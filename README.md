@@ -1,6 +1,8 @@
 # ℙurplecoin
 Official implementation of Purplecoin, the first stateless cryptocurrency. Requires Rust Nightly `>=v1.63.0`.
 
+**WARNING** The source code is still under heavy development. Use at your own risk.
+
 ## Running tests
 Type the following to run the test suite:
 ```
