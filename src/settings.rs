@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use config::{Config, ConfigError, Environment, File};
+use config::{Config, ConfigError, File};
 use lazy_static::*;
 use log::*;
 use rand::Rng;
@@ -39,11 +39,11 @@ impl Settings {
         let mut config_path = dirs::config_dir().unwrap();
         config_path.push("Purplecoin");
         config_path.push("config.toml");
+        let default_settings = Settings::default();
         match metadata(config_path.clone()) {
             // Create default configuration
             Err(_) => {
-                let settings = Settings::default();
-                let settings_str = toml::ser::to_string_pretty(&settings).unwrap();
+                let settings_str = toml::ser::to_string_pretty(&default_settings).unwrap();
 
                 // Create configuration file
                 match FsFile::create(config_path.clone()) {
@@ -59,10 +59,54 @@ impl Settings {
             _ => {} // Do nothing
         }
 
+        let prefix = "purplecoin";
         let env_source: Vec<_> = std::env::vars().collect();
         let mut s = Config::builder().add_source(File::with_name(
             &config_path.into_os_string().into_string().unwrap(),
-        ));
+        ).required(false));
+
+        // Set defaults
+        let defaults: HashMap<String, HashMap<String, DynamicConfVal>> =
+        serde_yaml::from_value(serde_yaml::to_value(&default_settings).unwrap()).unwrap();
+        for (k1, inner) in &defaults {
+            for (k2, v) in inner {
+                match v {
+                    DynamicConfVal::String(v) => {
+                        s = s.set_default(format!("{}.{}", k1, k2), v.as_str())?;
+                    }
+
+                    DynamicConfVal::Bool(v) => {
+                        s = s.set_default(format!("{}.{}", k1, k2), v.to_string())?;
+                    }
+
+                    DynamicConfVal::U16(v) => {
+                        s = s.set_default(format!("{}.{}", k1, k2), v.to_string())?;
+                    }
+
+                    DynamicConfVal::Sequence(v) => {
+                        s = s.set_default(format!("{}.{}", k1, k2), v.clone())?;
+                    }
+
+                    DynamicConfVal::Option(v) => {
+                        if let Some(v) = v {
+                            s = s.set_default(format!("{}.{}", k1, k2), v.as_str())?;
+                        }
+                    }
+
+                    DynamicConfVal::OptionSequence(v) => {
+                        if let Some(v) = v {
+                            s = s.set_default(format!("{}.{}", k1, k2), v.clone())?;
+                        }
+                    }
+
+                    DynamicConfVal::OptionSequenceByte(v) => {
+                        if let Some(v) = v {
+                            s = s.set_default(format!("{}.{}", k1, k2), v.clone())?;
+                        }
+                    }
+                }
+            }
+        }
 
         // Make sure to list these in order
         let settings_modules: Vec<_> = vec![
@@ -71,7 +115,6 @@ impl Settings {
             Miner::FIELD_NAMES_AS_ARRAY,
             Cluster::FIELD_NAMES_AS_ARRAY,
         ];
-        let prefix = "purplecoin";
 
         // Gather all possible settings keys
         let possible_keys: HashMap<String, &str> = Settings::FIELD_NAMES_AS_ARRAY
@@ -378,4 +421,16 @@ impl Default for Cluster {
             cluster_ips: None,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+enum DynamicConfVal {
+    String(String),
+    Sequence(Vec<String>),
+    Option(Option<String>),
+    OptionSequence(Option<Vec<String>>),
+    OptionSequenceByte(Option<Vec<u8>>),
+    Bool(bool),
+    U16(u16),
 }
