@@ -83,7 +83,7 @@ impl<'a> LeafSet<'a> {
 
         // Then add back output pos to the leaf_set
         // that were removed.
-        bitmap.or_inplace(&rewind_rm_pos);
+        bitmap.or_inplace(rewind_rm_pos);
 
         // Invert bitmap for the leaf pos and return the resulting bitmap.
         bitmap
@@ -102,7 +102,7 @@ impl<'a> LeafSet<'a> {
 
         // Then add back output pos to the leaf_set
         // that were removed.
-        self.bitmap.or_inplace(&rewind_rm_pos);
+        self.bitmap.or_inplace(rewind_rm_pos);
     }
 
     /// Append a new position to the leaf_set.

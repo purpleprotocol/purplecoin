@@ -30,7 +30,7 @@ mod theme;
 
 const HEADER_SIZE: u16 = 32;
 const TAB_PADDING: u16 = 16;
-const WINDOW_TITLE: &'static str = "Purplecoin Core";
+const WINDOW_TITLE: &str = "Purplecoin Core";
 
 const ICON_FONT: Font = iced::Font::External {
     name: "Icons",

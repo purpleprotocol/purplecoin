@@ -17,10 +17,10 @@ use std::sync::Arc;
 pub type DB = TransactionDB<MultiThreaded>;
 pub type WriteBatch = WriteBatchWithTransaction<true>;
 
-pub const HEADERS_CF: &'static str = "headers";
-pub const TRANSACTIONS_CF: &'static str = "transactions";
-pub const OUTPUTS_CF: &'static str = "outputs";
-pub const SHARE_CHAIN_CF: &'static str = "sharechain";
+pub const HEADERS_CF: &str = "headers";
+pub const TRANSACTIONS_CF: &str = "transactions";
+pub const OUTPUTS_CF: &str = "outputs";
+pub const SHARE_CHAIN_CF: &str = "sharechain";
 
 #[derive(Clone)]
 pub struct DiskBackend<'a> {
@@ -252,7 +252,7 @@ impl<'a> ShardBackend<'a> for DiskBackend<'a> {
             );
         }
 
-        if let Some(ref sig) = block.body.aggregated_signature.as_ref() {
+        if let Some(sig) = block.body.aggregated_signature.as_ref() {
             batch.put_cf(&transactions_cf, sig_key, sig.to_bytes());
         }
 
@@ -271,11 +271,11 @@ impl<'a> ShardBackend<'a> for DiskBackend<'a> {
         let bhkey = &[[self.shard_config().chain_id].as_slice(), &h.to_le_bytes()].concat();
         let headers_cf = self.db.cf_handle(HEADERS_CF).unwrap();
         let hash = self.db.get_cf(&headers_cf, bhkey)?;
-        if let None = hash {
+        if hash.is_none() {
             return Ok(None);
         }
         let hbytes = self.db.get_cf(&headers_cf, hash.as_ref().unwrap())?;
-        if let None = hbytes {
+        if hbytes.is_none() {
             return Ok(None);
         }
 
@@ -320,7 +320,7 @@ impl<'a> ShardBackend<'a> for DiskBackend<'a> {
             }
 
             Ok(None) => {
-                tx.put_cf(&headers_cf, key, &1_u64.to_le_bytes())?;
+                tx.put_cf(&headers_cf, key, 1_u64.to_le_bytes())?;
                 tx.commit()?;
                 Ok(1)
             }

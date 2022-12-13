@@ -165,7 +165,7 @@ impl fmt::Debug for PowAlgorithm {
 
             Self::RandomX(ctx) => f
                 .debug_tuple("RandomX")
-                .field(&hex::encode(&ctx.key()))
+                .field(&hex::encode(ctx.key()))
                 .finish(),
         }
     }
@@ -241,7 +241,7 @@ impl Miner {
                                             continue;
                                         }
 
-                                        if let None = header.increment_nonce() {
+                                        if header.increment_nonce().is_none() {
                                             ctrl_send.send(MinerCtrl::ExhaustedNonces).unwrap();
                                             *state = MinerState::Paused;
                                             continue;
@@ -265,7 +265,7 @@ impl Miner {
                                             continue;
                                         }
 
-                                        if let None = header.increment_nonce() {
+                                        if header.increment_nonce().is_none() {
                                             ctrl_send.send(MinerCtrl::ExhaustedNonces).unwrap();
                                             *state = MinerState::Paused;
                                             continue;

@@ -56,7 +56,7 @@ pub const MAX_BLOCK_TIME: i64 = 60;
 pub const COINBASE_EPOCH_LEN: u64 = 32;
 
 /// RandomX key prefix
-pub const RANDOMX_KEY_PREFIX: &'static str = "purplecoinrandomxhasher";
+pub const RANDOMX_KEY_PREFIX: &str = "purplecoinrandomxhasher";
 
 /// RandomX keys change every n blocks, regardless of PoW algorithm used
 pub const RANDOMX_KEY_CHANGE_INTERVAL: u64 = 2048;

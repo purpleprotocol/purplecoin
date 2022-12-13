@@ -6,9 +6,7 @@
 
 #![feature(stmt_expr_attributes)]
 
-use accumulator::group::{Codec, Rsa2048};
-use accumulator::{Accumulator, MembershipProof, Witness};
-use futures::{future, prelude::*};
+use futures::prelude::*;
 use iced::window::icon::Icon;
 use iced::{Application, Settings};
 use log::*;
@@ -16,41 +14,28 @@ use mimalloc::MiMalloc;
 use purplecoin::chain::backend::disk::DiskBackend;
 use purplecoin::chain::backend::ShardBackend;
 use purplecoin::chain::*;
-use purplecoin::consensus::*;
-use purplecoin::miner::{Miner, MinerStatus};
+
 use purplecoin::node::*;
-use purplecoin::node::*;
+
 use purplecoin::primitives::*;
-use purplecoin::primitives::*;
+
 use purplecoin::settings::SETTINGS;
-use purplecoin::wallet::HDWallet;
+
 use rand::prelude::*;
 use rayon::prelude::*;
-use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
-use rust_randomx::Context;
-use serde::*;
-use std::collections::{HashMap, HashSet};
+
 use std::env;
-use std::mem;
-use std::net::{IpAddr, Ipv6Addr};
-use std::path::PathBuf;
-use std::str::FromStr;
+
 use std::sync::atomic::AtomicBool;
-use std::sync::Mutex;
+
 use std::thread;
-use std::time::{Duration, Instant};
-use tarpc::{
-    context,
-    server::{self, incoming::Incoming, Channel},
-    tokio_serde::formats::Json,
-};
+use std::time::Duration;
+use tarpc::server::{self, incoming::Incoming, Channel};
 use tokio::runtime::Builder;
 use tokio::time::sleep;
 use tracing_subscriber::prelude::*;
-use triomphe::Arc;
+
 use warp::Filter;
-use zeroize::Zeroize;
 
 #[cfg(feature = "sha256sum")]
 use sha2::{Digest, Sha256};
@@ -85,7 +70,7 @@ fn start_runtime() -> anyhow::Result<()> {
     let config = ChainConfig::new(&SETTINGS.node.network_name);
     let disk_backend =
         DiskBackend::new(db, std::sync::Arc::new(config.clone()), None, None).unwrap();
-    let chain = Chain::new(disk_backend, &config);
+    let _chain = Chain::new(disk_backend, &config);
     let worker_threads = if SETTINGS.node.network_threads == 0 {
         num_cpus::get()
     } else {
@@ -238,7 +223,7 @@ async fn handle_rpc_request(
 }
 
 fn check_authorization_header(auth: String) -> bool {
-    let split: Vec<_> = auth.split(" ").collect();
+    let split: Vec<_> = auth.split(' ').collect();
 
     if split.len() != 2 {
         return false;
@@ -248,7 +233,7 @@ fn check_authorization_header(auth: String) -> bool {
         return false;
     }
 
-    let decoded = match base64::decode(&split[1]) {
+    let decoded = match base64::decode(split[1]) {
         Ok(decoded) => decoded,
         Err(_) => return false,
     };
@@ -260,7 +245,7 @@ fn check_authorization_header(auth: String) -> bool {
         SETTINGS.network.rpc_username, SETTINGS.network.rpc_password
     );
     let oracle_hash = Hash256::hash_from_slice(oracle_key.as_bytes(), hash_key);
-    let hash = Hash256::hash_from_slice(&decoded, hash_key);
+    let hash = Hash256::hash_from_slice(decoded, hash_key);
 
     constant_time_eq::constant_time_eq_32(&oracle_hash.0, &hash.0)
 }
@@ -302,7 +287,7 @@ fn perform_sanity_checks() {
 }
 
 fn verify_addresses_checksum(addresses_path: &str, addresses_raw: &str) {
-    let mut addresses_path_split: Vec<_> = addresses_path.split(".").collect();
+    let mut addresses_path_split: Vec<_> = addresses_path.split('.').collect();
     if !addresses_path.contains("genesisbalances") {
         panic!("Invalid addresses path");
     }
@@ -324,7 +309,7 @@ fn verify_addresses_checksum(addresses_path: &str, addresses_raw: &str) {
         .ok_or("addresses file name doesn't contain a checksum")
         .unwrap()
         .to_owned()
-        .split(":")
+        .split(':')
         .collect::<Vec<_>>()[1];
 
     info!("Verifying addresses file checksum...");

@@ -130,7 +130,7 @@ impl XPub {
 
         let extended_key = ExtendedKey {
             chaincode: ChainCode(self.chain_code),
-            key: self.pub_key.0.clone(),
+            key: self.pub_key.0,
         };
         let child_number = self.child_number + 1;
 
@@ -157,11 +157,11 @@ impl fmt::Debug for XPub {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("XPub")
             .field("version", &format!("0x{:x}", self.version))
-            .field("chain_code", &hex::encode(&self.chain_code))
-            .field("fingerprint", &hex::encode(&self.fingerprint))
+            .field("chain_code", &hex::encode(self.chain_code))
+            .field("fingerprint", &hex::encode(self.fingerprint))
             .field("child_number", &self.child_number)
             .field("depth", &self.depth)
-            .field("pub_key", &hex::encode(&self.pub_key.0))
+            .field("pub_key", &hex::encode(self.pub_key.0))
             .finish()
     }
 }
@@ -220,7 +220,7 @@ impl XKeypair {
         child_number: u32,
     ) -> Self {
         let mut chain_code_fixed = [0; 32];
-        chain_code_fixed.copy_from_slice(&chain_code);
+        chain_code_fixed.copy_from_slice(chain_code);
         let mut mini_secret = MiniSecretKey::from_bytes(secret).unwrap();
         let mut keypair = mini_secret.expand_to_keypair(ExpansionMode::Uniform);
 
@@ -302,7 +302,7 @@ impl HDWallet {
             .skip_fixed_array_length();
         let wallet_bytes = bincode::encode_to_vec(self, config).unwrap();
 
-        fs::write(path, &wallet_bytes).map_err(|_| "unable to dump wallet to disk")?;
+        fs::write(path, wallet_bytes).map_err(|_| "unable to dump wallet to disk")?;
 
         Ok(())
     }
@@ -361,7 +361,7 @@ impl HDWallet {
         match self.internal_meta.get(address) {
             None => 0,
             Some(meta) => match meta.get("C") {
-                Some(txc) => u64::from_str_radix(&txc, 16).unwrap(),
+                Some(txc) => u64::from_str_radix(txc, 16).unwrap(),
                 None => 0,
             },
         }
@@ -649,7 +649,7 @@ mod tests {
     fn generate_wallet_name() -> String {
         let mut rng = rand::thread_rng();
         let bytes: [u8; 32] = rng.gen();
-        hex::encode(&bytes)
+        hex::encode(bytes)
     }
 
     #[test]

@@ -53,13 +53,13 @@ impl MMRMerkleProof {
     /// Serialize the Merkle proof as a hex string (for api json endpoints)
     pub fn to_hex(&self) -> String {
         let mut buf = crate::codec::encode_to_vec(self).unwrap();
-        hex::encode(&buf)
+        hex::encode(buf)
     }
 
     /// Convert hex string representation back to a Merkle proof instance
     pub fn from_hex(hex: &str) -> Result<MMRMerkleProof, String> {
         let bytes = hex::decode(hex).unwrap();
-        let res = crate::codec::decode(&mut &bytes[..])
+        let res = crate::codec::decode(&bytes[..])
             .map_err(|_| "failed to deserialize a Merkle Proof".to_string())?;
         Ok(res)
     }

@@ -729,7 +729,7 @@ mod tests {
 
     #[test]
     fn test_f64_encode_decode_negative() {
-        let t = VmTerm::Float64(-143254423423.543543534);
+        let t = VmTerm::Float64(-143_254_423_423.543_55);
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded[..1], &[0x12]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
@@ -737,7 +737,7 @@ mod tests {
 
     #[test]
     fn test_f64_encode_decode_positive() {
-        let t = VmTerm::Float64(143254324324.543543543);
+        let t = VmTerm::Float64(143_254_324_324.543_55);
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded[..1], &[0x12]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);

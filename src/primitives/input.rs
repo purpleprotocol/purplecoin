@@ -69,9 +69,9 @@ impl Input {
     /// Serializes to bytes for signing. Will not encode any script args or the out witness
     pub fn to_bytes_for_signing(&self) -> Vec<u8> {
         let mut copied = self.clone();
-        
-        // We don't sign or hash the witness as it can be recomputed by miners 
-        copied.witness = None; 
+
+        // We don't sign or hash the witness as it can be recomputed by miners
+        copied.witness = None;
 
         // We also don't sign or hash the script arguments marked as malleable
         // unimplemented!();
@@ -85,7 +85,7 @@ impl Input {
         }
 
         let bytes = self.to_bytes_for_signing();
-        self.hash = Some(Hash256::hash_from_slice(&bytes, key))
+        self.hash = Some(Hash256::hash_from_slice(bytes, key))
     }
 
     pub fn hash(&self) -> Option<&Hash256> {

@@ -9,15 +9,15 @@ use accumulator::util::int;
 use criterion::Criterion;
 
 fn bench_poke2_rsa() {
-  let base = Rsa2048::unknown_order_elem();
-  let exp = int(20);
-  let result = Rsa2048::elem(1_048_576);
-  let proof = Poke2::<Rsa2048>::prove(&base, &exp, &result);
-  Poke2::verify(&base, &result, &proof);
+    let base = Rsa2048::unknown_order_elem();
+    let exp = int(20);
+    let result = Rsa2048::elem(1_048_576);
+    let proof = Poke2::<Rsa2048>::prove(&base, &exp, &result);
+    Poke2::verify(&base, &result, &proof);
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  c.bench_function("poke2_rsa", |b| b.iter(bench_poke2_rsa));
+    c.bench_function("poke2_rsa", |b| b.iter(bench_poke2_rsa));
 }
 
 criterion_group!(benches, criterion_benchmark);

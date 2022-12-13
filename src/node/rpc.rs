@@ -196,15 +196,15 @@ impl RpcServerDefinition for RpcServer {
     type VerifyAddressFut = Ready<Result<bool, RpcErr>>;
 
     fn get_blockchain_info(self, _: context::Context) -> Self::GetBlockchainInfoFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn get_mempool_info(self, _: context::Context) -> Self::GetMempoolInfoFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn get_raw_mempool(self, _: context::Context) -> Self::GetRawMempoolFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn get_height(self, _: context::Context, chain_id: u8) -> Self::GetHeightFut {
@@ -212,7 +212,7 @@ impl RpcServerDefinition for RpcServer {
     }
 
     fn get_shard_info(self, _: context::Context, chain_id: u8) -> Self::GetShardInfoFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn get_raw_mempool_shard(
@@ -220,7 +220,7 @@ impl RpcServerDefinition for RpcServer {
         _: context::Context,
         chain_id: u8,
     ) -> Self::GetRawMempoolShardFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn get_block_hash(
@@ -229,15 +229,15 @@ impl RpcServerDefinition for RpcServer {
         chain_id: u8,
         height: u64,
     ) -> Self::GetBlockHashFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn get_block_stats(self, _: context::Context, hash: String) -> Self::GetBlockStatsFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn precious_block(self, _: context::Context, hash: String) -> Self::PreciousBlockFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn prune_shard(
@@ -247,11 +247,11 @@ impl RpcServerDefinition for RpcServer {
         height: u64,
         mode: String,
     ) -> Self::PruneShardFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn generate(self, _: context::Context, address_or_descriptor: String) -> Self::GenerateFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn generate_to_address(
@@ -259,7 +259,7 @@ impl RpcServerDefinition for RpcServer {
         _: context::Context,
         address: String,
     ) -> Self::GenerateToAddressFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn generate_to_descriptor(
@@ -267,7 +267,7 @@ impl RpcServerDefinition for RpcServer {
         _: context::Context,
         descriptor: String,
     ) -> Self::GenerateToDescriptorFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn generate_share(
@@ -275,7 +275,7 @@ impl RpcServerDefinition for RpcServer {
         _: context::Context,
         address_or_descriptor: String,
     ) -> Self::GenerateShareFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn generate_share_to_address(
@@ -283,7 +283,7 @@ impl RpcServerDefinition for RpcServer {
         _: context::Context,
         address: String,
     ) -> Self::GenerateShareToAddressFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn generate_share_to_descriptor(
@@ -291,23 +291,23 @@ impl RpcServerDefinition for RpcServer {
         _: context::Context,
         descriptor: String,
     ) -> Self::GenerateShareToDescriptorFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn submit_block(self, _: context::Context, payload: String) -> Self::SubmitBlockFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn submit_share_block(self, _: context::Context, payload: String) -> Self::SubmitShareBlockFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn get_node_info(self, _: context::Context) -> Self::GetNodeInfoFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn stop(self, _: context::Context) -> Self::StopFut {
-        future::ready(format!("Purplecoin shutting down"))
+        future::ready("Purplecoin shutting down".to_string())
     }
 
     fn uptime(self, _: context::Context) -> Self::UptimeFut {
@@ -345,11 +345,11 @@ impl RpcServerDefinition for RpcServer {
     }
 
     fn get_network_info(self, _: context::Context) -> Self::GetNetworkInfoFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn get_peer_info(self, _: context::Context) -> Self::GetPeerInfoFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn get_connection_count(self, _: context::Context) -> Self::GetConnectionCountFut {
@@ -357,19 +357,19 @@ impl RpcServerDefinition for RpcServer {
     }
 
     fn get_net_totals(self, _: context::Context) -> Self::GetNetTotalsFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn add_node(self, _: context::Context, node: String) -> Self::AddNodeFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn list_banned(self, _: context::Context) -> Self::ListBannedFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn set_network_active(self, _: context::Context, active: bool) -> Self::SetNetworkActiveFut {
-        future::ready(format!("Hello world!"))
+        future::ready("Hello world!".to_string())
     }
 
     fn validate_address(self, _: context::Context, address: String) -> Self::ValidateAddressFut {

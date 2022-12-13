@@ -216,7 +216,7 @@ impl Script {
 
                 // Check the top of the stack for the execution result
                 if fs_len == 0 {
-                    if frame.stack.len() == 0 {
+                    if frame.stack.is_empty() {
                         return ExecutionResult::Invalid;
                     }
 
@@ -262,7 +262,7 @@ impl Script {
     }
 
     pub fn to_script_hash(&self, key: &str) -> Hash160 {
-        Hash160::hash_from_slice(&crate::codec::encode_to_vec(&self).unwrap(), key)
+        Hash160::hash_from_slice(crate::codec::encode_to_vec(&self).unwrap(), key)
     }
 
     #[inline]
@@ -922,7 +922,7 @@ mod tests {
             acc
         });
 
-        let inputs_hash = Hash160::hash_from_slice(&ins_hashes, key);
+        let inputs_hash = Hash160::hash_from_slice(ins_hashes, key);
         let mut oracle_out = Output {
             address: Some(Hash160::zero().to_address()),
             amount: 30,

@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  # Run daily to catch when Rust updates cause problems to happen.
+  schedule:
+    - cron: '00 01 * * *'
+
+jobs:
+  rust:
+    name: Rust
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest] #, windows-latest]
+        toolchain: ["nightly"]
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      CARGO_INCREMENTAL: 0
+      RUST_BACKTRACE: 1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          profile: minimal
+          default: true
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+
+  lint:
+    name: Rustfmt / Clippy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          default: true
+          components: rustfmt, clippy
+
+      - name: Fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --workspace

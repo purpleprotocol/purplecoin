@@ -8,7 +8,7 @@ use rug::Integer;
 use std::str::FromStr;
 
 fn criterion_benchmark(c: &mut Criterion) {
-  let left = ClassGroup::elem((
+    let left = ClassGroup::elem((
     Integer::from_str("16").unwrap(),
     Integer::from_str("9").unwrap(),
     Integer::from_str(
@@ -22,10 +22,10 @@ fn criterion_benchmark(c: &mut Criterion) {
     )
     .unwrap(),
   ));
-  let right = left.clone();
+    let right = left.clone();
 
-  // Generator element.
-  let base = ClassGroup::elem((
+    // Generator element.
+    let base = ClassGroup::elem((
     Integer::from(2),
     Integer::from(1),
     Integer::from_str(
@@ -39,13 +39,13 @@ fn criterion_benchmark(c: &mut Criterion) {
     )
     .unwrap(),
   ));
-  let exp = Integer::from_str("65315").unwrap();
-  let g_inv = base.clone();
-  let g_sq = ClassGroup::unknown_order_elem();
+    let exp = Integer::from_str("65315").unwrap();
+    let g_inv = base.clone();
+    let g_sq = ClassGroup::unknown_order_elem();
 
-  let aa = Integer::from_str("16").unwrap();
-  let bb = Integer::from_str("105").unwrap();
-  let cc = Integer::from_str(
+    let aa = Integer::from_str("16").unwrap();
+    let bb = Integer::from_str("105").unwrap();
+    let cc = Integer::from_str(
     "4783760786688675616733383986925127377420761933775791859799529477781625005833111632534101811067\
     20472171123774764735020601213528425753087932376215639471576300984851315174010737751911943195315\
     49483898334742144138601661120476425524333273122132151927833887323969998955713328783526854198871\
@@ -56,35 +56,29 @@ fn criterion_benchmark(c: &mut Criterion) {
   )
   .unwrap();
 
-  // Element which requires one iteration to reduce, represented as a tuple here, since only
-  // reduced representations of ClassElem are allowed.
-  let g_red = (cc.clone(), bb.clone(), aa.clone());
-  let g_norm = (aa.clone(), bb.clone(), cc.clone());
+    // Element which requires one iteration to reduce, represented as a tuple here, since only
+    // reduced representations of ClassElem are allowed.
+    let g_red = (cc.clone(), bb.clone(), aa.clone());
+    let g_norm = (aa.clone(), bb.clone(), cc.clone());
 
-  c.bench_function("group_class_op", move |b| {
-    b.iter(|| ClassGroup::op(&left, &right))
-  });
-  c.bench_function("group_class_exp", move |b| {
-    b.iter(|| ClassGroup::exp(&base, &exp))
-  });
-  c.bench_function("group_class_inv", move |b| {
-    b.iter(|| ClassGroup::inv(&g_inv))
-  });
-  c.bench_function("group_class_normalize", move |b| {
-    b.iter_with_setup(
-      || g_norm.clone(),
-      |g| ClassGroup::normalize(g.0, g.1, g.2),
-    )
-  });
-  c.bench_function("group_class_reduce", move |b| {
-    b.iter_with_setup(
-      || g_red.clone(),
-      |g| ClassGroup::reduce(g.0, g.1, g.2),
-    )
-  });
-  c.bench_function("group_class_square", move |b| {
-    b.iter_with_setup(|| g_sq.clone(), |g| ClassGroup::square(&g))
-  });
+    c.bench_function("group_class_op", move |b| {
+        b.iter(|| ClassGroup::op(&left, &right))
+    });
+    c.bench_function("group_class_exp", move |b| {
+        b.iter(|| ClassGroup::exp(&base, &exp))
+    });
+    c.bench_function("group_class_inv", move |b| {
+        b.iter(|| ClassGroup::inv(&g_inv))
+    });
+    c.bench_function("group_class_normalize", move |b| {
+        b.iter_with_setup(|| g_norm.clone(), |g| ClassGroup::normalize(g.0, g.1, g.2))
+    });
+    c.bench_function("group_class_reduce", move |b| {
+        b.iter_with_setup(|| g_red.clone(), |g| ClassGroup::reduce(g.0, g.1, g.2))
+    });
+    c.bench_function("group_class_square", move |b| {
+        b.iter_with_setup(|| g_sq.clone(), |g| ClassGroup::square(&g))
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);

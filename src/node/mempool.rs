@@ -8,8 +8,8 @@ use crate::consensus::*;
 use crate::primitives::*;
 use parking_lot::RwLock;
 use std::collections::{BTreeSet, HashMap};
-use std::pin::Pin;
 use std::marker::PhantomPinned;
+use std::pin::Pin;
 use std::ptr::NonNull;
 use std::sync::Arc;
 
@@ -34,21 +34,19 @@ impl Mempool {
         })
     }
 
-    pub fn prune(&mut self) {
-
-    }
+    pub fn prune(&mut self) {}
 
     pub fn append(&mut self, tx: TransactionWithFee) -> Result<(), &'static str> {
-        let tx_hash = tx.hash().unwrap().clone();
+        let tx_hash = *tx.hash().unwrap();
 
         // First check if we have the transaction present
         if self.tx_map.get(&tx_hash).is_some() {
-            return Ok(())
+            return Ok(());
         }
 
         // Write transaction and size
         self.current_size_bytes += tx.tx_size as u64;
-        self.tx_map.insert(tx_hash.clone(), tx);
+        self.tx_map.insert(tx_hash, tx);
         let ptr = NonNull::from(self.tx_map.get(&tx_hash).unwrap());
         self.tx_list.insert(ptr);
 
@@ -67,23 +65,22 @@ impl Mempool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vm::*;
-    use crate::vm::internal::VmTerm;
     use crate::chain::ChainConfig;
+    use crate::vm::internal::VmTerm;
+    use crate::vm::*;
     use rand::prelude::*;
 
     #[test]
     fn append_batch() {
-        let txs: Vec<_> = (0..300)
-            .into_iter()
-            .map(|_| get_random_tx())
-            .collect();
+        let txs: Vec<_> = (0..300).into_iter().map(|_| get_random_tx()).collect();
 
         let mut mempool = Mempool::new();
-        
+
         unsafe {
             let mut_ref: Pin<&mut _> = Pin::as_mut(&mut mempool);
-            Pin::get_unchecked_mut(mut_ref).append_batch(txs.clone()).unwrap();
+            Pin::get_unchecked_mut(mut_ref)
+                .append_batch(txs.clone())
+                .unwrap();
         }
 
         for tx in txs.iter() {
@@ -116,12 +113,12 @@ mod tests {
             colour_script: None,
             colour_script_args: None,
             script: Script::new_coinbase(),
-            script_args: script_args.clone(),
+            script_args,
             nsequence: 0xffffffff,
             hash: None,
         };
         input.compute_hash(key);
-    
+
         let mut tx = Transaction {
             version: 1,
             chain_id,

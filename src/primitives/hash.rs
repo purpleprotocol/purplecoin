@@ -24,7 +24,7 @@ mod tests {
     fn hash_bytes_fugue256_test() {
         let test_vector = "";
         let result = hash_bytes_fugue256(test_vector.as_bytes());
-        let result = hex::encode(&result);
+        let result = hex::encode(result);
 
         assert_eq!(
             &result,

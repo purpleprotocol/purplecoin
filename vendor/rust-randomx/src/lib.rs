@@ -3,16 +3,16 @@
 #![allow(non_snake_case)]
 
 use num_cpus;
-use std::os::raw::c_void;
-use triomphe::Arc;
-use std::thread;
-use std::cmp::Ordering;
 use std::cmp;
+use std::cmp::Ordering;
+use std::os::raw::c_void;
+use std::thread;
+use triomphe::Arc;
 
 mod bindings;
 use bindings::*;
 
-const MAX_ZEROS: u8 = 252; 
+const MAX_ZEROS: u8 = 252;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Difficulty(u32);
@@ -38,17 +38,18 @@ impl Difficulty {
         let mply = (((self.postfix() as u64) << 16) as f32 / f) as u64;
         let offset = (mply.leading_zeros() as usize) / 8;
         let new_postfix = &mply.to_be_bytes()[offset..offset + 3];
-        let offset = offset-3;
-        let def = if offset > 0 {
-            MAX_ZEROS
-        } else {
-            0
-        };
+        let offset = offset - 3;
+        let def = if offset > 0 { MAX_ZEROS } else { 0 };
         Difficulty(u32::from_le_bytes([
             new_postfix[2],
             new_postfix[1],
             new_postfix[0],
-            cmp::min((self.zeros() as u8).checked_add(offset as u8).unwrap_or(def), MAX_ZEROS),
+            cmp::min(
+                (self.zeros() as u8)
+                    .checked_add(offset as u8)
+                    .unwrap_or(def),
+                MAX_ZEROS,
+            ),
         ]))
     }
 }
@@ -72,7 +73,7 @@ impl Ord for Difficulty {
                 return Ordering::Less;
             }
         }
-        
+
         Ordering::Equal
     }
 }
