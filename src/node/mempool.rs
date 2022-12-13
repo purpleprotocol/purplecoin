@@ -37,7 +37,7 @@ impl Mempool {
     pub fn prune(&mut self) {}
 
     pub fn append(&mut self, tx: TransactionWithFee) -> Result<(), &'static str> {
-        let tx_hash = tx.hash().unwrap().clone();
+        let tx_hash = *tx.hash().unwrap();
 
         // First check if we have the transaction present
         if self.tx_map.get(&tx_hash).is_some() {
@@ -46,7 +46,7 @@ impl Mempool {
 
         // Write transaction and size
         self.current_size_bytes += tx.tx_size as u64;
-        self.tx_map.insert(tx_hash.clone(), tx);
+        self.tx_map.insert(tx_hash, tx);
         let ptr = NonNull::from(self.tx_map.get(&tx_hash).unwrap());
         self.tx_list.insert(ptr);
 
@@ -113,7 +113,7 @@ mod tests {
             colour_script: None,
             colour_script_args: None,
             script: Script::new_coinbase(),
-            script_args: script_args.clone(),
+            script_args: script_args,
             nsequence: 0xffffffff,
             hash: None,
         };

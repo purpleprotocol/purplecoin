@@ -26,9 +26,9 @@ lazy_static! {
     /// * 256mb x 4 = 1024mb max memory in slow mode by default
     /// * 2080mb x 4 = 8320mb max memory in fast mode by default
     static ref RANDOMX_CTX_SIZE_MUX: Mutex<usize> = Mutex::new(4);
-    static ref RANDOMX_CTX_STORE: RandomXCtxStore = Mutex::new(LruCache::new(NonZeroUsize::new(RANDOMX_CTX_SIZE_MUX.lock().clone()).unwrap()));
+    static ref RANDOMX_CTX_STORE: RandomXCtxStore = Mutex::new(LruCache::new(NonZeroUsize::new(*RANDOMX_CTX_SIZE_MUX.lock()).unwrap()));
     static ref RANDOMX_FAST_MODE_MUX: Mutex<bool> = Mutex::new(false);
-    static ref RANDOMX_FAST_MODE: bool = RANDOMX_FAST_MODE_MUX.lock().clone();
+    static ref RANDOMX_FAST_MODE: bool = *RANDOMX_FAST_MODE_MUX.lock();
 
     /// Genesis blocks cache
     static ref GENESIS_CACHE: GenesisCache = RwLock::new(HashMap::with_capacity(256));
@@ -106,7 +106,7 @@ pub fn get_cached_genesis(chain_id: u8, chain_config: &ChainConfig) -> Arc<Block
 pub fn get_randomx_ctx(key: &str) -> Arc<Context> {
     let nn: &str = &crate::settings::SETTINGS.node.network_name;
     let key = format!("{}.{}.{}", RANDOMX_KEY_PREFIX, nn, key);
-    let key = Hash256::hash_from_slice(&key, "purplecoinminer");
+    let key = Hash256::hash_from_slice(key, "purplecoinminer");
     let mut nnmux = (*RANDOMX_CTX_STORE).lock();
 
     match nnmux.get(&key).cloned() {

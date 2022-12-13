@@ -41,7 +41,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
         colour_script: None,
         colour_script_args: None,
         script: Script::new_coinbase(),
-        script_args: script_args.clone(),
+        script_args: script_args,
         nsequence: 0xffffffff,
         hash: None,
     };
@@ -76,10 +76,10 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
         let accumulators_with_proofs: Vec<_> = outputs
             .chunks(SHARDS_PER_SECTOR * ACCUMULATOR_MULTIPLIER)
             .map(|outs| {
-                let out_hashes: Vec<_> = outs.iter().map(|o| o.hash().unwrap().clone()).collect();
+                let out_hashes: Vec<_> = outs.iter().map(|o| *o.hash().unwrap()).collect();
                 let accumulator1 = Accumulator::<Rsa2048, Hash256>::empty();
                 let (witness_deleted, _proof_deleted) =
-                    accumulator1.clone().delete_with_proof(&[]).unwrap();
+                    accumulator1.delete_with_proof(&[]).unwrap();
                 let (accumulator2, proof_added) = witness_deleted.add_with_proof(&out_hashes);
 
                 (accumulator2, proof_added, out_hashes)
@@ -96,7 +96,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
                     accumulators_with_proofs
                         .par_iter()
                         .map(|(accumulator, proof_added, out_hashes)| {
-                            accumulator.verify_membership_batch(&out_hashes, &proof_added)
+                            accumulator.verify_membership_batch(out_hashes, proof_added)
                         })
                         .collect::<Vec<_>>();
                 });
@@ -115,7 +115,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
                     accumulators_with_proofs
                         .par_iter()
                         .map(|(accumulator, proof_added, out_hashes)| {
-                            accumulator.verify_membership_batch(&out_hashes, &proof_added)
+                            accumulator.verify_membership_batch(out_hashes, proof_added)
                         })
                         .collect::<Vec<_>>();
                     accumulator::hash::clear_cache_percentage(0.95);
@@ -135,7 +135,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
                     accumulators_with_proofs
                         .par_iter()
                         .map(|(accumulator, proof_added, out_hashes)| {
-                            accumulator.verify_membership_batch(&out_hashes, &proof_added)
+                            accumulator.verify_membership_batch(out_hashes, proof_added)
                         })
                         .collect::<Vec<_>>();
                     accumulator::hash::clear_cache();
@@ -143,17 +143,17 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
             },
         );
 
-        let out_hashes: Vec<_> = outputs.iter().map(|o| o.hash().unwrap().clone()).collect();
-        let (witness_deleted, pd) = Accumulator::<Rsa2048, Hash256>::empty()
+        let out_hashes: Vec<_> = outputs.iter().map(|o| *o.hash().unwrap()).collect();
+        let (witness_deleted, _pd) = Accumulator::<Rsa2048, Hash256>::empty()
             .delete_with_proof(&next_to_delete)
             .unwrap();
         let (accumulator2, pa) = witness_deleted.add_with_proof(&out_hashes);
-        let mut witnesses = pa.witness.compute_individual_witnesses(&out_hashes);
-        let deleted_set: HashSet<_> = next_to_delete.iter().map(|(o, _)| o.clone()).collect();
-        let deleted: Vec<_> = next_to_delete.iter().map(|(o, _)| o.clone()).collect();
-        outs_vec.retain(|(o, _)| !deleted_set.contains(&o));
+        let witnesses = pa.witness.compute_individual_witnesses(&out_hashes);
+        let deleted_set: HashSet<_> = next_to_delete.iter().map(|(o, _)| *o).collect();
+        let _deleted: Vec<_> = next_to_delete.iter().map(|(o, _)| *o).collect();
+        outs_vec.retain(|(o, _)| !deleted_set.contains(o));
         outs_vec.extend(witnesses);
-        let outs: Vec<_> = outs_vec.iter().map(|(o, _)| o.clone()).collect();
+        let outs: Vec<_> = outs_vec.iter().map(|(o, _)| *o).collect();
         witness_all = accumulator2
             .clone()
             .update_membership_witness(witness_all.clone(), &outs, &[], &[])
@@ -187,14 +187,14 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
             .cloned()
             .collect();
         let accumulator = accumulator2;
-        let out_hashes: Vec<_> = outputs.iter().map(|o| o.hash().unwrap().clone()).collect();
+        let out_hashes: Vec<_> = outputs.iter().map(|o| *o.hash().unwrap()).collect();
 
         // Warmup the cache
-        let (witness_deleted, pd) = accumulator
+        let (witness_deleted, _pd) = accumulator
             .clone()
             .delete_with_proof(&next_to_delete)
             .unwrap();
-        let (accumulator2, pa) = witness_deleted.add_with_proof(&out_hashes);
+        let (_accumulator2, _pa) = witness_deleted.add_with_proof(&out_hashes);
 
         group.bench_function(
             &format!("mutate accumulators for all shards in sector 100% cache hit rate {} half added and half deleted", batch_size),

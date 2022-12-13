@@ -85,7 +85,7 @@ impl Input {
         }
 
         let bytes = self.to_bytes_for_signing();
-        self.hash = Some(Hash256::hash_from_slice(&bytes, key))
+        self.hash = Some(Hash256::hash_from_slice(bytes, key))
     }
 
     pub fn hash(&self) -> Option<&Hash256> {

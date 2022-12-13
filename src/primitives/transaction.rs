@@ -23,7 +23,7 @@ pub struct Transaction {
 impl Transaction {
     pub fn compute_hash(&mut self, key: &str) {
         let encoded = crate::codec::encode_to_vec(self).unwrap();
-        self.hash = Some(Hash256::hash_from_slice(&encoded, key));
+        self.hash = Some(Hash256::hash_from_slice(encoded, key));
     }
 
     /// Serialize to bytes
@@ -98,13 +98,12 @@ impl Transaction {
         }
 
         // Verify all signatures against transcripts and public keys
-        if !verify_batch(
+        if verify_batch(
             transcripts.iter().map(|m| ctx.bytes(m)),
             &signatures,
             &public_keys,
             false,
-        )
-        .is_ok()
+        ).is_err()
         {
             return Err(TxVerifyErr::InvalidSignature);
         }
@@ -224,9 +223,7 @@ impl From<Transaction> for TransactionWithFee {
             .filter_map(|i| {
                 // Filter coinbase and coloured outs
                 let o = i.out.as_ref()?;
-                if let None = i.out.as_ref().unwrap().address {
-                    return None;
-                }
+                i.out.as_ref().unwrap().address.as_ref()?;
 
                 Some(o)
             })
@@ -236,9 +233,7 @@ impl From<Transaction> for TransactionWithFee {
             .iter()
             .filter_map(|o| {
                 // Filter coloured outs
-                if let None = o.address {
-                    return None;
-                }
+                o.address.as_ref()?;
 
                 Some(o)
             })

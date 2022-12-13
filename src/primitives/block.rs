@@ -86,14 +86,14 @@ pub(crate) use addresses_file_mainnet;
 pub(crate) use addresses_file_testnet;
 pub(crate) use psep;
 
-pub const ADDRESSES_RAW_MAINNET: &'static str = include_str!(concat!(
+pub const ADDRESSES_RAW_MAINNET: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     psep!(),
     "data",
     psep!(),
     addresses_file_mainnet!()
 ));
-pub const ADDRESSES_RAW_TESTNET: &'static str = include_str!(concat!(
+pub const ADDRESSES_RAW_TESTNET: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     psep!(),
     "data",
@@ -247,7 +247,7 @@ impl PowBlockHeader {
             let mut out = [Hash256::zero(); 3];
             let b: Vec<Hash256> = runnerups
                 .iter()
-                .map(|r| r.hash().unwrap().clone())
+                .map(|r| *r.hash().unwrap())
                 .collect();
             out.copy_from_slice(b.as_slice());
             Some(out)
@@ -270,7 +270,7 @@ impl PowBlockHeader {
         };
         let runnerups_prev_hash = if let Some(runnerups) = runnerups {
             debug_assert_eq!(runnerups[0].prev_hash, prev.prev_hash);
-            Some(runnerups[0].prev_hash.clone())
+            Some(runnerups[0].prev_hash)
         } else {
             match prev.round() {
                 1 => {
@@ -279,7 +279,7 @@ impl PowBlockHeader {
                     if timestamp < time {
                         return Err(BlockVerifyErr::InvalidRunnerupTimestamp);
                     } else {
-                        Some(prev.prev_hash.clone())
+                        Some(prev.prev_hash)
                     }
                 }
 
@@ -839,7 +839,7 @@ impl BlockHeader {
             .map(|line| {
                 let split: Vec<_> = line
                     .unwrap()
-                    .split("=")
+                    .split('=')
                     .map(|line| {
                         let mut line = line.to_owned();
                         line.retain(|c| !c.is_whitespace());
@@ -872,7 +872,7 @@ impl BlockHeader {
                     colour_script: None,
                     colour_script_args: None,
                     script: Script::new_coinbase(),
-                    script_args: script_args.clone(),
+                    script_args,
                     nsequence: 0xffffffff,
                     hash: None,
                 };
@@ -922,7 +922,7 @@ impl BlockHeader {
             .map(|outs| {
                 let accumulator = Accumulator::<Rsa2048, Output>::empty();
                 let (witness_deleted, proof_deleted) = accumulator.delete_with_proof(&[]).unwrap();
-                let (accumulator, proof_added) = witness_deleted.add_with_proof(&outs);
+                let (accumulator, proof_added) = witness_deleted.add_with_proof(outs);
                 let poc = ProofOfCorrectness::new(proof_added, proof_deleted);
                 (accumulator, poc)
             })
@@ -945,19 +945,19 @@ impl BlockHeader {
 
         let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
             MerkleTree::from_data::<Hash256, Vec<Hash256>>(vec![
-                tx.hash().unwrap().clone(),
-                tx.hash().unwrap().clone(),
+                *tx.hash().unwrap(),
+                *tx.hash().unwrap(),
             ])
             .unwrap();
 
         let tx_root = mt.root();
         let prev_hash = Hash256::hash_from_slice("The Guardian 22/08/2022 UK inflation will hit 18% in early 2023, says leading bank Citi\n\nABSE", key);
         let bloom_seed_hash =
-            Hash256::hash_from_slice(&prev_hash.0, &format!(bloom_hash_key!(), chain_id));
+            Hash256::hash_from_slice(prev_hash.0, &format!(bloom_hash_key!(), chain_id));
         let bloom_seed = &bloom_seed_hash.0;
 
-        let mut bloom_hashes = vec![tx.hash().unwrap().clone()];
-        bloom_hashes.extend(out_stack.iter().map(|o| o.hash().unwrap().clone()));
+        let mut bloom_hashes = vec![*tx.hash().unwrap()];
+        bloom_hashes.extend(out_stack.iter().map(|o| *o.hash().unwrap()));
         bloom_hashes.extend(
             out_stack
                 .iter()
@@ -978,7 +978,7 @@ impl BlockHeader {
 
         let mut genesis = Self {
             version: 1,
-            chain_id: chain_id,
+            chain_id,
             prev_hash,
             tx_root,
             accumulators,
@@ -1015,7 +1015,7 @@ impl BlockHeader {
     /// Compute hash
     pub fn compute_hash(&mut self) {
         let encoded = crate::codec::encode_to_vec(self).unwrap();
-        self.hash = Some(Hash256::hash_from_slice(&encoded, "shardblockheaderhasher"));
+        self.hash = Some(Hash256::hash_from_slice(encoded, "shardblockheaderhasher"));
     }
 
     /// Validate header against the previous header. Used for initial header validation.
@@ -1191,7 +1191,7 @@ impl BlockData {
         prev: &BlockHeader,
         key: &str,
     ) -> Result<(OutWitnessVec, OutWitnessVec), BlockVerifyErr> {
-        if self.txs.len() == 0 {
+        if self.txs.is_empty() {
             return Ok((vec![], vec![]));
         }
 
@@ -1440,7 +1440,7 @@ impl Decode for BlockHeader {
             block_bloom: {
                 let v: Vec<u8> = bincode::Decode::decode(decoder)?;
                 let bloom_seed_hash =
-                    Hash256::hash_from_slice(&prev_hash.0, &format!(bloom_hash_key!(), chain_id));
+                    Hash256::hash_from_slice(prev_hash.0, &format!(bloom_hash_key!(), chain_id));
                 let mut keys = [(0, 0); 2];
                 keys[0].0 = slice_to_u64(&bloom_seed_hash.0[..8]);
                 keys[0].1 = slice_to_u64(&bloom_seed_hash.0[8..16]);
@@ -1459,7 +1459,7 @@ impl Decode for BlockHeader {
 // Assumes bytes len is 8
 fn slice_to_u64(bytes: &[u8]) -> u64 {
     let mut buf = [0; 8];
-    buf.copy_from_slice(&bytes);
+    buf.copy_from_slice(bytes);
     u64::from_le_bytes(buf)
 }
 
@@ -1523,9 +1523,8 @@ mod tests {
         assert!(accumulator2.verify_membership_batch(&elems, &proof_added));
         assert!(!accumulator2.verify_membership_batch(&elems, &proof_deleted));
         assert!(!accumulator2.verify_membership_batch(&elemsplus1, &proof_added));
-        assert!(!accumulator2
-            .prove_membership(&[("test6".to_owned(), proof_added.witness.clone())])
-            .is_ok());
+        assert!(accumulator2
+            .prove_membership(&[("test6".to_owned(), proof_added.witness.clone())]).is_err());
         assert!(accumulator1.verify_membership_batch(&[], &proof_deleted));
         assert_eq!(proof_added.witness, proof_deleted.witness);
 
@@ -1542,9 +1541,8 @@ mod tests {
             assert!(accumulator2
                 .prove_membership(&[(e.clone(), witness)])
                 .is_ok());
-            assert!(!accumulator2
-                .prove_membership(&[(e.clone(), witness2)])
-                .is_ok());
+            assert!(accumulator2
+                .prove_membership(&[(e.clone(), witness2)]).is_err());
         }
 
         for e in elemsminus1.iter() {
@@ -1559,15 +1557,12 @@ mod tests {
                 .unwrap();
             let witness5 = witness.clone().compute_subset_witness(&[], &[]).unwrap();
 
-            assert!(!accumulator2
-                .prove_membership(&[(e.clone(), witness3)])
-                .is_ok());
-            assert!(!accumulator2
-                .prove_membership(&[(e.clone(), witness4)])
-                .is_ok());
-            assert!(!accumulator2
-                .prove_membership(&[(e.clone(), witness5)])
-                .is_ok());
+            assert!(accumulator2
+                .prove_membership(&[(e.clone(), witness3)]).is_err());
+            assert!(accumulator2
+                .prove_membership(&[(e.clone(), witness4)]).is_err());
+            assert!(accumulator2
+                .prove_membership(&[(e.clone(), witness5)]).is_err());
         }
     }
 
@@ -1598,7 +1593,7 @@ mod tests {
             colour_script: None,
             colour_script_args: None,
             script: Script::new_coinbase(),
-            script_args: script_args.clone(),
+            script_args: script_args,
             nsequence: 0xffffffff,
             hash: None,
         };
@@ -1636,7 +1631,7 @@ mod tests {
                     (counter, out_buf)
                 })
                 .1;
-            let out_hashes: Vec<_> = outputs.iter().map(|o| o.hash().unwrap().clone()).collect();
+            let out_hashes: Vec<_> = outputs.iter().map(|o| *o.hash().unwrap()).collect();
             let (witness_deleted, pd) = accumulator
                 .clone()
                 .delete_with_proof(&next_to_delete)
@@ -1646,25 +1641,25 @@ mod tests {
             let half_len = out_hashes.len() >> 1;
             for (e, witness) in witnesses.iter() {
                 assert!(accumulator2
-                    .prove_membership(&[(e.clone(), witness.clone())])
+                    .prove_membership(&[(*e, witness.clone())])
                     .is_ok());
             }
 
-            let deleted_set: HashSet<_> = next_to_delete.iter().map(|(o, _)| o.clone()).collect();
-            let deleted: Vec<_> = next_to_delete.iter().map(|(o, _)| o.clone()).collect();
+            let deleted_set: HashSet<_> = next_to_delete.iter().map(|(o, _)| *o).collect();
+            let deleted: Vec<_> = next_to_delete.iter().map(|(o, _)| *o).collect();
             let mut untracked_deletions = deleted.clone();
             untracked_deletions.retain(|o| !outs_vec2.iter().map(|(o1, _)| o1).any(|o1| &o1 == &o));
-            outs_vec.retain(|(o, _)| !deleted_set.contains(&o));
+            outs_vec.retain(|(o, _)| !deleted_set.contains(o));
             outs_vec.extend(witnesses.clone());
-            outs_vec2.retain(|(o, _)| !deleted_set.contains(&o));
+            outs_vec2.retain(|(o, _)| !deleted_set.contains(o));
             outs_vec2.extend_from_slice(&witnesses[..half_len]);
-            let outs: Vec<_> = outs_vec.iter().map(|(o, _)| o.clone()).collect();
-            let outs2: Vec<_> = outs_vec2.iter().map(|(o, _)| o.clone()).collect();
+            let outs: Vec<_> = outs_vec.iter().map(|(o, _)| *o).collect();
+            let outs2: Vec<_> = outs_vec2.iter().map(|(o, _)| *o).collect();
             let untracked_additions: Vec<_> = witnesses[half_len..]
                 .iter()
-                .map(|(o, _)| o.clone())
+                .map(|(o, _)| *o)
                 .collect();
-            let outs3: Vec<_> = witnesses[half_len..].iter().cloned().collect();
+            let outs3: Vec<_> = witnesses[half_len..].to_vec();
             let mut witness_all3 = Witness(Accumulator::<Rsa2048, Hash256>::empty());
             let mut witness_all4 = Witness(Accumulator::<Rsa2048, Hash256>::empty());
 
@@ -1696,28 +1691,28 @@ mod tests {
             outs_vec = witness_all.clone().compute_individual_witnesses(&outs);
             for (o, witness) in outs_vec.iter() {
                 assert!(accumulator2
-                    .prove_membership(&[(o.clone(), witness.clone())])
+                    .prove_membership(&[(*o, witness.clone())])
                     .is_ok());
             }
 
             let witnesses2 = witness_all2.clone().compute_individual_witnesses(&outs2);
             for (o, witness) in witnesses2.iter() {
                 assert!(accumulator2
-                    .prove_membership(&[(o.clone(), witness.clone())])
+                    .prove_membership(&[(*o, witness.clone())])
                     .is_ok());
             }
 
             let witnesses3 = witness_all3.clone().compute_individual_witnesses(&outs);
             for (o, witness) in witnesses3.iter() {
                 assert!(accumulator2
-                    .prove_membership(&[(o.clone(), witness.clone())])
+                    .prove_membership(&[(*o, witness.clone())])
                     .is_ok());
             }
 
             let witnesses4 = witness_all4.clone().compute_individual_witnesses(&outs2);
             for (o, witness) in witnesses4.iter() {
                 assert!(accumulator2
-                    .prove_membership(&[(o.clone(), witness.clone())])
+                    .prove_membership(&[(*o, witness.clone())])
                     .is_ok());
             }
 

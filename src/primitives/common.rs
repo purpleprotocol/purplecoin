@@ -25,7 +25,7 @@ use zeroize::Zeroize;
 pub const ADDRESS_BYTES: usize = 20;
 pub const COLOURED_ADDRESS_BYTES: usize = 40;
 
-const HASH_KEY_PREFIX: &'static str = "purplecoin.hash.";
+const HASH_KEY_PREFIX: &str = "purplecoin.hash.";
 
 lazy_static! {
     static ref HASH_KEY160_OWNED: String = format!("{}", 20);
@@ -541,7 +541,7 @@ impl Decode for AggregatedSignature {
 impl fmt::Debug for AggregatedSignature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("AggregatedSignature")
-            .field(&hex::encode(&self.to_bytes()))
+            .field(&hex::encode(self.to_bytes()))
             .finish()
     }
 }
@@ -579,8 +579,8 @@ impl BloomFilterHash256 {
         let num_hashes_raw = &bytes[..4];
         let num_bits_raw = &bytes[4..12];
         let bitmap = &bytes[12..];
-        num_bits_buf.copy_from_slice(&num_bits_raw);
-        num_hashes_buf.copy_from_slice(&num_hashes_raw);
+        num_bits_buf.copy_from_slice(num_bits_raw);
+        num_hashes_buf.copy_from_slice(num_hashes_raw);
         let num_bits = u64::from_le_bytes(num_bits_buf);
         let num_hashes = u32::from_le_bytes(num_hashes_buf);
 
@@ -616,7 +616,7 @@ mod tests {
         );
 
         for i in 0..100_u8 {
-            let hash = Hash256::hash_from_slice(&[i], "");
+            let hash = Hash256::hash_from_slice([i], "");
             block_bloom.set(&hash);
         }
 

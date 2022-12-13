@@ -60,12 +60,12 @@ pub trait MMRBackend<T: Encode> {
     /// Append new leaves to the MMR
     fn append(&self, leaf: &T, hashes: Vec<Hash256>) -> Result<(), MMRBackendErr> {
         // Write leaf data
-        self.write_leaf(hashes[0].clone(), leaf)?;
+        self.write_leaf(hashes[0], leaf)?;
 
         // Write hashes
         let mut pos = self.unpruned_size();
         for h in hashes.iter() {
-            self.write_hash_at_pos(h.clone(), pos)?;
+            self.write_hash_at_pos(*h, pos)?;
             pos += 1;
         }
 

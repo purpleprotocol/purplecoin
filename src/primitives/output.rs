@@ -72,7 +72,7 @@ impl Output {
         }
 
         let bytes = self.to_bytes();
-        self.hash = Some(Hash256::hash_from_slice(&bytes, key))
+        self.hash = Some(Hash256::hash_from_slice(bytes, key))
     }
 }
 

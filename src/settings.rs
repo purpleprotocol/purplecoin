@@ -84,7 +84,7 @@ impl Settings {
                             "{}_{}_{}",
                             prefix,
                             field.to_owned(),
-                            nested.split("_").collect::<Vec<_>>().join("")
+                            nested.split('_').collect::<Vec<_>>().join("")
                         ),
                         *nested,
                     )
@@ -98,7 +98,7 @@ impl Settings {
             let k = k.to_lowercase();
 
             if let Some(k_postfix) = possible_keys.get(&k) {
-                let mut k: Vec<_> = k.split("_").filter(|x| x != &prefix).collect();
+                let mut k: Vec<_> = k.split('_').filter(|x| x != &prefix).collect();
                 *k.last_mut().unwrap() = k_postfix;
                 let k = k.join(".");
                 s = s.set_override(k, v.as_str())?;
