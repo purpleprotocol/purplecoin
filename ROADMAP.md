@@ -21,6 +21,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [x] Block serialization
   - [x] Transaction serialization
   - [x] Script arguments serialization
+  - [ ] Headers MMR implementation
   - [ ] Implement optimal atomic asset exchange script and use it as a default script
   * [ ] Implement VM opcodes
     - [ ] OP `0x00` Func - Start a function definition
@@ -48,10 +49,52 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x20` Hash160Var - Starts an inline `Hash160` declaration
     - [ ] OP `0x21` Hash256Var - Starts an inline `Hash256` declaration
     - [ ] OP `0x22` Hash512Var - Starts an inline `Hash512` declaration
+    - [ ] OP `0x23` Unsigned8Var - Starts an inline `Unsigned8` declaration
+    - [ ] OP `0x24` Unsigned16Var - Starts an inline `Unsigned16` declaration
+    - [ ] OP `0x25` Unsigned32Var - Starts an inline `Unsigned32` declaration
+    - [ ] OP `0x26` Unsigned64Var - Starts an inline `Unsigned64` declaration
+    - [ ] OP `0x27` Unsigned128Var - Starts an inline `Unsigned128` declaration
+    - [ ] OP `0x28` UnsignedBigVar - Starts an inline `UnsignedBig` declaration
+    - [ ] OP `0x29` Signed8Var - Starts an inline `Signed8` declaration
+    - [ ] OP `0x2a` Signed16Var - Starts an inline `Signed16` declaration
+    - [ ] OP `0x2b` Signed32Var - Starts an inline `Signed32` declaration
+    - [ ] OP `0x2c` Signed64Var - Starts an inline `Signed64` declaration
+    - [ ] OP `0x2d` Signed128Var - Starts an inline `Signed128` declaration
+    - [ ] OP `0x2e` SignedBigVar - Starts an inline `SignedBig` declaration
+    - [ ] OP `0x2f` Float32Var - Starts an inline `Float32` declaration
+    - [ ] OP `0x30` Float64Var - Starts an inline `Float64` declaration
+    - [ ] OP `0x31` Hash160ArrayVar - Starts an inline `Hash160Array` declaration
+    - [ ] OP `0x32` Hash256ArrayVar - Starts an inline `Hash256Array` declaration
+    - [ ] OP `0x33` Hash512ArrayVar - Starts an inline `Hash512Array` declaration
+    - [ ] OP `0x34` Unsigned8ArrayVar - Starts an inline `Unsigned8Array` declaration
+    - [ ] OP `0x35` Unsigned16ArrayVar - Starts an inline `Unsigned16Array` declaration
+    - [ ] OP `0x36` Unsigned32ArrayVar - Starts an inline `Unsigned32Array` declaration
+    - [ ] OP `0x37` Unsigned64ArrayVar - Starts an inline `Unsigned64` declaration
+    - [ ] OP `0x38` Unsigned128ArrayVar - Starts an inline `Unsigned128Array` declaration
+    - [ ] OP `0x39` UnsignedBigArrayVar - Starts an inline `UnsignedBigArray` declaration
+    - [ ] OP `0x3a` Signed8ArrayVar - Starts an inline `Signed8Array` declaration
+    - [ ] OP `0x3b` Signed16ArrayVar - Starts an inline `Signed16Array` declaration
+    - [ ] OP `0x3c` Signed32ArrayVar - Starts an inline `Signed32Array` declaration
+    - [ ] OP `0x3d` Signed64ArrayVar - Starts an inline `Signed64Array` declaration
+    - [ ] OP `0x3e` Signed128ArrayVar - Starts an inline `Signed128Array` declaration
+    - [ ] OP `0x3f` SignedBigArrayVar - Starts an inline `SignedBigArray` declaration
+    - [ ] OP `0x40` Float32ArrayVar - Starts an inline `Float32Array` declaration
+    - [ ] OP `0x41` Float64ArrayVar - Starts an inline `Float64Array` declaration
+    - [ ] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
+    - [ ] OP `0x4b` GetType - Pushes on top of the stack the type code of the value currently on top of the stack as a `Unsigned8`
+    - [ ] OP `0x4c` IsNaN - Pushes `1` on top of the stack if the top item on the stack is NaN
+    - [ ] OP `0x4d` IsInf - Pushes `1` on top of the stack if the top item on the stack is Inf
+    - [ ] OP `0x4e` IsMinusInf - Pushes `1` on top of the stack if the top item on the stack is MinusInf
+    - [ ] OP `0x4f` ClearStack - Clears the stack
+    - [ ] OP `0x50` Add - Pops the two topmost items on the stack, performs addition and pushes the result on the stack
+    - [ ] OP `0x51` Sub - Pops the two topmost items on the stack, performs subtraction and pushes the result on the stack
+    - [ ] OP `0x52` Mult - Pops the two topmost items on the stack, performs multiplication and pushes the result on the stack
+    - [ ] OP `0x53` Div - Pops the two topmost items on the stack, performs division and pushes the result on the stack
     - [ ] TODO add all opcodes
 * [ ] Network layer
   - [ ] Sector networking
     - [x] Seed nodes DNS resolution
+    - [ ] Header synchronization
     - [ ] Peer discovery via Kademlia DHT
   	- [ ] Implement base header propagation
     - [ ] Implement graphene propagation
