@@ -54,14 +54,20 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: actions-rs/toolchain@v1
+      uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
-          default: true
+          components: rustfmt, clippy
 
       - name: Fmt
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: +nightly --all -- --check
+          args: --all -- --check
+
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
