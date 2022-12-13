@@ -1,4 +1,6 @@
 # ℙurplecoin
+[![Discord](https://img.shields.io/discord/435827644915777536.svg)](https://discord.gg/UCYWSsd) [![_pdf whitepaper](https://img.shields.io/badge/_pdf-whitepaper-blue.svg)](https://github.com/purpleprotocol/purplecoin_whitepaper/raw/main/whitepaper.pdf)
+
 Official implementation of Purplecoin, the first stateless cryptocurrency. Requires Rust Nightly `>=v1.63.0`.
 
 **WARNING** The source code is still under heavy development. Use at your own risk.
