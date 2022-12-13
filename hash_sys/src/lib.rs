@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use core::ffi::{c_void, c_char};
+use core::ffi::{c_char, c_void};
 
 extern "C" {
     pub fn fugue_hash(input: *const c_char, output: *mut c_char, len: u32) -> *mut c_void;

@@ -2,30 +2,30 @@
 #[macro_use]
 extern crate criterion;
 
-use criterion::Criterion;
 use accumulator::group::{ElemFrom, Group, Rsa2048};
+use criterion::Criterion;
 use rug::Integer;
 use std::str::FromStr;
 
 fn bench_op<G: Group + ElemFrom<Integer>>() {
-  G::op(
-    &G::elem(
-      Integer::from_str(
-        "111066521363124532171649626395987136074128970245601106158251038731392583290069",
-      )
-      .unwrap(),
-    ),
-    &G::elem(
-      Integer::from_str(
-        "106610920435831899020588753249099054915951032185883121197718271189872278955399",
-      )
-      .unwrap(),
-    ),
-  );
+    G::op(
+        &G::elem(
+            Integer::from_str(
+                "111066521363124532171649626395987136074128970245601106158251038731392583290069",
+            )
+            .unwrap(),
+        ),
+        &G::elem(
+            Integer::from_str(
+                "106610920435831899020588753249099054915951032185883121197718271189872278955399",
+            )
+            .unwrap(),
+        ),
+    );
 }
 
 fn bench_op_large<G: Group + ElemFrom<Integer>>() {
-  G::op(
+    G::op(
     &G::elem(Integer::from_str(
       "21720738995539542858936915878186921869751915989840152165899303861582487240810878492659751749\
       672737203717627738047648700009977053044057502917091973287111671693426065546612150833232954361\
@@ -50,7 +50,7 @@ fn bench_op_large<G: Group + ElemFrom<Integer>>() {
 }
 
 fn bench_exp<G: Group + ElemFrom<u8>>() {
-  G::exp(
+    G::exp(
     &G::elem(2),
     &Integer::from_str(
       "65315136833896061809557254466951240071191890612435768575001173256020447546800029221544380288\
@@ -63,14 +63,14 @@ fn bench_exp<G: Group + ElemFrom<u8>>() {
 }
 
 fn bench_inv<G: Group + ElemFrom<u8>>() {
-  G::inv(&G::elem(2));
+    G::inv(&G::elem(2));
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-  c.bench_function("group_rsa_op", |b| b.iter(bench_op::<Rsa2048>));
-  c.bench_function("group_rsa_op_large", |b| b.iter(bench_op_large::<Rsa2048>));
-  c.bench_function("group_rsa_exp", |b| b.iter(bench_exp::<Rsa2048>));
-  c.bench_function("group_rsa_inv", |b| b.iter(bench_inv::<Rsa2048>));
+    c.bench_function("group_rsa_op", |b| b.iter(bench_op::<Rsa2048>));
+    c.bench_function("group_rsa_op_large", |b| b.iter(bench_op_large::<Rsa2048>));
+    c.bench_function("group_rsa_exp", |b| b.iter(bench_exp::<Rsa2048>));
+    c.bench_function("group_rsa_inv", |b| b.iter(bench_inv::<Rsa2048>));
 }
 
 criterion_group!(benches, criterion_benchmark);

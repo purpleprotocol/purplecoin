@@ -1,12 +1,12 @@
 //! RSA (2048) group using GMP integers in the `rug` crate.
 use super::{ElemFrom, Group, UnknownOrderGroup};
-use crate::util::{int, TypeRep};
 use crate::group::{Codec, ToInteger};
-use rug::Integer;
-use rug::integer::Order;
-use std::str::FromStr;
 use crate::hash::{INTERNAL_LRU, INTERNAL_LRU_SHARDS};
 use crate::uint::u256;
+use crate::util::{int, TypeRep};
+use rug::integer::Order;
+use rug::Integer;
+use std::str::FromStr;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -27,8 +27,8 @@ const RSA2048_MODULUS_DECIMAL: &str =
   378636564391212010397122822120720357";
 
 lazy_static! {
-  pub static ref RSA2048_MODULUS: Integer = Integer::from_str(RSA2048_MODULUS_DECIMAL).unwrap();
-  pub static ref HALF_MODULUS: Integer = RSA2048_MODULUS.clone() / 2;
+    pub static ref RSA2048_MODULUS: Integer = Integer::from_str(RSA2048_MODULUS_DECIMAL).unwrap();
+    pub static ref HALF_MODULUS: Integer = RSA2048_MODULUS.clone() / 2;
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -37,133 +37,137 @@ lazy_static! {
 pub struct Rsa2048Elem(Integer);
 
 impl Codec for Rsa2048Elem {
-  fn to_bytes(&self) -> Vec<u8> {
-    self.0.to_digits(Order::LsfLe)
-  }
+    fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_digits(Order::LsfLe)
+    }
 
-  fn from_bytes(bytes: &[u8]) -> Result<Self, &'static str> {
-    Ok(Self(Integer::from_digits(bytes, Order::LsfLe)))
-  }
+    fn from_bytes(bytes: &[u8]) -> Result<Self, &'static str> {
+        Ok(Self(Integer::from_digits(bytes, Order::LsfLe)))
+    }
 }
 
 impl TypeRep for Rsa2048 {
-  type Rep = Integer;
-  fn rep() -> &'static Self::Rep {
-    &RSA2048_MODULUS
-  }
+    type Rep = Integer;
+    fn rep() -> &'static Self::Rep {
+        &RSA2048_MODULUS
+    }
 }
 
 impl Group for Rsa2048 {
-  type Elem = Rsa2048Elem;
-  fn op_(modulus: &Integer, a: &Rsa2048Elem, b: &Rsa2048Elem) -> Rsa2048Elem {
-    Self::elem(int(&a.0 * &b.0) % modulus)
-  }
-
-  fn id_(_: &Integer) -> Rsa2048Elem {
-    Self::elem(1)
-  }
-
-  fn inv_(modulus: &Integer, x: &Rsa2048Elem) -> Rsa2048Elem {
-    Self::elem(x.0.invert_ref(modulus).unwrap())
-  }
-
-  fn exp_(modulus: &Integer, x: &Rsa2048Elem, n: &Integer) -> Rsa2048Elem {
-    // Hash to cache key
-    let hash = crate::hash::hash(&(modulus, x, n));
-    let mut bytes = [0; 8];
-    bytes.copy_from_slice(&hash[..8]);
-    let shard = jump_consistent_hash::hash(u64::from_le_bytes(bytes), INTERNAL_LRU_SHARDS) as usize;
-
-    // Check LRU
-    {
-      let mut lru = (*INTERNAL_LRU)[shard].lock();
-
-      if let Some(cached) = lru.get(&hash) {
-        return Rsa2048Elem(cached.clone());
-      }
+    type Elem = Rsa2048Elem;
+    fn op_(modulus: &Integer, a: &Rsa2048Elem, b: &Rsa2048Elem) -> Rsa2048Elem {
+        Self::elem(int(&a.0 * &b.0) % modulus)
     }
 
-    // A side-channel resistant impl is 40% slower; we'll consider it in the future if we need to.
-    let elem = Self::elem(x.0.pow_mod_ref(n, modulus).unwrap());
-
-    // Write result to cache
-    {
-      let mut lru = (*INTERNAL_LRU)[shard].lock();
-      lru.put(hash, elem.0.clone());
+    fn id_(_: &Integer) -> Rsa2048Elem {
+        Self::elem(1)
     }
 
-    elem
-  }
+    fn inv_(modulus: &Integer, x: &Rsa2048Elem) -> Rsa2048Elem {
+        Self::elem(x.0.invert_ref(modulus).unwrap())
+    }
+
+    fn exp_(modulus: &Integer, x: &Rsa2048Elem, n: &Integer) -> Rsa2048Elem {
+        // Hash to cache key
+        let hash = crate::hash::hash(&(modulus, x, n));
+        let mut bytes = [0; 8];
+        bytes.copy_from_slice(&hash[..8]);
+        let shard =
+            jump_consistent_hash::hash(u64::from_le_bytes(bytes), INTERNAL_LRU_SHARDS) as usize;
+
+        // Check LRU
+        {
+            let mut lru = (*INTERNAL_LRU)[shard].lock();
+
+            if let Some(cached) = lru.get(&hash) {
+                return Rsa2048Elem(cached.clone());
+            }
+        }
+
+        // A side-channel resistant impl is 40% slower; we'll consider it in the future if we need to.
+        let elem = Self::elem(x.0.pow_mod_ref(n, modulus).unwrap());
+
+        // Write result to cache
+        {
+            let mut lru = (*INTERNAL_LRU)[shard].lock();
+            lru.put(hash, elem.0.clone());
+        }
+
+        elem
+    }
 }
 
 impl ToInteger for Rsa2048Elem {
-  fn to_integer(&self) -> Integer {
-    self.0.clone()
-  }
+    fn to_integer(&self) -> Integer {
+        self.0.clone()
+    }
 }
 
 impl From<Integer> for Rsa2048Elem {
-  fn from(other: Integer) -> Self {
-    Rsa2048Elem(other)
-  }
+    fn from(other: Integer) -> Self {
+        Rsa2048Elem(other)
+    }
 }
 
 impl<T> ElemFrom<T> for Rsa2048
 where
-  Integer: From<T>,
+    Integer: From<T>,
 {
-  fn elem(t: T) -> Rsa2048Elem {
-    let modulus = Self::rep();
-    let val = int(t) % modulus;
-    if val > *HALF_MODULUS {
-      Rsa2048Elem(<(Integer, Integer)>::from((-val).div_rem_euc_ref(&modulus)).1)
-    } else {
-      Rsa2048Elem(val)
+    fn elem(t: T) -> Rsa2048Elem {
+        let modulus = Self::rep();
+        let val = int(t) % modulus;
+        if val > *HALF_MODULUS {
+            Rsa2048Elem(<(Integer, Integer)>::from((-val).div_rem_euc_ref(&modulus)).1)
+        } else {
+            Rsa2048Elem(val)
+        }
     }
-  }
 }
 
 impl UnknownOrderGroup for Rsa2048 {
-  fn unknown_order_elem_(_: &Integer) -> Rsa2048Elem {
-    Self::elem(2)
-  }
+    fn unknown_order_elem_(_: &Integer) -> Rsa2048Elem {
+        Self::elem(2)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use rand::prelude::*;
+    use super::*;
+    use rand::prelude::*;
 
-  #[test]
-  fn test_init() {
-    let _x = &Rsa2048::rep();
-  }
-
-  #[test]
-  fn test_op() {
-    let a = Rsa2048::op(&Rsa2048::elem(2), &Rsa2048::elem(3));
-    assert!(a == Rsa2048::elem(6));
-    let b = Rsa2048::op(&Rsa2048::elem(-2), &Rsa2048::elem(-3));
-    assert!(b == Rsa2048::elem(6));
-  }
-
-  /// Tests that `-x` and `x` are treated as the same element.
-  #[test]
-  fn test_cosets() {
-    for _ in 0..100000 {
-      let n: u128 = rand::thread_rng().gen();
-      assert!(Rsa2048::elem(n) == Rsa2048::elem(RSA2048_MODULUS.clone() - n));
-      assert_eq!(Rsa2048::elem(n), Rsa2048Elem::from_bytes(&Rsa2048::elem(n).to_bytes()).unwrap());
+    #[test]
+    fn test_init() {
+        let _x = &Rsa2048::rep();
     }
-    assert!(Rsa2048::elem(0) == Rsa2048::elem(RSA2048_MODULUS.clone()));
-  }
 
-  #[test]
-  fn test_exp() {
-    let a = Rsa2048::exp(&Rsa2048::elem(2), &int(3));
-    assert!(a == Rsa2048::elem(8));
-    let b = Rsa2048::exp(&Rsa2048::elem(2), &int(4096));
-    assert!(
+    #[test]
+    fn test_op() {
+        let a = Rsa2048::op(&Rsa2048::elem(2), &Rsa2048::elem(3));
+        assert!(a == Rsa2048::elem(6));
+        let b = Rsa2048::op(&Rsa2048::elem(-2), &Rsa2048::elem(-3));
+        assert!(b == Rsa2048::elem(6));
+    }
+
+    /// Tests that `-x` and `x` are treated as the same element.
+    #[test]
+    fn test_cosets() {
+        for _ in 0..100000 {
+            let n: u128 = rand::thread_rng().gen();
+            assert!(Rsa2048::elem(n) == Rsa2048::elem(RSA2048_MODULUS.clone() - n));
+            assert_eq!(
+                Rsa2048::elem(n),
+                Rsa2048Elem::from_bytes(&Rsa2048::elem(n).to_bytes()).unwrap()
+            );
+        }
+        assert!(Rsa2048::elem(0) == Rsa2048::elem(RSA2048_MODULUS.clone()));
+    }
+
+    #[test]
+    fn test_exp() {
+        let a = Rsa2048::exp(&Rsa2048::elem(2), &int(3));
+        assert!(a == Rsa2048::elem(8));
+        let b = Rsa2048::exp(&Rsa2048::elem(2), &int(4096));
+        assert!(
       b == Rsa2048::elem(
         Integer::parse(
           "2172073899553954285893691587818692186975191598984015216589930386158248724081087849265975\
@@ -177,16 +181,16 @@ mod tests {
         .unwrap()
       )
     );
-    let c = Rsa2048::exp(&Rsa2048::elem(2), &RSA2048_MODULUS);
-    dbg!(c);
-    let d = Rsa2048::exp(&Rsa2048::elem(2), &(RSA2048_MODULUS.clone() * int(2)));
-    dbg!(d);
-  }
+        let c = Rsa2048::exp(&Rsa2048::elem(2), &RSA2048_MODULUS);
+        dbg!(c);
+        let d = Rsa2048::exp(&Rsa2048::elem(2), &(RSA2048_MODULUS.clone() * int(2)));
+        dbg!(d);
+    }
 
-  #[test]
-  fn test_inv() {
-    let x = Rsa2048::elem(2);
-    let inv = Rsa2048::inv(&x);
-    assert!(Rsa2048::op(&x, &inv) == Rsa2048::id());
-  }
+    #[test]
+    fn test_inv() {
+        let x = Rsa2048::elem(2);
+        let inv = Rsa2048::inv(&x);
+        assert!(Rsa2048::op(&x, &inv) == Rsa2048::id());
+    }
 }

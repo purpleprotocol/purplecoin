@@ -245,10 +245,7 @@ impl PowBlockHeader {
         let timestamp = Utc::now().timestamp();
         let runnerup_hashes = if let Some(runnerups) = runnerups {
             let mut out = [Hash256::zero(); 3];
-            let b: Vec<Hash256> = runnerups
-                .iter()
-                .map(|r| *r.hash().unwrap())
-                .collect();
+            let b: Vec<Hash256> = runnerups.iter().map(|r| *r.hash().unwrap()).collect();
             out.copy_from_slice(b.as_slice());
             Some(out)
         } else {
@@ -1524,7 +1521,8 @@ mod tests {
         assert!(!accumulator2.verify_membership_batch(&elems, &proof_deleted));
         assert!(!accumulator2.verify_membership_batch(&elemsplus1, &proof_added));
         assert!(accumulator2
-            .prove_membership(&[("test6".to_owned(), proof_added.witness.clone())]).is_err());
+            .prove_membership(&[("test6".to_owned(), proof_added.witness.clone())])
+            .is_err());
         assert!(accumulator1.verify_membership_batch(&[], &proof_deleted));
         assert_eq!(proof_added.witness, proof_deleted.witness);
 
@@ -1542,7 +1540,8 @@ mod tests {
                 .prove_membership(&[(e.clone(), witness)])
                 .is_ok());
             assert!(accumulator2
-                .prove_membership(&[(e.clone(), witness2)]).is_err());
+                .prove_membership(&[(e.clone(), witness2)])
+                .is_err());
         }
 
         for e in elemsminus1.iter() {
@@ -1558,11 +1557,14 @@ mod tests {
             let witness5 = witness.clone().compute_subset_witness(&[], &[]).unwrap();
 
             assert!(accumulator2
-                .prove_membership(&[(e.clone(), witness3)]).is_err());
+                .prove_membership(&[(e.clone(), witness3)])
+                .is_err());
             assert!(accumulator2
-                .prove_membership(&[(e.clone(), witness4)]).is_err());
+                .prove_membership(&[(e.clone(), witness4)])
+                .is_err());
             assert!(accumulator2
-                .prove_membership(&[(e.clone(), witness5)]).is_err());
+                .prove_membership(&[(e.clone(), witness5)])
+                .is_err());
         }
     }
 
@@ -1593,7 +1595,7 @@ mod tests {
             colour_script: None,
             colour_script_args: None,
             script: Script::new_coinbase(),
-            script_args: script_args,
+            script_args,
             nsequence: 0xffffffff,
             hash: None,
         };
@@ -1655,10 +1657,8 @@ mod tests {
             outs_vec2.extend_from_slice(&witnesses[..half_len]);
             let outs: Vec<_> = outs_vec.iter().map(|(o, _)| *o).collect();
             let outs2: Vec<_> = outs_vec2.iter().map(|(o, _)| *o).collect();
-            let untracked_additions: Vec<_> = witnesses[half_len..]
-                .iter()
-                .map(|(o, _)| *o)
-                .collect();
+            let untracked_additions: Vec<_> =
+                witnesses[half_len..].iter().map(|(o, _)| *o).collect();
             let outs3: Vec<_> = witnesses[half_len..].to_vec();
             let mut witness_all3 = Witness(Accumulator::<Rsa2048, Hash256>::empty());
             let mut witness_all4 = Witness(Accumulator::<Rsa2048, Hash256>::empty());

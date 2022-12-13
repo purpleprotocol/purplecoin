@@ -1,8 +1,8 @@
 use num_cpus;
 use rand::prelude::*;
 use rust_randomx::{Context, Difficulty, Hasher};
-use triomphe::Arc;
 use std::thread;
+use triomphe::Arc;
 
 fn main() {
     let context = Arc::new(Context::new(b"RandomX key", true));

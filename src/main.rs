@@ -6,9 +6,7 @@
 
 #![feature(stmt_expr_attributes)]
 
-
-
-use futures::{prelude::*};
+use futures::prelude::*;
 use iced::window::icon::Icon;
 use iced::{Application, Settings};
 use log::*;
@@ -16,7 +14,6 @@ use mimalloc::MiMalloc;
 use purplecoin::chain::backend::disk::DiskBackend;
 use purplecoin::chain::backend::ShardBackend;
 use purplecoin::chain::*;
-
 
 use purplecoin::node::*;
 
@@ -27,28 +24,18 @@ use purplecoin::settings::SETTINGS;
 use rand::prelude::*;
 use rayon::prelude::*;
 
-
-
-
-
 use std::env;
-
-
-
 
 use std::sync::atomic::AtomicBool;
 
 use std::thread;
-use std::time::{Duration};
-use tarpc::{
-    server::{self, incoming::Incoming, Channel},
-};
+use std::time::Duration;
+use tarpc::server::{self, incoming::Incoming, Channel};
 use tokio::runtime::Builder;
 use tokio::time::sleep;
 use tracing_subscriber::prelude::*;
 
 use warp::Filter;
-
 
 #[cfg(feature = "sha256sum")]
 use sha2::{Digest, Sha256};

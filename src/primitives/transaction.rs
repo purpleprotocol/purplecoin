@@ -103,7 +103,8 @@ impl Transaction {
             &signatures,
             &public_keys,
             false,
-        ).is_err()
+        )
+        .is_err()
         {
             return Err(TxVerifyErr::InvalidSignature);
         }
