@@ -93,7 +93,7 @@ jobs:
       # gets us the nicer syntax for linking to functions, and is in-line with
       # what docs.rs uses.
 
-      - name: 'Check documentation links
+      - name: 'Check documentation links'
         uses: actions-rs/cargo@v1
         with:
           command: rustdoc
