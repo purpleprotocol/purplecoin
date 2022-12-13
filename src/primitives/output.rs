@@ -25,21 +25,14 @@ pub struct Output {
 
 impl PartialEq for Output {
     fn eq(&self, other: &Self) -> bool {
-        self.amount == other.amount 
-        &&
-        self.script_hash == other.script_hash
-        && 
-        self.inputs_hash == other.inputs_hash
-        &&
-        self.idx == other.idx
-        &&
-        self.address == other.address
-        && 
-        self.coloured_address == other.coloured_address
-        &&
-        self.coinbase_height == other.coinbase_height
-        &&
-        self.script_outs == other.script_outs
+        self.amount == other.amount
+            && self.script_hash == other.script_hash
+            && self.inputs_hash == other.inputs_hash
+            && self.idx == other.idx
+            && self.address == other.address
+            && self.coloured_address == other.coloured_address
+            && self.coinbase_height == other.coinbase_height
+            && self.script_outs == other.script_outs
     }
 }
 
