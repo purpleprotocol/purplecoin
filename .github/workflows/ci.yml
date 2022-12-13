@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest] #, windows-latest]
         toolchain: ["nightly"]
 
     runs-on: ${{ matrix.os }}
@@ -46,7 +46,7 @@ jobs:
           command: test
 
   lint:
-    name: Rustfmt / Clippy
+    name: Rustfmt
     runs-on: ubuntu-latest
 
     steps:

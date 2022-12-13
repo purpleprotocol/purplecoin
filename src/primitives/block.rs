@@ -29,14 +29,14 @@ use triomphe::Arc;
 
 type OutWitnessVec = Vec<(Output, Witness<Rsa2048, Output>)>;
 
-#[cfg(windows)]
+#[cfg(host_family = "windows")]
 macro_rules! psep {
     () => {
         r"\"
     };
 }
 
-#[cfg(not(windows))]
+#[cfg(not(host_family = "windows"))]
 macro_rules! psep {
     () => {
         r"/"
