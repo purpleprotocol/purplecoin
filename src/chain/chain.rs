@@ -6,9 +6,9 @@
 
 use crate::chain::*;
 use crate::node::*;
+use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
-use parking_lot::RwLock;
 
 pub struct Chain<'a, B: PowChainBackend<'a> + ShardBackend<'a>> {
     pub backend: B,

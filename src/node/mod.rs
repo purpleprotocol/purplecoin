@@ -8,8 +8,6 @@ use crate::chain::backend::disk::DiskBackend;
 use crate::chain::*;
 use crate::node::behaviour::*;
 use crate::node::peer_info::PeerInfo;
-pub use mempool::*;
-pub use rpc::*;
 use futures::*;
 use libp2p::{
     core::upgrade,
@@ -20,7 +18,9 @@ use libp2p::{
     swarm::{SwarmBuilder, SwarmEvent},
     tcp, Multiaddr, NetworkBehaviour, PeerId, Swarm, Transport,
 };
+pub use mempool::*;
 use parking_lot::RwLock;
+pub use rpc::*;
 use std::collections::HashMap;
 use triomphe::Arc;
 

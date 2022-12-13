@@ -584,7 +584,9 @@ impl BloomFilterHash256 {
         let num_bits = u64::from_le_bytes(num_bits_buf);
         let num_hashes = u32::from_le_bytes(num_hashes_buf);
 
-        Ok(Self { inner: Bloom::from_existing(bitmap, num_bits, num_hashes, sip_keys) })
+        Ok(Self {
+            inner: Bloom::from_existing(bitmap, num_bits, num_hashes, sip_keys),
+        })
     }
 }
 
@@ -621,6 +623,9 @@ mod tests {
         let keys = block_bloom.sip_keys();
         let block_bloom = BloomFilterHash256 { inner: block_bloom };
 
-        assert_eq!(block_bloom, BloomFilterHash256::from_bytes(&block_bloom.to_bytes(), keys).unwrap());
+        assert_eq!(
+            block_bloom,
+            BloomFilterHash256::from_bytes(&block_bloom.to_bytes(), keys).unwrap()
+        );
     }
 }

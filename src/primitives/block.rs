@@ -8,11 +8,12 @@ use crate::chain::ChainConfig;
 use crate::consensus::*;
 use crate::miner::{HashAlgorithm, PowAlgorithm};
 use crate::primitives::*;
+use crate::settings::SETTINGS;
 use crate::vm::internal::VmTerm;
 use crate::vm::Script;
-use crate::settings::SETTINGS;
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::{Accumulator, ProofOfCorrectness, Witness};
+use arrayvec::ArrayVec;
 use bincode::{Decode, Encode};
 use bloomfilter::Bloom;
 use chrono::prelude::*;
@@ -23,9 +24,8 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::cmp;
+use std::io::{self, prelude::*, BufReader, Cursor};
 use triomphe::Arc;
-use arrayvec::ArrayVec;
-use std::io::{self, prelude::*, Cursor, BufReader};
 
 type OutWitnessVec = Vec<(Output, Witness<Rsa2048, Output>)>;
 
@@ -68,7 +68,11 @@ macro_rules! addresses_file_testnet {
 }
 
 /// Sip keys are constructed by hashing the prev hash with keyed blake3
-macro_rules! bloom_hash_key { () => { "purplecoin.bloom.{}" } } 
+macro_rules! bloom_hash_key {
+    () => {
+        "purplecoin.bloom.{}"
+    };
+}
 
 pub fn pub_addresses_file_mainnet() -> &'static str {
     addresses_file_mainnet!()
@@ -211,7 +215,7 @@ pub struct PowBlockHeader {
     ///
     /// If this block has been mined after the second round timeout
     /// this is equal to a zero hash.
-    pub runnerup_hashes: Option<[Hash256; SECTORS-1]>,
+    pub runnerup_hashes: Option<[Hash256; SECTORS - 1]>,
 
     /// Optional:
     /// If `block_height % 4 == 1 | 3`, this is the prev hash of the runnerup blocks.
@@ -818,13 +822,9 @@ impl BlockHeader {
 
     fn read_genesis_inputs(chain_id: u8, config: &ChainConfig) -> Vec<Input> {
         let raw = match SETTINGS.node.network_name.as_str() {
-            "mainnet" => {
-                ADDRESSES_RAW_MAINNET
-            }
+            "mainnet" => ADDRESSES_RAW_MAINNET,
 
-            "testnet" => {
-                ADDRESSES_RAW_TESTNET
-            }
+            "testnet" => ADDRESSES_RAW_TESTNET,
 
             other => {
                 panic!("Invalid network: {}", other)
@@ -840,10 +840,10 @@ impl BlockHeader {
                 let split: Vec<_> = line
                     .unwrap()
                     .split("=")
-                    .map(|line| { 
+                    .map(|line| {
                         let mut line = line.to_owned();
-                        line.retain(|c| !c.is_whitespace()); 
-                        line 
+                        line.retain(|c| !c.is_whitespace());
+                        line
                     })
                     .collect();
 
@@ -915,7 +915,7 @@ impl BlockHeader {
                 acc[idx].push(out);
                 acc
             });
-        
+
         // Compute accumulators and proofs
         let accumulators_and_proofs: Vec<_> = indexed_outs
             .iter()
@@ -934,7 +934,7 @@ impl BlockHeader {
             accumulators.push(acc.clone());
             proofs.push(poc.clone());
         }
-        
+
         let mut tx = Transaction {
             version: 1,
             chain_id,
@@ -956,9 +956,7 @@ impl BlockHeader {
             Hash256::hash_from_slice(&prev_hash.0, &format!(bloom_hash_key!(), chain_id));
         let bloom_seed = &bloom_seed_hash.0;
 
-        let mut bloom_hashes = vec![
-            tx.hash().unwrap().clone(),
-        ];
+        let mut bloom_hashes = vec![tx.hash().unwrap().clone()];
         bloom_hashes.extend(out_stack.iter().map(|o| o.hash().unwrap().clone()));
         bloom_hashes.extend(
             out_stack
@@ -1412,23 +1410,29 @@ impl Decode for BlockHeader {
             prev_hash,
             tx_root: bincode::Decode::decode(decoder)?,
             accumulators: {
-                let mut buf: ArrayVec<Accumulator<Rsa2048, Output>, ACCUMULATOR_MULTIPLIER> = ArrayVec::new();
+                let mut buf: ArrayVec<Accumulator<Rsa2048, Output>, ACCUMULATOR_MULTIPLIER> =
+                    ArrayVec::new();
 
                 for _ in 0..ACCUMULATOR_MULTIPLIER {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
-                    buf.push(Accumulator::from_bytes(&v)
-                        .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?);
+                    buf.push(
+                        Accumulator::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    );
                 }
 
                 buf
             },
             poc: {
-                let mut buf: ArrayVec<ProofOfCorrectness<Rsa2048, Output>, ACCUMULATOR_MULTIPLIER> = ArrayVec::new();
+                let mut buf: ArrayVec<ProofOfCorrectness<Rsa2048, Output>, ACCUMULATOR_MULTIPLIER> =
+                    ArrayVec::new();
 
                 for _ in 0..ACCUMULATOR_MULTIPLIER {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
-                    buf.push(ProofOfCorrectness::from_bytes(&v)
-                        .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?);
+                    buf.push(
+                        ProofOfCorrectness::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    );
                 }
 
                 buf
@@ -1457,7 +1461,7 @@ fn slice_to_u64(bytes: &[u8]) -> u64 {
     let mut buf = [0; 8];
     buf.copy_from_slice(&bytes);
     u64::from_le_bytes(buf)
-} 
+}
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum BlockVerifyErr {
@@ -1656,7 +1660,10 @@ mod tests {
             outs_vec2.extend_from_slice(&witnesses[..half_len]);
             let outs: Vec<_> = outs_vec.iter().map(|(o, _)| o.clone()).collect();
             let outs2: Vec<_> = outs_vec2.iter().map(|(o, _)| o.clone()).collect();
-            let untracked_additions: Vec<_> = witnesses[half_len..].iter().map(|(o, _)| o.clone()).collect();
+            let untracked_additions: Vec<_> = witnesses[half_len..]
+                .iter()
+                .map(|(o, _)| o.clone())
+                .collect();
             let outs3: Vec<_> = witnesses[half_len..].iter().cloned().collect();
             let mut witness_all3 = Witness(Accumulator::<Rsa2048, Hash256>::empty());
             let mut witness_all4 = Witness(Accumulator::<Rsa2048, Hash256>::empty());
@@ -1668,7 +1675,12 @@ mod tests {
 
             witness_all2 = accumulator2
                 .clone()
-                .update_membership_witness(witness_all2.clone(), &outs2, &untracked_additions, &untracked_deletions)
+                .update_membership_witness(
+                    witness_all2.clone(),
+                    &outs2,
+                    &untracked_additions,
+                    &untracked_deletions,
+                )
                 .unwrap();
 
             witness_all3 = accumulator2
