@@ -58,43 +58,10 @@ jobs:
         with:
           profile: minimal
           toolchain: nightly
-          components: rustfmt, clippy
+          default: true
 
       - name: Fmt
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --all -- --check
-
-      - name: Clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --workspace -- -D warnings
-
-  # Detect cases where documentation links would be dead
-  doc:
-    name: Check documentation
-    runs-on: ubuntu-latest
-    steps:
-
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-
-      # Note: We need to use nightly rust, and `cargo rustdoc` (yes, not `cargo
-      # doc`) to actually get it to respect -D warnings... Using nightly also
-      # gets us the nicer syntax for linking to functions, and is in-line with
-      # what docs.rs uses.
-
-      - name: 'Check documentation links'
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustdoc
-          args: -- -D warnings
+          args: +nightly --all -- --check
