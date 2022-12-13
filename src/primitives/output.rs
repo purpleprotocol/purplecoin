@@ -10,7 +10,7 @@ use crate::vm::internal::VmTerm;
 use bincode::{Decode, Encode};
 use std::hash::{Hash, Hasher};
 
-#[derive(PartialEq, Debug, Eq, Clone)]
+#[derive(Debug, Eq, Clone)]
 pub struct Output {
     pub amount: Money,
     pub script_hash: Hash160,
@@ -21,6 +21,26 @@ pub struct Output {
     pub coinbase_height: Option<u64>,
     pub script_outs: Vec<VmTerm>,
     pub hash: Option<Hash256>,
+}
+
+impl PartialEq for Output {
+    fn eq(&self, other: &Self) -> bool {
+        self.amount == other.amount 
+        &&
+        self.script_hash == other.script_hash
+        && 
+        self.inputs_hash == other.inputs_hash
+        &&
+        self.idx == other.idx
+        &&
+        self.address == other.address
+        && 
+        self.coloured_address == other.coloured_address
+        &&
+        self.coinbase_height == other.coinbase_height
+        &&
+        self.script_outs == other.script_outs
+    }
 }
 
 impl Hash for Output {
