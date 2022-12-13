@@ -61,13 +61,13 @@ impl Settings {
 
         let prefix = "purplecoin";
         let env_source: Vec<_> = std::env::vars().collect();
-        let mut s = Config::builder().add_source(File::with_name(
-            &config_path.into_os_string().into_string().unwrap(),
-        ).required(false));
+        let mut s = Config::builder().add_source(
+            File::with_name(&config_path.into_os_string().into_string().unwrap()).required(false),
+        );
 
         // Set defaults
         let defaults: HashMap<String, HashMap<String, DynamicConfVal>> =
-        serde_yaml::from_value(serde_yaml::to_value(&default_settings).unwrap()).unwrap();
+            serde_yaml::from_value(serde_yaml::to_value(&default_settings).unwrap()).unwrap();
         for (k1, inner) in &defaults {
             for (k2, v) in inner {
                 match v {
