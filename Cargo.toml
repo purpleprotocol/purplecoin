@@ -106,12 +106,14 @@ disk = []
 memory = []
 
 [profile.test]
+opt-level = 0
 overflow-checks = false
 strip = "debuginfo"
 panic = "abort"
 rustflags = ["-C", "target_cpu=native"]
 
 [profile.dev]
+opt-level = 0
 overflow-checks = false
 strip = "debuginfo"
 panic = "abort"
