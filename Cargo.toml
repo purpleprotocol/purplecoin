@@ -1,0 +1,148 @@
+cargo-features = ["profile-rustflags"]
+
+[package]
+name = "purplecoin"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rust-randomx = { path = "./vendor/rust-randomx" }
+iced = { version = "0.4.2", features = ["tokio"] }
+iced_lazy = "0.1.1"
+iced_native = "0.5.1"
+iced_aw = "0.2"
+iced_futures = { version = "0.4.1", features = ["tokio"] }
+image = "0.24.5"
+rocksdb = "0.19.0"
+blake2 = "0.10.4"
+blake3 = "1.3.1"
+sha2 = "0.10.2"
+sha3 = "0.10.1"
+jh-x86_64 = "0.2.2"
+hash-sys = { path = "./hash_sys" }
+schnorrkel = { path = "./vendor/schnorrkel" }
+accumulator = { path = "./vendor/accumulator" }
+arrayvec = "0.7.2"
+merkletree = "0.22.0"
+num_cpus = "1.0"
+rand = "0.8.5"
+rand_chacha = "0.3.1"
+bincode = { path = "./vendor/bincode" }
+lazy_static = "1.4.0"
+bech32 = "0.9.0"
+mimalloc = { version = "0.1.31", default-features = false }
+hex = "0.4.3"
+base64 = "0.13.1"
+chrono = "0.4.19"
+triomphe = "0.1.7"
+crossbeam-channel = "0.5.4"
+rust_decimal = "1.24"
+rust_decimal_macros = "1.24"
+ripemd = "0.1.1"
+argon2rs = "0.2.5"
+zeroize = { version = "1.4.3", features = ["zeroize_derive"] }
+dirs = "4.0.0"
+chacha20poly1305 = "0.9.0"
+rpassword = "6.0"
+num-traits = "0.2"
+num-derive = "0.3"
+bitflags = "1.3.2"
+ibig = "0.3.5"
+static_assertions = "1.1.0"
+parking_lot = "0.12.1"
+lru = "0.8.1"
+jump-consistent-hash = "0.1.0"
+anyhow = "1.0.62"
+futures = "0.3"
+tarpc = { version = "0.31", features = ["full"] }
+tokio = { version = "1.0", features = ["full"] }
+warp = "0.3"
+rayon = "1.5.3"
+libp2p = "0.46.1"
+bloomfilter = "1.0.9"
+croaring = "0.6.1"
+dashmap = "5.3.4"
+itertools = "0.10.5"
+pretty_env_logger = "0.4.0"
+log = "0.4"
+config = "0.13.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.5.9"
+struct-field-names-as-array = "0.1.3"
+headers = "0.3"
+tracing = { version = "0.1", default-features = false, features = [
+    "attributes",
+    "log",
+] }
+tracing-opentelemetry = { version = "0.17.2", default-features = false }
+opentelemetry = { version = "0.17.0", default-features = false, features = [
+    "rt-tokio",
+] }
+opentelemetry-jaeger = { version = "0.16.0", features = ["rt-tokio"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+constant_time_eq = "0.2.4"
+bs58 = "0.4.0"
+
+[dev-dependencies]
+serial_test = "*"
+criterion = "0.3"
+quickcheck = "1"
+quickcheck_macros = "1"
+
+[features]
+default = ["gui", "miner", "wallet", "rpc", "disk", "blake3sum"]
+sha256sum = []
+blake3sum = []
+gui = []
+cli = []
+miner = []
+wallet = []
+rpc = []
+disk = []
+memory = []
+
+[profile.test]
+opt-level = 3
+lto = "fat"
+overflow-checks = false
+strip = "debuginfo"
+panic = "abort"
+rustflags = ["-C", "target_cpu=native"]
+
+[profile.dev]
+opt-level = 3
+lto = "fat"
+overflow-checks = false
+strip = "debuginfo"
+panic = "abort"
+rustflags = ["-C", "target_cpu=native"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+overflow-checks = false
+strip = "debuginfo"
+panic = "abort"
+codegen-units = 1
+rustflags = ["-C", "target_cpu=native"]
+
+[profile.bench]
+opt-level = 3
+lto = "fat"
+overflow-checks = false
+strip = "debuginfo"
+panic = "abort"
+codegen-units = 1
+rustflags = ["-C", "target_cpu=native"]
+
+[[bench]]
+name = "accumulator"
+harness = false
+
+[[bench]]
+name = "vm"
+harness = false

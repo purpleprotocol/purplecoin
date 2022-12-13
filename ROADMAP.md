@@ -1,0 +1,118 @@
+# Technical Roadmap
+This document presents the technical roadmap of the Purplecoin project. Please note that these are subject to change before the release. The roadmap branches off a higher level with sub-sections describing a greater level of detail.
+
+## Purplecoin Core
+
+* [ ] Consensus layer
+  - [x] Implement sector blocks
+  - [x] Implement shard blocks
+  - [x] Implement RSA accumulators
+  - [x] Optimise hashing to primes
+  - [x] Use multiple accumulators per block
+  - [x] Benchmark accumulator code in order to determine optimum number of sectors and shards
+  - [x] Implement difficulty calculation
+  - [x] Green PoW implementation
+  - [x] Sequence PoW algorithms
+  - [ ] Choose minimum mainnet difficulty
+  - [x] Determine ASIC friendly hash functions
+  - [ ] Aggregate outputs with same spend script and receiver in the same block
+  - [ ] Implement canonical transaction ordering
+  - [ ] Implement partially spendable outputs
+  - [x] Block serialization
+  - [x] Transaction serialization
+  - [x] Script arguments serialization
+  - [ ] Implement optimal atomic asset exchange script and use it as a default script
+  * [ ] Implement VM opcodes
+    - [ ] OP `0x00` Func - Start a function definition
+    - [ ] OP `0x07` ChainId - Pushes the current `chain_id` onto the stack
+    - [ ] OP `0x08` ChainHeight - Pushes the current `chain_height` onto the stack
+    - [ ] OP `0x09` ChainTimestamp - Pushes the current timestamp of the chain onto the stack as a `Signed64`
+    - [ ] OP `0x0a` IsCoinbase - Pushes `1` as an `Signed8` onto the stack if the current input is a coinbase otherwise pushes `0`
+    - [ ] OP `0x0b` PrevBlockHash - Pushes the previous block hash onto the stack as a `Hash256`
+    - [ ] OP `0x0c` NSequence - Pushes the transaction `nsequence` onto the stack as an `Signed32`
+    - [ ] OP `0x0d` RandomHash160Var - Pushes a random `Hash160` onto the stack
+    - [ ] OP `0x0e` RandomHash256Var - Pushes a random `Hash256` onto the stack
+    - [ ] OP `0x0f` RandomHash512Var - Pushes a random `Hash512` onto the stack
+    - [ ] OP `0x10` RandomUnsigned8Var - Pushes a random `Unsigned8`onto the stack
+    - [ ] OP `0x11` RandomUnsigned16Var - Pushes a random `Unsigned16`onto the stack
+    - [ ] OP `0x12` RandomUnsigned32Var - Pushes a random `Unsigned32`onto the stack
+    - [ ] OP `0x13` RandomUnsigned64Var - Pushes a random `Unsigned64`onto the stack
+    - [ ] OP `0x14` RandomUnsigned128Var - Pushes a random `Unsigned128`onto the stack
+    - [ ] OP `0x15` RandomSigned8Var - Pushes a random `Signed8`onto the stack
+    - [ ] OP `0x16` RandomSigned16Var - Pushes a random `Signed16`onto the stack
+    - [ ] OP `0x17` RandomSigned32Var - Pushes a random `Signed32`onto the stack
+    - [ ] OP `0x18` RandomSigned64Var - Pushes a random `Signed64`onto the stack
+    - [ ] OP `0x19` RandomSigned128Var - Pushes a random `Signed128`onto the stack
+    - [ ] OP `0x1a` RandomFloat32Var - Pushes a random `Float32`onto the stack
+    - [ ] OP `0x1b` RandomFloat64Var - Pushes a random `Float64`onto the stack
+    - [ ] OP `0x20` Hash160Var - Starts an inline `Hash160` declaration
+    - [ ] OP `0x21` Hash256Var - Starts an inline `Hash256` declaration
+    - [ ] OP `0x22` Hash512Var - Starts an inline `Hash512` declaration
+    - [ ] TODO add all opcodes
+* [ ] Network layer
+  - [ ] Sector networking
+    - [x] Seed nodes DNS resolution
+    - [ ] Peer discovery via Kademlia DHT
+  	- [ ] Implement base header propagation
+    - [ ] Implement graphene propagation
+  - [ ] Public Bridge DHT
+    - [ ] Query outputs via Kademlia
+    - [ ] Query headers via Kademlia
+  - [ ] Private Bridge protocol
+    - [ ] Query private bridges
+    - [ ] Import private bridges from certificates  
+  - [ ] Cluster mode
+    - [ ] Clustered block validation consensus
+      - [ ] AP mode
+      - [ ] CP mode
+      - [ ] Hybrid CP mode in the same datacenter but AP across datacenters
+    - [ ] Shard distribution on a hash ring
+    - [ ] Shard re-distribution on the hash ring when adding/removing nodes
+    - [ ] Shard simple replication
+    - [ ] Shard datacenter replication
+    - [ ] UTXO/Witness set simple replication
+    - [ ] UTXO/Witness set datacenter replication
+    - [ ] Wallet simple replication
+    - [ ] Wallet datacenter replication
+  - [ ] Asset Exchange
+    - [ ] Quote mempool
+    - [ ] Asset exchange peer discovery via Kademlia DHT
+* [ ] Node
+  - [ ] RPC
+    - [x] RPC over HTTP/JSON
+    - [ ] RPC over WS/JSON
+    - [ ] RPC over WS/Binary
+    - [ ] RPC over TCP/JSON
+    - [ ] RPC over TCP/Binary
+    - [ ] RPC Commands
+      - [ ] TODO Add all RPC commands
+  - [ ] Mempool
+    - [x] Base Implenentation
+    - [ ] Sharded mempool
+* [ ] Wallet
+  - [x] Hierarchical Deterministic Wallet
+  - [ ] Multi-Sig Hierarchical Deterministic Wallet
+  - [ ] Backup wallet
+  - [ ] Backup wallet to AWS S3
+  - [ ] Backup wallet to Google Cloud Storage
+  - [ ] Restore wallet from file
+  - [ ] Restore wallet from AWS S3
+  - [ ] Restore wallet from Google Cloud Storage
+* [ ] GUI
+  - [x] Render XPU balances
+  - [ ] Render XPU transaction history
+  - [ ] Render alternative asset balances
+  - [ ] Render alternative asset transaction histories
+  - [ ] Render wallet addresses
+  - [ ] Create new wallet address
+    - [ ] Render address as QR Code
+  - [ ] Send interface
+    - [ ] Send via QR Code
+  - [ ] Receive interface
+    - [ ] Receive via QR Code
+  - [ ] Multi-Sig interface
+  - [ ] Asset exchange interface
+    - [ ] Price chart
+    - [ ] Trading interface
+    - [ ] Market orders
+    - [ ] Limit orders

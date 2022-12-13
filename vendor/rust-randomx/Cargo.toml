@@ -1,0 +1,17 @@
+[package]
+name = "rust-randomx"
+version = "0.5.7"
+edition = "2021"
+authors = ["Keyvan Kambakhsh <keyvankambakhsh@gmail.com>"]
+description = "Rust interface to the RandomX hash function"
+repository = "https://github.com/zeeka-network/rust-randomx"
+homepage = "https://github.com/zeeka-network/rust-randomx"
+license = "MIT"
+
+[build-dependencies]
+cmake = "0.1"
+
+[dependencies]
+num_cpus = "1.0"
+rand = "0.8.5"
+triomphe = "0.1.7"

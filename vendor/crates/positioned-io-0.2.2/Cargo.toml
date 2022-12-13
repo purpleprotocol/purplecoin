@@ -1,0 +1,21 @@
+[package]
+name = "positioned-io"
+version = "0.2.2"
+authors = ["Dave Vasilevsky <dave@vasilevsky.ca>"]
+description = "Reading and writing at an offset"
+keywords = ["read", "offset", "pread", "pwrite", "endian"]
+license = "MIT"
+documentation = "http://vasi.github.io/positioned-io/positioned_io/"
+repository = "https://github.com/vasi/positioned-io"
+homepage = "https://github.com/vasi/positioned-io"
+readme = "README.md"
+
+[dependencies]
+byteorder = "0.5"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.14"
+
+[target.'cfg(windows)'.dependencies]
+winapi = "0.2"
+kernel32-sys = "0.2"
