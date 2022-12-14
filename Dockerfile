@@ -6,7 +6,13 @@ RUN apk update  && \
             g++ \
             m4 \
             cmake \ 
-            clang
+            clang \ 
+            clang-dev \
+            clang-libs \
+            llvm \
+            llvm-dev \
+            musl \
+            musl-dev
 
 WORKDIR /usr/src/purplecoin
 
