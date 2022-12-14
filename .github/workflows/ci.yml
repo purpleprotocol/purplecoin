@@ -70,7 +70,7 @@ jobs:
   docker:
     name: Docker build
     runs-on: ubuntu-latest
-    
+
     steps:
       -
         name: Set up QEMU
@@ -82,6 +82,5 @@ jobs:
         name: Build
         uses: docker/build-push-action@v3
         with:
-          context: .
           push: false
           tags: purplecoin-core:latest
