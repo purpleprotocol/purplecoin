@@ -96,7 +96,7 @@ quickcheck = "1"
 quickcheck_macros = "1"
 
 [features]
-default = ["gui", "miner", "wallet", "rpc", "disk", "blake3sum"]
+default = ["gui", "miner", "wallet", "rpc", "disk", "blake3sum", "runtime-clang"]
 sha256sum = []
 blake3sum = []
 gui = []
@@ -106,6 +106,7 @@ wallet = []
 rpc = []
 disk = []
 memory = []
+runtime-clang = ["bindgen/runtime"]
 
 [profile.test]
 opt-level = 0

@@ -18,8 +18,6 @@ WORKDIR /usr/src/purplecoin
 
 COPY . .
 
-ENV LLVM_CONFIG_PATH /usr/bin/llvm‑config
-
 RUN cargo +nightly install --profile release --no-default-features --features "rpc wallet disk miner blake3sum" --path .
 RUN rm -rf /usr/src/purplecoin
 
