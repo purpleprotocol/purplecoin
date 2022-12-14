@@ -34,19 +34,19 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x0d` RandomHash160Var - Pushes a random `Hash160` onto the stack
     - [ ] OP `0x0e` RandomHash256Var - Pushes a random `Hash256` onto the stack
     - [ ] OP `0x0f` RandomHash512Var - Pushes a random `Hash512` onto the stack
-    - [ ] OP `0x10` RandomUnsigned8Var - Pushes a random `Unsigned8`onto the stack
+    - [ ] OP `0x10` RandomUnsigned8Var - Pushes a random `Unsigned8` onto the stack
     - [ ] OP `0x11` RandomUnsigned16Var - Pushes a random `Unsigned16` onto the stack
-    - [ ] OP `0x12` RandomUnsigned32Var - Pushes a random `Unsigned32`on to the stack
-    - [ ] OP `0x13` RandomUnsigned64Var - Pushes a random `Unsigned64`on to the stack
+    - [ ] OP `0x12` RandomUnsigned32Var - Pushes a random `Unsigned32` onto the stack
+    - [ ] OP `0x13` RandomUnsigned64Var - Pushes a random `Unsigned64` onto the stack
     - [ ] OP `0x14` RandomUnsigned128Var - Pushes a random `Unsigned128` onto the stack
-    - [ ] OP `0x15` RandomSigned8Var - Pushes a random `Signed8`onto the stack
+    - [ ] OP `0x15` RandomSigned8Var - Pushes a random `Signed8` onto the stack
     - [ ] OP `0x16` RandomSigned16Var - Pushes a random `Signed16` onto the stack
-    - [ ] OP `0x17` RandomSigned32Var - Pushes a random `Signed32`on to the stack
-    - [ ] OP `0x18` RandomSigned64Var - Pushes a random `Signed64`on to the stack
+    - [ ] OP `0x17` RandomSigned32Var - Pushes a random `Signed32` onto the stack
+    - [ ] OP `0x18` RandomSigned64Var - Pushes a random `Signed64` onto the stack
     - [ ] OP `0x19` RandomSigned128Var - Pushes a random `Signed128` onto the stack
-    - [ ] OP `0x1a` RandomFloat32Var - Pushes a random `Float32`onto t he stack
-    - [ ] OP `0x1b` RandomFloat64Var - Pushes a random `Float64`on to the stack
-    - [ ] OP `0x20` Hash160Var - Starts an inline `Hash160` declar ation
+    - [ ] OP `0x1a` RandomFloat32Var - Pushes a random `Float32` onto the stack
+    - [ ] OP `0x1b` RandomFloat64Var - Pushes a random `Float64` onto the stack
+    - [ ] OP `0x20` Hash160Var - Starts an inline `Hash160` declaration
     - [ ] OP `0x21` Hash256Var - Starts an inline `Hash256` declaration
     - [ ] OP `0x22` Hash512Var - Starts an inline `Hash512` declaration
     - [ ] OP `0x23` Unsigned8Var - Starts an inline `Unsigned8` declaration
