@@ -107,6 +107,7 @@ rpc = []
 disk = []
 memory = []
 runtime-clang = ["bindgen/runtime"]
+static-clan = ["bindgen/static"]
 
 [profile.test]
 opt-level = 0
