@@ -70,10 +70,10 @@ impl Input {
     pub fn to_bytes_for_signing(&self) -> Vec<u8> {
         let mut copied = self.clone();
 
-        // We don't sign or hash the witness as it can be recomputed by miners
+        // We don't sign the witness as it can be recomputed by miners
         copied.witness = None;
 
-        // We also don't sign or hash the script arguments marked as malleable
+        // We also don't sign the script arguments marked as malleable
         // unimplemented!();
 
         crate::codec::encode_to_vec(&copied).unwrap()
@@ -84,7 +84,7 @@ impl Input {
             return;
         }
 
-        let bytes = self.to_bytes_for_signing();
+        let bytes = self.to_bytes();
         self.hash = Some(Hash256::hash_from_slice(bytes, key))
     }
 
