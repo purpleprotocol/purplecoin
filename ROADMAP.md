@@ -30,23 +30,23 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x09` ChainTimestamp - Pushes the current timestamp of the chain onto the stack as a `Signed64`
     - [ ] OP `0x0a` IsCoinbase - Pushes `1` as an `Signed8` onto the stack if the current input is a coinbase otherwise pushes `0`
     - [ ] OP `0x0b` PrevBlockHash - Pushes the previous block hash onto the stack as a `Hash256`
-    - [ ] OP `0x0c` NSequence - Pushes the transaction `nsequence` onto the stack as an `Signed32`
+    - [ ] OP `0x0c` NSequence - Pushes the transaction `nsequence` onto the stack as a `Signed32`
     - [ ] OP `0x0d` RandomHash160Var - Pushes a random `Hash160` onto the stack
     - [ ] OP `0x0e` RandomHash256Var - Pushes a random `Hash256` onto the stack
     - [ ] OP `0x0f` RandomHash512Var - Pushes a random `Hash512` onto the stack
     - [ ] OP `0x10` RandomUnsigned8Var - Pushes a random `Unsigned8`onto the stack
-    - [ ] OP `0x11` RandomUnsigned16Var - Pushes a random `Unsigned16`onto the stack
-    - [ ] OP `0x12` RandomUnsigned32Var - Pushes a random `Unsigned32`onto the stack
-    - [ ] OP `0x13` RandomUnsigned64Var - Pushes a random `Unsigned64`onto the stack
-    - [ ] OP `0x14` RandomUnsigned128Var - Pushes a random `Unsigned128`onto the stack
+    - [ ] OP `0x11` RandomUnsigned16Var - Pushes a random `Unsigned16` onto the stack
+    - [ ] OP `0x12` RandomUnsigned32Var - Pushes a random `Unsigned32`on to the stack
+    - [ ] OP `0x13` RandomUnsigned64Var - Pushes a random `Unsigned64`on to the stack
+    - [ ] OP `0x14` RandomUnsigned128Var - Pushes a random `Unsigned128` onto the stack
     - [ ] OP `0x15` RandomSigned8Var - Pushes a random `Signed8`onto the stack
-    - [ ] OP `0x16` RandomSigned16Var - Pushes a random `Signed16`onto the stack
-    - [ ] OP `0x17` RandomSigned32Var - Pushes a random `Signed32`onto the stack
-    - [ ] OP `0x18` RandomSigned64Var - Pushes a random `Signed64`onto the stack
-    - [ ] OP `0x19` RandomSigned128Var - Pushes a random `Signed128`onto the stack
-    - [ ] OP `0x1a` RandomFloat32Var - Pushes a random `Float32`onto the stack
-    - [ ] OP `0x1b` RandomFloat64Var - Pushes a random `Float64`onto the stack
-    - [ ] OP `0x20` Hash160Var - Starts an inline `Hash160` declaration
+    - [ ] OP `0x16` RandomSigned16Var - Pushes a random `Signed16` onto the stack
+    - [ ] OP `0x17` RandomSigned32Var - Pushes a random `Signed32`on to the stack
+    - [ ] OP `0x18` RandomSigned64Var - Pushes a random `Signed64`on to the stack
+    - [ ] OP `0x19` RandomSigned128Var - Pushes a random `Signed128` onto the stack
+    - [ ] OP `0x1a` RandomFloat32Var - Pushes a random `Float32`onto t he stack
+    - [ ] OP `0x1b` RandomFloat64Var - Pushes a random `Float64`on to the stack
+    - [ ] OP `0x20` Hash160Var - Starts an inline `Hash160` declar ation
     - [ ] OP `0x21` Hash256Var - Starts an inline `Hash256` declaration
     - [ ] OP `0x22` Hash512Var - Starts an inline `Hash512` declaration
     - [ ] OP `0x23` Unsigned8Var - Starts an inline `Unsigned8` declaration
@@ -90,6 +90,28 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x51` Sub - Pops the two topmost items on the stack, performs subtraction and pushes the result on the stack
     - [ ] OP `0x52` Mult - Pops the two topmost items on the stack, performs multiplication and pushes the result on the stack
     - [ ] OP `0x53` Div - Pops the two topmost items on the stack, performs division and pushes the result on the stack
+    - [ ] OP `0x54` BitSHLeft - Pops the two topmost items on the stack, performs a left bit shift operation on the first operand and then pushes the result on the stack
+    - [ ] OP `0x55` BitSHRight - Pops the two topmost items on the stack, performs a right bit shift operation on the first operand and then pushes the result on the stack
+    - [ ] OP `0x56` BitXOR - Pops the two topmost items on the stack, performs bit exclusive OR on the operands and then pushes the result on the stack
+    - [ ] OP `0x57` Loop - Starts a loop block
+    - [ ] OP `0x58` Break - Breaks the current loop
+    - [ ] OP `0x59` BreakIf - Breaks the current loop if the topmost item on the stack is `1`
+    - [ ] OP `0x5a` BreakIfn - Breaks the current loop if the topmost item on the stack is not equal to `1`
+    - [ ] OP `0x5b` BreakIfEq - Breaks the current loop if the two topmost items on the stack are equal
+    - [ ] OP `0x5c` BreakIfNeq - Breaks the current loop if the two topmost items on the stack are not equal
+    - [ ] OP `0x5d` BreakIfLeq - Breaks the current loop if the topmost item on the stack is less or equal than the second
+    - [ ] OP `0x5e` BreakIfGeq - Breaks the current loop if the topmost item on the stack is greater or equal than the second
+    - [ ] OP `0x5f` BreakIfLt - Breaks the current loop if the topmost item on the stack is less than the second
+    - [ ] OP `0x60` BreakIfGt - Breaks the current loop if the topmost item on the stack is greater than the second
+    - [ ] OP `0x61` Continue - Moves to the next iteration of the current loop
+    - [ ] OP `0x62` ContinueIf - Moves to the next iteration of the current loop if the topmost item on the stack is equal to `1`
+    - [ ] OP `0x63` ContinueIfn - Moves to the next iteration of the current loop if the topmost item on the stack is not equal to `1`
+    - [ ] OP `0x64` ContinueIfEq - Moves to the next iteration of the current loop if the two topmost items on the stack are equal
+    - [ ] OP `0x66` ContinueIfNeq - Moves to the next iteration of the current loop if the two topmost items on the stack are not equal
+    - [ ] OP `0x66` ContinueIfLeq - Moves to the next iteration of the current loop if the topmost item on the stack is less or equal than the second
+    - [ ] OP `0x67` ContinueIfGeq - Moves to the next iteration of the current loop if the topmost item on the stack is greater or equal than the second
+    - [ ] OP `0x68` ContinueIfLt - Moves to the next iteration of the current loop if the topmost item on the stack is less than the second
+    - [ ] OP `0x69` ContinueIfGt - Moves to the next iteration of the current loop if the topmost item on the stack is greater than the second
     - [ ] TODO add all opcodes
 * [ ] Network layer
   - [ ] Sector networking
