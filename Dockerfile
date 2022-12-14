@@ -4,6 +4,7 @@ RUN apk update  && \
     apk upgrade  && \
     apk add make \
             g++ \
+            m4 \
             cmake
 
 WORKDIR /usr/src/purplecoin
