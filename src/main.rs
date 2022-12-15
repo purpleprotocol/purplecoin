@@ -174,15 +174,19 @@ async fn run_rpc() -> anyhow::Result<()> {
             .and(warp::header("authorization"))
             .and_then(handle_rpc_request);
 
+        let port = match SETTINGS.node.network_name.as_str() {
+            "mainnet" => SETTINGS.network.rpc_listen_port_mainnet,
+            "testnet" => SETTINGS.network.rpc_listen_port_testnet,
+            other => panic!("Invalid network name: {other}"),
+        };
+
         info!(
             "Purplecoin Core v{} RPC Listening on port {}",
             env!("CARGO_PKG_VERSION"),
-            SETTINGS.network.rpc_listen_port
+            port
         );
 
-        warp::serve(rpc_path)
-            .run(([127, 0, 0, 1], SETTINGS.network.rpc_listen_port))
-            .await;
+        warp::serve(rpc_path).run(([127, 0, 0, 1], port)).await;
     }
 
     Ok(())
