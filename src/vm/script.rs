@@ -235,7 +235,7 @@ impl Script {
                                 return ExecutionResult::Invalid;
                             }
                         }
-                        _ => return ExecutionResult::Ok,
+                        _ => return ExecutionResult::Invalid,
                     }
                 } else {
                     let top = &mut frame_stack[fs_len - 1].stack;
