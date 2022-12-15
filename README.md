@@ -63,7 +63,7 @@ cargo +nighly test
 More details about the architecture.
 
 ### Sharded Nakamoto Consensus 
-Purplecoin uses Sharded Nakamoto Consensus to scale beyond the limitetd transaction throughput of traditional blockchains such as Bitcoin or Ethereum. 
+Purplecoin uses Sharded Nakamoto Consensus to scale beyond the limited transaction throughput of traditional blockchains such as Bitcoin or Ethereum. 
 
 Instead of storing a single blockchain of transactions, we would instead store `n` blockchains with the same consensus rules, each with its own UTXO set and Proof of Work.
 
