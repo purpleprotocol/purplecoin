@@ -144,6 +144,12 @@ impl Settings {
                 let mut k: Vec<_> = k.split('_').filter(|x| x != &prefix).collect();
                 *k.last_mut().unwrap() = k_postfix;
                 let k = k.join(".");
+
+                // Filter empty values
+                if v.as_str() == "" {
+                    continue;
+                }
+
                 s = s.set_override(k, v.as_str())?;
             }
         }
@@ -297,7 +303,7 @@ impl Default for Node {
             network_threads: 0,
             archival_mode: true, // Leave this on for now
             prune_headers: false,
-            randomx_fast_mode: true,
+            randomx_fast_mode: false,
             prune_transactions: false,
             prune_utxos: false,
             data_dir: path.into_os_string().into_string().unwrap(),

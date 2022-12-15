@@ -4595,6 +4595,7 @@ dependencies = [
  "base64",
  "bech32",
  "bincode 2.0.0-rc.1",
+ "bindgen 0.60.1",
  "bitflags",
  "blake2",
  "blake3",
