@@ -1,7 +1,7 @@
 FROM rustlang/rust:nightly AS builder
 
 ARG OPENSSL_VERSION=1.1.1m
-ARG ZLIB_VERSION=1.2.11
+ARG ZLIB_VERSION=1.2.13
 
 RUN rustup target add x86_64-unknown-linux-musl
 RUN apt-get -y -qq update  && \
