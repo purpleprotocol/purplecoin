@@ -1,10 +1,9 @@
 FROM rustlang/rust:nightly AS builder
 
 RUN rustup target add x86_64-unknown-linux-musl
-RUN apt-get -y update  && \
-    apt-get -y upgrade  && \
-    apt-get -y install make \
-            g++ \
+RUN apt-get -y -q update  && \
+    apt-get -y -q upgrade  && \
+    apt-get -y -q install make \
             m4 \
             cmake \
             clang \
@@ -13,7 +12,9 @@ RUN apt-get -y update  && \
             llvm-dev \
             musl \
             musl-dev \
-            musl-tools
+            musl-tools \
+            build-essential \
+            pkgconf
 
 RUN update-ca-certificates
 
