@@ -23,7 +23,6 @@ RUN apt-get -y -qq update  && \
             autoconf \
             autoconf-archive \
             automake \
-            "libstdc++-8-dev" \
             libc-dev \
             linux-libc-dev \
             build-essential \
