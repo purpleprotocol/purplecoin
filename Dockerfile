@@ -73,7 +73,7 @@ ENV RUST_LOG=purplecoin
 WORKDIR /purplecoin
 
 # Copy our build
-COPY --from=builder /purplecoin/target/x86_64-unknown-linux-musl/release/purplecoin ./
+COPY --from=builder /usr/src/purplecoin/target/x86_64-unknown-linux-musl/release/purplecoin ./
 
 # Use an unprivileged user.
 USER purplecoin:purplecoin
