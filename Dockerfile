@@ -1,4 +1,4 @@
-FROM messense/rust-musl-cross:x86_64-musl
+FROM messense/rust-musl-cross:x86_64-musl as builder
 
 ARG OPENSSL_VERSION=1.1.1m
 ARG ZLIB_VERSION=1.2.13
