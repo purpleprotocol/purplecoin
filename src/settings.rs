@@ -164,17 +164,25 @@ pub struct Network {
     #[serde(alias = "listenaddr")]
     pub listen_addr: String,
 
-    /// Node listen port.
-    #[serde(alias = "listenport")]
-    pub listen_port: u16,
+    /// Node listen port on mainnet.
+    #[serde(alias = "listenportmainnet")]
+    pub listen_port_mainnet: u16,
+
+    /// Node listen port on mainnet.
+    #[serde(alias = "listenporttestnet")]
+    pub listen_port_testnet: u16,
 
     /// Enable RPC.
     #[serde(alias = "rpcenabled")]
     pub rpc_enabled: bool,
 
-    /// RPC listen port.
-    #[serde(alias = "rpclistenport")]
-    pub rpc_listen_port: u16,
+    /// RPC listen port on mainnet.
+    #[serde(alias = "rpclistenportmainnet")]
+    pub rpc_listen_port_mainnet: u16,
+
+    /// RPC listen port on testnet.
+    #[serde(alias = "rpclistenporttestnet")]
+    pub rpc_listen_port_testnet: u16,
 
     /// RPC username.
     #[serde(alias = "rpcusername")]
@@ -197,9 +205,11 @@ impl Default for Network {
     fn default() -> Self {
         Self {
             listen_addr: "*".to_owned(),
-            listen_port: 8098,
+            listen_port_mainnet: 8098,
+            listen_port_testnet: 8031,
             rpc_enabled: true,
-            rpc_listen_port: 8067,
+            rpc_listen_port_mainnet: 8067,
+            rpc_listen_port_testnet: 8037,
             rpc_username: "purplecoin".to_owned(),
             rpc_password: "purplecoin".to_owned(),
             seeds_mainnet: vec!["bootstrap.mainnet.purplecoin.io".to_owned()],

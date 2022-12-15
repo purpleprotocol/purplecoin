@@ -4611,6 +4611,7 @@ dependencies = [
  "dashmap",
  "dirs",
  "futures",
+ "gmp-mpfr-sys",
  "hash-sys",
  "headers",
  "hex",
