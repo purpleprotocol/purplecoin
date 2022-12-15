@@ -27,7 +27,7 @@ pub const MAX_OUT_STACK: usize = 1_000;
 
 macro_rules! check_top_stack_val {
     ($exp:expr) => {
-        if $exp >= &0 {
+        if $exp == &1 {
             return ExecutionResult::Ok;
         } else {
             return ExecutionResult::Invalid;
@@ -229,7 +229,7 @@ impl Script {
                         VmTerm::Signed64(v) => check_top_stack_val!(v),
                         VmTerm::Signed128(v) => check_top_stack_val!(v),
                         VmTerm::SignedBig(v) => {
-                            if v >= &ibig!(0) {
+                            if v == &ibig!(1) {
                                 return ExecutionResult::Ok;
                             } else {
                                 return ExecutionResult::Invalid;
