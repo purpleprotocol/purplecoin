@@ -6,6 +6,29 @@ ARG ZLIB_VERSION=1.2.13
 RUN rustup update nightly && \
     rustup target add --toolchain nightly x86_64-unknown-linux-musl
 
+RUN apt-get -y -qq update  && \
+    apt-get -y -qq upgrade  && \
+    apt-get -y -qq install make \
+            g++ \
+            m4 \
+            cmake \
+            clang \
+            libclang-dev \
+            llvm \
+            llvm-dev \
+            musl \
+            musl-dev \
+            musl-tools \
+            xutils-dev \
+            autoconf \
+            autoconf-archive \
+            automake \
+            "libstdc++-8-dev" \
+            libc-dev \
+            linux-libc-dev \
+            build-essential \
+            pkgconf
+
 # Build a static library version of OpenSSL using musl-libc.  This is needed by
 # the popular Rust `hyper` crate.
 #
