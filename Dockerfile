@@ -3,8 +3,8 @@ FROM rustlang/rust:nightly AS builder
 ARG OPENSSL_VERSION=1.1.1m
 ARG ZLIB_VERSION=1.2.13
 
-ENV CC=musl-gcc
-ENV CXX=musl-g++
+ENV CC=x86_64-unknown-linux-musl-gcc
+ENV CXX=x86_64-unknown-linux-musl-g++
 ENV CXX_FLAGS="-dynamic-linker /lib/ld-linux.so.2"
 
 RUN rustup target add x86_64-unknown-linux-musl
