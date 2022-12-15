@@ -18,7 +18,7 @@ RUN apt-get -y -q update  && \
             pkgconf
 
 RUN update-ca-certificates
-RUN ln -s /bin/g++ /bin/musl-g++
+RUN ln -s "/usr/bin/g++" "/usr/bin/musl-g++"
 
 WORKDIR /usr/src/purplecoin
 
