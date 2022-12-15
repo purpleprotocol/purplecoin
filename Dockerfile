@@ -8,6 +8,7 @@ RUN apt-get -y update  && \
             m4 \
             cmake \
             clang \
+            libclang-dev \
             llvm \
             llvm-dev \
             musl \
