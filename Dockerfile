@@ -3,6 +3,9 @@ FROM rustlang/rust:nightly AS builder
 ARG OPENSSL_VERSION=1.1.1m
 ARG ZLIB_VERSION=1.2.13
 
+ENV CC=musl-gcc
+ENV CXX=musl-g++
+
 RUN rustup target add x86_64-unknown-linux-musl
 RUN apt-get -y -qq update  && \
     apt-get -y -qq upgrade  && \
@@ -17,6 +20,10 @@ RUN apt-get -y -qq update  && \
             musl \
             musl-dev \
             musl-tools \
+            xutils-dev \
+            autoconf \
+            autoconf-archive \
+            automake \
             "libstdc++-8-dev" \
             libc-dev \
             linux-libc-dev \
@@ -66,7 +73,7 @@ RUN cargo +nightly build --release --no-default-features --features "rpc wallet 
 
 FROM scratch
 
-ENV RUST_LOG purplecoin
+ENV RUST_LOG=purplecoin
 
 WORKDIR /purplecoin
 
