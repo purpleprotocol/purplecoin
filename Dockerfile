@@ -14,6 +14,7 @@ RUN apt-get -y -q update  && \
             musl \
             musl-dev \
             musl-tools \
+            linux-libc-dev \
             build-essential \
             pkgconf
 
