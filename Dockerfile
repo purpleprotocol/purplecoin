@@ -4,6 +4,7 @@ RUN rustup target add x86_64-unknown-linux-musl
 RUN apt-get -y -q update  && \
     apt-get -y -q upgrade  && \
     apt-get -y -q install make \
+            g++ \
             m4 \
             cmake \
             clang \
@@ -17,6 +18,7 @@ RUN apt-get -y -q update  && \
             pkgconf
 
 RUN update-ca-certificates
+RUN ln -s /bin/g++ /bin/musl-g++
 
 WORKDIR /usr/src/purplecoin
 
