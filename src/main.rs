@@ -309,7 +309,7 @@ fn verify_addresses_checksum(addresses_path: &str, addresses_raw: &str) {
         .ok_or("addresses file name doesn't contain a checksum")
         .unwrap()
         .to_owned()
-        .split(':')
+        .split('_')
         .collect::<Vec<_>>()[1];
 
     info!("Verifying addresses file checksum...");
