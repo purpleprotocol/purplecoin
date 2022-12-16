@@ -46,40 +46,40 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x19` RandomSigned128Var - Pushes a random `Signed128` onto the stack
     - [ ] OP `0x1a` RandomFloat32Var - Pushes a random `Float32` onto the stack
     - [ ] OP `0x1b` RandomFloat64Var - Pushes a random `Float64` onto the stack
-    - [ ] OP `0x20` Hash160Var - Starts an inline `Hash160` declaration
-    - [ ] OP `0x21` Hash256Var - Starts an inline `Hash256` declaration
-    - [ ] OP `0x22` Hash512Var - Starts an inline `Hash512` declaration
-    - [ ] OP `0x23` Unsigned8Var - Starts an inline `Unsigned8` declaration
-    - [ ] OP `0x24` Unsigned16Var - Starts an inline `Unsigned16` declaration
-    - [ ] OP `0x25` Unsigned32Var - Starts an inline `Unsigned32` declaration
-    - [ ] OP `0x26` Unsigned64Var - Starts an inline `Unsigned64` declaration
-    - [ ] OP `0x27` Unsigned128Var - Starts an inline `Unsigned128` declaration
-    - [ ] OP `0x28` UnsignedBigVar - Starts an inline `UnsignedBig` declaration
-    - [ ] OP `0x29` Signed8Var - Starts an inline `Signed8` declaration
-    - [ ] OP `0x2a` Signed16Var - Starts an inline `Signed16` declaration
-    - [ ] OP `0x2b` Signed32Var - Starts an inline `Signed32` declaration
-    - [ ] OP `0x2c` Signed64Var - Starts an inline `Signed64` declaration
-    - [ ] OP `0x2d` Signed128Var - Starts an inline `Signed128` declaration
-    - [ ] OP `0x2e` SignedBigVar - Starts an inline `SignedBig` declaration
-    - [ ] OP `0x2f` Float32Var - Starts an inline `Float32` declaration
-    - [ ] OP `0x30` Float64Var - Starts an inline `Float64` declaration
-    - [ ] OP `0x31` Hash160ArrayVar - Starts an inline `Hash160Array` declaration
-    - [ ] OP `0x32` Hash256ArrayVar - Starts an inline `Hash256Array` declaration
-    - [ ] OP `0x33` Hash512ArrayVar - Starts an inline `Hash512Array` declaration
-    - [ ] OP `0x34` Unsigned8ArrayVar - Starts an inline `Unsigned8Array` declaration
-    - [ ] OP `0x35` Unsigned16ArrayVar - Starts an inline `Unsigned16Array` declaration
-    - [ ] OP `0x36` Unsigned32ArrayVar - Starts an inline `Unsigned32Array` declaration
-    - [ ] OP `0x37` Unsigned64ArrayVar - Starts an inline `Unsigned64` declaration
-    - [ ] OP `0x38` Unsigned128ArrayVar - Starts an inline `Unsigned128Array` declaration
-    - [ ] OP `0x39` UnsignedBigArrayVar - Starts an inline `UnsignedBigArray` declaration
-    - [ ] OP `0x3a` Signed8ArrayVar - Starts an inline `Signed8Array` declaration
-    - [ ] OP `0x3b` Signed16ArrayVar - Starts an inline `Signed16Array` declaration
-    - [ ] OP `0x3c` Signed32ArrayVar - Starts an inline `Signed32Array` declaration
-    - [ ] OP `0x3d` Signed64ArrayVar - Starts an inline `Signed64Array` declaration
-    - [ ] OP `0x3e` Signed128ArrayVar - Starts an inline `Signed128Array` declaration
-    - [ ] OP `0x3f` SignedBigArrayVar - Starts an inline `SignedBigArray` declaration
-    - [ ] OP `0x40` Float32ArrayVar - Starts an inline `Float32Array` declaration
-    - [ ] OP `0x41` Float64ArrayVar - Starts an inline `Float64Array` declaration
+    - [ ] OP `0x20` Hash160Var - Pushes a `Hash160` onto the stack
+    - [ ] OP `0x21` Hash256Var - Pushes a `Hash256` onto the stack
+    - [ ] OP `0x22` Hash512Var - Pushes a `Hash512` onto the stack
+    - [ ] OP `0x23` Unsigned8Var - Pushes a `Unsigned8` onto the stack
+    - [ ] OP `0x24` Unsigned16Var - Pushes a `Unsigned16` onto the stack
+    - [ ] OP `0x25` Unsigned32Var - Pushes a `Unsigned32` onto the stack
+    - [ ] OP `0x26` Unsigned64Var - Pushes a `Unsigned64` onto the stack
+    - [ ] OP `0x27` Unsigned128Var - Pushes a `Unsigned128` onto the stack
+    - [ ] OP `0x28` UnsignedBigVar - Pushes a `UnsignedBig` onto the stack
+    - [ ] OP `0x29` Signed8Var - Pushes a `Signed8` onto the stack
+    - [ ] OP `0x2a` Signed16Var - Pushes a `Signed16` onto the stack
+    - [ ] OP `0x2b` Signed32Var - Pushes a `Signed32` onto the stack
+    - [ ] OP `0x2c` Signed64Var - Pushes a `Signed64` onto the stack
+    - [ ] OP `0x2d` Signed128Var - Pushes a `Signed128` onto the stack
+    - [ ] OP `0x2e` SignedBigVar - Pushes a `SignedBig` onto the stack
+    - [ ] OP `0x2f` Float32Var - Pushes a `Float32` onto the stack
+    - [ ] OP `0x30` Float64Var - Pushes a `Float64` onto the stack
+    - [ ] OP `0x31` Hash160ArrayVar - Pushes a `Hash160Array` onto the stack
+    - [ ] OP `0x32` Hash256ArrayVar - Pushes a `Hash256Array` onto the stack
+    - [ ] OP `0x33` Hash512ArrayVar - Pushes a `Hash512Array` onto the stack
+    - [ ] OP `0x34` Unsigned8ArrayVar - Pushes a `Unsigned8Array` onto the stack
+    - [ ] OP `0x35` Unsigned16ArrayVar - Pushes a `Unsigned16Array` onto the stack
+    - [ ] OP `0x36` Unsigned32ArrayVar - Pushes a `Unsigned32Array` onto the stack
+    - [ ] OP `0x37` Unsigned64ArrayVar - Pushes a `Unsigned64` onto the stack
+    - [ ] OP `0x38` Unsigned128ArrayVar - Pushes a `Unsigned128Array` onto the stack
+    - [ ] OP `0x39` UnsignedBigArrayVar - Pushes a `UnsignedBigArray` onto the stack
+    - [ ] OP `0x3a` Signed8ArrayVar - Pushes a `Signed8Array` onto the stack
+    - [ ] OP `0x3b` Signed16ArrayVar - Pushes a `Signed16Array` onto the stack
+    - [ ] OP `0x3c` Signed32ArrayVar - Pushes a `Signed32Array` onto the stack
+    - [ ] OP `0x3d` Signed64ArrayVar - Pushes a `Signed64Array` onto the stack
+    - [ ] OP `0x3e` Signed128ArrayVar - Pushes a `Signed128Array` onto the stack
+    - [ ] OP `0x3f` SignedBigArrayVar - Pushes a `SignedBigArray` onto the stack
+    - [ ] OP `0x40` Float32ArrayVar - Pushes a `Float32Array` onto the stack
+    - [ ] OP `0x41` Float64ArrayVar - Pushes a `Float64Array` onto the stack
     - [ ] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
     - [ ] OP `0x4b` GetType - Pushes on top of the stack the type code of the value currently on top of the stack as a `Unsigned8`
     - [ ] OP `0x4c` IsNaN - Pushes `1` on top of the stack if the top item on the stack is NaN
@@ -93,8 +93,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x54` BitSHLeft - Pops the two topmost items on the stack, performs a left bit shift operation on the first operand and then pushes the result on the stack
     - [ ] OP `0x55` BitSHRight - Pops the two topmost items on the stack, performs a right bit shift operation on the first operand and then pushes the result on the stack
     - [ ] OP `0x56` BitXOR - Pops the two topmost items on the stack, performs bit exclusive OR on the operands and then pushes the result on the stack
-    - [ ] OP `0x57` Loop - Starts a loop block
-    - [ ] OP `0x58` Break - Breaks the current loop
+    - [x] OP `0x57` Loop - Starts a loop block
+    - [x] OP `0x58` Break - Breaks the current loop
     - [ ] OP `0x59` BreakIf - Breaks the current loop if the topmost item on the stack is `1`
     - [ ] OP `0x5a` BreakIfn - Breaks the current loop if the topmost item on the stack is not equal to `1`
     - [ ] OP `0x5b` BreakIfEq - Breaks the current loop if the two topmost items on the stack are equal
@@ -103,7 +103,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x5e` BreakIfGeq - Breaks the current loop if the topmost item on the stack is greater or equal than the second
     - [ ] OP `0x5f` BreakIfLt - Breaks the current loop if the topmost item on the stack is less than the second
     - [ ] OP `0x60` BreakIfGt - Breaks the current loop if the topmost item on the stack is greater than the second
-    - [ ] OP `0x61` Continue - Moves to the next iteration of the current loop
+    - [x] OP `0x61` Continue - Moves to the next iteration of the current loop
     - [ ] OP `0x62` ContinueIf - Moves to the next iteration of the current loop if the topmost item on the stack is equal to `1`
     - [ ] OP `0x63` ContinueIfn - Moves to the next iteration of the current loop if the topmost item on the stack is not equal to `1`
     - [ ] OP `0x64` ContinueIfEq - Moves to the next iteration of the current loop if the two topmost items on the stack are equal
@@ -112,6 +112,17 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x67` ContinueIfGeq - Moves to the next iteration of the current loop if the topmost item on the stack is greater or equal than the second
     - [ ] OP `0x68` ContinueIfLt - Moves to the next iteration of the current loop if the topmost item on the stack is less than the second
     - [ ] OP `0x69` ContinueIfGt - Moves to the next iteration of the current loop if the topmost item on the stack is greater than the second
+    - [ ] OP `0x6a` Depth - Pushes the depth of the current frame onto the stack as an `Unsigned16`
+    - [ ] OP `0x6b` IfDup - If the topmost item on the stack is not `0`, duplicate it
+    - [ ] OP `0x6c` Drop - Removes the topmost item on the stack
+    - [ ] OP `0x6d` Dup - Duplicates the topmost item on the stack
+    - [ ] OP `0x6e` Nip - Removes the second item on the stack
+    - [ ] OP `0x6f` Over - Duplicates the second item on the stack
+    - [x] OP `0x70` Pick - Duplicates the `n` item on the stack
+    - [ ] OP `0x71` Roll - The `n` item on the stack is moved to the top
+    - [ ] OP `0x72` Rot - The three topmost items on the stack are rotated to the left
+    - [ ] OP `0x73` Swap - The twop topmost items on the stack are swaped
+    - [ ] OP `0x74` Tuck - The topmost item on the stack is copied and inserted before the second-to-top item
     - [ ] TODO add all opcodes
 * [ ] Network layer
   - [ ] Sector networking

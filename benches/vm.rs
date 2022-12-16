@@ -94,6 +94,8 @@ fn bench_coinbase(c: &mut Criterion) {
     }
 }
 
+fn bench_vm_abuse(_c: &mut Criterion) {}
+
 pub fn vm_benchmark(c: &mut Criterion) {
     bench_coinbase(c);
 }

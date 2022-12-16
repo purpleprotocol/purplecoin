@@ -14,7 +14,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use std::collections::HashMap;
 
 /// Max frame stack size
-pub const MAX_FRAMES: usize = 128;
+pub const MAX_FRAMES: usize = 512;
 
 /// Max stack size
 pub const STACK_SIZE: usize = 256;
@@ -23,7 +23,7 @@ pub const STACK_SIZE: usize = 256;
 pub const MEMORY_SIZE: usize = 512_000;
 
 /// Max output stack size
-pub const MAX_OUT_STACK: usize = 1_000;
+pub const MAX_OUT_STACK: usize = 300;
 
 macro_rules! check_top_stack_val {
     ($exp:expr) => {
@@ -46,7 +46,8 @@ struct Frame<'a> {
     pub stack: Vec<VmTerm>,
     pub i_ptr: usize,
     pub func_idx: usize,
-    pub s_executor: ScriptExecutor<'a>,
+    pub is_loop: Option<(usize, usize)>,
+    pub executor: ScriptExecutor<'a>,
 }
 
 impl<'a> Frame<'a> {
@@ -55,7 +56,8 @@ impl<'a> Frame<'a> {
             stack: Vec::with_capacity(STACK_SIZE),
             i_ptr: 0,
             func_idx,
-            s_executor: ScriptExecutor::new(),
+            executor: ScriptExecutor::new(),
+            is_loop: None,
         }
     }
 }
@@ -171,6 +173,8 @@ impl Script {
         loop {
             let mut new_frame = None;
             let mut pop_frame = false;
+            let mut set_ip = None;
+            let fs_len = frame_stack.len();
 
             if let Some(frame) = frame_stack.last_mut() {
                 let f = &funcs[frame.func_idx];
@@ -180,7 +184,8 @@ impl Script {
                 } else {
                     let i = &f.script[frame.i_ptr];
 
-                    frame.s_executor.push_op(
+                    // Execute opcode
+                    frame.executor.push_op(
                         i,
                         &inputs_hash,
                         &mut memory_size,
@@ -189,14 +194,75 @@ impl Script {
                         output_stack,
                         key,
                     );
+                    exec_count += 1;
 
-                    match frame.s_executor.done() {
+                    // Check for new frames or if we should pop one
+                    match frame.executor.state {
+                        ScriptExecutorState::NewLoopFrame => {
+                            let mut nf = frame.clone();
+
+                            nf.i_ptr += 1;
+
+                            let start_i = nf.i_ptr;
+                            let mut end_i = nf.i_ptr + 1;
+
+                            // Find end instruction idx
+                            loop {
+                                if let ScriptEntry::Opcode(OP::End) = self.script[end_i] {
+                                    break;
+                                }
+
+                                end_i += 1;
+                            }
+
+                            nf.is_loop = Some((start_i, end_i));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            nf.executor.state = ScriptExecutorState::ExpectingInitialOP;
+
+                            for t in nf.stack.iter() {
+                                memory_size += t.size();
+                            }
+
+                            new_frame = Some(nf);
+                        }
+
+                        ScriptExecutorState::BreakLoop => {
+                            if let Some((_, end_i)) = frame.is_loop {
+                                set_ip = Some(end_i);
+                                pop_frame = true;
+                            } else {
+                                unreachable!()
+                            }
+                        }
+
+                        ScriptExecutorState::ContinueLoop => {
+                            if let Some((start_i, _)) = frame.is_loop {
+                                frame.i_ptr = start_i;
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            } else {
+                                unreachable!()
+                            }
+                        }
+
+                        ScriptExecutorState::EndBlock => {
+                            if let Some((start_i, _)) = frame.is_loop {
+                                frame.i_ptr = start_i;
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            } else {
+                                pop_frame = true;
+                            }
+                        }
+
+                        _ => {
+                            frame.i_ptr += 1;
+                        }
+                    }
+
+                    // Check if we are done
+                    match frame.executor.done() {
                         None => {}
                         Some(result) => return result,
                     }
-
-                    frame.i_ptr += 1;
-                    exec_count += 1;
                 }
             } else {
                 unreachable!();
@@ -238,15 +304,24 @@ impl Script {
                         _ => return ExecutionResult::Invalid,
                     }
                 } else {
-                    let top = &mut frame_stack[fs_len - 1].stack;
+                    let mut parent_frame = &mut frame_stack[fs_len - 1];
+                    let mut parent_stack = &mut parent_frame.stack;
 
-                    if top.len() + frame.stack.len() > STACK_SIZE {
-                        return ExecutionResult::StackOverflow;
+                    if let Some(ip) = set_ip {
+                        parent_frame.i_ptr = ip;
+                        parent_frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                        set_ip = None;
                     }
 
-                    // Push terms on top frame
+                    parent_frame.i_ptr += 1;
+
+                    // Push terms on the parent stack
                     for t in frame.stack.iter().rev().cloned() {
-                        top.push(t);
+                        parent_stack.push(t);
+
+                        if parent_stack.len() > STACK_SIZE {
+                            return ExecutionResult::StackOverflow;
+                        }
                     }
                 }
             }
@@ -330,6 +405,25 @@ impl<'a> ScriptExecutor<'a> {
                         self.state = ScriptExecutorState::Error(ExecutionResult::BadFormat);
                         return;
                     }
+
+                    self.state = ScriptExecutorState::ExpectingInitialOP;
+                }
+
+                _ => {
+                    self.state = ScriptExecutorState::Error(ExecutionResult::BadFormat);
+                }
+            },
+
+            ScriptExecutorState::ExpectingIndexU8(last_op) => match (last_op, op) {
+                (OP::Pick, ScriptEntry::Byte(idx)) => {
+                    if *idx as usize >= exec_stack.len() {
+                        self.state = ScriptExecutorState::Error(ExecutionResult::IndexOutOfBounds);
+                        return;
+                    }
+
+                    let cloned = exec_stack[exec_stack.len() - 1 - *idx as usize].clone();
+                    *memory_size += cloned.size();
+                    exec_stack.push(cloned);
 
                     self.state = ScriptExecutorState::ExpectingInitialOP;
                 }
@@ -488,6 +582,26 @@ impl<'a> ScriptExecutor<'a> {
                     self.state = ScriptExecutorState::OkVerify;
                 }
 
+                ScriptEntry::Opcode(OP::Loop) => {
+                    self.state = ScriptExecutorState::NewLoopFrame;
+                }
+
+                ScriptEntry::Opcode(OP::Break) => {
+                    self.state = ScriptExecutorState::BreakLoop;
+                }
+
+                ScriptEntry::Opcode(OP::Continue) => {
+                    self.state = ScriptExecutorState::ContinueLoop;
+                }
+
+                ScriptEntry::Opcode(OP::End) => {
+                    self.state = ScriptExecutorState::EndBlock;
+                }
+
+                ScriptEntry::Opcode(OP::Pick) => {
+                    self.state = ScriptExecutorState::ExpectingIndexU8(OP::Pick);
+                }
+
                 ScriptEntry::Opcode(_) => {
                     self.state = ScriptExecutorState::Error(ExecutionResult::BadFormat);
                 }
@@ -509,11 +623,37 @@ impl<'a> ScriptExecutor<'a> {
 
 #[derive(Debug, Clone)]
 enum ScriptExecutorState<'a> {
+    /// Expecting script arguments length
     ExpectingArgsLen,
+
+    /// Expecting any valid opcode in the default state
     ExpectingInitialOP,
+
+    /// Expecting bytes or a cached term
     ExpectingBytesOrCachedTerm,
+
+    /// Expecting specific opcodes
     ExpectingInitialOPorOPs(&'a [OP]),
+
+    /// Expecting an u8 index for an opcode
+    ExpectingIndexU8(OP),
+
+    /// A new frame should be pushed to the stack and marked as loop
+    NewLoopFrame,
+
+    /// The current block has reached the final execution state
+    EndBlock,
+
+    /// Break the current loop
+    BreakLoop,
+
+    /// Continue to the next iteration of the current loop
+    ContinueLoop,
+
+    /// Return success error code and push message and signature to the verification stack
     OkVerify,
+
+    /// Error
     Error(ExecutionResult),
 }
 
@@ -884,6 +1024,9 @@ pub enum ExecutionResult {
 
     /// Too many arguments given
     TooManyArgs,
+
+    /// The provided index is out of bounds
+    IndexOutOfBounds,
 }
 
 #[cfg(test)]
@@ -926,6 +1069,81 @@ mod tests {
         let mut oracle_out = Output {
             address: Some(Hash160::zero().to_address()),
             amount: 30,
+            script_hash: sh,
+            inputs_hash,
+            coloured_address: None,
+            coinbase_height: None,
+            hash: None,
+            script_outs: vec![],
+            idx: 0,
+        };
+        oracle_out.compute_hash(key);
+
+        assert_eq!(
+            ss.execute(&args, &ins, &mut outs, key),
+            ExecutionResult::OkVerify
+        );
+        assert_eq!(outs, vec![oracle_out]);
+    }
+
+    #[test]
+    fn it_breaks_loop() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::BreakIfEq),
+                ScriptEntry::Opcode(OP::End),
+            ],
+        };
+        let sh = ss.to_script_hash(key);
+        let args = vec![
+            VmTerm::Signed128(30),
+            VmTerm::Hash160([0; 20]),
+            VmTerm::Hash160(sh.0),
+        ];
+        let mut ins = vec![Input {
+            out: None,
+            nsequence: 0xffffffff,
+            colour_script_args: None,
+            spending_pkey: None,
+            spend_proof: None,
+            witness: None,
+            script: ss.clone(),
+            script_args: args.clone(),
+            colour_proof: None,
+            colour_proof_without_address: None,
+            colour_script: None,
+            hash: None,
+        }];
+        let mut outs = vec![];
+
+        let ins_hashes: Vec<u8> = ins.iter_mut().fold(vec![], |mut acc, v: &mut Input| {
+            v.compute_hash(key);
+            acc.extend(v.hash().unwrap().0);
+            acc
+        });
+
+        let inputs_hash = Hash160::hash_from_slice(ins_hashes, key);
+        let mut oracle_out = Output {
+            address: Some(Hash160::zero().to_address()),
+            amount: 90,
             script_hash: sh,
             inputs_hash,
             coloured_address: None,
