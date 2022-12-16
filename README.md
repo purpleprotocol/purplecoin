@@ -116,7 +116,7 @@ In this example, there is one issue for Charlie: The amount received in exchange
 ### Quote adjustment
 Adjusting quotes poses one big challenge in this design: 
 * Once a quote is posted, anyone can accept it. If a quote is updated to a better price for the liquidity provider, someone can still settle the first transaction, invalidating the updated quote. 
-* This means adjusting quotes can only be done upward in case of buy quotes and downward in case of sell quotes, very similarly to how a Dutch auction works. Strategies can then be implemented around this by adjusting the time and price parameters of a quote update.
+* This means adjusting quotes can only be done upward in case of buy quotes and downward in case of sell quotes, very similarly to how a Dutch auction works. Strategies can then be implemented around this by adjusting the time until expiry and price parameters of a quote update.
 
 #### Comparison with liquidity pools
 We can quickly see that this mechanism resembles a traditional Order Book exchange. This brings several advantages to liquidity pools:
@@ -128,10 +128,10 @@ We can quickly see that this mechanism resembles a traditional Order Book exchan
 Purplecoin uses Schnorr implemented over Ristretto (sr25519) as its signature algorithm and blake3 as the choice of hash function.
 
 ### Green PoW
-Purple Coin uses the Green PoW model which lowers the energy consumption of mining to up to 50%.
+Purplecoin uses the Green PoW model which lowers the energy consumption of mining to up to 50%.
 
 ### ASIC resistance
-Purple Coin uses 2 Proof of Work algorithms in tandem: RandomX and a choice out of several hash functions. One is suited to CPU mining and the other for ASIC miners. Algorithms are switched every Green PoW epoch.
+Purplecoin uses 2 Proof of Work algorithms in tandem: RandomX and a choice out of several hash functions. One is suited to CPU mining and the other for ASIC miners. Algorithms are switched every Green PoW epoch.
 
 ## Donations
 While the development of Purplecoin initially happened in the sphere of Purple Technologies, it is not backed in any way by it or any other company. Purple Technologies is a for-profit company while Purplecoin is a decentralized project. Thereforce, the decisions and development happens at the community level. As such, the project also relies on the community at a funding level. 
