@@ -119,7 +119,7 @@ Adjusting quotes poses one big challenge in this design:
 * This means adjusting quotes can only be done upward in case of buy quotes and downward in case of sell quotes, very similarly to how a Dutch auction works. Strategies can then be implemented around this by adjusting the time and price parameters of a quote update.
 
 #### Comparison with liquidity pools
-We can quickly see that this mechanism resembles a traditional. This brings several advantages to liquidity pools:
+We can quickly see that this mechanism resembles a traditional Order Book exchange. This brings several advantages to liquidity pools:
 * Stateless design
 * Market and limit orders
 * No need to lock liquidity in the pool for a long time; Liquidity providers are able to access profits after each trade
