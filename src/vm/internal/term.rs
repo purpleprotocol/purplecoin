@@ -58,6 +58,10 @@ impl VmTerm {
         crate::codec::encode_to_vec(self).unwrap()
     }
 
+    pub fn add_one(&mut self) -> Option<()> {
+        unimplemented!();
+    }
+
     /// Returns the virtual heap size of the term in bytes
     pub fn size(&self) -> usize {
         match self {

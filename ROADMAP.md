@@ -49,12 +49,12 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x20` Hash160Var - Pushes a `Hash160` onto the stack
     - [ ] OP `0x21` Hash256Var - Pushes a `Hash256` onto the stack
     - [ ] OP `0x22` Hash512Var - Pushes a `Hash512` onto the stack
-    - [ ] OP `0x23` Unsigned8Var - Pushes a `Unsigned8` onto the stack
-    - [ ] OP `0x24` Unsigned16Var - Pushes a `Unsigned16` onto the stack
-    - [ ] OP `0x25` Unsigned32Var - Pushes a `Unsigned32` onto the stack
-    - [ ] OP `0x26` Unsigned64Var - Pushes a `Unsigned64` onto the stack
-    - [ ] OP `0x27` Unsigned128Var - Pushes a `Unsigned128` onto the stack
-    - [ ] OP `0x28` UnsignedBigVar - Pushes a `UnsignedBig` onto the stack
+    - [x] OP `0x23` Unsigned8Var - Pushes an `Unsigned8` onto the stack
+    - [ ] OP `0x24` Unsigned16Var - Pushes an `Unsigned16` onto the stack
+    - [ ] OP `0x25` Unsigned32Var - Pushes an `Unsigned32` onto the stack
+    - [ ] OP `0x26` Unsigned64Var - Pushes an `Unsigned64` onto the stack
+    - [ ] OP `0x27` Unsigned128Var - Pushes an `Unsigned128` onto the stack
+    - [ ] OP `0x28` UnsignedBigVar - Pushes an `UnsignedBig` onto the stack
     - [ ] OP `0x29` Signed8Var - Pushes a `Signed8` onto the stack
     - [ ] OP `0x2a` Signed16Var - Pushes a `Signed16` onto the stack
     - [ ] OP `0x2b` Signed32Var - Pushes a `Signed32` onto the stack

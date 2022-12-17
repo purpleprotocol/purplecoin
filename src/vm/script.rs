@@ -140,7 +140,7 @@ impl Script {
             return ExecutionResult::Ok;
         }
 
-        if args.len() > 256 {
+        if args.len() > STACK_SIZE {
             return ExecutionResult::TooManyArgs;
         }
 
@@ -253,6 +253,23 @@ impl Script {
                             }
                         }
 
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8Var) => {
+                            frame.i_ptr += 1;
+                            let i = &f.script[frame.i_ptr];
+                            
+                            match i {
+                                ScriptEntry::Byte(byte) => {
+                                    frame.stack.push(VmTerm::Unsigned8(*byte));
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+
+                                ScriptEntry::Opcode(_) => { 
+                                    frame.executor.state = ScriptExecutorState::Error(ExecutionResult::BadFormat); 
+                                }
+                            }
+                        }
+
                         _ => {
                             frame.i_ptr += 1;
                         }
@@ -356,11 +373,7 @@ impl Script {
                 };
 
                 for op in self.script.iter() {
-                    match op {
-                        ScriptEntry::Opcode(OP::End) => return Err(ExecutionResult::BadFormat),
-                        ScriptEntry::Opcode(OP::Func) => return Err(ExecutionResult::BadFormat),
-                        op_or_byte => out_script.script.push(op_or_byte.clone()),
-                    }
+                    out_script.script.push(op.clone());
                 }
 
                 out.push(out_script);
@@ -402,7 +415,7 @@ impl<'a> ScriptExecutor<'a> {
                 ScriptEntry::Byte(args_len) => {
                     let args_len = *args_len as usize;
                     if exec_stack.len() != args_len {
-                        self.state = ScriptExecutorState::Error(ExecutionResult::BadFormat);
+                        self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs);
                         return;
                     }
 
@@ -602,6 +615,23 @@ impl<'a> ScriptExecutor<'a> {
                     self.state = ScriptExecutorState::ExpectingIndexU8(OP::Pick);
                 }
 
+                ScriptEntry::Opcode(OP::Unsigned8Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8Var);
+                }
+
+                ScriptEntry::Opcode(OP::Add1) => {
+                    if exec_stack.len() == 0 {
+                        self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs);
+                    }
+
+                    let mut last = exec_stack.last_mut().unwrap();
+                    if last.add_one().is_some() {
+                        self.state = ScriptExecutorState::ExpectingInitialOP;
+                    } else {
+                        self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs);
+                    }
+                }
+
                 ScriptEntry::Opcode(_) => {
                     self.state = ScriptExecutorState::Error(ExecutionResult::BadFormat);
                 }
@@ -630,7 +660,7 @@ enum ScriptExecutorState<'a> {
     ExpectingInitialOP,
 
     /// Expecting bytes or a cached term
-    ExpectingBytesOrCachedTerm,
+    ExpectingBytesOrCachedTerm(OP),
 
     /// Expecting specific opcodes
     ExpectingInitialOPorOPs(&'a [OP]),
