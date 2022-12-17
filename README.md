@@ -8,7 +8,7 @@ Official implementation of Purplecoin, the first stateless cryptocurrency. Requi
 ## Running tests
 Type the following to run the test suite:
 ```
-cargo +nighly test
+cargo +nightly test
 ```
 
 ## Features
