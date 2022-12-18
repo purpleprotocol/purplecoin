@@ -308,8 +308,7 @@ impl Script {
                         // Extend stack trace
                         ScriptExecutorState::Error(err, stack_trace) => {
                             let mut stack_trace = stack_trace.clone();
-                            frame.executor.state =
-                                ScriptExecutorState::Error(*err, stack_trace);
+                            frame.executor.state = ScriptExecutorState::Error(*err, stack_trace);
                         }
 
                         _ => {
@@ -1196,8 +1195,6 @@ impl StackTrace {
         self.trace.extend(trace);
     }
 }
-
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TraceItem {
