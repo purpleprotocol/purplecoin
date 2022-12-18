@@ -8,11 +8,12 @@ use bincode::{Decode, Encode};
 use ibig::ops::Abs;
 use ibig::{ibig, IBig, UBig};
 use num_traits::identities::Zero;
+use std::fmt;
 
 const WORD_SIZE: usize = 8; // 8 bytes on 64bit machines
 const EMPTY_VEC_HEAP_SIZE: usize = 3 * WORD_SIZE; // 3 words
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum VmTerm {
     Hash160([u8; 20]),
     Hash256([u8; 32]),
@@ -49,6 +50,78 @@ pub enum VmTerm {
     Float32Array(Vec<f32>),
     Float64Array(Vec<f64>),
 }
+
+macro_rules! impl_hash_debug {
+    ($f:expr, $val:expr, $struc:expr) => {
+        $f.debug_tuple($struc)
+            .field(&hex::encode($val))
+            .finish()
+    }
+}
+
+macro_rules! impl_normal_debug {
+    ($f:expr, $val:expr, $struc:expr) => {
+        $f.debug_tuple($struc)
+            .field(&$val)
+            .finish()
+    }
+}
+
+macro_rules! impl_hash_array_debug {
+    ($f:expr, $val:expr, $struc:expr) => {
+        {
+            let encoded: Vec<_> = $val
+                .iter()
+                .map(|e| hex::encode(e))
+                .collect();
+            $f.debug_tuple($struc)
+                .field(&encoded)
+                .finish()
+        }
+    }
+}
+
+impl fmt::Debug for VmTerm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Hash160(val) => impl_hash_debug!(f, val, "Hash160"),
+            Self::Hash256(val) => impl_hash_debug!(f, val, "Hash256"),
+            Self::Hash512(val) => impl_hash_debug!(f, val, "Hash512"),
+            Self::Unsigned8(val) => impl_normal_debug!(f, val, "Unsigned8"),
+            Self::Unsigned16(val) => impl_normal_debug!(f, val, "Unsigned16"),
+            Self::Unsigned32(val) => impl_normal_debug!(f, val, "Unsigned32"),
+            Self::Unsigned64(val) => impl_normal_debug!(f, val, "Unsigned64"),
+            Self::Unsigned128(val) => impl_normal_debug!(f, val, "Unsigned128"),
+            Self::UnsignedBig(val) => impl_normal_debug!(f, val, "UnsignedBig"),
+            Self::Signed8(val) => impl_normal_debug!(f, val, "Signed8"),
+            Self::Signed16(val) => impl_normal_debug!(f, val, "Signed16"),
+            Self::Signed32(val) => impl_normal_debug!(f, val, "Signed32"),
+            Self::Signed64(val) => impl_normal_debug!(f, val, "Signed64"),
+            Self::Signed128(val) => impl_normal_debug!(f, val, "Signed128"),
+            Self::SignedBig(val) => impl_normal_debug!(f, val, "SignedBig"),
+            Self::Float32(val) => impl_normal_debug!(f, val, "Float32"),
+            Self::Float64(val) => impl_normal_debug!(f, val, "Float64"),
+            Self::Unsigned8Array(val) => impl_normal_debug!(f, val, "Unsigned8Array"),
+            Self::Unsigned16Array(val) => impl_normal_debug!(f, val, "Unsigned16Array"),
+            Self::Unsigned32Array(val) => impl_normal_debug!(f, val, "Unsigned32Array"),
+            Self::Unsigned64Array(val) => impl_normal_debug!(f, val, "Unsigned64Array"),
+            Self::Unsigned128Array(val) => impl_normal_debug!(f, val, "Unsigned128Array"),
+            Self::UnsignedBigArray(val) => impl_normal_debug!(f, val, "UnsignedBigArray"),
+            Self::Signed8Array(val) => impl_normal_debug!(f, val, "Signed8Array"),
+            Self::Signed16Array(val) => impl_normal_debug!(f, val, "Signed16Array"),
+            Self::Signed32Array(val) => impl_normal_debug!(f, val, "Signed32Array"),
+            Self::Signed64Array(val) => impl_normal_debug!(f, val, "Signed64Array"),
+            Self::Signed128Array(val) => impl_normal_debug!(f, val, "Signed128Array"),
+            Self::SignedBigArray(val) => impl_normal_debug!(f, val, "SignedBigArray"),
+            Self::Float32Array(val) => impl_normal_debug!(f, val, "Float32Array"),
+            Self::Float64Array(val) => impl_normal_debug!(f, val, "Float64Array"),
+            Self::Hash160Array(val) => impl_hash_array_debug!(f, val, "Hash160Array"),
+            Self::Hash256Array(val) => impl_hash_array_debug!(f, val, "Hash256Array"),
+            Self::Hash512Array(val) => impl_hash_array_debug!(f, val, "Hash512Array"),
+        }
+    }
+}
+
 
 // TODO: Implement PartialEq and check for NaN manually for floats
 impl Eq for VmTerm {}
