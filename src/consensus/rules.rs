@@ -30,10 +30,10 @@ pub const BLOCK_TIMESTAMP_MAX: u64 = 60;
 pub const MAX_BYTES_PER_BLOCK: u64 = 380_000;
 
 /// Max bytes per transaction
-pub const TRANSACTION_LIMIT_SIZE: u64 = 48_000;
+pub const TRANSACTION_LIMIT_SIZE: u64 = 10_000;
 
 /// Max number of opcodes that can be executed per script
-pub const SCRIPT_LIMIT_OPCODES: u64 = 100_000;
+pub const SCRIPT_LIMIT_OPCODES: u64 = 10_000;
 
 /// Initial block reward
 pub const INITIAL_BLOCK_REWARD: Money = COIN * 64; // 64 XPU
