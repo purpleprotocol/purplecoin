@@ -25,6 +25,9 @@ pub const MEMORY_SIZE: usize = 512_000;
 /// Max output stack size
 pub const MAX_OUT_STACK: usize = 300;
 
+/// Return only the last n frames or top stack frame items
+pub const TRACE_SIZE: usize = 10;
+
 macro_rules! check_top_stack_val {
     ($exp:expr, $frame:expr, $frame_stack:expr, $structt:expr) => {
         if $exp == &1 {
@@ -1193,7 +1196,7 @@ pub struct StackTrace {
 
 impl StackTrace {
     pub fn extend_from_frame_stack<'a>(&mut self, stack: &[Frame<'a>], script: &Script) {
-        let trace = stack.iter().map(|frame| TraceItem {
+        let trace = stack.iter().take(TRACE_SIZE).map(|frame| TraceItem {
             i_ptr: frame.i_ptr,
             func_idx: frame.func_idx,
             entry: script.script[frame.i_ptr].clone(),
@@ -1222,7 +1225,7 @@ impl From<(usize, usize, ScriptEntry, Vec<VmTerm>)> for StackTrace {
 
         Self {
             trace: vec![ti],
-            top_frame_stack,
+            top_frame_stack: top_frame_stack.iter().take(TRACE_SIZE).collect(),
         }
     }
 }
