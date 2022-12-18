@@ -85,7 +85,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x4c` IsNaN - Pushes `1` on top of the stack if the top item on the stack is NaN
     - [ ] OP `0x4d` IsInf - Pushes `1` on top of the stack if the top item on the stack is Inf
     - [ ] OP `0x4e` IsMinusInf - Pushes `1` on top of the stack if the top item on the stack is MinusInf
-    - [ ] OP `0x4f` ClearStack - Clears the stack
+    - [x] OP `0x4f` ClearStack - Clears the stack
     - [ ] OP `0x50` Add - Pops the two topmost items on the stack, performs addition and pushes the result on the stack
     - [ ] OP `0x51` Sub - Pops the two topmost items on the stack, performs subtraction and pushes the result on the stack
     - [ ] OP `0x52` Mult - Pops the two topmost items on the stack, performs multiplication and pushes the result on the stack
@@ -97,7 +97,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x58` Break - Breaks the current loop
     - [ ] OP `0x59` BreakIf - Breaks the current loop if the topmost item on the stack is `1`
     - [ ] OP `0x5a` BreakIfn - Breaks the current loop if the topmost item on the stack is not equal to `1`
-    - [ ] OP `0x5b` BreakIfEq - Breaks the current loop if the two topmost items on the stack are equal
+    - [x] OP `0x5b` BreakIfEq - Breaks the current loop if the two topmost items on the stack are equal
     - [ ] OP `0x5c` BreakIfNeq - Breaks the current loop if the two topmost items on the stack are not equal
     - [ ] OP `0x5d` BreakIfLeq - Breaks the current loop if the topmost item on the stack is less or equal than the second
     - [ ] OP `0x5e` BreakIfGeq - Breaks the current loop if the topmost item on the stack is greater or equal than the second

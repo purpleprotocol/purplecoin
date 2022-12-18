@@ -628,7 +628,7 @@ impl<'a> ScriptExecutor<'a> {
                                 coloured_address: None,
                                 inputs_hash: inputs_hash.clone(),
                                 idx: output_stack.len() as u16,
-                                script_outs: exec_stack.clone(),
+                                script_outs: vec![],
                                 hash: None,
                             };
 
@@ -682,7 +682,7 @@ impl<'a> ScriptExecutor<'a> {
                                 coloured_address: None,
                                 inputs_hash: inputs_hash.clone(),
                                 idx: output_stack.len() as u16,
-                                script_outs: exec_stack.clone(),
+                                script_outs: vec![],
                                 hash: None,
                             };
 
@@ -738,7 +738,7 @@ impl<'a> ScriptExecutor<'a> {
                                 coloured_address: None,
                                 inputs_hash: inputs_hash.clone(),
                                 idx: output_stack.len() as u16,
-                                script_outs: exec_stack.clone(),
+                                script_outs: vec![],
                                 hash: None,
                             };
 
@@ -777,6 +777,23 @@ impl<'a> ScriptExecutor<'a> {
                     self.state = ScriptExecutorState::BreakLoop;
                 }
 
+                ScriptEntry::Opcode(OP::BreakIfEq) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+
+                    let e_stack_len = exec_stack.len();
+                    let e1 = exec_stack.pop().unwrap();
+                    let e2 = exec_stack.pop().unwrap();
+
+                    if e1 == e2 {
+                        self.state = ScriptExecutorState::BreakLoop;
+                    }
+                }
+
                 ScriptEntry::Opcode(OP::Continue) => {
                     self.state = ScriptExecutorState::ContinueLoop;
                 }
@@ -810,6 +827,10 @@ impl<'a> ScriptExecutor<'a> {
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                     }
+                }
+
+                ScriptEntry::Opcode(OP::ClearStack) => {
+                    exec_stack.clear();
                 }
 
                 ScriptEntry::Opcode(_) => {
@@ -1426,6 +1447,7 @@ mod tests {
                 ScriptEntry::Byte(0x03),
                 ScriptEntry::Opcode(OP::BreakIfEq),
                 ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
             ],
         };
         let sh = ss.to_script_hash(key);
@@ -1459,9 +1481,9 @@ mod tests {
         let inputs_hash = Hash160::hash_from_slice(ins_hashes, key);
         let mut oracle_out = Output {
             address: Some(Hash160::zero().to_address()),
-            amount: 90,
-            script_hash: sh,
-            inputs_hash,
+            amount: 30,
+            script_hash: sh.clone(),
+            inputs_hash: inputs_hash.clone(),
             coloured_address: None,
             coinbase_height: None,
             hash: None,
@@ -1469,12 +1491,36 @@ mod tests {
             idx: 0,
         };
         oracle_out.compute_hash(key);
+        let mut oracle_out2 = Output {
+            address: Some(Hash160::zero().to_address()),
+            amount: 30,
+            script_hash: sh.clone(),
+            inputs_hash: inputs_hash.clone(),
+            coloured_address: None,
+            coinbase_height: None,
+            hash: None,
+            script_outs: vec![],
+            idx: 1,
+        };
+        oracle_out2.compute_hash(key);
+        let mut oracle_out3 = Output {
+            address: Some(Hash160::zero().to_address()),
+            amount: 30,
+            script_hash: sh,
+            inputs_hash,
+            coloured_address: None,
+            coinbase_height: None,
+            hash: None,
+            script_outs: vec![],
+            idx: 2,
+        };
+        oracle_out3.compute_hash(key);
 
         assert_eq!(
             ss.execute(&args, &ins, &mut outs, key),
             Ok(ExecutionResult::OkVerify).into()
         );
-        assert_eq!(outs, vec![oracle_out]);
+        assert_eq!(outs, vec![oracle_out, oracle_out2, oracle_out3]);
     }
 
     #[test]

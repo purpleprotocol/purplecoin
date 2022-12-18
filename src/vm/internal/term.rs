@@ -53,32 +53,21 @@ pub enum VmTerm {
 
 macro_rules! impl_hash_debug {
     ($f:expr, $val:expr, $struc:expr) => {
-        $f.debug_tuple($struc)
-            .field(&hex::encode($val))
-            .finish()
-    }
+        $f.debug_tuple($struc).field(&hex::encode($val)).finish()
+    };
 }
 
 macro_rules! impl_normal_debug {
     ($f:expr, $val:expr, $struc:expr) => {
-        $f.debug_tuple($struc)
-            .field(&$val)
-            .finish()
-    }
+        $f.debug_tuple($struc).field(&$val).finish()
+    };
 }
 
 macro_rules! impl_hash_array_debug {
-    ($f:expr, $val:expr, $struc:expr) => {
-        {
-            let encoded: Vec<_> = $val
-                .iter()
-                .map(|e| hex::encode(e))
-                .collect();
-            $f.debug_tuple($struc)
-                .field(&encoded)
-                .finish()
-        }
-    }
+    ($f:expr, $val:expr, $struc:expr) => {{
+        let encoded: Vec<_> = $val.iter().map(|e| hex::encode(e)).collect();
+        $f.debug_tuple($struc).field(&encoded).finish()
+    }};
 }
 
 impl fmt::Debug for VmTerm {
@@ -122,7 +111,6 @@ impl fmt::Debug for VmTerm {
     }
 }
 
-
 // TODO: Implement PartialEq and check for NaN manually for floats
 impl Eq for VmTerm {}
 
@@ -133,18 +121,42 @@ impl VmTerm {
 
     pub fn add_one(&mut self) -> Option<()> {
         match self {
-            Self::Unsigned8(ref mut val) => { val.checked_add(1)?; },
-            Self::Unsigned16(ref mut val) => { val.checked_add(1)?; },
-            Self::Unsigned32(ref mut val) => { val.checked_add(1)?; },
-            Self::Unsigned64(ref mut val) => { val.checked_add(1)?; },
-            Self::Unsigned128(ref mut val) => { val.checked_add(1)?; },
-            Self::UnsignedBig(ref mut val) => { *val += 1; },
-            Self::Signed8(ref mut val) => { val.checked_add(1)?; },
-            Self::Signed16(ref mut val) => { val.checked_add(1)?; },
-            Self::Signed32(ref mut val) => { val.checked_add(1)?; },
-            Self::Signed64(ref mut val) => { val.checked_add(1)?; },
-            Self::Signed128(ref mut val) => { val.checked_add(1)?; },
-            Self::SignedBig(ref mut val) => { *val += 1; },
+            Self::Unsigned8(ref mut val) => {
+                *val = val.checked_add(1)?;
+            }
+            Self::Unsigned16(ref mut val) => {
+                *val = val.checked_add(1)?;
+            }
+            Self::Unsigned32(ref mut val) => {
+                *val = val.checked_add(1)?;
+            }
+            Self::Unsigned64(ref mut val) => {
+                *val = val.checked_add(1)?;
+            }
+            Self::Unsigned128(ref mut val) => {
+                *val = val.checked_add(1)?;
+            }
+            Self::UnsignedBig(ref mut val) => {
+                *val += 1;
+            }
+            Self::Signed8(ref mut val) => {
+                *val = val.checked_add(1)?;
+            }
+            Self::Signed16(ref mut val) => {
+                *val = val.checked_add(1)?;
+            }
+            Self::Signed32(ref mut val) => {
+                *val = val.checked_add(1)?;
+            }
+            Self::Signed64(ref mut val) => {
+                *val = val.checked_add(1)?;
+            }
+            Self::Signed128(ref mut val) => {
+                *val = val.checked_add(1)?;
+            }
+            Self::SignedBig(ref mut val) => {
+                *val += 1;
+            }
             _ => {
                 return None;
             }
