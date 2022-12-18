@@ -1225,7 +1225,12 @@ impl From<(usize, usize, ScriptEntry, &[VmTerm])> for StackTrace {
 
         Self {
             trace: vec![ti],
-            top_frame_stack: top_frame_stack.iter().rev().take(TRACE_SIZE).cloned().collect(),
+            top_frame_stack: top_frame_stack
+                .iter()
+                .rev()
+                .take(TRACE_SIZE)
+                .cloned()
+                .collect(),
         }
     }
 }
