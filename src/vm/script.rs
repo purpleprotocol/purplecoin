@@ -31,7 +31,14 @@ macro_rules! check_top_stack_val {
             return Ok(ExecutionResult::Ok).into();
         } else {
             let mut stack_trace = StackTrace::default();
-            stack_trace.trace.push(($frame.i_ptr, $frame.func_idx, $structt.script[$frame.i_ptr].clone()).into());
+            stack_trace.trace.push(
+                (
+                    $frame.i_ptr,
+                    $frame.func_idx,
+                    $structt.script[$frame.i_ptr].clone(),
+                )
+                    .into(),
+            );
             stack_trace.extend_from_frame_stack(&$frame_stack, &$structt);
             return Err((ExecutionResult::Invalid, stack_trace)).into();
         }
@@ -144,16 +151,36 @@ impl Script {
         }
 
         if args.len() > STACK_SIZE {
-            return Err((ExecutionResult::TooManyArgs, StackTrace { trace: vec![(0_usize, 0_usize, self.script[0].clone()).into()] })).into();
+            return Err((
+                ExecutionResult::TooManyArgs,
+                StackTrace {
+                    trace: vec![(0_usize, 0_usize, self.script[0].clone()).into()],
+                },
+            ))
+            .into();
         }
 
         if self.version == 0 {
-            return Err((ExecutionResult::BadVersion, StackTrace { trace: vec![(0_usize, 0_usize, self.script[0].clone()).into()] })).into();
+            return Err((
+                ExecutionResult::BadVersion,
+                StackTrace {
+                    trace: vec![(0_usize, 0_usize, self.script[0].clone()).into()],
+                },
+            ))
+            .into();
         }
 
         let funcs = match self.parse_funcs() {
             Ok(funcs) => funcs,
-            Err(r) => return Err((r, StackTrace { trace: vec![(0_usize, 0_usize, self.script[0].clone()).into()] })).into()
+            Err(r) => {
+                return Err((
+                    r,
+                    StackTrace {
+                        trace: vec![(0_usize, 0_usize, self.script[0].clone()).into()],
+                    },
+                ))
+                .into()
+            }
         };
         let mut memory_size = 0;
         let mut exec_count = 0;
@@ -261,7 +288,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8Var) => {
                             frame.i_ptr += 1;
                             let i = &f.script[frame.i_ptr];
-                            
+
                             match i {
                                 ScriptEntry::Byte(byte) => {
                                     frame.stack.push(VmTerm::Unsigned8(*byte));
@@ -269,8 +296,11 @@ impl Script {
                                     frame.i_ptr += 1;
                                 }
 
-                                ScriptEntry::Opcode(op) => { 
-                                    frame.executor.state = ScriptExecutorState::Error(ExecutionResult::BadFormat, (frame.i_ptr, frame.func_idx, op.clone()).into()); 
+                                ScriptEntry::Opcode(op) => {
+                                    frame.executor.state = ScriptExecutorState::Error(
+                                        ExecutionResult::BadFormat,
+                                        (frame.i_ptr, frame.func_idx, *op).into(),
+                                    );
                                 }
                             }
                         }
@@ -278,7 +308,8 @@ impl Script {
                         // Extend stack trace
                         ScriptExecutorState::Error(err, stack_trace) => {
                             let mut stack_trace = stack_trace.clone();
-                            frame.executor.state = ScriptExecutorState::Error(err.clone(), stack_trace);
+                            frame.executor.state =
+                                ScriptExecutorState::Error(*err, stack_trace);
                         }
 
                         _ => {
@@ -290,17 +321,15 @@ impl Script {
                 unreachable!();
             }
 
-             // Check if we are done
+            // Check if we are done
             match frame_stack.last().unwrap().executor.done() {
                 None => {}
-                Some(result) => {
-                    match result {
-                        Ok(res) => return Ok(res).into(),
-                        Err((result, mut stack_trace)) => {
-                            let fs_len = frame_stack.len();
-                            stack_trace.extend_from_frame_stack(&frame_stack[..fs_len-1], &self);
-                            return Err((result, stack_trace)).into();
-                        }
+                Some(result) => match result {
+                    Ok(res) => return Ok(res).into(),
+                    Err((result, mut stack_trace)) => {
+                        let fs_len = frame_stack.len();
+                        stack_trace.extend_from_frame_stack(&frame_stack[..fs_len - 1], self);
+                        return Err((result, stack_trace)).into();
                     }
                 },
             }
@@ -309,8 +338,15 @@ impl Script {
                 let mut stack_trace = StackTrace::default();
                 let i_ptr = frame_stack.last().unwrap().i_ptr;
                 let fs_len = frame_stack.len();
-                stack_trace.trace.push((i_ptr, frame_stack.last().unwrap().func_idx, self.script[i_ptr].clone()).into());
-                stack_trace.extend_from_frame_stack(&frame_stack[..fs_len-1], &self);
+                stack_trace.trace.push(
+                    (
+                        i_ptr,
+                        frame_stack.last().unwrap().func_idx,
+                        self.script[i_ptr].clone(),
+                    )
+                        .into(),
+                );
+                stack_trace.extend_from_frame_stack(&frame_stack[..fs_len - 1], self);
                 return Err((ExecutionResult::OutOfGas, stack_trace)).into();
             }
 
@@ -318,8 +354,15 @@ impl Script {
                 let mut stack_trace = StackTrace::default();
                 let i_ptr = frame_stack.last().unwrap().i_ptr;
                 let fs_len = frame_stack.len();
-                stack_trace.trace.push((i_ptr, frame_stack.last().unwrap().func_idx, self.script[i_ptr].clone()).into());
-                stack_trace.extend_from_frame_stack(&frame_stack[..fs_len-1], &self);
+                stack_trace.trace.push(
+                    (
+                        i_ptr,
+                        frame_stack.last().unwrap().func_idx,
+                        self.script[i_ptr].clone(),
+                    )
+                        .into(),
+                );
+                stack_trace.extend_from_frame_stack(&frame_stack[..fs_len - 1], self);
                 return Err((ExecutionResult::OutOfMemory, stack_trace)).into();
             }
 
@@ -331,8 +374,15 @@ impl Script {
                 if fs_len == 0 {
                     if frame.stack.is_empty() {
                         let mut stack_trace = StackTrace::default();
-                            stack_trace.trace.push((frame.i_ptr-1, frame.func_idx, self.script[frame.i_ptr-1].clone()).into());
-                            return Err((ExecutionResult::Invalid, stack_trace)).into();
+                        stack_trace.trace.push(
+                            (
+                                frame.i_ptr - 1,
+                                frame.func_idx,
+                                self.script[frame.i_ptr - 1].clone(),
+                            )
+                                .into(),
+                        );
+                        return Err((ExecutionResult::Invalid, stack_trace)).into();
                     }
 
                     let top = &frame.stack[0];
@@ -348,15 +398,29 @@ impl Script {
                                 return Ok(ExecutionResult::Ok).into();
                             } else {
                                 let mut stack_trace = StackTrace::default();
-                                stack_trace.trace.push((frame.i_ptr-1, frame.func_idx, self.script[frame.i_ptr-1].clone()).into());
-                                stack_trace.extend_from_frame_stack(&frame_stack, &self);
+                                stack_trace.trace.push(
+                                    (
+                                        frame.i_ptr - 1,
+                                        frame.func_idx,
+                                        self.script[frame.i_ptr - 1].clone(),
+                                    )
+                                        .into(),
+                                );
+                                stack_trace.extend_from_frame_stack(&frame_stack, self);
                                 return Err((ExecutionResult::Invalid, stack_trace)).into();
                             }
                         }
                         _ => {
                             let mut stack_trace = StackTrace::default();
-                            stack_trace.trace.push((frame.i_ptr-1, frame.func_idx, self.script[frame.i_ptr-1].clone()).into());
-                            stack_trace.extend_from_frame_stack(&frame_stack, &self);
+                            stack_trace.trace.push(
+                                (
+                                    frame.i_ptr - 1,
+                                    frame.func_idx,
+                                    self.script[frame.i_ptr - 1].clone(),
+                                )
+                                    .into(),
+                            );
+                            stack_trace.extend_from_frame_stack(&frame_stack, self);
                             return Err((ExecutionResult::Invalid, stack_trace)).into();
                         }
                     }
@@ -378,8 +442,15 @@ impl Script {
 
                         if parent_stack.len() > STACK_SIZE {
                             let mut stack_trace = StackTrace::default();
-                            stack_trace.trace.push((frame.i_ptr-1, frame.func_idx, self.script[frame.i_ptr-1].clone()).into());
-                            stack_trace.extend_from_frame_stack(&frame_stack, &self);
+                            stack_trace.trace.push(
+                                (
+                                    frame.i_ptr - 1,
+                                    frame.func_idx,
+                                    self.script[frame.i_ptr - 1].clone(),
+                                )
+                                    .into(),
+                            );
+                            stack_trace.extend_from_frame_stack(&frame_stack, self);
                             return Err((ExecutionResult::StackOverflow, stack_trace)).into();
                         }
                     }
@@ -390,8 +461,15 @@ impl Script {
                 if frame_stack.len() > MAX_FRAMES {
                     let frame = frame_stack.last().unwrap();
                     let mut stack_trace = StackTrace::default();
-                    stack_trace.trace.push((frame.i_ptr, frame.func_idx, self.script[new_frame.i_ptr].clone()).into());
-                    stack_trace.extend_from_frame_stack(&frame_stack, &self);
+                    stack_trace.trace.push(
+                        (
+                            frame.i_ptr,
+                            frame.func_idx,
+                            self.script[new_frame.i_ptr].clone(),
+                        )
+                            .into(),
+                    );
+                    stack_trace.extend_from_frame_stack(&frame_stack, self);
                     return Err((ExecutionResult::StackOverflow, stack_trace)).into();
                 }
 
@@ -464,7 +542,10 @@ impl<'a> ScriptExecutor<'a> {
                 ScriptEntry::Byte(args_len) => {
                     let args_len = *args_len as usize;
                     if exec_stack.len() != args_len {
-                        self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs, (i_ptr, func_idx, op.clone()).into());
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone()).into(),
+                        );
                         return;
                     }
 
@@ -472,14 +553,20 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 _ => {
-                    self.state = ScriptExecutorState::Error(ExecutionResult::BadFormat, (i_ptr, func_idx, op.clone()).into());
+                    self.state = ScriptExecutorState::Error(
+                        ExecutionResult::BadFormat,
+                        (i_ptr, func_idx, op.clone()).into(),
+                    );
                 }
             },
 
             ScriptExecutorState::ExpectingIndexU8(last_op) => match (last_op, op) {
                 (OP::Pick, ScriptEntry::Byte(idx)) => {
                     if *idx as usize >= exec_stack.len() {
-                        self.state = ScriptExecutorState::Error(ExecutionResult::IndexOutOfBounds, (i_ptr, func_idx, op.clone()).into());
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::IndexOutOfBounds,
+                            (i_ptr, func_idx, op.clone()).into(),
+                        );
                         return;
                     }
 
@@ -491,18 +578,27 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 _ => {
-                    self.state = ScriptExecutorState::Error(ExecutionResult::BadFormat, (i_ptr, func_idx, op.clone()).into());
+                    self.state = ScriptExecutorState::Error(
+                        ExecutionResult::BadFormat,
+                        (i_ptr, func_idx, op.clone()).into(),
+                    );
                 }
             },
 
             ScriptExecutorState::ExpectingInitialOP => match op {
                 ScriptEntry::Byte(_) => {
-                    self.state = ScriptExecutorState::Error(ExecutionResult::BadFormat, (i_ptr, func_idx, op.clone()).into());
+                    self.state = ScriptExecutorState::Error(
+                        ExecutionResult::BadFormat,
+                        (i_ptr, func_idx, op.clone()).into(),
+                    );
                 }
 
                 ScriptEntry::Opcode(OP::PushOut) => {
                     if exec_stack.len() < 3 {
-                        self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs, (i_ptr, func_idx, op.clone()).into());
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone()).into(),
+                        );
                         return;
                     }
 
@@ -532,8 +628,10 @@ impl<'a> ScriptExecutor<'a> {
                             output_stack.push(output);
 
                             if output_stack.len() > MAX_OUT_STACK {
-                                self.state =
-                                    ScriptExecutorState::Error(ExecutionResult::OutStackOverflow, (i_ptr, func_idx, op.clone()).into());
+                                self.state = ScriptExecutorState::Error(
+                                    ExecutionResult::OutStackOverflow,
+                                    (i_ptr, func_idx, op.clone()).into(),
+                                );
                                 return;
                             }
 
@@ -541,14 +639,20 @@ impl<'a> ScriptExecutor<'a> {
                         }
 
                         _ => {
-                            self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs, (i_ptr, func_idx, op.clone()).into());
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone()).into(),
+                            );
                         }
                     }
                 }
 
                 ScriptEntry::Opcode(OP::PushOutVerify) => {
                     if exec_stack.len() < 3 {
-                        self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs, (i_ptr, func_idx, op.clone()).into());
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone()).into(),
+                        );
                         return;
                     }
 
@@ -578,8 +682,10 @@ impl<'a> ScriptExecutor<'a> {
                             output_stack.push(output);
 
                             if output_stack.len() > MAX_OUT_STACK {
-                                self.state =
-                                    ScriptExecutorState::Error(ExecutionResult::OutStackOverflow, (i_ptr, func_idx, op.clone()).into());
+                                self.state = ScriptExecutorState::Error(
+                                    ExecutionResult::OutStackOverflow,
+                                    (i_ptr, func_idx, op.clone()).into(),
+                                );
                                 return;
                             }
 
@@ -587,14 +693,20 @@ impl<'a> ScriptExecutor<'a> {
                         }
 
                         _ => {
-                            self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs, (i_ptr, func_idx, op.clone()).into());
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone()).into(),
+                            );
                         }
                     }
                 }
 
                 ScriptEntry::Opcode(OP::PushCoinbaseOut) => {
                     if exec_stack.len() < 4 {
-                        self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs, (i_ptr, func_idx, op.clone()).into());
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone()).into(),
+                        );
                         return;
                     }
 
@@ -626,8 +738,10 @@ impl<'a> ScriptExecutor<'a> {
                             output_stack.push(output);
 
                             if output_stack.len() > MAX_OUT_STACK {
-                                self.state =
-                                    ScriptExecutorState::Error(ExecutionResult::OutStackOverflow, (i_ptr, func_idx, op.clone()).into());
+                                self.state = ScriptExecutorState::Error(
+                                    ExecutionResult::OutStackOverflow,
+                                    (i_ptr, func_idx, op.clone()).into(),
+                                );
                                 return;
                             }
 
@@ -635,7 +749,10 @@ impl<'a> ScriptExecutor<'a> {
                         }
 
                         _ => {
-                            self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs, (i_ptr, func_idx, op.clone()).into());
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone()).into(),
+                            );
                         }
                     }
                 }
@@ -669,20 +786,29 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::Add1) => {
-                    if exec_stack.len() == 0 {
-                        self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs, (i_ptr, func_idx, op.clone()).into());
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone()).into(),
+                        );
                     }
 
                     let mut last = exec_stack.last_mut().unwrap();
                     if last.add_one().is_some() {
                         self.state = ScriptExecutorState::ExpectingInitialOP;
                     } else {
-                        self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs, (i_ptr, func_idx, op.clone()).into());
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone()).into(),
+                        );
                     }
                 }
 
                 ScriptEntry::Opcode(_) => {
-                    self.state = ScriptExecutorState::Error(ExecutionResult::BadFormat, (i_ptr, func_idx, op.clone()).into());
+                    self.state = ScriptExecutorState::Error(
+                        ExecutionResult::BadFormat,
+                        (i_ptr, func_idx, op.clone()).into(),
+                    );
                 }
             },
 
@@ -694,7 +820,7 @@ impl<'a> ScriptExecutor<'a> {
     pub fn done(&self) -> Option<Result<ExecutionResult, (ExecutionResult, StackTrace)>> {
         match &self.state {
             ScriptExecutorState::OkVerify => Some(Ok(ExecutionResult::OkVerify)),
-            ScriptExecutorState::Error(res, trace) => Some(Err((res.clone(), trace.clone()))),
+            ScriptExecutorState::Error(res, trace) => Some(Err((*res, trace.clone()))),
             _ => None,
         }
     }
@@ -1055,31 +1181,24 @@ impl ScriptParser {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[derive(Default)]
 pub struct StackTrace {
-    pub trace: Vec<TraceItem>
+    pub trace: Vec<TraceItem>,
 }
 
 impl StackTrace {
     pub fn extend_from_frame_stack<'a>(&mut self, stack: &[Frame<'a>], script: &Script) {
-        let trace = stack
-            .iter()
-            .map(|frame| {
-                TraceItem {
-                    i_ptr: frame.i_ptr,
-                    func_idx: frame.func_idx,
-                    entry: script.script[frame.i_ptr].clone(),
-                }
-            });
+        let trace = stack.iter().map(|frame| TraceItem {
+            i_ptr: frame.i_ptr,
+            func_idx: frame.func_idx,
+            entry: script.script[frame.i_ptr].clone(),
+        });
 
         self.trace.extend(trace);
     }
 }
 
-impl Default for StackTrace {
-    fn default() -> Self {
-        Self { trace: vec![] }
-    }
-}
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TraceItem {
@@ -1096,9 +1215,7 @@ impl From<(usize, usize, ScriptEntry)> for StackTrace {
             entry,
         };
 
-        Self {
-            trace: vec![ti],
-        }
+        Self { trace: vec![ti] }
     }
 }
 
@@ -1130,7 +1247,7 @@ impl PartialEq for VmResult {
         match (&self.0, &other.0) {
             (Ok(res1), Ok(res2)) => res1 == res2,
             (Err((res1, _)), Err((res2, _))) => res1 == res2,
-            _ => false
+            _ => false,
         }
     }
 }
