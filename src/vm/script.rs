@@ -303,7 +303,8 @@ impl Script {
                                 ScriptEntry::Opcode(op) => {
                                     frame.executor.state = ScriptExecutorState::Error(
                                         ExecutionResult::BadFormat,
-                                        (frame.i_ptr, frame.func_idx, *op, frame.stack.clone()).into(),
+                                        (frame.i_ptr, frame.func_idx, *op, frame.stack.clone())
+                                            .into(),
                                     );
                                 }
                             }
@@ -1210,14 +1211,19 @@ pub struct TraceItem {
 }
 
 impl From<(usize, usize, ScriptEntry, Vec<VmTerm>)> for StackTrace {
-    fn from((i_ptr, func_idx, entry, top_frame_stack): (usize, usize, ScriptEntry, Vec<VmTerm>)) -> Self {
+    fn from(
+        (i_ptr, func_idx, entry, top_frame_stack): (usize, usize, ScriptEntry, Vec<VmTerm>),
+    ) -> Self {
         let ti = TraceItem {
             i_ptr,
             func_idx,
             entry,
         };
 
-        Self { trace: vec![ti], top_frame_stack }
+        Self {
+            trace: vec![ti],
+            top_frame_stack,
+        }
     }
 }
 
