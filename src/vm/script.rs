@@ -39,6 +39,7 @@ macro_rules! check_top_stack_val {
                 )
                     .into(),
             );
+            stack_trace.top_frame_stack.extend_from_slice(&$frame.stack);
             stack_trace.extend_from_frame_stack(&$frame_stack, &$structt);
             return Err((ExecutionResult::Invalid, stack_trace)).into();
         }
@@ -155,6 +156,7 @@ impl Script {
                 ExecutionResult::TooManyArgs,
                 StackTrace {
                     trace: vec![(0_usize, 0_usize, self.script[0].clone()).into()],
+                    top_frame_stack: vec![],
                 },
             ))
             .into();
@@ -165,6 +167,7 @@ impl Script {
                 ExecutionResult::BadVersion,
                 StackTrace {
                     trace: vec![(0_usize, 0_usize, self.script[0].clone()).into()],
+                    top_frame_stack: vec![],
                 },
             ))
             .into();
@@ -177,6 +180,7 @@ impl Script {
                     r,
                     StackTrace {
                         trace: vec![(0_usize, 0_usize, self.script[0].clone()).into()],
+                        top_frame_stack: vec![],
                     },
                 ))
                 .into()
@@ -299,7 +303,7 @@ impl Script {
                                 ScriptEntry::Opcode(op) => {
                                     frame.executor.state = ScriptExecutorState::Error(
                                         ExecutionResult::BadFormat,
-                                        (frame.i_ptr, frame.func_idx, *op).into(),
+                                        (frame.i_ptr, frame.func_idx, *op, frame.stack.clone()).into(),
                                     );
                                 }
                             }
@@ -405,6 +409,7 @@ impl Script {
                                     )
                                         .into(),
                                 );
+                                stack_trace.top_frame_stack.extend_from_slice(&frame.stack);
                                 stack_trace.extend_from_frame_stack(&frame_stack, self);
                                 return Err((ExecutionResult::Invalid, stack_trace)).into();
                             }
@@ -543,7 +548,7 @@ impl<'a> ScriptExecutor<'a> {
                     if exec_stack.len() != args_len {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
-                            (i_ptr, func_idx, op.clone()).into(),
+                            (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                         );
                         return;
                     }
@@ -554,7 +559,7 @@ impl<'a> ScriptExecutor<'a> {
                 _ => {
                     self.state = ScriptExecutorState::Error(
                         ExecutionResult::BadFormat,
-                        (i_ptr, func_idx, op.clone()).into(),
+                        (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                     );
                 }
             },
@@ -564,7 +569,7 @@ impl<'a> ScriptExecutor<'a> {
                     if *idx as usize >= exec_stack.len() {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::IndexOutOfBounds,
-                            (i_ptr, func_idx, op.clone()).into(),
+                            (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                         );
                         return;
                     }
@@ -579,7 +584,7 @@ impl<'a> ScriptExecutor<'a> {
                 _ => {
                     self.state = ScriptExecutorState::Error(
                         ExecutionResult::BadFormat,
-                        (i_ptr, func_idx, op.clone()).into(),
+                        (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                     );
                 }
             },
@@ -588,7 +593,7 @@ impl<'a> ScriptExecutor<'a> {
                 ScriptEntry::Byte(_) => {
                     self.state = ScriptExecutorState::Error(
                         ExecutionResult::BadFormat,
-                        (i_ptr, func_idx, op.clone()).into(),
+                        (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                     );
                 }
 
@@ -596,7 +601,7 @@ impl<'a> ScriptExecutor<'a> {
                     if exec_stack.len() < 3 {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
-                            (i_ptr, func_idx, op.clone()).into(),
+                            (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                         );
                         return;
                     }
@@ -629,7 +634,7 @@ impl<'a> ScriptExecutor<'a> {
                             if output_stack.len() > MAX_OUT_STACK {
                                 self.state = ScriptExecutorState::Error(
                                     ExecutionResult::OutStackOverflow,
-                                    (i_ptr, func_idx, op.clone()).into(),
+                                    (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                                 );
                                 return;
                             }
@@ -640,7 +645,7 @@ impl<'a> ScriptExecutor<'a> {
                         _ => {
                             self.state = ScriptExecutorState::Error(
                                 ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone()).into(),
+                                (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                             );
                         }
                     }
@@ -650,7 +655,7 @@ impl<'a> ScriptExecutor<'a> {
                     if exec_stack.len() < 3 {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
-                            (i_ptr, func_idx, op.clone()).into(),
+                            (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                         );
                         return;
                     }
@@ -683,7 +688,7 @@ impl<'a> ScriptExecutor<'a> {
                             if output_stack.len() > MAX_OUT_STACK {
                                 self.state = ScriptExecutorState::Error(
                                     ExecutionResult::OutStackOverflow,
-                                    (i_ptr, func_idx, op.clone()).into(),
+                                    (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                                 );
                                 return;
                             }
@@ -694,7 +699,7 @@ impl<'a> ScriptExecutor<'a> {
                         _ => {
                             self.state = ScriptExecutorState::Error(
                                 ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone()).into(),
+                                (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                             );
                         }
                     }
@@ -704,7 +709,7 @@ impl<'a> ScriptExecutor<'a> {
                     if exec_stack.len() < 4 {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
-                            (i_ptr, func_idx, op.clone()).into(),
+                            (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                         );
                         return;
                     }
@@ -739,7 +744,7 @@ impl<'a> ScriptExecutor<'a> {
                             if output_stack.len() > MAX_OUT_STACK {
                                 self.state = ScriptExecutorState::Error(
                                     ExecutionResult::OutStackOverflow,
-                                    (i_ptr, func_idx, op.clone()).into(),
+                                    (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                                 );
                                 return;
                             }
@@ -750,7 +755,7 @@ impl<'a> ScriptExecutor<'a> {
                         _ => {
                             self.state = ScriptExecutorState::Error(
                                 ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone()).into(),
+                                (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                             );
                         }
                     }
@@ -788,7 +793,7 @@ impl<'a> ScriptExecutor<'a> {
                     if exec_stack.is_empty() {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
-                            (i_ptr, func_idx, op.clone()).into(),
+                            (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                         );
                     }
 
@@ -798,7 +803,7 @@ impl<'a> ScriptExecutor<'a> {
                     } else {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
-                            (i_ptr, func_idx, op.clone()).into(),
+                            (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                         );
                     }
                 }
@@ -806,7 +811,7 @@ impl<'a> ScriptExecutor<'a> {
                 ScriptEntry::Opcode(_) => {
                     self.state = ScriptExecutorState::Error(
                         ExecutionResult::BadFormat,
-                        (i_ptr, func_idx, op.clone()).into(),
+                        (i_ptr, func_idx, op.clone(), exec_stack.clone()).into(),
                     );
                 }
             },
@@ -1182,6 +1187,7 @@ impl ScriptParser {
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct StackTrace {
     pub trace: Vec<TraceItem>,
+    pub top_frame_stack: Vec<VmTerm>,
 }
 
 impl StackTrace {
@@ -1203,21 +1209,21 @@ pub struct TraceItem {
     pub(crate) entry: ScriptEntry,
 }
 
-impl From<(usize, usize, ScriptEntry)> for StackTrace {
-    fn from((i_ptr, func_idx, entry): (usize, usize, ScriptEntry)) -> Self {
+impl From<(usize, usize, ScriptEntry, Vec<VmTerm>)> for StackTrace {
+    fn from((i_ptr, func_idx, entry, top_frame_stack): (usize, usize, ScriptEntry, Vec<VmTerm>)) -> Self {
         let ti = TraceItem {
             i_ptr,
             func_idx,
             entry,
         };
 
-        Self { trace: vec![ti] }
+        Self { trace: vec![ti], top_frame_stack }
     }
 }
 
-impl From<(usize, usize, OP)> for StackTrace {
-    fn from((i_ptr, func_idx, entry): (usize, usize, OP)) -> Self {
-        (i_ptr, func_idx, ScriptEntry::Opcode(entry)).into()
+impl From<(usize, usize, OP, Vec<VmTerm>)> for StackTrace {
+    fn from((i_ptr, func_idx, entry, top_frame_stack): (usize, usize, OP, Vec<VmTerm>)) -> Self {
+        (i_ptr, func_idx, ScriptEntry::Opcode(entry), top_frame_stack).into()
     }
 }
 
