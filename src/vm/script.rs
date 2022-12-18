@@ -1196,7 +1196,7 @@ pub struct StackTrace {
 
 impl StackTrace {
     pub fn extend_from_frame_stack<'a>(&mut self, stack: &[Frame<'a>], script: &Script) {
-        let trace = stack.iter().take(TRACE_SIZE).map(|frame| TraceItem {
+        let trace = stack.iter().rev().take(TRACE_SIZE).map(|frame| TraceItem {
             i_ptr: frame.i_ptr,
             func_idx: frame.func_idx,
             entry: script.script[frame.i_ptr].clone(),
@@ -1225,7 +1225,7 @@ impl From<(usize, usize, ScriptEntry, &[VmTerm])> for StackTrace {
 
         Self {
             trace: vec![ti],
-            top_frame_stack: top_frame_stack.iter().take(TRACE_SIZE).cloned().collect(),
+            top_frame_stack: top_frame_stack.iter().rev().take(TRACE_SIZE).cloned().collect(),
         }
     }
 }
