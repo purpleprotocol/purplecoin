@@ -132,7 +132,25 @@ impl VmTerm {
     }
 
     pub fn add_one(&mut self) -> Option<()> {
-        unimplemented!();
+        match self {
+            Self::Unsigned8(ref mut val) => { val.checked_add(1)?; },
+            Self::Unsigned16(ref mut val) => { val.checked_add(1)?; },
+            Self::Unsigned32(ref mut val) => { val.checked_add(1)?; },
+            Self::Unsigned64(ref mut val) => { val.checked_add(1)?; },
+            Self::Unsigned128(ref mut val) => { val.checked_add(1)?; },
+            Self::UnsignedBig(ref mut val) => { *val += 1; },
+            Self::Signed8(ref mut val) => { val.checked_add(1)?; },
+            Self::Signed16(ref mut val) => { val.checked_add(1)?; },
+            Self::Signed32(ref mut val) => { val.checked_add(1)?; },
+            Self::Signed64(ref mut val) => { val.checked_add(1)?; },
+            Self::Signed128(ref mut val) => { val.checked_add(1)?; },
+            Self::SignedBig(ref mut val) => { *val += 1; },
+            _ => {
+                return None;
+            }
+        }
+
+        Some(())
     }
 
     /// Returns the virtual heap size of the term in bytes
