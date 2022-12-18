@@ -1180,8 +1180,7 @@ impl ScriptParser {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct StackTrace {
     pub trace: Vec<TraceItem>,
 }
