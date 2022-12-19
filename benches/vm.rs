@@ -94,10 +94,72 @@ fn bench_coinbase(c: &mut Criterion) {
     }
 }
 
-fn bench_vm_abuse(_c: &mut Criterion) {}
+fn bench_vm_abuse(c: &mut Criterion) {
+    let key = "test_key";
+    let ss = Script {
+        version: 1,
+        script: vec![
+            ScriptEntry::Byte(0x03),
+            ScriptEntry::Opcode(OP::Unsigned8Var),
+            ScriptEntry::Byte(0x00),
+            ScriptEntry::Opcode(OP::Loop),
+            ScriptEntry::Opcode(OP::Pick),
+            ScriptEntry::Byte(0x00),
+            ScriptEntry::Opcode(OP::Pick),
+            ScriptEntry::Byte(0x00),
+            ScriptEntry::Opcode(OP::Add1),
+            ScriptEntry::Opcode(OP::BreakIfEq),
+            ScriptEntry::Opcode(OP::End),
+            ScriptEntry::Opcode(OP::Verify),
+        ],
+    };
+    let sh = ss.to_script_hash(key);
+    let args = vec![
+        VmTerm::Signed128(30),
+        VmTerm::Hash160([0; 20]),
+        VmTerm::Hash160(sh.0),
+    ];
+    let ins = vec![Input {
+        out: None,
+        nsequence: 0xffffffff,
+        colour_script_args: None,
+        spending_pkey: None,
+        spend_proof: None,
+        witness: None,
+        script: ss.clone(),
+        script_args: args.clone(),
+        colour_proof: None,
+        colour_proof_without_address: None,
+        colour_script: None,
+        hash: None,
+    }]
+    .iter()
+    .cloned()
+    .map(|mut i| {
+        i.compute_hash(key);
+        i
+    })
+    .collect::<Vec<_>>();
+    let batch_sizes = vec![100, 500, 1000, 1500, 2000];
+
+    for batch_size in batch_sizes {
+        c.bench_function(&format!("abuse vm {} out of gas inputs", batch_size), |b| {
+            b.iter(|| {
+                (0..batch_size).into_par_iter().for_each(|_| {
+                    let mut outs = vec![];
+                    assert_eq!(
+                        ss.execute(&args, ins.as_slice(), &mut outs, key),
+                        Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
+                    );
+                });
+            })
+        });
+    }
+}
 
 pub fn vm_benchmark(c: &mut Criterion) {
     bench_coinbase(c);
+    bench_vm_abuse(c);
 }
 
 criterion_group!(benches, vm_benchmark);
