@@ -1566,7 +1566,10 @@ mod tests {
         }]
         .iter()
         .cloned()
-        .map(|mut i| { i.compute_hash(key); i })
+        .map(|mut i| {
+            i.compute_hash(key);
+            i
+        })
         .collect::<Vec<_>>();
 
         let mut outs = vec![];

@@ -135,27 +135,25 @@ fn bench_vm_abuse(c: &mut Criterion) {
     }]
     .iter()
     .cloned()
-    .map(|mut i| { i.compute_hash(key); i })
+    .map(|mut i| {
+        i.compute_hash(key);
+        i
+    })
     .collect::<Vec<_>>();
     let batch_sizes = vec![100, 500, 1000, 1500, 2000];
 
     for batch_size in batch_sizes {
-        c.bench_function(
-            &format!("abuse vm {} out of gas inputs", batch_size),
-            |b| {
-                b.iter(|| {
-                    (0..batch_size)
-                        .into_par_iter()
-                        .for_each(|_| {
-                            let mut outs = vec![];
-                            assert_eq!(
-                                ss.execute(&args, ins.as_slice(), &mut outs, key),
-                                Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
-                            );
-                        });
-                })
-            }
-        );
+        c.bench_function(&format!("abuse vm {} out of gas inputs", batch_size), |b| {
+            b.iter(|| {
+                (0..batch_size).into_par_iter().for_each(|_| {
+                    let mut outs = vec![];
+                    assert_eq!(
+                        ss.execute(&args, ins.as_slice(), &mut outs, key),
+                        Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
+                    );
+                });
+            })
+        });
     }
 }
 
