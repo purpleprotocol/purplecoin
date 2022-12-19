@@ -78,8 +78,8 @@ impl<'a> Frame<'a> {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Script {
-    version: u8,
-    script: Vec<ScriptEntry>,
+    pub version: u8,
+    pub script: Vec<ScriptEntry>,
 }
 
 impl Script {
@@ -1369,6 +1369,7 @@ pub enum ExecutionResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rayon::prelude::*;
 
     #[test]
     fn it_simple_spends() {
@@ -1521,6 +1522,58 @@ mod tests {
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, vec![oracle_out, oracle_out2, oracle_out3]);
+    }
+
+    #[test]
+    fn it_runs_out_of_gas() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::BreakIfEq),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+        let sh = ss.to_script_hash(key);
+        let args = vec![
+            VmTerm::Signed128(30),
+            VmTerm::Hash160([0; 20]),
+            VmTerm::Hash160(sh.0),
+        ];
+        let ins = vec![Input {
+            out: None,
+            nsequence: 0xffffffff,
+            colour_script_args: None,
+            spending_pkey: None,
+            spend_proof: None,
+            witness: None,
+            script: ss.clone(),
+            script_args: args.clone(),
+            colour_proof: None,
+            colour_proof_without_address: None,
+            colour_script: None,
+            hash: None,
+        }]
+        .iter()
+        .cloned()
+        .map(|mut i| { i.compute_hash(key); i })
+        .collect::<Vec<_>>();
+
+        let mut outs = vec![];
+        assert_eq!(
+            ss.execute(&args, ins.as_slice(), &mut outs, key),
+            Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
+        );
     }
 
     #[test]
