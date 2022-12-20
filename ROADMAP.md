@@ -123,6 +123,12 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x72` Rot - The three topmost items on the stack are rotated to the left
     - [ ] OP `0x73` Swap - The twop topmost items on the stack are swaped
     - [ ] OP `0x74` Tuck - The topmost item on the stack is copied and inserted before the second-to-top item
+    - [ ] OP `0x75` Drop2 - Removes the first two topmost items on the stack
+    - [ ] OP `0x76` Dup2 - Duplicates the first two topmost items on the stack
+    - [ ] OP `0x77` Dup3 - Duplicates the first three topmost items on the stack
+    - [ ] OP `0x78` Over2 - Duplicates the second and third items on the stack
+    - [ ] OP `0x79` Rot2 - The fifth and sixth topmost items on the stack are moved to the top
+    - [ ] OP `0x7a` Swap2 - Swaps the topmost pairs of terms on top of the stack
     - [ ] TODO add all opcodes
 * [ ] Network layer
   - [ ] Sector networking
