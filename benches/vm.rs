@@ -6,6 +6,7 @@ use purplecoin::primitives::*;
 use purplecoin::vm::internal::VmTerm;
 use purplecoin::vm::*;
 use rayon::prelude::*;
+use std::collections::HashMap;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -42,9 +43,14 @@ fn bench_coinbase(c: &mut Criterion) {
     let mut out_stack = vec![];
     c.bench_function("verify coinbase script", |b| {
         b.iter(|| {
-            input
-                .script
-                .execute(&input.script_args, &[input.clone()], &mut out_stack, key)
+            let mut idx_map = HashMap::new();
+            input.script.execute(
+                &input.script_args,
+                &[input.clone()],
+                &mut out_stack,
+                &mut idx_map,
+                key,
+            )
         })
     });
 
@@ -59,9 +65,15 @@ fn bench_coinbase(c: &mut Criterion) {
                 inputs
                     .par_iter()
                     .map(|i| {
+                        let mut idx_map = HashMap::new();
                         let mut out_stack = vec![];
-                        i.script
-                            .execute(&input.script_args, &[input.clone()], &mut out_stack, key)
+                        i.script.execute(
+                            &input.script_args,
+                            &[input.clone()],
+                            &mut out_stack,
+                            &mut idx_map,
+                            key,
+                        )
                     })
                     .collect::<Vec<_>>()
             })
@@ -79,11 +91,13 @@ fn bench_coinbase(c: &mut Criterion) {
                     inputs
                         .par_iter()
                         .map(|i| {
+                            let mut idx_map = HashMap::new();
                             let mut out_stack = vec![];
                             i.script.execute(
                                 &input.script_args,
                                 &[input.clone()],
                                 &mut out_stack,
+                                &mut idx_map,
                                 key,
                             )
                         })
@@ -147,8 +161,9 @@ fn bench_vm_abuse(c: &mut Criterion) {
             b.iter(|| {
                 (0..batch_size).into_par_iter().for_each(|_| {
                     let mut outs = vec![];
+                    let mut idx_map = HashMap::new();
                     assert_eq!(
-                        ss.execute(&args, ins.as_slice(), &mut outs, key),
+                        ss.execute(&args, ins.as_slice(), &mut outs, &mut idx_map, key),
                         Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
                     );
                 });

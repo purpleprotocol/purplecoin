@@ -11,6 +11,7 @@ use crate::settings::SETTINGS;
 use bincode::{Decode, Encode};
 use schnorrkel::{signing_context, verify_batch, PublicKey as SchnorPK, Signature as SchnorSig};
 use std::cmp::Ordering;
+use std::collections::HashMap;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Transaction {
@@ -47,12 +48,17 @@ impl Transaction {
     pub fn get_outs(&self) -> Vec<Output> {
         let key = format!("{}.shard.{}", SETTINGS.node.network_name, self.chain_id);
         let mut out_stack = vec![];
+        let mut idx_map = HashMap::new();
 
         // Compute outputs
         for input in self.ins.iter() {
-            input
-                .script
-                .execute(&input.script_args, &self.ins, &mut out_stack, &key);
+            input.script.execute(
+                &input.script_args,
+                &self.ins,
+                &mut out_stack,
+                &mut idx_map,
+                &key,
+            );
         }
 
         out_stack

@@ -15,7 +15,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [x] Sequence PoW algorithms
   - [ ] Choose minimum mainnet difficulty
   - [x] Determine ASIC friendly hash functions
-  - [ ] Aggregate outputs with same spend script and receiver in the same block
+  - [x] Aggregate outputs with same spend script and receiver in the same block
   - [ ] Implement canonical transaction ordering
   - [ ] Implement partially spendable outputs
   - [x] Block serialization

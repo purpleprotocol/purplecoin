@@ -148,6 +148,7 @@ impl Script {
         args: &[VmTerm],
         input_stack: &[Input],
         output_stack: &mut Vec<Output>,
+        output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
         key: &str,
     ) -> VmResult {
         if self.version > 1 {
@@ -231,6 +232,7 @@ impl Script {
                         &mut frame.stack,
                         input_stack,
                         output_stack,
+                        output_stack_idx_map,
                         key,
                     );
                     exec_count += 1;
@@ -542,7 +544,7 @@ impl<'a> ScriptExecutor<'a> {
         exec_stack: &mut Vec<VmTerm>,
         input_stack: &[Input],
         output_stack: &mut Vec<Output>,
-        //output_stack_idx: &mut HashMap<(Address, Hash160), u16>,
+        output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
         key: &str,
     ) {
         match self.state {
@@ -620,20 +622,32 @@ impl<'a> ScriptExecutor<'a> {
                             VmTerm::Hash160(addr),
                             VmTerm::Hash160(script_hash),
                         ) if amount > 0 => {
-                            let mut output = Output {
-                                amount,
-                                address: Some(Address(addr)),
-                                script_hash: Hash160(script_hash),
-                                coinbase_height: None,
-                                coloured_address: None,
-                                inputs_hash: inputs_hash.clone(),
-                                idx: output_stack.len() as u16,
-                                script_outs: vec![],
-                                hash: None,
-                            };
+                            let address = Address(addr);
+                            let script_hash = Hash160(script_hash);
 
-                            output.compute_hash(key);
-                            output_stack.push(output);
+                            if let Some(idx) =
+                                output_stack_idx_map.get(&(address.clone(), script_hash.clone()))
+                            {
+                                output_stack[*idx as usize].amount += amount;
+                                output_stack[*idx as usize].compute_hash(key);
+                            } else {
+                                let mut output = Output {
+                                    amount,
+                                    address: Some(address.clone()),
+                                    script_hash: script_hash.clone(),
+                                    coinbase_height: None,
+                                    coloured_address: None,
+                                    inputs_hash: inputs_hash.clone(),
+                                    idx: output_stack.len() as u16,
+                                    script_outs: vec![],
+                                    hash: None,
+                                };
+
+                                output.compute_hash(key);
+                                output_stack_idx_map
+                                    .insert((address, script_hash), output_stack.len() as u16);
+                                output_stack.push(output);
+                            }
 
                             if output_stack.len() > MAX_OUT_STACK {
                                 self.state = ScriptExecutorState::Error(
@@ -674,27 +688,39 @@ impl<'a> ScriptExecutor<'a> {
                             VmTerm::Hash160(addr),
                             VmTerm::Hash160(script_hash),
                         ) if amount > 0 => {
-                            let mut output = Output {
-                                amount,
-                                address: Some(Address(addr)),
-                                script_hash: Hash160(script_hash),
-                                coinbase_height: None,
-                                coloured_address: None,
-                                inputs_hash: inputs_hash.clone(),
-                                idx: output_stack.len() as u16,
-                                script_outs: vec![],
-                                hash: None,
-                            };
+                            let address = Address(addr);
+                            let script_hash = Hash160(script_hash);
 
-                            output.compute_hash(key);
-                            output_stack.push(output);
+                            if let Some(idx) =
+                                output_stack_idx_map.get(&(address.clone(), script_hash.clone()))
+                            {
+                                output_stack[*idx as usize].amount += amount;
+                                output_stack[*idx as usize].compute_hash(key);
+                            } else {
+                                let mut output = Output {
+                                    amount,
+                                    address: Some(address.clone()),
+                                    script_hash: script_hash.clone(),
+                                    coinbase_height: None,
+                                    coloured_address: None,
+                                    inputs_hash: inputs_hash.clone(),
+                                    idx: output_stack.len() as u16,
+                                    script_outs: vec![],
+                                    hash: None,
+                                };
 
-                            if output_stack.len() > MAX_OUT_STACK {
-                                self.state = ScriptExecutorState::Error(
-                                    ExecutionResult::OutStackOverflow,
-                                    (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                                );
-                                return;
+                                output.compute_hash(key);
+                                output_stack_idx_map
+                                    .insert((address, script_hash), output_stack.len() as u16);
+                                output_stack.push(output);
+
+                                if output_stack.len() > MAX_OUT_STACK {
+                                    self.state = ScriptExecutorState::Error(
+                                        ExecutionResult::OutStackOverflow,
+                                        (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                    );
+                                    return;
+                                }
                             }
 
                             self.state = ScriptExecutorState::OkVerify;
@@ -744,14 +770,6 @@ impl<'a> ScriptExecutor<'a> {
 
                             output.compute_hash(key);
                             output_stack.push(output);
-
-                            if output_stack.len() > MAX_OUT_STACK {
-                                self.state = ScriptExecutorState::Error(
-                                    ExecutionResult::OutStackOverflow,
-                                    (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                                );
-                                return;
-                            }
 
                             self.state = ScriptExecutorState::ExpectingInitialOP;
                         }
@@ -1376,6 +1394,7 @@ mod tests {
         let key = "test_key";
         let ss = Script::new_simple_spend();
         let sh = ss.to_script_hash(key);
+        let mut idx_map = HashMap::new();
         let args = vec![
             VmTerm::Signed128(30),
             VmTerm::Hash160([0; 20]),
@@ -1418,7 +1437,7 @@ mod tests {
         oracle_out.compute_hash(key);
 
         assert_eq!(
-            ss.execute(&args, &ins, &mut outs, key),
+            ss.execute(&args, &ins, &mut outs, &mut idx_map, key),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, vec![oracle_out]);
@@ -1452,6 +1471,7 @@ mod tests {
             ],
         };
         let sh = ss.to_script_hash(key);
+        let mut idx_map = HashMap::new();
         let args = vec![
             VmTerm::Signed128(30),
             VmTerm::Hash160([0; 20]),
@@ -1482,9 +1502,9 @@ mod tests {
         let inputs_hash = Hash160::hash_from_slice(ins_hashes, key);
         let mut oracle_out = Output {
             address: Some(Hash160::zero().to_address()),
-            amount: 30,
-            script_hash: sh.clone(),
-            inputs_hash: inputs_hash.clone(),
+            amount: 90,
+            script_hash: sh,
+            inputs_hash: inputs_hash,
             coloured_address: None,
             coinbase_height: None,
             hash: None,
@@ -1492,36 +1512,12 @@ mod tests {
             idx: 0,
         };
         oracle_out.compute_hash(key);
-        let mut oracle_out2 = Output {
-            address: Some(Hash160::zero().to_address()),
-            amount: 30,
-            script_hash: sh.clone(),
-            inputs_hash: inputs_hash.clone(),
-            coloured_address: None,
-            coinbase_height: None,
-            hash: None,
-            script_outs: vec![],
-            idx: 1,
-        };
-        oracle_out2.compute_hash(key);
-        let mut oracle_out3 = Output {
-            address: Some(Hash160::zero().to_address()),
-            amount: 30,
-            script_hash: sh,
-            inputs_hash,
-            coloured_address: None,
-            coinbase_height: None,
-            hash: None,
-            script_outs: vec![],
-            idx: 2,
-        };
-        oracle_out3.compute_hash(key);
 
         assert_eq!(
-            ss.execute(&args, &ins, &mut outs, key),
+            ss.execute(&args, &ins, &mut outs, &mut idx_map, key),
             Ok(ExecutionResult::OkVerify).into()
         );
-        assert_eq!(outs, vec![oracle_out, oracle_out2, oracle_out3]);
+        assert_eq!(outs, vec![oracle_out]);
     }
 
     #[test]
@@ -1545,6 +1541,7 @@ mod tests {
             ],
         };
         let sh = ss.to_script_hash(key);
+        let mut idx_map = HashMap::new();
         let args = vec![
             VmTerm::Signed128(30),
             VmTerm::Hash160([0; 20]),
@@ -1574,7 +1571,7 @@ mod tests {
 
         let mut outs = vec![];
         assert_eq!(
-            ss.execute(&args, ins.as_slice(), &mut outs, key),
+            ss.execute(&args, ins.as_slice(), &mut outs, &mut idx_map, key),
             Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
         );
     }
@@ -1584,6 +1581,7 @@ mod tests {
         let key = "test_key";
         let ss = Script::new_simple_spend();
         let sh = ss.to_script_hash(key);
+        let mut idx_map = HashMap::new();
         let args = vec![
             VmTerm::Signed128(0),
             VmTerm::Hash160([0; 20]),
@@ -1613,7 +1611,7 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&args, &ins, &mut outs, key),
+            ss.execute(&args, &ins, &mut outs, &mut idx_map, key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -1623,6 +1621,7 @@ mod tests {
         let key = "test_key";
         let ss = Script::new_simple_spend();
         let sh = ss.to_script_hash(key);
+        let mut idx_map = HashMap::new();
         let args = vec![
             VmTerm::Signed128(-30),
             VmTerm::Hash160([0; 20]),
@@ -1652,7 +1651,7 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&args, &ins, &mut outs, key),
+            ss.execute(&args, &ins, &mut outs, &mut idx_map, key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
