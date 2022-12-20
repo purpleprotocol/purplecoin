@@ -10,7 +10,7 @@ use purplecoin::vm::internal::VmTerm;
 use purplecoin::vm::*;
 use rand::prelude::*;
 use rayon::prelude::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -24,6 +24,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
     let ss = Script::new_simple_spend();
     let sh = ss.to_script_hash(key);
     let mut out_stack = vec![];
+    let mut idx_map = HashMap::new();
     let script_args = vec![
         VmTerm::Signed128(INITIAL_BLOCK_REWARD),
         VmTerm::Hash160(address.0),
@@ -52,9 +53,13 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
 
     for batch_size in batch_sizes.iter() {
         let in_clone = input.clone();
-        input
-            .script
-            .execute(&input.script_args, &[in_clone], &mut out_stack, key);
+        input.script.execute(
+            &input.script_args,
+            &[in_clone],
+            &mut out_stack,
+            &mut idx_map,
+            key,
+        );
 
         let outputs: Vec<Output> = out_stack
             .iter()

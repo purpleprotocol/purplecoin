@@ -24,6 +24,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::cmp;
+use std::collections::HashMap;
 use std::io::{self, prelude::*, BufReader, Cursor};
 use triomphe::Arc;
 
@@ -884,13 +885,18 @@ impl BlockHeader {
         let inputs = Self::read_genesis_inputs(chain_id, config);
         let key = config.get_chain_key(chain_id);
         let mut out_stack = vec![];
+        let mut idx_map = HashMap::new();
 
         // Compute outputs
         for input in inputs.iter() {
             let in_clone = input.clone();
-            input
-                .script
-                .execute(&input.script_args, &[in_clone], &mut out_stack, key);
+            input.script.execute(
+                &input.script_args,
+                &[in_clone],
+                &mut out_stack,
+                &mut idx_map,
+                key,
+            );
         }
 
         // Hash outs with jump_ch to determine accumulator index and then index them accordingly
@@ -1075,6 +1081,7 @@ impl Block {
         let ss = Script::new_simple_spend();
         let sh = ss.to_script_hash(key);
         let mut out_stack = vec![];
+        let mut idx_map = HashMap::new();
         let coinbase_height = prev.height + 1;
         let mut input = Input {
             out: None,
@@ -1099,9 +1106,13 @@ impl Block {
         input.compute_hash(key);
         let in_clone = input.clone();
 
-        input
-            .script
-            .execute(&input.script_args, &[in_clone], &mut out_stack, key);
+        input.script.execute(
+            &input.script_args,
+            &[in_clone],
+            &mut out_stack,
+            &mut idx_map,
+            key,
+        );
 
         let mut tx = Transaction {
             version: 1,
@@ -1194,6 +1205,7 @@ impl BlockData {
 
         let block_height = prev.height + 1;
         let block_reward = map_height_to_block_reward(block_height);
+        let mut idx_map = HashMap::new();
         let mut coinbase: Option<Input> = None;
         let mut coinbase_count = 0;
         let mut coloured_coinbase_count = 0;
@@ -1243,6 +1255,7 @@ impl BlockData {
                                 &input.script_args,
                                 &[input.clone()],
                                 &mut to_add,
+                                &mut idx_map,
                                 key,
                             );
                         }
@@ -1603,6 +1616,7 @@ mod tests {
 
         let addresses: Vec<_> = (0..5).into_iter().map(|_| Address::random()).collect();
 
+        let mut idx_map = HashMap::new();
         let mut witness_all = Witness(Accumulator::<Rsa2048, Hash256>::empty());
         let mut witness_all2 = Witness(Accumulator::<Rsa2048, Hash256>::empty());
         let mut accumulator = Accumulator::<Rsa2048, Hash256>::empty();
@@ -1614,9 +1628,13 @@ mod tests {
 
         for batch_size in batch_sizes.iter() {
             let in_clone = input.clone();
-            input
-                .script
-                .execute(&input.script_args, &[in_clone], &mut out_stack, key);
+            input.script.execute(
+                &input.script_args,
+                &[in_clone],
+                &mut out_stack,
+                &mut idx_map,
+                key,
+            );
 
             let outputs: Vec<Output> = out_stack
                 .iter()
