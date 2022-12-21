@@ -628,7 +628,21 @@ impl<'a> ScriptExecutor<'a> {
                             if let Some(idx) =
                                 output_stack_idx_map.get(&(address.clone(), script_hash.clone()))
                             {
+                                // Re-hash inputs
+                                let inputs_hashes: Vec<u8> = vec![
+                                    output_stack[*idx as usize].inputs_hash.clone(),
+                                    inputs_hash.clone(),
+                                ]
+                                .iter()
+                                .fold(vec![], |mut acc, hash| {
+                                    acc.extend(hash.0);
+                                    acc
+                                });
+
+                                let inputs_hash = Hash160::hash_from_slice(inputs_hashes, key);
+
                                 output_stack[*idx as usize].amount += amount;
+                                output_stack[*idx as usize].inputs_hash = inputs_hash;
                                 output_stack[*idx as usize].compute_hash(key);
                             } else {
                                 let mut output = Output {
@@ -694,7 +708,21 @@ impl<'a> ScriptExecutor<'a> {
                             if let Some(idx) =
                                 output_stack_idx_map.get(&(address.clone(), script_hash.clone()))
                             {
+                                // Re-hash inputs
+                                let inputs_hashes: Vec<u8> = vec![
+                                    output_stack[*idx as usize].inputs_hash.clone(),
+                                    inputs_hash.clone(),
+                                ]
+                                .iter()
+                                .fold(vec![], |mut acc, hash| {
+                                    acc.extend(hash.0);
+                                    acc
+                                });
+
+                                let inputs_hash = Hash160::hash_from_slice(inputs_hashes, key);
+
                                 output_stack[*idx as usize].amount += amount;
+                                output_stack[*idx as usize].inputs_hash = inputs_hash;
                                 output_stack[*idx as usize].compute_hash(key);
                             } else {
                                 let mut output = Output {
@@ -1490,7 +1518,14 @@ mod tests {
             colour_proof_without_address: None,
             colour_script: None,
             hash: None,
-        }];
+        }]
+        .iter()
+        .cloned()
+        .map(|mut i| {
+            i.compute_hash(key);
+            i
+        })
+        .collect::<Vec<_>>();
         let mut outs = vec![];
 
         let ins_hashes: Vec<u8> = ins.iter_mut().fold(vec![], |mut acc, v: &mut Input| {
@@ -1499,12 +1534,25 @@ mod tests {
             acc
         });
 
-        let inputs_hash = Hash160::hash_from_slice(ins_hashes, key);
+        let inputs_hash = Hash160::hash_from_slice(ins_hashes.as_slice(), key);
+
+        let inputs_hash: Hash160 = ins.iter().cloned().cycle().take(2).fold(
+            inputs_hash.clone(),
+            |mut acc: Hash160, v: Input| {
+                let inputs_hashes = vec![acc.0, inputs_hash.0]
+                    .iter()
+                    .flatten()
+                    .cloned()
+                    .collect::<Vec<_>>();
+                acc = Hash160::hash_from_slice(inputs_hashes.as_slice(), key);
+                acc
+            },
+        );
         let mut oracle_out = Output {
             address: Some(Hash160::zero().to_address()),
             amount: 90,
             script_hash: sh,
-            inputs_hash: inputs_hash,
+            inputs_hash,
             coloured_address: None,
             coinbase_height: None,
             hash: None,
