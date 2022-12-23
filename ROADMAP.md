@@ -76,9 +76,6 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x3f` SignedBigArrayVar - Pushes a `SignedBigArray` onto the stack
     - [ ] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
     - [ ] OP `0x4b` GetType - Pushes on top of the stack the type code of the value currently on top of the stack as a `Unsigned8`
-    - [ ] OP `0x4c` IsNaN - Pushes `1` on top of the stack if the top item on the stack is NaN
-    - [ ] OP `0x4d` IsInf - Pushes `1` on top of the stack if the top item on the stack is Inf
-    - [ ] OP `0x4e` IsMinusInf - Pushes `1` on top of the stack if the top item on the stack is MinusInf
     - [x] OP `0x4f` ClearStack - Clears the stack
     - [ ] OP `0x50` Add - Pops the two topmost items on the stack, performs addition and pushes the result on the stack
     - [ ] OP `0x51` Sub - Pops the two topmost items on the stack, performs subtraction and pushes the result on the stack
