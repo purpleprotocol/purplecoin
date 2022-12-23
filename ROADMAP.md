@@ -44,8 +44,6 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x17` RandomSigned32Var - Pushes a random `Signed32` onto the stack
     - [ ] OP `0x18` RandomSigned64Var - Pushes a random `Signed64` onto the stack
     - [ ] OP `0x19` RandomSigned128Var - Pushes a random `Signed128` onto the stack
-    - [ ] OP `0x1a` RandomFloat32Var - Pushes a random `Float32` onto the stack
-    - [ ] OP `0x1b` RandomFloat64Var - Pushes a random `Float64` onto the stack
     - [ ] OP `0x20` Hash160Var - Pushes a `Hash160` onto the stack
     - [ ] OP `0x21` Hash256Var - Pushes a `Hash256` onto the stack
     - [ ] OP `0x22` Hash512Var - Pushes a `Hash512` onto the stack
@@ -61,8 +59,6 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x2c` Signed64Var - Pushes a `Signed64` onto the stack
     - [ ] OP `0x2d` Signed128Var - Pushes a `Signed128` onto the stack
     - [ ] OP `0x2e` SignedBigVar - Pushes a `SignedBig` onto the stack
-    - [ ] OP `0x2f` Float32Var - Pushes a `Float32` onto the stack
-    - [ ] OP `0x30` Float64Var - Pushes a `Float64` onto the stack
     - [ ] OP `0x31` Hash160ArrayVar - Pushes a `Hash160Array` onto the stack
     - [ ] OP `0x32` Hash256ArrayVar - Pushes a `Hash256Array` onto the stack
     - [ ] OP `0x33` Hash512ArrayVar - Pushes a `Hash512Array` onto the stack
@@ -78,8 +74,6 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x3d` Signed64ArrayVar - Pushes a `Signed64Array` onto the stack
     - [ ] OP `0x3e` Signed128ArrayVar - Pushes a `Signed128Array` onto the stack
     - [ ] OP `0x3f` SignedBigArrayVar - Pushes a `SignedBigArray` onto the stack
-    - [ ] OP `0x40` Float32ArrayVar - Pushes a `Float32Array` onto the stack
-    - [ ] OP `0x41` Float64ArrayVar - Pushes a `Float64Array` onto the stack
     - [ ] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
     - [ ] OP `0x4b` GetType - Pushes on top of the stack the type code of the value currently on top of the stack as a `Unsigned8`
     - [ ] OP `0x4c` IsNaN - Pushes `1` on top of the stack if the top item on the stack is NaN

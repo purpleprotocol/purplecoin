@@ -13,7 +13,7 @@ use std::fmt;
 const WORD_SIZE: usize = 8; // 8 bytes on 64bit machines
 const EMPTY_VEC_HEAP_SIZE: usize = 3 * WORD_SIZE; // 3 words
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum VmTerm {
     Hash160([u8; 20]),
     Hash256([u8; 32]),
@@ -30,8 +30,6 @@ pub enum VmTerm {
     Signed64(i64),
     Signed128(i128),
     SignedBig(IBig),
-    Float32(f32),
-    Float64(f64),
     Hash160Array(Vec<[u8; 20]>),
     Hash256Array(Vec<[u8; 32]>),
     Hash512Array(Vec<[u8; 64]>),
@@ -47,8 +45,6 @@ pub enum VmTerm {
     Signed64Array(Vec<i64>),
     Signed128Array(Vec<i128>),
     SignedBigArray(Vec<IBig>),
-    Float32Array(Vec<f32>),
-    Float64Array(Vec<f64>),
 }
 
 macro_rules! impl_hash_debug {
@@ -88,8 +84,6 @@ impl fmt::Debug for VmTerm {
             Self::Signed64(val) => impl_normal_debug!(f, val, "Signed64"),
             Self::Signed128(val) => impl_normal_debug!(f, val, "Signed128"),
             Self::SignedBig(val) => impl_normal_debug!(f, val, "SignedBig"),
-            Self::Float32(val) => impl_normal_debug!(f, val, "Float32"),
-            Self::Float64(val) => impl_normal_debug!(f, val, "Float64"),
             Self::Unsigned8Array(val) => impl_normal_debug!(f, val, "Unsigned8Array"),
             Self::Unsigned16Array(val) => impl_normal_debug!(f, val, "Unsigned16Array"),
             Self::Unsigned32Array(val) => impl_normal_debug!(f, val, "Unsigned32Array"),
@@ -102,17 +96,12 @@ impl fmt::Debug for VmTerm {
             Self::Signed64Array(val) => impl_normal_debug!(f, val, "Signed64Array"),
             Self::Signed128Array(val) => impl_normal_debug!(f, val, "Signed128Array"),
             Self::SignedBigArray(val) => impl_normal_debug!(f, val, "SignedBigArray"),
-            Self::Float32Array(val) => impl_normal_debug!(f, val, "Float32Array"),
-            Self::Float64Array(val) => impl_normal_debug!(f, val, "Float64Array"),
             Self::Hash160Array(val) => impl_hash_array_debug!(f, val, "Hash160Array"),
             Self::Hash256Array(val) => impl_hash_array_debug!(f, val, "Hash256Array"),
             Self::Hash512Array(val) => impl_hash_array_debug!(f, val, "Hash512Array"),
         }
     }
 }
-
-// TODO: Implement PartialEq and check for NaN manually for floats
-impl Eq for VmTerm {}
 
 impl VmTerm {
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -173,8 +162,8 @@ impl VmTerm {
             Self::Hash512(_) => 64,
             Self::Unsigned8(_) | Self::Signed8(_) => 1,
             Self::Unsigned16(_) | Self::Signed16(_) => 2,
-            Self::Unsigned32(_) | Self::Signed32(_) | Self::Float32(_) => 4,
-            Self::Unsigned64(_) | Self::Signed64(_) | Self::Float64(_) => 8,
+            Self::Unsigned32(_) | Self::Signed32(_) => 4,
+            Self::Unsigned64(_) | Self::Signed64(_) => 8,
             Self::Unsigned128(_) | Self::Signed128(_) => 16,
             Self::UnsignedBig(v) => {
                 (v.bit_len() >> 3) + EMPTY_VEC_HEAP_SIZE // additional vec allocated by ubig
@@ -193,10 +182,8 @@ impl VmTerm {
             Self::Signed16Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 2,
             Self::Unsigned32Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 4,
             Self::Signed32Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 4,
-            Self::Float32Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 4,
             Self::Unsigned64Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 8,
             Self::Signed64Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 8,
-            Self::Float64Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 8,
             Self::Unsigned128Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 16,
             Self::Signed128Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 16,
             Self::UnsignedBigArray(val) => {
@@ -330,18 +317,6 @@ impl Encode for VmTerm {
 
                     _ => unreachable!(),
                 }
-            }
-
-            Self::Float32(ref v) => {
-                bincode::Encode::encode(&0x11_u8, encoder)?;
-                let v: [u8; 4] = v.to_le_bytes();
-                bincode::Encode::encode(&v, encoder)?;
-            }
-
-            Self::Float64(ref v) => {
-                bincode::Encode::encode(&0x12_u8, encoder)?;
-                let v: [u8; 8] = v.to_le_bytes();
-                bincode::Encode::encode(&v, encoder)?;
             }
 
             Self::Hash160Array(ref v) => {
@@ -481,24 +456,6 @@ impl Encode for VmTerm {
                 }
                 bincode::Encode::encode(&buf, encoder)?;
             }
-
-            Self::Float32Array(ref v) => {
-                bincode::Encode::encode(&0x22_u8, encoder)?;
-                let mut buf = Vec::with_capacity(v.len() * 4);
-                for v in v.iter() {
-                    buf.extend_from_slice(&v.to_le_bytes());
-                }
-                bincode::Encode::encode(&buf, encoder)?;
-            }
-
-            Self::Float64Array(ref v) => {
-                bincode::Encode::encode(&0x23_u8, encoder)?;
-                let mut buf = Vec::with_capacity(v.len() * 8);
-                for v in v.iter() {
-                    buf.extend_from_slice(&v.to_le_bytes());
-                }
-                bincode::Encode::encode(&buf, encoder)?;
-            }
         }
 
         Ok(())
@@ -610,18 +567,6 @@ impl Decode for VmTerm {
             }
 
             0x10 => Ok(VmTerm::SignedBig(IBig::zero())),
-
-            0x11 => {
-                let v: [u8; 4] = bincode::Decode::decode(decoder)?;
-                let v = f32::from_le_bytes(v);
-                Ok(VmTerm::Float32(v))
-            }
-
-            0x12 => {
-                let v: [u8; 8] = bincode::Decode::decode(decoder)?;
-                let v = f64::from_le_bytes(v);
-                Ok(VmTerm::Float64(v))
-            }
 
             _ => Err(bincode::error::DecodeError::OtherString(
                 "invalid term type".to_owned(),
@@ -815,38 +760,6 @@ mod tests {
         let t = VmTerm::SignedBig(i);
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded, &[0x10]);
-        assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
-    }
-
-    #[test]
-    fn test_f32_encode_decode_negative() {
-        let t = VmTerm::Float32(-1432543423.543543534534);
-        let encoded = crate::codec::encode_to_vec(&t).unwrap();
-        assert_eq!(&encoded[..1], &[0x11]);
-        assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
-    }
-
-    #[test]
-    fn test_f32_encode_decode_positive() {
-        let t = VmTerm::Float32(1254324324.543543543534);
-        let encoded = crate::codec::encode_to_vec(&t).unwrap();
-        assert_eq!(&encoded[..1], &[0x11]);
-        assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
-    }
-
-    #[test]
-    fn test_f64_encode_decode_negative() {
-        let t = VmTerm::Float64(-143_254_423_423.543_55);
-        let encoded = crate::codec::encode_to_vec(&t).unwrap();
-        assert_eq!(&encoded[..1], &[0x12]);
-        assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
-    }
-
-    #[test]
-    fn test_f64_encode_decode_positive() {
-        let t = VmTerm::Float64(143_254_324_324.543_55);
-        let encoded = crate::codec::encode_to_vec(&t).unwrap();
-        assert_eq!(&encoded[..1], &[0x12]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
     }
 }

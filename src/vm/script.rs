@@ -1090,16 +1090,6 @@ impl ScriptParser {
                     self.state = ScriptParserState::ExpectingBytes(32);
                     Ok(())
                 }
-                Some(OP::Float32Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Float32Var));
-                    self.state = ScriptParserState::ExpectingBytes(4);
-                    Ok(())
-                }
-                Some(OP::Float64Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Float64Var));
-                    self.state = ScriptParserState::ExpectingBytes(8);
-                    Ok(())
-                }
                 Some(OP::Hash160ArrayVar) => {
                     self.out.push(ScriptEntry::Opcode(OP::Hash160ArrayVar));
                     self.state = ScriptParserState::ExpectingLen(OP::Hash160ArrayVar, 0, 0);
@@ -1225,11 +1215,11 @@ impl ScriptParser {
                             self.state = ScriptParserState::ExpectingBytes((*sum * 2) as usize);
                             Ok(())
                         }
-                        OP::Unsigned32ArrayVar | OP::Signed32ArrayVar | OP::Float32ArrayVar => {
+                        OP::Unsigned32ArrayVar | OP::Signed32ArrayVar => {
                             self.state = ScriptParserState::ExpectingBytes((*sum * 4) as usize);
                             Ok(())
                         }
-                        OP::Unsigned64ArrayVar | OP::Signed64ArrayVar | OP::Float64ArrayVar => {
+                        OP::Unsigned64ArrayVar | OP::Signed64ArrayVar => {
                             self.state = ScriptParserState::ExpectingBytes((*sum * 8) as usize);
                             Ok(())
                         }
