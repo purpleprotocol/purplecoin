@@ -895,6 +895,7 @@ impl BlockHeader {
                 &[in_clone],
                 &mut out_stack,
                 &mut idx_map,
+                [0; 32],
                 key,
             );
         }
@@ -1111,6 +1112,7 @@ impl Block {
             &[in_clone],
             &mut out_stack,
             &mut idx_map,
+            [0; 32],
             key,
         );
 
@@ -1256,6 +1258,7 @@ impl BlockData {
                                 &[input.clone()],
                                 &mut to_add,
                                 &mut idx_map,
+                                [0; 32], // TODO: Inject seed here
                                 key,
                             );
                         }
@@ -1633,6 +1636,7 @@ mod tests {
                 &[in_clone],
                 &mut out_stack,
                 &mut idx_map,
+                [0; 32],
                 key,
             );
 

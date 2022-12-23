@@ -49,6 +49,7 @@ fn bench_coinbase(c: &mut Criterion) {
                 &[input.clone()],
                 &mut out_stack,
                 &mut idx_map,
+                [0; 32],
                 key,
             )
         })
@@ -72,6 +73,7 @@ fn bench_coinbase(c: &mut Criterion) {
                             &[input.clone()],
                             &mut out_stack,
                             &mut idx_map,
+                            [0; 32],
                             key,
                         )
                     })
@@ -98,6 +100,7 @@ fn bench_coinbase(c: &mut Criterion) {
                                 &[input.clone()],
                                 &mut out_stack,
                                 &mut idx_map,
+                                [0; 32],
                                 key,
                             )
                         })
@@ -163,7 +166,7 @@ fn bench_vm_abuse(c: &mut Criterion) {
                     let mut outs = vec![];
                     let mut idx_map = HashMap::new();
                     assert_eq!(
-                        ss.execute(&args, ins.as_slice(), &mut outs, &mut idx_map, key),
+                        ss.execute(&args, ins.as_slice(), &mut outs, &mut idx_map, [0; 32], key),
                         Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
                     );
                 });

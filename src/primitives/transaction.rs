@@ -57,6 +57,7 @@ impl Transaction {
                 &self.ins,
                 &mut out_stack,
                 &mut idx_map,
+                [0; 32], // TODO: Inject seed here
                 &key,
             );
         }

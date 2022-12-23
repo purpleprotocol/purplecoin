@@ -11,6 +11,9 @@ use crate::vm::opcodes::OP;
 use bincode::{Decode, Encode};
 use ibig::ibig;
 use num_traits::{FromPrimitive, ToPrimitive};
+use rand::prelude::*;
+use rand_pcg::Pcg64;
+use rand_seeder::Seeder;
 use std::collections::HashMap;
 
 /// Max frame stack size
@@ -149,6 +152,7 @@ impl Script {
         input_stack: &[Input],
         output_stack: &mut Vec<Output>,
         output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
+        seed: [u8; 32],
         key: &str,
     ) -> VmResult {
         if self.version > 1 {
@@ -190,6 +194,11 @@ impl Script {
                 .into()
             }
         };
+
+        // Seed RNG
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        // Initialize internals
         let mut memory_size = 0;
         let mut exec_count = 0;
         let mut frame_stack: Vec<Frame> = Vec::with_capacity(MAX_FRAMES);
@@ -1455,7 +1464,7 @@ mod tests {
         oracle_out.compute_hash(key);
 
         assert_eq!(
-            ss.execute(&args, &ins, &mut outs, &mut idx_map, key),
+            ss.execute(&args, &ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, vec![oracle_out]);
@@ -1552,7 +1561,7 @@ mod tests {
         oracle_out.compute_hash(key);
 
         assert_eq!(
-            ss.execute(&args, &ins, &mut outs, &mut idx_map, key),
+            ss.execute(&args, &ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, vec![oracle_out]);
@@ -1609,7 +1618,7 @@ mod tests {
 
         let mut outs = vec![];
         assert_eq!(
-            ss.execute(&args, ins.as_slice(), &mut outs, &mut idx_map, key),
+            ss.execute(&args, ins.as_slice(), &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
         );
     }
@@ -1649,7 +1658,7 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&args, &ins, &mut outs, &mut idx_map, key),
+            ss.execute(&args, &ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -1689,7 +1698,7 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&args, &ins, &mut outs, &mut idx_map, key),
+            ss.execute(&args, &ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
