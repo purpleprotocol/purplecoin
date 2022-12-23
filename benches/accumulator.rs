@@ -58,6 +58,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
             &[in_clone],
             &mut out_stack,
             &mut idx_map,
+            [0; 32],
             key,
         );
 

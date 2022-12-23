@@ -11,10 +11,10 @@ use crate::vm::opcodes::OP;
 use bincode::{Decode, Encode};
 use ibig::ibig;
 use num_traits::{FromPrimitive, ToPrimitive};
-use std::collections::HashMap;
 use rand::prelude::*;
-use rand_seeder::Seeder;
 use rand_pcg::Pcg64;
+use rand_seeder::Seeder;
+use std::collections::HashMap;
 
 /// Max frame stack size
 pub const MAX_FRAMES: usize = 512;
