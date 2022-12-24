@@ -234,18 +234,17 @@ impl PowBlockHeader {
     /// if previous header's hash is not computed.
     pub fn new(
         prev: &PowBlockHeader,
-        runnerups: Option<[&PowBlockHeader; 3]>,
+        runnerups: Option<[&PowBlockHeader; SECTORS - 1]>,
         blocks: Vec<BlockHeader>,
         key: &str,
     ) -> Result<Self, BlockVerifyErr> {
-        debug_assert_eq!(blocks.len(), 64);
         let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
             MerkleTree::from_data::<Hash256, _>(blocks.iter().map(|b| b.hash().unwrap()).cloned())
                 .unwrap();
         let block_root = mt.root();
         let timestamp = Utc::now().timestamp();
         let runnerup_hashes = if let Some(runnerups) = runnerups {
-            let mut out = [Hash256::zero(); 3];
+            let mut out = [Hash256::zero(); SECTORS - 1];
             let b: Vec<Hash256> = runnerups.iter().map(|r| *r.hash().unwrap()).collect();
             out.copy_from_slice(b.as_slice());
             Some(out)
@@ -257,7 +256,7 @@ impl PowBlockHeader {
                     if timestamp < time {
                         return Err(BlockVerifyErr::InvalidRunnerupTimestamp);
                     } else {
-                        Some([Hash256::zero(); 3])
+                        Some([Hash256::zero(); SECTORS - 1])
                     }
                 }
 
@@ -295,8 +294,10 @@ impl PowBlockHeader {
         } else {
             return Err(BlockVerifyErr::InvalidSectorID);
         };
-        unimplemented!()
 
+        unimplemented!();
+
+        // TODO: Add prev root
         // let mut block = Self {
         //     version: prev.version,
         //     sector_id: prev.sector_id,
@@ -339,56 +340,50 @@ impl PowBlockHeader {
 
     /// Creates the genesis block for the given chain config
     pub fn genesis(sector_id: u8, config: &ChainConfig) -> Self {
-        unimplemented!();
-        // let nonce = match config.network_name() {
-        //     "mainnet" => GENESIS_NONCES_MAINNET[sector_id as usize],
-        //     "testnet" => GENESIS_NONCES_TESTNET[sector_id as usize],
-        //     network => panic!("Invalid network name received: {}", network),
-        // };
-        // let key = config.get_sector_key(sector_id);
-        // let mut bits = [MIN_DIFF_RANDOM_HASH; 14];
-        // bits[0] = MIN_DIFF_RANDOMX;
-        // bits[1] = MIN_DIFF_RANDOMX;
-        // let bt_mean = [30; 14];
-        // let diff_heights = [0; 14];
-        // let chain_ids = map_sector_id_to_chain_ids(sector_id).unwrap();
+        let nonce = 0;
+        let key = config.get_sector_key(sector_id);
+        let mut bits = [MIN_DIFF_RANDOM_HASH; 14];
+        bits[0] = MIN_DIFF_RANDOMX;
+        bits[1] = MIN_DIFF_RANDOMX;
+        let bt_mean = [30; 14];
+        let diff_heights = [0; 14];
+        let chain_ids = map_sector_id_to_chain_ids(sector_id).unwrap();
 
-        // let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
-        //     MerkleTree::from_data::<Hash256, Vec<Hash256>>(
-        //         chain_ids
-        //             .into_iter()
-        //             .map(|chain_id| {
-        //                 BlockHeader::genesis_cached(chain_id, config)
-        //                     .hash()
-        //                     .unwrap()
-        //                     .clone()
-        //             })
-        //             .collect(),
-        //     )
-        //     .unwrap();
-        // let block_root = mt.root();
-        // let prev_hash = Hash256::hash_from_slice("The Guardian 22/08/2022 UK inflation will hit 18% in early 2023, says leading bank Citi\n\nABSE", key);
+        let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
+            MerkleTree::from_data::<Hash256, Vec<Hash256>>(
+                chain_ids
+                    .into_iter()
+                    .map(|chain_id| {
+                        *BlockHeader::genesis_cached(chain_id, config)
+                            .hash()
+                            .unwrap()
+                    })
+                    .collect(),
+            )
+            .unwrap();
+        let block_root = mt.root();
+        let prev_hash = Hash256::hash_from_slice("The Guardian 22/08/2022 UK inflation will hit 18% in early 2023, says leading bank Citi\n\nABSE", key);
 
-        // let mut genesis = Self {
-        //     version: 1,
-        //     sector_id,
-        //     prev_hash,
-        //     block_root,
-        //     nonce,
-        //     height: 1, // Start at height 1 such that the genesis block is the second round of the first green pow epoch
-        //     bits,
-        //     bt_mean,
-        //     diff_heights,
-        //     shard_reward_height: 0,
-        //     timestamp: Utc.ymd(2022, 8, 22).and_hms(22, 30, 47).timestamp(),
-        //     prev_root: Hash256::zero(),
-        //     runnerup_hashes: Some([Hash256::zero(); 3]),
-        //     runnerups_prev_hash: Some(Hash256::zero()),
-        //     hash: None,
-        // };
+        let mut genesis = Self {
+            version: 1,
+            sector_id,
+            prev_hash,
+            block_root,
+            nonce,
+            height: 1, // Start at height 1 such that the genesis block is the second round of the first green pow epoch
+            bits,
+            bt_mean,
+            diff_heights,
+            shard_reward_height: 0,
+            timestamp: Utc.ymd(2022, 8, 22).and_hms(22, 30, 47).timestamp(),
+            prev_root: Hash256::zero(),
+            runnerup_hashes: Some([Hash256::zero(); SECTORS - 1]),
+            runnerups_prev_hash: Some(Hash256::zero()),
+            hash: None,
+        };
 
-        // genesis.compute_hash();
-        // genesis
+        genesis.compute_hash();
+        genesis
     }
 
     /// Increment nonce. Returns `None` if the nonce overflows.
