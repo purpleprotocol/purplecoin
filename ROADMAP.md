@@ -171,9 +171,9 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xc8` GeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is greater or equal than the second item on the stack
     - [ ] OP `0xc9` NeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are not equal
     - [ ] OP `0xca` CastTo - Casts the topmost item on the stack to the type id which is the second item on the stack
-    - [ ] OP `0xcf` PushOut - Pushes a new output to the output stack. The following arguments are poped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
-    - [ ] OP `0xd0` PushOutVerify - Pushes a new output to the output stack and calls Verify. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
-    - [ ] OP `0xd1` PushCoinbaseOut - Pushes a coinbase output to the output stack. Only valid in the coinbase input. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
+    - [x] OP `0xcf` PushOut - Pushes a new output to the output stack. The following arguments are poped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
+    - [x] OP `0xd0` PushOutVerify - Pushes a new output to the output stack and calls Verify. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
+    - [x] OP `0xd1` PushCoinbaseOut - Pushes a coinbase output to the output stack. Only valid in the coinbase input. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [ ] TODO add all opcodes
 * [ ] Network layer
   - [ ] Sector networking
