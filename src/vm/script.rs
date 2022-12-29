@@ -101,27 +101,7 @@ impl Script {
             version: 1,
             script: vec![
                 ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: out_amount, out_script_hash, coinbase_height, extra_nonce
-                ScriptEntry::Opcode(OP::PushCoinbaseOut),
-            ],
-        }
-    }
-
-    pub fn new_coinbase_with_extra_data() -> Script {
-        Script {
-            version: 1,
-            script: vec![
-                ScriptEntry::Byte(0x06), // 6 arguments are pushed onto the stack: out_amount, out_address, out_script_hash, coinbase_height, extra_nonce, extra_data
-                ScriptEntry::Opcode(OP::PushCoinbaseOut),
-            ],
-        }
-    }
-
-    pub fn new_coinbase_without_spending_address_with_extra_data() -> Script {
-        Script {
-            version: 1,
-            script: vec![
-                ScriptEntry::Byte(0x05), // 5 arguments are pushed onto the stack: out_amount, out_script_hash, coinbase_height, extra_nonce, extra_data
-                ScriptEntry::Opcode(OP::PushCoinbaseOut),
+                ScriptEntry::Opcode(OP::PushCoinbaseOutNoSpendAddress),
             ],
         }
     }
@@ -131,16 +111,6 @@ impl Script {
             version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
-                ScriptEntry::Opcode(OP::PushOutVerify),
-            ],
-        }
-    }
-
-    pub fn new_simple_coloured_spend() -> Script {
-        Script {
-            version: 1,
-            script: vec![
-                ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: out_amount, out_address, out_colour_hash, out_script_hash
                 ScriptEntry::Opcode(OP::PushOutVerify),
             ],
         }

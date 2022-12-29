@@ -142,6 +142,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x91` PickToScriptOuts - Duplicates the `n`th item on the stack and pushes it to the script outputs stack
     - [ ] OP `0x9a` ToHex - Converts the topmost item on the stack to hexadecimal
     - [ ] OP `0x9b` FromHex - Parses the topmost item on the stack from hexadecimal
+    - [ ] OP `0xae` CallBody - Interprets the top `Unsigned8Array` on the stack as a Func body and executes it
     - [ ] OP `0xaf` Call - Calls the function with the given index. `0` is not a valid argument as that represents the main function
     - [ ] OP `0xb0` Concat - Concats the two topmost items on the stack
     - [ ] OP `0xb1` Eq - Pushes `1` on top of the stack if the two topmost items on the stack are equal
@@ -151,6 +152,28 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xb5` Else - Else control operator
     - [x] OP `0xb6` End - Ends the current block
     - [x] OP `0xb7` Verify - Pushes the current output's binary format to the signature verification stack and stops script execution
+    - [ ] OP `0xb8` ReturnFunc - Returns from the current function and moves the terms on the current frame to the parent frame. Behaves the same as `Return` if called from the main function
+    - [ ] OP `0xb9` Return - Stops script execution and succeeds if the topmost item on the stack is `1`
+    - [ ] OP `0xba` EqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are equal
+    - [ ] OP `0xbb` Lt - Pushes `1` on top of the stack if the topmost item on the stack is less than the second item on stack
+    - [ ] OP `0xbc` Gt - Pushes `1` on top of the stack if the topmost item on the stack is greater than the second item on stack
+    - [ ] OP `0xbd` Leq - Pushes `1` on top of the stack if the topmost item on the stack is less or equal than the second item on stack
+    - [ ] OP `0xbe` Geq - Pushes `1` on top of the stack if the topmost item on the stack is greater or equal than the second item on stack
+    - [ ] OP `0xbf` IfLt - If less than control operator
+    - [ ] OP `0xc0` IfGt - If greater than control operator
+    - [ ] OP `0xc1` IfLeq - If less or equal control operator
+    - [ ] OP `0xc2` IfGeq - If greater or equal control operator
+    - [ ] OP `0xc3` IfEq - If equal control operator
+    - [ ] OP `0xc4` IfNeq - If not equal control operator
+    - [ ] OP `0xc5` LtVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is less than the second item on the stack
+    - [ ] OP `0xc6` GtVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is greater than the second item on the stack
+    - [ ] OP `0xc7` LeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is less or equal than the second item on the stack
+    - [ ] OP `0xc8` GeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is greater or equal than the second item on the stack
+    - [ ] OP `0xc9` NeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are not equal
+    - [ ] OP `0xca` CastTo - Casts the topmost item on the stack to the type id which is the second item on the stack
+    - [ ] OP `0xcf` PushOut - Pushes a new output to the output stack. The following arguments are poped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
+    - [ ] OP `0xd0` PushOutVerify - Pushes a new output to the output stack and calls Verify. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
+    - [ ] OP `0xd1` PushCoinbaseOut - Pushes a coinbase output to the output stack. Only valid in the coinbase input. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [ ] TODO add all opcodes
 * [ ] Network layer
   - [ ] Sector networking
