@@ -150,7 +150,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xb4` Ifn - If not control operator
     - [ ] OP `0xb5` Else - Else control operator
     - [x] OP `0xb6` End - Ends the current block
-    - [x] OP `0xb7` Verify - Pushes the current outputs binary format to the signature verification stack and stops script execution
+    - [x] OP `0xb7` Verify - Pushes the current output's binary format to the signature verification stack and stops script execution
     - [ ] TODO add all opcodes
 * [ ] Network layer
   - [ ] Sector networking
