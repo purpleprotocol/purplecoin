@@ -109,8 +109,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x6d` Dup - Duplicates the topmost item on the stack
     - [ ] OP `0x6e` Nip - Removes the second item on the stack
     - [ ] OP `0x6f` Over - Duplicates the second item on the stack
-    - [x] OP `0x70` Pick - Duplicates the `n` item on the stack
-    - [ ] OP `0x71` Roll - The `n` item on the stack is moved to the top
+    - [x] OP `0x70` Pick - Duplicates the `n`th item on the stack
+    - [ ] OP `0x71` Roll - The `n`th item on the stack is moved to the top
     - [ ] OP `0x72` Rot - The three topmost items on the stack are rotated to the left
     - [ ] OP `0x73` Swap - The twop topmost items on the stack are swaped
     - [ ] OP `0x74` Tuck - The topmost item on the stack is copied and inserted before the second-to-top item
@@ -120,6 +120,37 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x78` Over2 - Duplicates the second and third items on the stack
     - [ ] OP `0x79` Rot2 - The fifth and sixth topmost items on the stack are moved to the top
     - [ ] OP `0x7a` Swap2 - Swaps the topmost pairs of terms on top of the stack
+    - [ ] OP `0x7b` Size - Pushes the size in bytes of the topmost item on the stack
+    - [ ] OP `0x7c` Substr - Splits the given array at position n and pushes both arrays to the top of the stack
+    - [ ] OP `0x7d` BitOR -  Pops the two topmost items on the stack, performs bit OR on the operands and then pushes the result on the stack
+    - [ ] OP `0x7e` BitInvert - Inverts all bits of the topmost item on the stack
+    - [ ] OP `0x80` IsUTF8 - Pushes `1` on top of the stack if the given `Unsigned8Array` is a valid UTF8 byte sequence
+    - [x] OP `0x82` Add1 - Adds `1` to the topmost item on the stack
+    - [ ] OP `0x83` Sub1 - Subtracts `1` from the topmost item on the stack
+    - [ ] OP `0x84` Min - Returns the minimum of the two topmost items on the stack
+    - [ ] OP `0x85` Max - Returns the maximum of the two topmost items on the stack
+    - [ ] OP `0x86` Within - Pushes `1` on top of the stack if the topmost item on the stack is between the second and the third.
+    - [ ] OP `0x87` BoolAnd - And control operator
+    - [ ] OP `0x88` BoolOr - Or control operator
+    - [ ] OP `0x89` Negate - If the topmost item on the stack is `1`, turns it into a `0`. If the topmost item on the stack is anything but `1` it turns it into a `1`
+    - [ ] OP `0x8a` Abs - Returns the absolute value of the topmost item on the stack
+    - [ ] OP `0x8b` PushPrevScriptOuts - Pushes previous spend script outs on top of the stack
+    - [ ] OP `0x8c` PushPrevScriptOutsLen - Pushes the length of previous spend script outs on top of the stack
+    - [ ] OP `0x8e` PushExecCount - Pushes the current amount of opcodes that have been executed to the top of the stack
+    - [ ] OP `0x8f` FlushToScriptOuts - Flushes the terms on the current frame to the script outputs stack
+    - [ ] OP `0x90` PopToScriptOuts - Pops the topmost item on the stack and pushes it to the script outputs stack
+    - [ ] OP `0x91` PickToScriptOuts - Duplicates the `n`th item on the stack and pushes it to the script outputs stack
+    - [ ] OP `0x9a` ToHex - Converts the topmost item on the stack to hexadecimal
+    - [ ] OP `0x9b` FromHex - Parses the topmost item on the stack from hexadecimal
+    - [ ] OP `0xaf` Call - Calls the function with the given index. `0` is not a valid argument as that represents the main function
+    - [ ] OP `0xb0` Concat - Concats the two topmost items on the stack
+    - [ ] OP `0xb1` Eq - Pushes `1` on top of the stack if the two topmost items on the stack are equal
+    - [ ] OP `0xb2` Neq - Pushes `1` on top of the stack if the two topmost items on the stack are not equal
+    - [ ] OP `0xb3` If - If control operator
+    - [ ] OP `0xb4` Ifn - If not control operator
+    - [ ] OP `0xb5` Else - Else control operator
+    - [x] OP `0xb6` End - Ends the current block
+    - [x] OP `0xb7` Verify - Pushes the current outputs binary format to the signature verification stack and stops script execution
     - [ ] TODO add all opcodes
 * [ ] Network layer
   - [ ] Sector networking
