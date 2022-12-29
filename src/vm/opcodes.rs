@@ -203,7 +203,7 @@ mod tests {
         let encoded = crate::codec::encode_to_vec(&OP::Func).unwrap();
         assert_eq!(encoded.as_slice(), &[0x00]);
         let encoded = crate::codec::encode_to_vec(&OP::PushCoinbaseOut).unwrap();
-        assert_eq!(encoded.as_slice(), &[0xe1]);
+        assert_eq!(encoded.as_slice(), &[0xd1]);
         let encoded = crate::codec::encode_to_vec(&OP::Nop).unwrap();
         assert_eq!(encoded.as_slice(), &[0xff]);
     }
