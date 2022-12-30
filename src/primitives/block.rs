@@ -141,9 +141,6 @@ pub struct PowBlockHeader {
     /// Difficulty heights
     pub diff_heights: [u8; 14],
 
-    /// Current shard reward height
-    pub shard_reward_height: u8,
-
     /// Block timestamp
     pub timestamp: i64,
 
@@ -224,13 +221,6 @@ impl PowBlockHeader {
         };
 
         let shards_per_sector_minus_one = SHARDS_PER_SECTOR as u8 - 1;
-        let shard_reward_height = if prev.shard_reward_height == shards_per_sector_minus_one {
-            0
-        } else if prev.shard_reward_height < shards_per_sector_minus_one {
-            prev.shard_reward_height + 1
-        } else {
-            return Err(BlockVerifyErr::InvalidSectorID);
-        };
 
         unimplemented!();
 
@@ -247,7 +237,6 @@ impl PowBlockHeader {
         //     diff_heights: prev.diff_heights,
         //     runnerup_hashes,
         //     runnerups_prev_hash,
-        //     shard_reward_height,
         //     timestamp,
         //     hash: None,
         // };
@@ -311,7 +300,6 @@ impl PowBlockHeader {
             bits,
             bt_mean,
             diff_heights,
-            shard_reward_height: 0,
             timestamp: Utc.ymd(2022, 8, 22).and_hms(22, 30, 47).timestamp(),
             prev_root: Hash256::zero(),
             runnerup_hashes: Some([Hash256::zero(); SECTORS - 1]),
@@ -1302,7 +1290,6 @@ impl Decode for PowBlockHeader {
             bits: crate::codec::decode_fixed_14_array_u32(decoder)?,
             bt_mean: bincode::Decode::decode(decoder)?,
             diff_heights: bincode::Decode::decode(decoder)?,
-            shard_reward_height: bincode::Decode::decode(decoder)?,
             timestamp: bincode::Decode::decode(decoder)?,
             runnerup_hashes: match m {
                 1 | 3 => Some(bincode::Decode::decode(decoder)?),
