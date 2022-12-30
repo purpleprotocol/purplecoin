@@ -36,7 +36,7 @@ pub const TRANSACTION_LIMIT_SIZE: u64 = 10_000;
 pub const SCRIPT_LIMIT_OPCODES: u64 = 2_500;
 
 /// Initial block reward
-pub const INITIAL_BLOCK_REWARD: Money = COIN * 64; // 64 XPU
+pub const INITIAL_BLOCK_REWARD: Money = COIN; // 1 XPU
 
 /// Amount of coins mined in the genesis block
 pub const PRE_MINED_COINS: Money = COIN * 228_802_307;
