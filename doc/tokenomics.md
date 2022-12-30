@@ -1,6 +1,6 @@
 ## Purplecoin Tokenomics
-This document describes token economics for Purplecoin. Please note that the following values, except the amount of pre-mined tokens which are distributed across all shards, apply for each shard.
-* Pre-mined tokens: 228,802,307 XPU
+This document describes token economics for Purplecoin. Please note that the following values, except the amount of pre-mined coins which are distributed across all shards, apply for each shard.
+* Pre-mined coins: 228,802,307 XPU
 * Initial block reward: 1 XPU
 * Block time: 30 seconds
 * Halving period: 4.2 million blocks (4 years).
