@@ -140,3 +140,8 @@ If you wish to support the development of Purplecoin, donations can be sent to t
 ```
 bc1qwf7lcc8rsm75c54fmkrpl8s6g57gsp4zh5n34q
 ```
+
+Donations can also be sent to the following ETH address:
+```
+0x8948F2d65Fa48cB10Aeb2C91930b7f9d28b2E885
+```
