@@ -8,10 +8,10 @@ The PoW chain does not contain any transaction body, but rather the root hash of
 * In total, there are 16 PoW chains, each with its own sector composed of 16 shards. Each
 shard sector is processed concurrently and without any communication with other sectors.
 
-* Each PoW block must include the merkle root of the corresponding 16 block situated in its sector.
+* Each PoW block must include the merkle root of the corresponding 16 blocks situated in its sector.
 
 * As each block has a maximum size of `380kb`, the network will have to propagate a maximum
-of `6mb` of transactions for a block to be placed in each shard. As nodes do not need to
+of `6mb` of transactions for a block to be placed in each shard in a sector. As nodes do not need to
 store the UTXO set in order to validate new transactions, this is fine.
 
 ## Design rationale
