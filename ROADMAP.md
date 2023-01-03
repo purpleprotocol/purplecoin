@@ -86,10 +86,10 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x56` BitXOR - Pops the two topmost items on the stack, performs bit exclusive OR on the operands and then pushes the result on the stack
     - [x] OP `0x57` Loop - Starts a loop block
     - [x] OP `0x58` Break - Breaks the current loop
-    - [ ] OP `0x59` BreakIf - Breaks the current loop if the topmost item on the stack is `1`
-    - [ ] OP `0x5a` BreakIfn - Breaks the current loop if the topmost item on the stack is not equal to `1`
+    - [x] OP `0x59` BreakIf - Breaks the current loop if the topmost item on the stack is `1`
+    - [x] OP `0x5a` BreakIfn - Breaks the current loop if the topmost item on the stack is not equal to `1`
     - [x] OP `0x5b` BreakIfEq - Breaks the current loop if the two topmost items on the stack are equal
-    - [ ] OP `0x5c` BreakIfNeq - Breaks the current loop if the two topmost items on the stack are not equal
+    - [x] OP `0x5c` BreakIfNeq - Breaks the current loop if the two topmost items on the stack are not equal
     - [ ] OP `0x5d` BreakIfLeq - Breaks the current loop if the topmost item on the stack is less or equal than the second
     - [ ] OP `0x5e` BreakIfGeq - Breaks the current loop if the topmost item on the stack is greater or equal than the second
     - [ ] OP `0x5f` BreakIfLt - Breaks the current loop if the topmost item on the stack is less than the second
@@ -112,7 +112,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x70` Pick - Duplicates the `n`th item on the stack
     - [ ] OP `0x71` Roll - The `n`th item on the stack is moved to the top
     - [ ] OP `0x72` Rot - The three topmost items on the stack are rotated to the left
-    - [ ] OP `0x73` Swap - The twop topmost items on the stack are swaped
+    - [ ] OP `0x73` Swap - The two topmost items on the stack are swaped
     - [ ] OP `0x74` Tuck - The topmost item on the stack is copied and inserted before the second-to-top item
     - [ ] OP `0x75` Drop2 - Removes the first two topmost items on the stack
     - [ ] OP `0x76` Dup2 - Duplicates the first two topmost items on the stack

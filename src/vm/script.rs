@@ -802,6 +802,34 @@ impl<'a> ScriptExecutor<'a> {
                     self.state = ScriptExecutorState::BreakLoop;
                 }
 
+                ScriptEntry::Opcode(OP::BreakIf) => {
+                    if exec_stack.len() < 1 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+
+                    let top = exec_stack.pop().unwrap();
+                    if top.equals_1() {
+                        self.state = ScriptExecutorState::BreakLoop;
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::BreakIfn) => {
+                    if exec_stack.len() < 1 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+
+                    let top = exec_stack.pop().unwrap();
+                    if !top.equals_1() {
+                        self.state = ScriptExecutorState::BreakLoop;
+                    }
+                }
+
                 ScriptEntry::Opcode(OP::BreakIfEq) => {
                     if exec_stack.len() < 2 {
                         self.state = ScriptExecutorState::Error(
@@ -810,7 +838,6 @@ impl<'a> ScriptExecutor<'a> {
                         );
                     }
 
-                    let e_stack_len = exec_stack.len();
                     let e1 = exec_stack.pop().unwrap();
                     let e2 = exec_stack.pop().unwrap();
 
@@ -818,6 +845,104 @@ impl<'a> ScriptExecutor<'a> {
                         self.state = ScriptExecutorState::BreakLoop;
                     }
                 }
+
+                ScriptEntry::Opcode(OP::BreakIfNeq) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    let e2 = exec_stack.pop().unwrap();
+
+                    if e1 != e2 {
+                        self.state = ScriptExecutorState::BreakLoop;
+                    }
+                }
+
+
+
+
+    //             [ ] OP `0x5d` BreakIfLeq - Breaks the current loop if the topmost item on the stack is less or equal than the second
+    // - [ ] OP `0x5e` BreakIfGeq - Breaks the current loop if the topmost item on the stack is greater or equal than the second
+    // - [ ] OP `0x5f` BreakIfLt - Breaks the current loop if the topmost item on the stack is less than the second
+    // - [ ] OP `0x60` BreakIfGt - Breaks the current loop if the topmost item on the stack is greater than the second
+
+
+
+
+                // ScriptEntry::Opcode(OP::BreakIfLeq) => {
+                //     if exec_stack.len() < 2 {
+                //         self.state = ScriptExecutorState::Error(
+                //             ExecutionResult::InvalidArgs,
+                //             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                //         );
+                //     }
+
+                //     let e1 = exec_stack.pop().unwrap();
+                //     let e2 = exec_stack.pop().unwrap();
+
+                //     if e1 <= e2 {
+                //         self.state = ScriptExecutorState::BreakLoop;
+                //     }
+                // }
+
+                // ScriptEntry::Opcode(OP::BreakIfGeq) => {
+                //     if exec_stack.len() < 2 {
+                //         self.state = ScriptExecutorState::Error(
+                //             ExecutionResult::InvalidArgs,
+                //             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                //         );
+                //     }
+
+                //     let e1 = exec_stack.pop().unwrap();
+                //     let e2 = exec_stack.pop().unwrap();
+
+                //     if e1 >= e2 {
+                //         self.state = ScriptExecutorState::BreakLoop;
+                //     }
+                // }
+
+                // ScriptEntry::Opcode(OP::BreakIfLt) => {
+                //     if exec_stack.len() < 2 {
+                //         self.state = ScriptExecutorState::Error(
+                //             ExecutionResult::InvalidArgs,
+                //             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                //         );
+                //     }
+
+                //     let e1 = exec_stack.pop().unwrap();
+                //     let e2 = exec_stack.pop().unwrap();
+
+                //     if e1 < e2 {
+                //         self.state = ScriptExecutorState::BreakLoop;
+                //     }
+                // }
+
+                // ScriptEntry::Opcode(OP::BreakIfGt) => {
+                //     if exec_stack.len() < 2 {
+                //         self.state = ScriptExecutorState::Error(
+                //             ExecutionResult::InvalidArgs,
+                //             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                //         );
+                //     }
+
+                //     let e1 = exec_stack.pop().unwrap();
+                //     let e2 = exec_stack.pop().unwrap();
+
+                //     if e1 > e2 {
+                //         self.state = ScriptExecutorState::BreakLoop;
+                //     }
+                // }
+
+
+
+
+
+
+
 
                 ScriptEntry::Opcode(OP::Continue) => {
                     self.state = ScriptExecutorState::ContinueLoop;
@@ -1441,7 +1566,7 @@ mod tests {
     }
 
     #[test]
-    fn it_breaks_loop() {
+    fn it_breaks_loop_if_values_equal() {
         let key = "test_key";
         let ss = Script {
             version: 1,
@@ -1520,6 +1645,293 @@ mod tests {
         let mut oracle_out = Output {
             address: Some(Hash160::zero().to_address()),
             amount: 90,
+            script_hash: sh,
+            inputs_hash,
+            coloured_address: None,
+            coinbase_height: None,
+            hash: None,
+            script_outs: vec![],
+            idx: 0,
+        };
+        oracle_out.compute_hash(key);
+
+        assert_eq!(
+            ss.execute(&args, &ins, &mut outs, &mut idx_map, [0; 32], key),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, vec![oracle_out]);
+    }
+
+    #[test]
+    fn it_breaks_loop_if_values_not_equal() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::BreakIfNeq),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+        let sh = ss.to_script_hash(key);
+        let mut idx_map = HashMap::new();
+        let args = vec![
+            VmTerm::Signed128(30),
+            VmTerm::Hash160([0; 20]),
+            VmTerm::Hash160(sh.0),
+        ];
+        let mut ins = vec![Input {
+            out: None,
+            nsequence: 0xffffffff,
+            colour_script_args: None,
+            spending_pkey: None,
+            spend_proof: None,
+            witness: None,
+            script: ss.clone(),
+            script_args: args.clone(),
+            colour_proof: None,
+            colour_proof_without_address: None,
+            colour_script: None,
+            hash: None,
+        }]
+        .iter()
+        .cloned()
+        .map(|mut i| {
+            i.compute_hash(key);
+            i
+        })
+        .collect::<Vec<_>>();
+        let mut outs = vec![];
+
+        let ins_hashes: Vec<u8> = ins.iter_mut().fold(vec![], |mut acc, v: &mut Input| {
+            v.compute_hash(key);
+            acc.extend(v.hash().unwrap().0);
+            acc
+        });
+
+        let inputs_hash = Hash160::hash_from_slice(ins_hashes.as_slice(), key);
+
+        let inputs_hash: Hash160 = ins.iter().cloned().cycle().take(1).fold(
+            inputs_hash.clone(),
+            |mut acc: Hash160, v: Input| {
+                let inputs_hashes = vec![acc.0, inputs_hash.0]
+                    .iter()
+                    .flatten()
+                    .cloned()
+                    .collect::<Vec<_>>();
+                acc = Hash160::hash_from_slice(inputs_hashes.as_slice(), key);
+                acc
+            },
+        );
+        let mut oracle_out = Output {
+            address: Some(Hash160::zero().to_address()),
+            amount: 60,
+            script_hash: sh,
+            inputs_hash,
+            coloured_address: None,
+            coinbase_height: None,
+            hash: None,
+            script_outs: vec![],
+            idx: 0,
+        };
+        oracle_out.compute_hash(key);
+
+        assert_eq!(
+            ss.execute(&args, &ins, &mut outs, &mut idx_map, [0; 32], key),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, vec![oracle_out]);
+    }
+
+    #[test]
+    fn it_breaks_loop_if_equal_to_1() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::BreakIf),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+        let sh = ss.to_script_hash(key);
+        let mut idx_map = HashMap::new();
+        let args = vec![
+            VmTerm::Signed128(30),
+            VmTerm::Hash160([0; 20]),
+            VmTerm::Hash160(sh.0),
+        ];
+        let mut ins = vec![Input {
+            out: None,
+            nsequence: 0xffffffff,
+            colour_script_args: None,
+            spending_pkey: None,
+            spend_proof: None,
+            witness: None,
+            script: ss.clone(),
+            script_args: args.clone(),
+            colour_proof: None,
+            colour_proof_without_address: None,
+            colour_script: None,
+            hash: None,
+        }]
+        .iter()
+        .cloned()
+        .map(|mut i| {
+            i.compute_hash(key);
+            i
+        })
+        .collect::<Vec<_>>();
+        let mut outs = vec![];
+
+        let ins_hashes: Vec<u8> = ins.iter_mut().fold(vec![], |mut acc, v: &mut Input| {
+            v.compute_hash(key);
+            acc.extend(v.hash().unwrap().0);
+            acc
+        });
+
+        let inputs_hash = Hash160::hash_from_slice(ins_hashes.as_slice(), key);
+
+        let inputs_hash: Hash160 = ins.iter().cloned().cycle().take(0).fold(
+            inputs_hash.clone(),
+            |mut acc: Hash160, v: Input| {
+                let inputs_hashes = vec![acc.0, inputs_hash.0]
+                    .iter()
+                    .flatten()
+                    .cloned()
+                    .collect::<Vec<_>>();
+                acc = Hash160::hash_from_slice(inputs_hashes.as_slice(), key);
+                acc
+            },
+        );
+        let mut oracle_out = Output {
+            address: Some(Hash160::zero().to_address()),
+            amount: 30,
+            script_hash: sh,
+            inputs_hash,
+            coloured_address: None,
+            coinbase_height: None,
+            hash: None,
+            script_outs: vec![],
+            idx: 0,
+        };
+        oracle_out.compute_hash(key);
+
+        assert_eq!(
+            ss.execute(&args, &ins, &mut outs, &mut idx_map, [0; 32], key),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, vec![oracle_out]);
+    }
+
+    #[test]
+    fn it_breaks_loop_if_not_equal_to_1() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::BreakIfn),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+        let sh = ss.to_script_hash(key);
+        let mut idx_map = HashMap::new();
+        let args = vec![
+            VmTerm::Signed128(30),
+            VmTerm::Hash160([0; 20]),
+            VmTerm::Hash160(sh.0),
+        ];
+        let mut ins = vec![Input {
+            out: None,
+            nsequence: 0xffffffff,
+            colour_script_args: None,
+            spending_pkey: None,
+            spend_proof: None,
+            witness: None,
+            script: ss.clone(),
+            script_args: args.clone(),
+            colour_proof: None,
+            colour_proof_without_address: None,
+            colour_script: None,
+            hash: None,
+        }]
+        .iter()
+        .cloned()
+        .map(|mut i| {
+            i.compute_hash(key);
+            i
+        })
+        .collect::<Vec<_>>();
+        let mut outs = vec![];
+
+        let ins_hashes: Vec<u8> = ins.iter_mut().fold(vec![], |mut acc, v: &mut Input| {
+            v.compute_hash(key);
+            acc.extend(v.hash().unwrap().0);
+            acc
+        });
+
+        let inputs_hash = Hash160::hash_from_slice(ins_hashes.as_slice(), key);
+
+        let inputs_hash: Hash160 = ins.iter().cloned().cycle().take(1).fold(
+            inputs_hash.clone(),
+            |mut acc: Hash160, v: Input| {
+                let inputs_hashes = vec![acc.0, inputs_hash.0]
+                    .iter()
+                    .flatten()
+                    .cloned()
+                    .collect::<Vec<_>>();
+                acc = Hash160::hash_from_slice(inputs_hashes.as_slice(), key);
+                acc
+            },
+        );
+        let mut oracle_out = Output {
+            address: Some(Hash160::zero().to_address()),
+            amount: 60,
             script_hash: sh,
             inputs_hash,
             coloured_address: None,

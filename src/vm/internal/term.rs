@@ -6,7 +6,7 @@
 
 use bincode::{Decode, Encode};
 use ibig::ops::Abs;
-use ibig::{ibig, IBig, UBig};
+use ibig::{ibig, ubig, IBig, UBig};
 use num_traits::identities::Zero;
 use std::fmt;
 
@@ -203,6 +203,25 @@ impl VmTerm {
                 }
                 size
             }
+        }
+    }
+
+    // TODO HANDLE ARRAYS
+    pub fn equals_1(self) -> bool {
+        match self {
+            Self::Unsigned8(val) => val == 1_u8,
+            Self::Unsigned16(val) => val == 1_u16,
+            Self::Unsigned32(val) => val == 1_u32,
+            Self::Unsigned64(val) => val == 1_u64,
+            Self::Unsigned128(val) => val == 1_u128,
+            Self::UnsignedBig(val) => val == ubig!(1),
+            Self::Signed8(val) => val == 1_i8,
+            Self::Signed16(val) => val == 1_i16,
+            Self::Signed32(val) => val == 1_i32,
+            Self::Signed64(val) => val == 1_i64,
+            Self::Signed128(val) => val == 1_i128,
+            Self::SignedBig(val) => val == ibig!(1),
+            _ => false
         }
     }
 }
@@ -578,7 +597,7 @@ impl Decode for VmTerm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ibig::ubig;
+    use ibig::{ubig, ibig};
 
     #[test]
     fn test_hash160_encode_decode() {
@@ -761,5 +780,34 @@ mod tests {
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded, &[0x10]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
+    }
+
+    #[test]
+    fn test_equals_1() {
+        assert_eq!(VmTerm::Unsigned8(1).equals_1(), true);
+        assert_eq!(VmTerm::Unsigned16(1).equals_1(), true);
+        assert_eq!(VmTerm::Unsigned32(1).equals_1(), true);
+        assert_eq!(VmTerm::Unsigned64(1).equals_1(), true);
+        assert_eq!(VmTerm::Unsigned128(1).equals_1(), true);
+        assert_eq!(VmTerm::UnsignedBig(ubig!(1)).equals_1(), true);
+        assert_eq!(VmTerm::Signed8(1).equals_1(), true);
+        assert_eq!(VmTerm::Signed16(1).equals_1(), true);
+        assert_eq!(VmTerm::Signed32(1).equals_1(), true);
+        assert_eq!(VmTerm::Signed64(1).equals_1(), true);
+        assert_eq!(VmTerm::Signed128(1).equals_1(), true);
+        assert_eq!(VmTerm::SignedBig(ibig!(1)).equals_1(), true);
+
+        assert_eq!(VmTerm::Unsigned8(10).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned16(10).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned32(10).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned64(10).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned128(10).equals_1(), false);
+        assert_eq!(VmTerm::UnsignedBig(ubig!(10)).equals_1(), false);
+        assert_eq!(VmTerm::Signed8(10).equals_1(), false);
+        assert_eq!(VmTerm::Signed16(10).equals_1(), false);
+        assert_eq!(VmTerm::Signed32(10).equals_1(), false);
+        assert_eq!(VmTerm::Signed64(10).equals_1(), false);
+        assert_eq!(VmTerm::Signed128(10).equals_1(), false);
+        assert_eq!(VmTerm::SignedBig(ibig!(10)).equals_1(), false);
     }
 }
