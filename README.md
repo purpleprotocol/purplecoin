@@ -43,13 +43,15 @@ cargo +nightly test
 * Scalable
 * Schnorr signatures
 * Constant chain size
+* Asynchronous smart contracts
+* Re-entrancy attacks are impossible by design
 * Decentralized mining pools
 * Can be mined using the CPU
 * Can be mined on a smartphone
 
 ### Disadvantages when compared to Ethereum v1.0
-* No global state, all contract state is passed as an input to the contract
-* Contracts cannot interact with other contracts
+* Contracts are cannot have a global state as they are encoded as input spending conditions. While this is better performance wise as it allows us to parallelise contract execution, state modeling is much harder. State can only be passed from an input to the next output.
+* Contracts can only interact with contracts found in the same transaction
 
 ### Advantages when compared to Ethereum v2.0
 * Simple architecture, more easily provable that it is decentralized/secure
