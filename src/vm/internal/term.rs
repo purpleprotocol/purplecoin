@@ -154,6 +154,52 @@ impl VmTerm {
         Some(())
     }
 
+    pub fn sub_one(&mut self) -> Option<()> {
+        match self {
+            Self::Unsigned8(ref mut val) => {
+                *val = val.checked_sub(1)?;
+            }
+            Self::Unsigned16(ref mut val) => {
+                *val = val.checked_sub(1)?;
+            }
+            Self::Unsigned32(ref mut val) => {
+                *val = val.checked_sub(1)?;
+            }
+            Self::Unsigned64(ref mut val) => {
+                *val = val.checked_sub(1)?;
+            }
+            Self::Unsigned128(ref mut val) => {
+                *val = val.checked_sub(1)?;
+            }
+            Self::UnsignedBig(ref mut val) => {
+                *val -= 1;
+            }
+            Self::Signed8(ref mut val) => {
+                *val = val.checked_sub(1)?;
+            }
+            Self::Signed16(ref mut val) => {
+                *val = val.checked_sub(1)?;
+            }
+            Self::Signed32(ref mut val) => {
+                *val = val.checked_sub(1)?;
+            }
+            Self::Signed64(ref mut val) => {
+                *val = val.checked_sub(1)?;
+            }
+            Self::Signed128(ref mut val) => {
+                *val = val.checked_sub(1)?;
+            }
+            Self::SignedBig(ref mut val) => {
+                *val -= 1;
+            }
+            _ => {
+                return None;
+            }
+        }
+
+        Some(())
+    }
+
     /// Returns the virtual heap size of the term in bytes
     pub fn size(&self) -> usize {
         match self {
@@ -206,7 +252,6 @@ impl VmTerm {
         }
     }
 
-    // TODO HANDLE ARRAYS
     pub fn equals_1(self) -> bool {
         match self {
             Self::Unsigned8(val) => val == 1_u8,

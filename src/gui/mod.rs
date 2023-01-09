@@ -120,21 +120,45 @@ impl Application for GUI {
             .tab_bar_theme
             .unwrap_or_default();
 
-        Tabs::new(self.active_tab, Message::TabSelected)
-            .push(self.overview_tab.tab_label(), self.overview_tab.view())
-            .push(
-                self.send_and_receive_tab.tab_label(),
-                self.send_and_receive_tab.view(),
-            )
-            .push(self.trade_tab.tab_label(), self.trade_tab.view())
-            .push(self.settings_tab.tab_label(), self.settings_tab.view())
-            .tab_bar_style(theme)
-            .icon_font(ICON_FONT)
-            .tab_bar_position(match position {
-                TabBarPosition::Top => iced_aw::TabBarPosition::Top,
-                TabBarPosition::Bottom => iced_aw::TabBarPosition::Bottom,
-            })
-            .into()
+        let mut aaa = Tabs::new(self.active_tab, Message::TabSelected);
+        println!("1");
+        aaa = aaa.push(self.overview_tab.tab_label(), self.overview_tab.view());
+        println!("1");
+        aaa = aaa.push(
+            self.send_and_receive_tab.tab_label(),
+            self.send_and_receive_tab.view(),
+        );
+        println!("1");
+        aaa = aaa.push(self.trade_tab.tab_label(), self.trade_tab.view());
+        println!("1");
+        aaa = aaa.push(self.settings_tab.tab_label(), self.settings_tab.view());
+        println!("1");
+        aaa = aaa.tab_bar_style(theme);
+        println!("1");
+        aaa = aaa.icon_font(ICON_FONT);
+        println!("1");
+        aaa = aaa.tab_bar_position(match position {
+            TabBarPosition::Top => iced_aw::TabBarPosition::Top,
+            TabBarPosition::Bottom => iced_aw::TabBarPosition::Bottom,
+        });
+        println!("1");
+        aaa.into()
+
+        // Tabs::new(self.active_tab, Message::TabSelected)
+        //     .push(self.overview_tab.tab_label(), self.overview_tab.view())
+        //     .push(
+        //         self.send_and_receive_tab.tab_label(),
+        //         self.send_and_receive_tab.view(),
+        //     )
+        //     .push(self.trade_tab.tab_label(), self.trade_tab.view())
+        //     .push(self.settings_tab.tab_label(), self.settings_tab.view())
+        //     .tab_bar_style(theme)
+        //     .icon_font(ICON_FONT)
+        //     .tab_bar_position(match position {
+        //         TabBarPosition::Top => iced_aw::TabBarPosition::Top,
+        //         TabBarPosition::Bottom => iced_aw::TabBarPosition::Bottom,
+        //     })
+        //     .into()
     }
 
     fn subscription(&self) -> Subscription<Message> {
