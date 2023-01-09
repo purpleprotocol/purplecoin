@@ -142,7 +142,7 @@ impl XPub {
             depth: 0x01,
             pub_key: PublicKey(
                 extended_key
-                    .derived_key_simple(format!("{}", child_number))
+                    .derived_key_simple(format!("{child_number}"))
                     .key,
             ),
         }
@@ -187,7 +187,7 @@ impl XPriv {
             child_number,
             depth: 0x01,
             secret_key: extended_key
-                .derived_key_simple(format!("{}", child_number))
+                .derived_key_simple(format!("{child_number}"))
                 .key
                 .to_bytes(),
         }
@@ -408,7 +408,7 @@ impl HDWallet {
         }
 
         let mut meta: HashMap<String, String> = HashMap::with_capacity(1);
-        meta.insert("c".to_owned(), format!("{}", tx_time));
+        meta.insert("c".to_owned(), format!("{tx_time}"));
 
         self.txs_meta.insert(*tx_hash, meta);
         self.txs.push(tx);
@@ -433,10 +433,10 @@ impl HDWallet {
         let now = Utc::now().timestamp();
 
         // Created at
-        meta.insert("c".to_owned(), format!("{}", now));
+        meta.insert("c".to_owned(), format!("{now}"));
 
         // Updated at
-        meta.insert("u".to_owned(), format!("{}", now));
+        meta.insert("u".to_owned(), format!("{now}"));
 
         self.txs_meta.insert(zero, meta);
     }
@@ -459,7 +459,7 @@ pub fn dump_hdwallet(wallet: &HDWallet, wallet_name: &str) -> Result<(), &'stati
     wallets_path.push("wallets");
 
     let mut wallet_path = wallets_path.clone();
-    wallet_path.push(format!("{}.dat", wallet_name));
+    wallet_path.push(format!("{wallet_name}.dat"));
 
     wallet.dump(wallet_path)
 }
@@ -475,7 +475,7 @@ pub fn load_hdwallet(wallet_name: &str) -> Result<HDWallet, &'static str> {
     wallets_path.push("wallets");
 
     let mut wallet_path = wallets_path.clone();
-    wallet_path.push(format!("{}.dat", wallet_name));
+    wallet_path.push(format!("{wallet_name}.dat"));
 
     HDWallet::load(wallet_path)
 }
@@ -491,7 +491,7 @@ pub fn generate_hdwallet(wallet_name: &str, passphrase: &str) -> Result<HDWallet
     wallets_path.push("wallets");
 
     let mut wallet_path = wallets_path.clone();
-    wallet_path.push(format!("{}.dat", wallet_name));
+    wallet_path.push(format!("{wallet_name}.dat"));
 
     if wallet_path.exists() {
         return Err("wallet already exists");

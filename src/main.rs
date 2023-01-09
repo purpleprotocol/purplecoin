@@ -335,8 +335,7 @@ fn verify_addresses_checksum(addresses_path: &str, addresses_raw: &str) {
 
         if checksum != oracle_checksum {
             panic!(
-                "Addresses file checksum verification failed! Got: {}, Expected: {}",
-                checksum, oracle_checksum
+                "Addresses file checksum verification failed! Got: {checksum}, Expected: {oracle_checksum}"
             );
         }
     }

@@ -86,10 +86,10 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x56` BitXOR - Pops the two topmost items on the stack, performs bit exclusive OR on the operands and then pushes the result on the stack
     - [x] OP `0x57` Loop - Starts a loop block
     - [x] OP `0x58` Break - Breaks the current loop
-    - [ ] OP `0x59` BreakIf - Breaks the current loop if the topmost item on the stack is `1`
-    - [ ] OP `0x5a` BreakIfn - Breaks the current loop if the topmost item on the stack is not equal to `1`
+    - [x] OP `0x59` BreakIf - Breaks the current loop if the topmost item on the stack is `1`
+    - [x] OP `0x5a` BreakIfn - Breaks the current loop if the topmost item on the stack is not equal to `1`
     - [x] OP `0x5b` BreakIfEq - Breaks the current loop if the two topmost items on the stack are equal
-    - [ ] OP `0x5c` BreakIfNeq - Breaks the current loop if the two topmost items on the stack are not equal
+    - [x] OP `0x5c` BreakIfNeq - Breaks the current loop if the two topmost items on the stack are not equal
     - [ ] OP `0x5d` BreakIfLeq - Breaks the current loop if the topmost item on the stack is less or equal than the second
     - [ ] OP `0x5e` BreakIfGeq - Breaks the current loop if the topmost item on the stack is greater or equal than the second
     - [ ] OP `0x5f` BreakIfLt - Breaks the current loop if the topmost item on the stack is less than the second
@@ -105,19 +105,19 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x69` ContinueIfGt - Moves to the next iteration of the current loop if the topmost item on the stack is greater than the second
     - [ ] OP `0x6a` Depth - Pushes the depth of the current frame onto the stack as an `Unsigned16`
     - [ ] OP `0x6b` IfDup - If the topmost item on the stack is not `0`, duplicate it
-    - [ ] OP `0x6c` Drop - Removes the topmost item on the stack
-    - [ ] OP `0x6d` Dup - Duplicates the topmost item on the stack
-    - [ ] OP `0x6e` Nip - Removes the second item on the stack
-    - [ ] OP `0x6f` Over - Duplicates the second item on the stack
+    - [x] OP `0x6c` Drop - Removes the topmost item on the stack
+    - [x] OP `0x6d` Dup - Duplicates the topmost item on the stack
+    - [x] OP `0x6e` Nip - Removes the second item on the stack
+    - [x] OP `0x6f` Over - Duplicates the second item on the stack
     - [x] OP `0x70` Pick - Duplicates the `n`th item on the stack
-    - [ ] OP `0x71` Roll - The `n`th item on the stack is moved to the top
+    - [x] OP `0x71` Roll - The `n`th item on the stack is moved to the top
     - [ ] OP `0x72` Rot - The three topmost items on the stack are rotated to the left
-    - [ ] OP `0x73` Swap - The twop topmost items on the stack are swaped
-    - [ ] OP `0x74` Tuck - The topmost item on the stack is copied and inserted before the second-to-top item
-    - [ ] OP `0x75` Drop2 - Removes the first two topmost items on the stack
-    - [ ] OP `0x76` Dup2 - Duplicates the first two topmost items on the stack
-    - [ ] OP `0x77` Dup3 - Duplicates the first three topmost items on the stack
-    - [ ] OP `0x78` Over2 - Duplicates the second and third items on the stack
+    - [x] OP `0x73` Swap - The two topmost items on the stack are swaped
+    - [x] OP `0x74` Tuck - The topmost item on the stack is copied and inserted before the second-to-top item
+    - [x] OP `0x75` Drop2 - Removes the first two topmost items on the stack
+    - [x] OP `0x76` Dup2 - Duplicates the first two topmost items on the stack
+    - [x] OP `0x77` Dup3 - Duplicates the first three topmost items on the stack
+    - [x] OP `0x78` Over2 - Duplicates the third and fourth items on the stack
     - [ ] OP `0x79` Rot2 - The fifth and sixth topmost items on the stack are moved to the top
     - [ ] OP `0x7a` Swap2 - Swaps the topmost pairs of terms on top of the stack
     - [ ] OP `0x7b` Size - Pushes the size in bytes of the topmost item on the stack
@@ -126,7 +126,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x7e` BitInvert - Inverts all bits of the topmost item on the stack
     - [ ] OP `0x80` IsUTF8 - Pushes `1` on top of the stack if the given `Unsigned8Array` is a valid UTF8 byte sequence
     - [x] OP `0x82` Add1 - Adds `1` to the topmost item on the stack
-    - [ ] OP `0x83` Sub1 - Subtracts `1` from the topmost item on the stack
+    - [x] OP `0x83` Sub1 - Subtracts `1` from the topmost item on the stack
     - [ ] OP `0x84` Min - Returns the minimum of the two topmost items on the stack
     - [ ] OP `0x85` Max - Returns the maximum of the two topmost items on the stack
     - [ ] OP `0x86` Within - Pushes `1` on top of the stack if the topmost item on the stack is between the second and the third.
@@ -138,8 +138,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x8c` PushPrevScriptOutsLen - Pushes the length of previous spend script outs on top of the stack
     - [ ] OP `0x8e` PushExecCount - Pushes the current amount of opcodes that have been executed to the top of the stack
     - [ ] OP `0x8f` FlushToScriptOuts - Flushes the terms on the current frame to the script outputs stack
-    - [ ] OP `0x90` PopToScriptOuts - Pops the topmost item on the stack and pushes it to the script outputs stack
-    - [ ] OP `0x91` PickToScriptOuts - Duplicates the `n`th item on the stack and pushes it to the script outputs stack
+    - [x] OP `0x90` PopToScriptOuts - Pops the topmost item on the stack and pushes it to the script outputs stack
+    - [x] OP `0x91` PickToScriptOuts - Duplicates the `n`th item on the stack and pushes it to the script outputs stack
     - [ ] OP `0x9a` ToHex - Converts the topmost item on the stack to hexadecimal
     - [ ] OP `0x9b` FromHex - Parses the topmost item on the stack from hexadecimal
     - [ ] OP `0xae` CallBody - Interprets the top `Unsigned8Array` on the stack as a Func body and executes it

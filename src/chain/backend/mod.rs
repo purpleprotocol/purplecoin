@@ -502,13 +502,13 @@ pub fn create_rocksdb_backend<'a>() -> Arc<DB> {
 pub fn read_bitmap(db: Arc<DB>, key: &str) -> Result<Option<Bitmap>, String> {
     db.get(key)
         .map(|res| res.map(|bytes| Bitmap::deserialize(&bytes)))
-        .map_err(|err| format!("could not read bitmap: {}", err))
+        .map_err(|err| format!("could not read bitmap: {err}"))
 }
 
 /// Write bitmap to the database using the provided key
 pub fn write_bitmap(db: Arc<DB>, key: &str, bitmap: Bitmap) -> Result<(), String> {
     db.put(key, bitmap.serialize())
-        .map_err(|err| format!("could not write bitmap: {}", err))
+        .map_err(|err| format!("could not write bitmap: {err}"))
 }
 
 #[derive(Debug, Clone, Encode, Decode)]

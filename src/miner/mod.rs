@@ -340,7 +340,7 @@ impl Miner {
                 Err(TryRecvError::Empty) => {}
 
                 Err(err) => {
-                    panic!("An error occured: {:?}", err);
+                    panic!("An error occured: {err:?}");
                 }
             }
         }

@@ -72,36 +72,36 @@ impl Settings {
             for (k2, v) in inner {
                 match v {
                     DynamicConfVal::String(v) => {
-                        s = s.set_default(format!("{}.{}", k1, k2), v.as_str())?;
+                        s = s.set_default(format!("{k1}.{k2}"), v.as_str())?;
                     }
 
                     DynamicConfVal::Bool(v) => {
-                        s = s.set_default(format!("{}.{}", k1, k2), v.to_string())?;
+                        s = s.set_default(format!("{k1}.{k2}"), v.to_string())?;
                     }
 
                     DynamicConfVal::U16(v) => {
-                        s = s.set_default(format!("{}.{}", k1, k2), v.to_string())?;
+                        s = s.set_default(format!("{k1}.{k2}"), v.to_string())?;
                     }
 
                     DynamicConfVal::Sequence(v) => {
-                        s = s.set_default(format!("{}.{}", k1, k2), v.clone())?;
+                        s = s.set_default(format!("{k1}.{k2}"), v.clone())?;
                     }
 
                     DynamicConfVal::Option(v) => {
                         if let Some(v) = v {
-                            s = s.set_default(format!("{}.{}", k1, k2), v.as_str())?;
+                            s = s.set_default(format!("{k1}.{k2}"), v.as_str())?;
                         }
                     }
 
                     DynamicConfVal::OptionSequence(v) => {
                         if let Some(v) = v {
-                            s = s.set_default(format!("{}.{}", k1, k2), v.clone())?;
+                            s = s.set_default(format!("{k1}.{k2}"), v.clone())?;
                         }
                     }
 
                     DynamicConfVal::OptionSequenceByte(v) => {
                         if let Some(v) = v {
-                            s = s.set_default(format!("{}.{}", k1, k2), v.clone())?;
+                            s = s.set_default(format!("{k1}.{k2}"), v.clone())?;
                         }
                     }
                 }

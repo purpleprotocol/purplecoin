@@ -94,8 +94,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
 
         group.bench_function(
             &format!(
-                "verify membership batch all shards in a single sector 100% cache hit rate {}",
-                batch_size
+                "verify membership batch all shards in a single sector 100% cache hit rate {batch_size}"
             ),
             |b| {
                 b.iter(|| {
@@ -113,8 +112,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
 
         group.bench_function(
             &format!(
-                "verify membership batch all shards in a single sector 95% cache hit rate {}",
-                batch_size
+                "verify membership batch all shards in a single sector 95% cache hit rate {batch_size}"
             ),
             |b| {
                 b.iter(|| {
@@ -132,10 +130,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
         accumulator::hash::clear_cache();
 
         group.bench_function(
-            &format!(
-                "verify membership batch all shards in a single sector uncached {}",
-                batch_size
-            ),
+            &format!("verify membership batch all shards in a single sector uncached {batch_size}"),
             |b| {
                 b.iter(|| {
                     accumulators_with_proofs
@@ -203,7 +198,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
         let (_accumulator2, _pa) = witness_deleted.add_with_proof(&out_hashes);
 
         group.bench_function(
-            &format!("mutate accumulators for all shards in sector 100% cache hit rate {} half added and half deleted", batch_size),
+            &format!("mutate accumulators for all shards in sector 100% cache hit rate {batch_size} half added and half deleted"),
             |b| {
                 b.iter(|| {
                     (0..(SHARDS_PER_SECTOR*ACCUMULATOR_MULTIPLIER))

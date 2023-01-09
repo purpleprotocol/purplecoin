@@ -7,6 +7,6 @@ const HOST_FAMILY: &str = "unix";
 fn main() {
     #[cfg(any(windows, unix))]
     {
-        println!("cargo:rust-cfg=host_family={}", HOST_FAMILY);
+        println!("cargo:rust-cfg=host_family={HOST_FAMILY}");
     }
 }

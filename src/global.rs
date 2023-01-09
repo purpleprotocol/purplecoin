@@ -105,7 +105,7 @@ pub fn get_cached_genesis(chain_id: u8, chain_config: &ChainConfig) -> Arc<Block
 /// Retrieves the RandomX context for the given key
 pub fn get_randomx_ctx(key: &str) -> Arc<Context> {
     let nn: &str = &crate::settings::SETTINGS.node.network_name;
-    let key = format!("{}.{}.{}", RANDOMX_KEY_PREFIX, nn, key);
+    let key = format!("{RANDOMX_KEY_PREFIX}.{nn}.{key}");
     let key = Hash256::hash_from_slice(key, "purplecoinminer");
     let mut nnmux = (*RANDOMX_CTX_STORE).lock();
 
