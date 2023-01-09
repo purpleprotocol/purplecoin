@@ -1122,13 +1122,13 @@ impl<'a> ScriptExecutor<'a> {
                         //
                         // We first swap the pointers of the first two elems and the last two:
                         // [4, 5, 2, 3, 0, 1]
-                        exec_stack.swap_unchecked(len-1, len-5);
-                        exec_stack.swap_unchecked(len-2, len-6);
+                        exec_stack.swap_unchecked(len - 1, len - 5);
+                        exec_stack.swap_unchecked(len - 2, len - 6);
 
                         // We then swap the third and fourth elements with the last two:
                         // [4, 5, 0, 1, 2, 3]
-                        exec_stack.swap_unchecked(len-3, len-5);
-                        exec_stack.swap_unchecked(len-4, len-6);
+                        exec_stack.swap_unchecked(len - 3, len - 5);
+                        exec_stack.swap_unchecked(len - 4, len - 6);
                     }
                 }
 
@@ -2512,7 +2512,7 @@ mod tests {
 
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Unsigned8(1),
-            VmTerm::Unsigned8(0),    
+            VmTerm::Unsigned8(0),
             VmTerm::Unsigned8(5),
             VmTerm::Unsigned8(4),
             VmTerm::Unsigned8(3),
