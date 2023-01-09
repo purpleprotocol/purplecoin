@@ -1013,8 +1013,6 @@ impl<'a> ScriptExecutor<'a> {
 
                     let e = exec_stack.remove(exec_stack.len() - 2);
                     exec_stack.push(e);
-
-                    self.state = ScriptExecutorState::ExpectingInitialOP;
                 }
 
                 ScriptEntry::Opcode(OP::Tuck) => {
@@ -1029,8 +1027,6 @@ impl<'a> ScriptExecutor<'a> {
                     let e = exec_stack[exec_stack.len() - 1].clone();
                     *memory_size += e.size();
                     exec_stack.insert(exec_stack.len() - 2, e);
-
-                    self.state = ScriptExecutorState::ExpectingInitialOP;
                 }
 
                 ScriptEntry::Opcode(OP::Drop2) => {
@@ -1045,8 +1041,6 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= e1.size();
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
-
-                    self.state = ScriptExecutorState::ExpectingInitialOP;
                 }
 
                 ScriptEntry::Opcode(OP::Dup2) => {
@@ -1066,8 +1060,6 @@ impl<'a> ScriptExecutor<'a> {
 
                     exec_stack.push(c2);
                     exec_stack.push(c1);
-
-                    self.state = ScriptExecutorState::ExpectingInitialOP;
                 }
 
                 ScriptEntry::Opcode(OP::Dup3) => {
@@ -1090,8 +1082,6 @@ impl<'a> ScriptExecutor<'a> {
                     exec_stack.push(c3);
                     exec_stack.push(c2);
                     exec_stack.push(c1);
-
-                    self.state = ScriptExecutorState::ExpectingInitialOP;
                 }
 
                 ScriptEntry::Opcode(OP::Over2) => {
@@ -1111,12 +1101,10 @@ impl<'a> ScriptExecutor<'a> {
 
                     exec_stack.push(c2);
                     exec_stack.push(c1);
-
-                    self.state = ScriptExecutorState::ExpectingInitialOP;
                 }
 
                 ScriptEntry::Opcode(OP::Rot2) => {
-                    if exec_stack.len() < 3 {
+                    if exec_stack.len() < 6 {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
@@ -1124,16 +1112,24 @@ impl<'a> ScriptExecutor<'a> {
                         return;
                     }
 
-                    let c1 = exec_stack[exec_stack.len() - 2].clone();
-                    let c2 = exec_stack[exec_stack.len() - 3].clone();
+                    let len = exec_stack.len();
 
-                    *memory_size += c1.size();
-                    *memory_size += c2.size();
+                    unsafe {
+                        // Fastest implemenetation I can think of:
+                        //
+                        // Let's suppose we have the following items on the stack:
+                        // [0, 1, 2, 3, 4, 5]
+                        //
+                        // We first swap the pointers of the first two elems and the last two:
+                        // [4, 5, 2, 3, 0, 1]
+                        exec_stack.swap_unchecked(len-1, len-5);
+                        exec_stack.swap_unchecked(len-2, len-6);
 
-                    exec_stack.push(c2);
-                    exec_stack.push(c1);
-
-                    self.state = ScriptExecutorState::ExpectingInitialOP;
+                        // We then swap the third and fourth elements with the last two:
+                        // [4, 5, 0, 1, 2, 3]
+                        exec_stack.swap_unchecked(len-3, len-5);
+                        exec_stack.swap_unchecked(len-4, len-6);
+                    }
                 }
 
                 ScriptEntry::Opcode(OP::Unsigned8Var) => {
@@ -1150,9 +1146,7 @@ impl<'a> ScriptExecutor<'a> {
                     }
 
                     let mut last = exec_stack.last_mut().unwrap();
-                    if last.add_one().is_some() {
-                        self.state = ScriptExecutorState::ExpectingInitialOP;
-                    } else {
+                    if last.add_one().is_none() {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
@@ -1170,9 +1164,7 @@ impl<'a> ScriptExecutor<'a> {
                     }
 
                     let mut last = exec_stack.last_mut().unwrap();
-                    if last.sub_one().is_some() {
-                        self.state = ScriptExecutorState::ExpectingInitialOP;
-                    } else {
+                    if last.sub_one().is_none() {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
@@ -1202,6 +1194,13 @@ impl<'a> ScriptExecutor<'a> {
 
                 ScriptEntry::Opcode(OP::ClearStack) => {
                     exec_stack.clear();
+                }
+
+                ScriptEntry::Opcode(OP::Trap) => {
+                    self.state = ScriptExecutorState::Error(
+                        ExecutionResult::Panic,
+                        (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                    );
                 }
 
                 ScriptEntry::Opcode(_) => {
@@ -1725,6 +1724,9 @@ pub enum ExecutionResult {
 
     /// The provided index is out of bounds
     IndexOutOfBounds,
+
+    /// Explicit panic
+    Panic,
 }
 
 #[cfg(test)]
@@ -2464,6 +2466,58 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(4), VmTerm::Unsigned8(1)];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_rot2() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Rot2),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(1),
+            VmTerm::Unsigned8(0),    
+            VmTerm::Unsigned8(5),
+            VmTerm::Unsigned8(4),
+            VmTerm::Unsigned8(3),
+            VmTerm::Unsigned8(2),
+        ];
         let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
