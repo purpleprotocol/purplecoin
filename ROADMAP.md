@@ -118,7 +118,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x76` Dup2 - Duplicates the first two topmost items on the stack
     - [x] OP `0x77` Dup3 - Duplicates the first three topmost items on the stack
     - [x] OP `0x78` Over2 - Duplicates the third and fourth items on the stack
-    - [ ] OP `0x79` Rot2 - The fifth and sixth topmost items on the stack are moved to the top
+    - [x] OP `0x79` Rot2 - The fifth and sixth topmost items on the stack are moved to the top
     - [ ] OP `0x7a` Swap2 - Swaps the topmost pairs of terms on top of the stack
     - [ ] OP `0x7b` Size - Pushes the size in bytes of the topmost item on the stack
     - [ ] OP `0x7c` Substr - Splits the given array at position n and pushes both arrays to the top of the stack

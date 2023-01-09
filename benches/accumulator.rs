@@ -160,7 +160,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
             .update_membership_witness(witness_all.clone(), &outs, &[], &[])
             .unwrap();
 
-        outs_vec = witness_all.clone().compute_individual_witnesses(&outs);
+        //outs_vec = witness_all.clone().compute_individual_witnesses(&outs);
 
         witness_all = accumulator2
             .clone()
