@@ -239,19 +239,18 @@ pub trait MMRBackend<T: Encode> {
     fn merkle_proof(&self, pos0: u64) -> Result<MMRMerkleProof, MMRBackendErr> {
         let size = self.unpruned_size();
         #[cfg(debug_assertions)]
-        println!("merkle_proof  {}, size {}", pos0, size);
+        println!("merkle_proof  {pos0}, size {size}");
 
         // check this pos is actually a leaf in the MMR
         if !is_leaf(pos0) {
             return Err(MMRBackendErr::CustomString(format!(
-                "not a leaf at pos {}",
-                pos0
+                "not a leaf at pos {pos0}"
             )));
         }
 
         // check we actually have a hash in the MMR at this pos
         self.get_hash(pos0)?
-            .ok_or_else(|| MMRBackendErr::CustomString(format!("no element at pos {}", pos0)))?;
+            .ok_or_else(|| MMRBackendErr::CustomString(format!("no element at pos {pos0}")))?;
 
         let family_branch = family_branch(pos0, size);
 

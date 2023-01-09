@@ -61,7 +61,7 @@ fn bench_coinbase(c: &mut Criterion) {
         let in_clone = input.clone();
         let inputs = vec![in_clone];
         let inputs: Vec<_> = inputs.iter().cycle().take(b).collect();
-        c.bench_function(&format!("verify coinbase script batch {}", b), |b| {
+        c.bench_function(&format!("verify coinbase script batch {b}"), |b| {
             b.iter(|| {
                 inputs
                     .par_iter()
@@ -87,7 +87,7 @@ fn bench_coinbase(c: &mut Criterion) {
         let inputs = vec![in_clone];
         let inputs: Vec<_> = inputs.iter().cycle().take(b).collect();
         c.bench_function(
-            &format!("verify coinbase script batch all shards {}", b),
+            &format!("verify coinbase script batch all shards {b}"),
             |b| {
                 b.iter(|| {
                     inputs
@@ -160,7 +160,7 @@ fn bench_vm_abuse(c: &mut Criterion) {
     let batch_sizes = vec![100, 500, 1000, 1500, 2000];
 
     for batch_size in batch_sizes {
-        c.bench_function(&format!("abuse vm {} out of gas inputs", batch_size), |b| {
+        c.bench_function(&format!("abuse vm {batch_size} out of gas inputs"), |b| {
             b.iter(|| {
                 (0..batch_size).into_par_iter().for_each(|_| {
                     let mut outs = vec![];

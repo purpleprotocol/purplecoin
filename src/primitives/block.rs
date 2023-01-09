@@ -745,7 +745,7 @@ impl BlockHeader {
             "testnet" => ADDRESSES_RAW_TESTNET,
 
             other => {
-                panic!("Invalid network: {}", other)
+                panic!("Invalid network: {other}")
             }
         };
 

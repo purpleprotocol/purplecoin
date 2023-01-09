@@ -27,13 +27,13 @@ impl ChainConfig {
         let mut sector_keys = HashMap::with_capacity(4);
 
         for i in 0..=255 {
-            chain_keys.insert(i, format!("{}.shard.{}", network_name, i));
+            chain_keys.insert(i, format!("{network_name}.shard.{i}"));
         }
 
         let range_e = 256 / SHARDS_PER_SECTOR;
 
         for i in 0..range_e {
-            sector_keys.insert(i as u8, format!("{}.sector.{}", network_name, i));
+            sector_keys.insert(i as u8, format!("{network_name}.sector.{i}"));
         }
 
         Self {

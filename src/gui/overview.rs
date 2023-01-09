@@ -101,7 +101,7 @@ impl Tab for OverviewTab {
                                         .width(Length::FillPortion(1)),
                                 )
                                 .push(
-                                    Text::new(format!("{:.18}  XPU", available))
+                                    Text::new(format!("{available:.18}  XPU"))
                                         .size(16)
                                         .horizontal_alignment(Horizontal::Right)
                                         .width(Length::FillPortion(1)),
@@ -117,7 +117,7 @@ impl Tab for OverviewTab {
                                         .width(Length::FillPortion(1)),
                                 )
                                 .push(
-                                    Text::new(format!("{:.18}  XPU", pending))
+                                    Text::new(format!("{pending:.18}  XPU"))
                                         .size(16)
                                         .horizontal_alignment(Horizontal::Right)
                                         .width(Length::FillPortion(1)),
@@ -134,7 +134,7 @@ impl Tab for OverviewTab {
                                         .width(Length::FillPortion(1)),
                                 )
                                 .push(
-                                    Text::new(format!("{:.18}  XPU", total))
+                                    Text::new(format!("{total:.18}  XPU"))
                                         .size(16)
                                         .horizontal_alignment(Horizontal::Right)
                                         .width(Length::FillPortion(1)),

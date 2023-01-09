@@ -934,7 +934,7 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::Drop) => {
-                    if exec_stack.len() < 1 {
+                    if exec_stack.is_empty() {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
@@ -962,7 +962,7 @@ impl<'a> ScriptExecutor<'a> {
 
                     self.state = ScriptExecutorState::ExpectingInitialOP;
                 }
-                
+
                 ScriptEntry::Opcode(OP::Nip) => {
                     if exec_stack.len() < 2 {
                         self.state = ScriptExecutorState::Error(
@@ -1732,16 +1732,22 @@ mod tests {
     use std::string;
 
     use super::*;
-    use rayon::prelude::*;
     use crate::consensus::Money;
+    use rayon::prelude::*;
 
     pub struct TestBaseArgs {
         args: Vec<VmTerm>,
         ins: Vec<Input>,
-        out: Vec<Output>
+        out: Vec<Output>,
     }
 
-    fn get_test_base_args(ss: &Script, out_amount: Money, out_script: Vec<VmTerm>, push_out_cycles: usize, key: &str) -> TestBaseArgs {
+    fn get_test_base_args(
+        ss: &Script,
+        out_amount: Money,
+        out_script: Vec<VmTerm>,
+        push_out_cycles: usize,
+        key: &str,
+    ) -> TestBaseArgs {
         let sh = ss.to_script_hash(key);
         let args = vec![
             VmTerm::Signed128(30),
@@ -1769,7 +1775,7 @@ mod tests {
             i
         })
         .collect::<Vec<_>>();
-        
+
         // Prepare output
         let ins_hashes: Vec<u8> = ins.iter_mut().fold(vec![], |mut acc, v: &mut Input| {
             v.compute_hash(key);
@@ -1803,9 +1809,9 @@ mod tests {
         oracle_out.compute_hash(key);
 
         TestBaseArgs {
-            args: args,
-            ins: ins,
-            out: vec![oracle_out]
+            args,
+            ins,
+            out: vec![oracle_out],
         }
     }
 
@@ -1890,7 +1896,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Verify),
             ],
         };
-        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -1929,7 +1935,7 @@ mod tests {
             ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -1966,10 +1972,10 @@ mod tests {
             ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
@@ -2002,8 +2008,8 @@ mod tests {
                 ScriptEntry::Opcode(OP::Verify),
             ],
         };
-        
-        let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, &key);
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -2041,8 +2047,8 @@ mod tests {
                 ScriptEntry::Opcode(OP::Verify),
             ],
         };
-        
-        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, &key);
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -2333,14 +2339,18 @@ mod tests {
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0), VmTerm::Unsigned8(1), VmTerm::Unsigned8(2)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, &key);
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(0),
+            VmTerm::Unsigned8(1),
+            VmTerm::Unsigned8(2),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
@@ -2375,14 +2385,18 @@ mod tests {
                 ScriptEntry::Opcode(OP::Drop2),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(2), VmTerm::Unsigned8(1), VmTerm::Unsigned8(0)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, &key);
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(1),
+            VmTerm::Unsigned8(0),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
@@ -2406,14 +2420,18 @@ mod tests {
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(1), VmTerm::Unsigned8(1), VmTerm::Unsigned8(1)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, &key);
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(1),
+            VmTerm::Unsigned8(1),
+            VmTerm::Unsigned8(1),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
@@ -2442,14 +2460,14 @@ mod tests {
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
         let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(4), VmTerm::Unsigned8(1)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
@@ -2480,14 +2498,21 @@ mod tests {
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(2), VmTerm::Unsigned8(1), VmTerm::Unsigned8(2), VmTerm::Unsigned8(3), VmTerm::Unsigned8(2), VmTerm::Unsigned8(1)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, &key);
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(1),
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(3),
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(1),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
@@ -2514,14 +2539,18 @@ mod tests {
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(2), VmTerm::Unsigned8(3), VmTerm::Unsigned8(1)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, &key);
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(3),
+            VmTerm::Unsigned8(1),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
@@ -2549,14 +2578,19 @@ mod tests {
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(3), VmTerm::Unsigned8(2), VmTerm::Unsigned8(3), VmTerm::Unsigned8(1)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, &key);
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(3),
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(3),
+            VmTerm::Unsigned8(1),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
@@ -2586,14 +2620,14 @@ mod tests {
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
         let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(5)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
@@ -2622,14 +2656,21 @@ mod tests {
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(2), VmTerm::Unsigned8(1), VmTerm::Unsigned8(2), VmTerm::Unsigned8(1),VmTerm::Unsigned8(2), VmTerm::Unsigned8(1)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, &key);
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(1),
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(1),
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(1),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
@@ -2663,14 +2704,24 @@ mod tests {
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(3), VmTerm::Unsigned8(2), VmTerm::Unsigned8(1), VmTerm::Unsigned8(3), VmTerm::Unsigned8(2), VmTerm::Unsigned8(1), VmTerm::Unsigned8(3), VmTerm::Unsigned8(2), VmTerm::Unsigned8(1)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, &key);
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(3),
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(1),
+            VmTerm::Unsigned8(3),
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(1),
+            VmTerm::Unsigned8(3),
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(1),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Ok(ExecutionResult::OkVerify).into()
@@ -2688,13 +2739,13 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Drop),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -2711,13 +2762,13 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Dup),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -2736,13 +2787,13 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Nip),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -2761,13 +2812,13 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Over),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -2795,13 +2846,13 @@ mod tests {
                 ScriptEntry::Opcode(OP::Roll),
                 ScriptEntry::Byte(0x05),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::IndexOutOfBounds, StackTrace::default())).into()
@@ -2820,13 +2871,13 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Swap),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -2845,13 +2896,13 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Tuck),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -2870,13 +2921,13 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Drop2),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -2895,13 +2946,13 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Dup2),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -2922,13 +2973,13 @@ mod tests {
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Dup3),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -2951,13 +3002,13 @@ mod tests {
                 ScriptEntry::Byte(0x3),
                 ScriptEntry::Opcode(OP::Over2),
                 ScriptEntry::Opcode(OP::Verify),
-            ]
+            ],
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, &key);
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
-        
+
         assert_eq!(
             ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()

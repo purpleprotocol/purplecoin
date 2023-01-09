@@ -266,7 +266,7 @@ impl VmTerm {
             Self::Signed64(val) => val == 1_i64,
             Self::Signed128(val) => val == 1_i128,
             Self::SignedBig(val) => val == ibig!(1),
-            _ => false
+            _ => false,
         }
     }
 }
@@ -642,7 +642,7 @@ impl Decode for VmTerm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ibig::{ubig, ibig};
+    use ibig::{ibig, ubig};
 
     #[test]
     fn test_hash160_encode_decode() {
