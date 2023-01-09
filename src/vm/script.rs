@@ -1011,8 +1011,11 @@ impl<'a> ScriptExecutor<'a> {
                         return;
                     }
 
-                    let e = exec_stack.remove(exec_stack.len() - 2);
-                    exec_stack.push(e);
+                    let len = exec_stack.len();
+
+                    unsafe {
+                        exec_stack.swap_unchecked(len - 1, len - 2);
+                    }
                 }
 
                 ScriptEntry::Opcode(OP::Tuck) => {
