@@ -1002,6 +1002,33 @@ impl<'a> ScriptExecutor<'a> {
                     self.state = ScriptExecutorState::ExpectingIndexU8(OP::Roll);
                 }
 
+                ScriptEntry::Opcode(OP::Rot) => {
+                    if exec_stack.len() < 3 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let len = exec_stack.len();
+
+                    unsafe {
+                        // Similar implemenetation like in case of Rot2:
+                        //
+                        // Let's suppose we have the following items on the stack:
+                        // [0, 1, 2]
+                        //
+                        // We first swap the pointers of the first elem and the last elem:
+                        // [2, 1, 0]
+                        exec_stack.swap_unchecked(len - 1, len - 3);
+
+                        // We then swap the second and third elements:
+                        // [1, 2, 0]
+                        exec_stack.swap_unchecked(len - 2, len - 3);
+                    }
+                }
+
                 ScriptEntry::Opcode(OP::Swap) => {
                     if exec_stack.len() < 2 {
                         self.state = ScriptExecutorState::Error(
@@ -1129,10 +1156,43 @@ impl<'a> ScriptExecutor<'a> {
                         exec_stack.swap_unchecked(len - 2, len - 6);
 
                         // We then swap the third and fourth elements with the last two:
-                        // [4, 5, 0, 1, 2, 3]
+                        // [2, 3, 4, 5, 0, 1]
                         exec_stack.swap_unchecked(len - 3, len - 5);
                         exec_stack.swap_unchecked(len - 4, len - 6);
                     }
+                }
+
+                ScriptEntry::Opcode(OP::Swap2) => {
+                    if exec_stack.len() < 4 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let len = exec_stack.len();
+
+                    unsafe {
+                        exec_stack.swap_unchecked(len - 1, len - 3);
+                        exec_stack.swap_unchecked(len - 2, len - 4);
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::Size) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let size = exec_stack[exec_stack.len() - 1].size();
+                    let e = VmTerm::Unsigned8(size as u8);
+                    
+                    *memory_size += e.size();
+                    exec_stack.push(e);
                 }
 
                 ScriptEntry::Opcode(OP::Unsigned8Var) => {
@@ -2323,7 +2383,7 @@ mod tests {
     }
 
     #[test]
-    fn it_rolls_on_stack_outputs_with_pop() {
+    fn it_roll_pop_out() {
         let key = "test_key";
         let ss = Script {
             version: 1,
@@ -2364,7 +2424,7 @@ mod tests {
     }
 
     #[test]
-    fn it_rolls_on_stack_outputs_with_pick() {
+    fn it_roll_pick_out() {
         let key = "test_key";
         let ss = Script {
             version: 1,
@@ -2410,7 +2470,7 @@ mod tests {
     }
 
     #[test]
-    fn it_dups_on_stack() {
+    fn it_dup() {
         let key = "test_key";
         let ss = Script {
             version: 1,
@@ -2445,7 +2505,7 @@ mod tests {
     }
 
     #[test]
-    fn it_nips_on_stack() {
+    fn it_nip() {
         let key = "test_key";
         let ss = Script {
             version: 1,
@@ -2469,6 +2529,58 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(4), VmTerm::Unsigned8(1)];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_rot() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Rot),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(3),
+            VmTerm::Unsigned8(5),
+            VmTerm::Unsigned8(4),
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(1),
+            VmTerm::Unsigned8(0),
+        ];
         let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
@@ -2533,7 +2645,7 @@ mod tests {
     }
 
     #[test]
-    fn it_overs_on_stack() {
+    fn it_over() {
         let key = "test_key";
         let ss = Script {
             version: 1,
@@ -2578,7 +2690,7 @@ mod tests {
     }
 
     #[test]
-    fn it_swaps_on_stack() {
+    fn it_swap() {
         let key = "test_key";
         let ss = Script {
             version: 1,
@@ -2616,7 +2728,53 @@ mod tests {
     }
 
     #[test]
-    fn it_tucks_on_stack() {
+    fn it_swap2() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Opcode(OP::Swap2),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(3),
+            VmTerm::Unsigned8(2),
+            VmTerm::Unsigned8(5),
+            VmTerm::Unsigned8(4),
+            VmTerm::Unsigned8(1),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_tuck() {
         let key = "test_key";
         let ss = Script {
             version: 1,
@@ -2656,7 +2814,7 @@ mod tests {
     }
 
     #[test]
-    fn it_drops_2_on_stack() {
+    fn it_drop2() {
         let key = "test_key";
         let ss = Script {
             version: 1,
@@ -2693,7 +2851,7 @@ mod tests {
     }
 
     #[test]
-    fn it_dups_2_on_stack() {
+    fn it_dup2() {
         let key = "test_key";
         let ss = Script {
             version: 1,
@@ -2736,7 +2894,7 @@ mod tests {
     }
 
     #[test]
-    fn it_dups_3_on_stack() {
+    fn it_dup3() {
         let key = "test_key";
         let ss = Script {
             version: 1,
@@ -2774,6 +2932,39 @@ mod tests {
             VmTerm::Unsigned8(3),
             VmTerm::Unsigned8(2),
             VmTerm::Unsigned8(1),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    // TODO: extend for all types when implemented
+    #[test]
+    fn it_adds_size() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Size),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(1),
+            VmTerm::Unsigned8(0),
         ];
         let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -2843,6 +3034,66 @@ mod tests {
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Nip),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
+        );
+    }
+
+    #[test]
+    fn it_fails_rot_when_stack_length_is_lower() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Rot),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
+        );
+    }
+
+    #[test]
+    fn it_fails_rot_2_when_stack_length_is_lower() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Rot2),
                 ScriptEntry::Opcode(OP::Verify),
             ],
         };
@@ -3071,4 +3322,57 @@ mod tests {
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
+
+    #[test]
+    fn it_fails_swap_2_when_stack_length_is_lower() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x1),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x2),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x3),
+                ScriptEntry::Opcode(OP::Swap2),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
+        );
+    }
+
+    #[test]
+    fn it_fails_to_push_size_when_stack_length_is_lower() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Size),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
+        );
+    }
+
 }
