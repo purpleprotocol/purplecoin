@@ -1190,7 +1190,7 @@ impl<'a> ScriptExecutor<'a> {
 
                     let size = exec_stack[exec_stack.len() - 1].size();
                     let e = VmTerm::Unsigned8(size as u8);
-                    
+
                     *memory_size += e.size();
                     exec_stack.push(e);
                 }
@@ -2962,10 +2962,7 @@ mod tests {
             ],
         };
 
-        let script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned8(1),
-            VmTerm::Unsigned8(0),
-        ];
+        let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(1), VmTerm::Unsigned8(0)];
         let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
@@ -3374,5 +3371,4 @@ mod tests {
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
-
 }
