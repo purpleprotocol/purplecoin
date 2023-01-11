@@ -111,7 +111,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x6f` Over - Duplicates the second item on the stack
     - [x] OP `0x70` Pick - Duplicates the `n`th item on the stack
     - [x] OP `0x71` Roll - The `n`th item on the stack is moved to the top
-    - [ ] OP `0x72` Rot - The three topmost items on the stack are rotated to the left
+    - [x] OP `0x72` Rot - The three topmost items on the stack are rotated to the left
     - [x] OP `0x73` Swap - The two topmost items on the stack are swaped
     - [x] OP `0x74` Tuck - The topmost item on the stack is copied and inserted before the second-to-top item
     - [x] OP `0x75` Drop2 - Removes the first two topmost items on the stack
@@ -119,8 +119,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x77` Dup3 - Duplicates the first three topmost items on the stack
     - [x] OP `0x78` Over2 - Duplicates the third and fourth items on the stack
     - [x] OP `0x79` Rot2 - The fifth and sixth topmost items on the stack are moved to the top
-    - [ ] OP `0x7a` Swap2 - Swaps the topmost pairs of terms on top of the stack
-    - [ ] OP `0x7b` Size - Pushes the size in bytes of the topmost item on the stack
+    - [x] OP `0x7a` Swap2 - Swaps the topmost pairs of terms on top of the stack
+    - [x] OP `0x7b` Size - Pushes the size in bytes of the topmost item on the stack
     - [ ] OP `0x7c` Substr - Splits the given array at position n and pushes both arrays to the top of the stack
     - [ ] OP `0x7d` BitOR -  Pops the two topmost items on the stack, performs bit OR on the operands and then pushes the result on the stack
     - [ ] OP `0x7e` BitInvert - Inverts all bits of the topmost item on the stack
