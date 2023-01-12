@@ -60,6 +60,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
             &mut idx_map,
             [0; 32],
             key,
+            VmFlags::default(),
         );
 
         let outputs: Vec<Output> = out_stack
