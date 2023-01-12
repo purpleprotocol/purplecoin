@@ -51,6 +51,10 @@ fn bench_coinbase(c: &mut Criterion) {
                 &mut idx_map,
                 [0; 32],
                 key,
+                VmFlags {
+                    build_stacktrace: false,
+                    validate_output_amounts: false,
+                },
             )
         })
     });
@@ -75,6 +79,10 @@ fn bench_coinbase(c: &mut Criterion) {
                             &mut idx_map,
                             [0; 32],
                             key,
+                            VmFlags {
+                                build_stacktrace: false,
+                                validate_output_amounts: false,
+                            },
                         )
                     })
                     .collect::<Vec<_>>()
@@ -102,6 +110,10 @@ fn bench_coinbase(c: &mut Criterion) {
                                 &mut idx_map,
                                 [0; 32],
                                 key,
+                                VmFlags {
+                                    build_stacktrace: false,
+                                    validate_output_amounts: false,
+                                },
                             )
                         })
                         .collect::<Vec<_>>()
@@ -166,7 +178,18 @@ fn bench_vm_abuse(c: &mut Criterion) {
                     let mut outs = vec![];
                     let mut idx_map = HashMap::new();
                     assert_eq!(
-                        ss.execute(&args, ins.as_slice(), &mut outs, &mut idx_map, [0; 32], key),
+                        ss.execute(
+                            &args,
+                            ins.as_slice(),
+                            &mut outs,
+                            &mut idx_map,
+                            [0; 32],
+                            key,
+                            VmFlags {
+                                build_stacktrace: false,
+                                validate_output_amounts: false
+                            }
+                        ),
                         Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
                     );
                 });

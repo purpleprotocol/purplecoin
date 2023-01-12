@@ -32,21 +32,25 @@ pub const MAX_OUT_STACK: usize = 300;
 pub const TRACE_SIZE: usize = 10;
 
 macro_rules! check_top_stack_val {
-    ($exp:expr, $frame:expr, $frame_stack:expr, $structt:expr) => {
+    ($exp:expr, $frame:expr, $frame_stack:expr, $structt:expr, $flags:expr) => {
         if $exp == &1 {
             return Ok(ExecutionResult::Ok).into();
         } else {
             let mut stack_trace = StackTrace::default();
-            stack_trace.trace.push(
-                (
-                    $frame.i_ptr,
-                    $frame.func_idx,
-                    $structt.script[$frame.i_ptr].clone(),
-                )
-                    .into(),
-            );
-            stack_trace.top_frame_stack.extend_from_slice(&$frame.stack);
-            stack_trace.extend_from_frame_stack(&$frame_stack, &$structt);
+
+            if $flags.build_stacktrace {
+                stack_trace.trace.push(
+                    (
+                        $frame.i_ptr,
+                        $frame.func_idx,
+                        $structt.script[$frame.i_ptr].clone(),
+                    )
+                        .into(),
+                );
+                stack_trace.top_frame_stack.extend_from_slice(&$frame.stack);
+                stack_trace.extend_from_frame_stack(&$frame_stack, &$structt);
+            }
+
             return Err((ExecutionResult::Invalid, stack_trace)).into();
         }
     };
@@ -75,6 +79,24 @@ impl<'a> Frame<'a> {
             func_idx,
             executor: ScriptExecutor::new(),
             is_loop: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct VmFlags {
+    /// Whether or not to build a stacktrace
+    pub build_stacktrace: bool,
+
+    /// Wheter or not to validate output amounts based on inputs
+    pub validate_output_amounts: bool,
+}
+
+impl Default for VmFlags {
+    fn default() -> Self {
+        Self {
+            build_stacktrace: true,
+            validate_output_amounts: false,
         }
     }
 }
@@ -124,6 +146,7 @@ impl Script {
         output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
         seed: [u8; 32],
         key: &str,
+        flags: VmFlags,
     ) -> VmResult {
         if self.version > 1 {
             return Ok(ExecutionResult::Ok).into();
@@ -320,7 +343,11 @@ impl Script {
                     Ok(res) => return Ok(res).into(),
                     Err((result, mut stack_trace)) => {
                         let fs_len = frame_stack.len();
-                        stack_trace.extend_from_frame_stack(&frame_stack[..fs_len - 1], self);
+
+                        if flags.build_stacktrace {
+                            stack_trace.extend_from_frame_stack(&frame_stack[..fs_len - 1], self);
+                        }
+
                         return Err((result, stack_trace)).into();
                     }
                 },
@@ -330,15 +357,18 @@ impl Script {
                 let mut stack_trace = StackTrace::default();
                 let i_ptr = frame_stack.last().unwrap().i_ptr;
                 let fs_len = frame_stack.len();
-                stack_trace.trace.push(
-                    (
-                        i_ptr,
-                        frame_stack.last().unwrap().func_idx,
-                        self.script[i_ptr].clone(),
-                    )
-                        .into(),
-                );
-                stack_trace.extend_from_frame_stack(&frame_stack[..fs_len - 1], self);
+
+                if flags.build_stacktrace {
+                    stack_trace.trace.push(
+                        (
+                            i_ptr,
+                            frame_stack.last().unwrap().func_idx,
+                            self.script[i_ptr].clone(),
+                        )
+                            .into(),
+                    );
+                    stack_trace.extend_from_frame_stack(&frame_stack[..fs_len - 1], self);
+                }
                 return Err((ExecutionResult::OutOfGas, stack_trace)).into();
             }
 
@@ -346,15 +376,19 @@ impl Script {
                 let mut stack_trace = StackTrace::default();
                 let i_ptr = frame_stack.last().unwrap().i_ptr;
                 let fs_len = frame_stack.len();
-                stack_trace.trace.push(
-                    (
-                        i_ptr,
-                        frame_stack.last().unwrap().func_idx,
-                        self.script[i_ptr].clone(),
-                    )
-                        .into(),
-                );
-                stack_trace.extend_from_frame_stack(&frame_stack[..fs_len - 1], self);
+
+                if flags.build_stacktrace {
+                    stack_trace.trace.push(
+                        (
+                            i_ptr,
+                            frame_stack.last().unwrap().func_idx,
+                            self.script[i_ptr].clone(),
+                        )
+                            .into(),
+                    );
+                    stack_trace.extend_from_frame_stack(&frame_stack[..fs_len - 1], self);
+                }
+
                 return Err((ExecutionResult::OutOfMemory, stack_trace)).into();
             }
 
@@ -366,45 +400,7 @@ impl Script {
                 if fs_len == 0 {
                     if frame.stack.is_empty() {
                         let mut stack_trace = StackTrace::default();
-                        stack_trace.trace.push(
-                            (
-                                frame.i_ptr - 1,
-                                frame.func_idx,
-                                self.script[frame.i_ptr - 1].clone(),
-                            )
-                                .into(),
-                        );
-                        return Err((ExecutionResult::Invalid, stack_trace)).into();
-                    }
-
-                    let top = &frame.stack[0];
-
-                    match top {
-                        VmTerm::Signed8(v) => check_top_stack_val!(v, frame, frame_stack, self),
-                        VmTerm::Signed16(v) => check_top_stack_val!(v, frame, frame_stack, self),
-                        VmTerm::Signed32(v) => check_top_stack_val!(v, frame, frame_stack, self),
-                        VmTerm::Signed64(v) => check_top_stack_val!(v, frame, frame_stack, self),
-                        VmTerm::Signed128(v) => check_top_stack_val!(v, frame, frame_stack, self),
-                        VmTerm::SignedBig(v) => {
-                            if v == &ibig!(1) {
-                                return Ok(ExecutionResult::Ok).into();
-                            } else {
-                                let mut stack_trace = StackTrace::default();
-                                stack_trace.trace.push(
-                                    (
-                                        frame.i_ptr - 1,
-                                        frame.func_idx,
-                                        self.script[frame.i_ptr - 1].clone(),
-                                    )
-                                        .into(),
-                                );
-                                stack_trace.top_frame_stack.extend_from_slice(&frame.stack);
-                                stack_trace.extend_from_frame_stack(&frame_stack, self);
-                                return Err((ExecutionResult::Invalid, stack_trace)).into();
-                            }
-                        }
-                        _ => {
-                            let mut stack_trace = StackTrace::default();
+                        if flags.build_stacktrace {
                             stack_trace.trace.push(
                                 (
                                     frame.i_ptr - 1,
@@ -413,7 +409,65 @@ impl Script {
                                 )
                                     .into(),
                             );
-                            stack_trace.extend_from_frame_stack(&frame_stack, self);
+                        }
+                        return Err((ExecutionResult::Invalid, stack_trace)).into();
+                    }
+
+                    let top = &frame.stack[0];
+
+                    match top {
+                        VmTerm::Signed8(v) => {
+                            check_top_stack_val!(v, frame, frame_stack, self, &flags)
+                        }
+                        VmTerm::Signed16(v) => {
+                            check_top_stack_val!(v, frame, frame_stack, self, &flags)
+                        }
+                        VmTerm::Signed32(v) => {
+                            check_top_stack_val!(v, frame, frame_stack, self, &flags)
+                        }
+                        VmTerm::Signed64(v) => {
+                            check_top_stack_val!(v, frame, frame_stack, self, &flags)
+                        }
+                        VmTerm::Signed128(v) => {
+                            check_top_stack_val!(v, frame, frame_stack, self, &flags)
+                        }
+                        VmTerm::SignedBig(v) => {
+                            if v == &ibig!(1) {
+                                return Ok(ExecutionResult::Ok).into();
+                            } else {
+                                let mut stack_trace = StackTrace::default();
+
+                                if flags.build_stacktrace {
+                                    stack_trace.trace.push(
+                                        (
+                                            frame.i_ptr - 1,
+                                            frame.func_idx,
+                                            self.script[frame.i_ptr - 1].clone(),
+                                        )
+                                            .into(),
+                                    );
+                                    stack_trace.top_frame_stack.extend_from_slice(&frame.stack);
+                                    stack_trace.extend_from_frame_stack(&frame_stack, self);
+                                }
+
+                                return Err((ExecutionResult::Invalid, stack_trace)).into();
+                            }
+                        }
+                        _ => {
+                            let mut stack_trace = StackTrace::default();
+
+                            if flags.build_stacktrace {
+                                stack_trace.trace.push(
+                                    (
+                                        frame.i_ptr - 1,
+                                        frame.func_idx,
+                                        self.script[frame.i_ptr - 1].clone(),
+                                    )
+                                        .into(),
+                                );
+                                stack_trace.extend_from_frame_stack(&frame_stack, self);
+                            }
+
                             return Err((ExecutionResult::Invalid, stack_trace)).into();
                         }
                     }
@@ -435,15 +489,18 @@ impl Script {
 
                         if parent_stack.len() > STACK_SIZE {
                             let mut stack_trace = StackTrace::default();
-                            stack_trace.trace.push(
-                                (
-                                    frame.i_ptr - 1,
-                                    frame.func_idx,
-                                    self.script[frame.i_ptr - 1].clone(),
-                                )
-                                    .into(),
-                            );
-                            stack_trace.extend_from_frame_stack(&frame_stack, self);
+
+                            if flags.build_stacktrace {
+                                stack_trace.trace.push(
+                                    (
+                                        frame.i_ptr - 1,
+                                        frame.func_idx,
+                                        self.script[frame.i_ptr - 1].clone(),
+                                    )
+                                        .into(),
+                                );
+                                stack_trace.extend_from_frame_stack(&frame_stack, self);
+                            }
                             return Err((ExecutionResult::StackOverflow, stack_trace)).into();
                         }
                     }
@@ -454,15 +511,17 @@ impl Script {
                 if frame_stack.len() > MAX_FRAMES {
                     let frame = frame_stack.last().unwrap();
                     let mut stack_trace = StackTrace::default();
-                    stack_trace.trace.push(
-                        (
-                            frame.i_ptr,
-                            frame.func_idx,
-                            self.script[new_frame.i_ptr].clone(),
-                        )
-                            .into(),
-                    );
-                    stack_trace.extend_from_frame_stack(&frame_stack, self);
+                    if flags.build_stacktrace {
+                        stack_trace.trace.push(
+                            (
+                                frame.i_ptr,
+                                frame.func_idx,
+                                self.script[new_frame.i_ptr].clone(),
+                            )
+                                .into(),
+                        );
+                        stack_trace.extend_from_frame_stack(&frame_stack, self);
+                    }
                     return Err((ExecutionResult::StackOverflow, stack_trace)).into();
                 }
 
@@ -1928,7 +1987,15 @@ mod tests {
         oracle_out.compute_hash(key);
 
         assert_eq!(
-            ss.execute(&args, &ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &args,
+                &ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, vec![oracle_out]);
@@ -1966,7 +2033,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2005,7 +2080,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2042,7 +2125,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2079,7 +2170,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2118,7 +2217,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2175,7 +2282,15 @@ mod tests {
 
         let mut outs = vec![];
         assert_eq!(
-            ss.execute(&args, ins.as_slice(), &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &args,
+                ins.as_slice(),
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
         );
     }
@@ -2215,7 +2330,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&args, &ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &args,
+                &ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -2255,7 +2378,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&args, &ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &args,
+                &ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -2417,7 +2548,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2463,7 +2602,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2498,7 +2645,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2534,7 +2689,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2586,7 +2749,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2638,7 +2809,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2683,7 +2862,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2721,7 +2908,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2767,7 +2962,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2807,7 +3010,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2844,7 +3055,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2887,7 +3106,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2938,7 +3165,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2968,7 +3203,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
@@ -2992,7 +3235,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3015,7 +3266,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3040,7 +3299,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3067,7 +3334,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3100,7 +3375,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3125,7 +3408,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3159,7 +3450,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::IndexOutOfBounds, StackTrace::default())).into()
         );
     }
@@ -3184,7 +3483,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3209,7 +3516,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3234,7 +3549,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3259,7 +3582,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3286,7 +3617,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3315,7 +3654,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3344,7 +3691,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }
@@ -3367,7 +3722,15 @@ mod tests {
         let mut outs = vec![];
 
         assert_eq!(
-            ss.execute(&base.args, &base.ins, &mut outs, &mut idx_map, [0; 32], key),
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
     }

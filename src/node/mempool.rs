@@ -72,7 +72,7 @@ mod tests {
 
     #[test]
     fn append_batch() {
-        let txs: Vec<_> = (0..300).into_iter().map(|_| get_random_tx()).collect();
+        let txs: Vec<_> = (0..300).map(|_| get_random_tx()).collect();
 
         let mut mempool = Mempool::new();
 

@@ -8,6 +8,7 @@ use crate::chain::{Shard, ShardBackend};
 use crate::consensus::Money;
 use crate::primitives::{Hash256, Input, Output};
 use crate::settings::SETTINGS;
+use crate::vm::VmFlags;
 use bincode::{Decode, Encode};
 use schnorrkel::{signing_context, verify_batch, PublicKey as SchnorPK, Signature as SchnorSig};
 use std::cmp::Ordering;
@@ -59,6 +60,10 @@ impl Transaction {
                 &mut idx_map,
                 [0; 32], // TODO: Inject seed here
                 &key,
+                VmFlags {
+                    validate_output_amounts: true,
+                    build_stacktrace: false,
+                },
             );
         }
 

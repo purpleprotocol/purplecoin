@@ -10,7 +10,7 @@ use crate::miner::{HashAlgorithm, PowAlgorithm};
 use crate::primitives::*;
 use crate::settings::SETTINGS;
 use crate::vm::internal::VmTerm;
-use crate::vm::Script;
+use crate::vm::*;
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::{Accumulator, ProofOfCorrectness, Witness};
 use arrayvec::ArrayVec;
@@ -817,6 +817,7 @@ impl BlockHeader {
                 &mut idx_map,
                 [0; 32],
                 key,
+                VmFlags::default(),
             );
         }
 
@@ -1034,6 +1035,10 @@ impl Block {
             &mut idx_map,
             [0; 32],
             key,
+            VmFlags {
+                build_stacktrace: false,
+                validate_output_amounts: true,
+            },
         );
 
         let mut tx = Transaction {
@@ -1180,6 +1185,10 @@ impl BlockData {
                                 &mut idx_map,
                                 [0; 32], // TODO: Inject seed here
                                 key,
+                                VmFlags {
+                                    build_stacktrace: false,
+                                    validate_output_amounts: true,
+                                },
                             );
                         }
                         _ => return Err(BlockVerifyErr::InvalidCoinbase),
@@ -1536,7 +1545,7 @@ mod tests {
         };
         input.compute_hash(key);
 
-        let addresses: Vec<_> = (0..5).into_iter().map(|_| Address::random()).collect();
+        let addresses: Vec<_> = (0..5).map(|_| Address::random()).collect();
 
         let mut idx_map = HashMap::new();
         let mut witness_all = Witness(Accumulator::<Rsa2048, Hash256>::empty());
@@ -1557,6 +1566,7 @@ mod tests {
                 &mut idx_map,
                 [0; 32],
                 key,
+                VmFlags::default(),
             );
 
             let outputs: Vec<Output> = out_stack
