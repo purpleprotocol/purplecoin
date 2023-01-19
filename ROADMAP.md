@@ -273,6 +273,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
       - [ ] GenerateWallet
       - [ ] BackupWallet
       - [ ] BackupWalletS3
+      - [ ] SendRawTx
+      - [ ] QueryOutput
   - [ ] Mempool
     - [x] Base Implenentation
     - [ ] Sharded mempool

@@ -144,6 +144,12 @@ pub trait RpcServerDefinition {
         access_key_id: String,
         secret_access_key: String,
     ) -> Result<String, RpcErr>;
+
+    /// Sends a raw transaction
+    async fn send_raw_tx(transaction: String) -> Result<String, RpcErr>;
+
+    /// Queries output with hash and returns if present in the UTXO set
+    async fn query_output(output_hash: String) -> Result<String, RpcErr>;
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -194,6 +200,8 @@ impl RpcServerDefinition for RpcServer {
     type SignMessageWithPrivKeyFut = Ready<Result<String, RpcErr>>;
     type VerifyMessageFut = Ready<Result<bool, RpcErr>>;
     type VerifyAddressFut = Ready<Result<bool, RpcErr>>;
+    type SendRawTxFut = Ready<Result<String, RpcErr>>;
+    type QueryOutputFut = Ready<Result<String, RpcErr>>;
 
     fn get_blockchain_info(self, _: context::Context) -> Self::GetBlockchainInfoFut {
         future::ready("Hello world!".to_string())
@@ -404,6 +412,14 @@ impl RpcServerDefinition for RpcServer {
         pub_key: String,
     ) -> Self::VerifyAddressFut {
         future::ready(Err(RpcErr::InvalidPublicKey))
+    }
+
+    fn send_raw_tx(self, _: context::Context, transaction: String) -> Self::SendRawTxFut {
+        future::ready(Ok("hello world".to_owned()))
+    }
+
+    fn query_output(self, _: context::Context, output_hash: String) -> Self::QueryOutputFut {
+        future::ready(Ok("hello world".to_owned()))
     }
 }
 
