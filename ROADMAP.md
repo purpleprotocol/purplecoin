@@ -240,7 +240,39 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] RPC over TCP/JSON
     - [ ] RPC over TCP/Binary
     - [ ] RPC Commands
-      - [ ] TODO Add all RPC commands
+      - [ ] GetBlockchainInfo
+      - [ ] GetBlockHash
+      - [ ] GetBlockStats
+      - [ ] GetHeight
+      - [ ] GetShardInfo
+      - [ ] GetMempoolInfo
+      - [ ] GetRawMempoolShard
+      - [ ] GetRawMempool
+      - [ ] PreciousBlock
+      - [ ] PruneShard
+      - [ ] Generate
+      - [ ] GenerateToDescriptor
+      - [ ] GenerateToAddress
+      - [ ] GenerateShare
+      - [ ] GenerateShareToDescriptor
+      - [ ] GenerateShareToAddress
+      - [ ] SubmitBlock
+      - [ ] SubmitShareBlock
+      - [ ] GetNetworkInfo
+      - [ ] GetPeerInfo
+      - [ ] AddNode
+      - [ ] ListBanned
+      - [ ] SetNetworkActive
+      - [ ] GetNodeInfo
+      - [ ] Stop
+      - [ ] Uptime
+      - [ ] ValidateAddress
+      - [ ] SignMessageWithPrivKey
+      - [ ] VerifyMessage
+      - [ ] VerifyAddress
+      - [ ] GenerateWallet
+      - [ ] BackupWallet
+      - [ ] BackupWalletS3
   - [ ] Mempool
     - [x] Base Implenentation
     - [ ] Sharded mempool
