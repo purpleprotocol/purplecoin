@@ -47,10 +47,10 @@ enum Icon {
 impl From<Icon> for char {
     fn from(icon: Icon) -> Self {
         match icon {
-            Icon::User => '\u{E800}',
-            Icon::Heart => '\u{E801}',
-            Icon::Calc => '\u{F1EC}',
-            Icon::CogAlt => '\u{E802}',
+            Icon::User => '\u{F015}',
+            Icon::Heart => '\u{F19C}',
+            Icon::Calc => '\u{F0EC}',
+            Icon::CogAlt => '\u{F013}',
         }
     }
 }

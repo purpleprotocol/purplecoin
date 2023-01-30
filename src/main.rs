@@ -127,9 +127,7 @@ fn start_runtime() -> anyhow::Result<()> {
 
 #[cfg(feature = "gui")]
 fn start_gui() -> iced::Result {
-    let mut gui_settings = Settings::default();
-
-    gui_settings.id = Some("org.purplecoin.PurplecoinCore".to_owned());
+    let mut gui_settings = Settings { id: Some("org.purplecoin.PurplecoinCore".to_owned()), ..Settings::default() };
 
     // Set application icon
     {
@@ -143,7 +141,10 @@ fn start_gui() -> iced::Result {
     }
 
     // Don't close application implicitly when clicking the close window button
-    gui_settings.exit_on_close_request = false;
+    #[cfg(macos)]
+    {
+        gui_settings.exit_on_close_request = false;
+    }
 
     info!(
         "Starting Purplecoin Core v{} GUI",

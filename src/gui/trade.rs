@@ -40,7 +40,7 @@ impl Tab for TradeTab {
     type Message = Message;
 
     fn title(&self) -> String {
-        String::from("Trade")
+        String::from("Exchange")
     }
 
     fn tab_label(&self) -> TabLabel {
