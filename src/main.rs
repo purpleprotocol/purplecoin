@@ -144,7 +144,7 @@ fn start_gui() -> iced::Result {
     }
 
     // Don't close application implicitly when clicking the close window button
-    #[cfg(macos)]
+    #[cfg(target_os = "macos")]
     {
         gui_settings.exit_on_close_request = false;
     }
