@@ -127,7 +127,10 @@ fn start_runtime() -> anyhow::Result<()> {
 
 #[cfg(feature = "gui")]
 fn start_gui() -> iced::Result {
-    let mut gui_settings = Settings { id: Some("org.purplecoin.PurplecoinCore".to_owned()), ..Settings::default() };
+    let mut gui_settings = Settings {
+        id: Some("org.purplecoin.PurplecoinCore".to_owned()),
+        ..Settings::default()
+    };
 
     // Set application icon
     {
