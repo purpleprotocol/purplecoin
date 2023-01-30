@@ -7,6 +7,7 @@
 use crate::chain::ChainConfig;
 use crate::consensus::*;
 use crate::primitives::{BlockHeader, Hash256};
+use crate::wallet::HDWallet;
 use lazy_static::*;
 use lru::LruCache;
 use parking_lot::{
@@ -35,6 +36,9 @@ lazy_static! {
 
     /// Wallet balances
     static ref WALLET_BLANCES: Mutex<HashMap<String, i128>> = Mutex::new(HashMap::new());
+
+    /// Wallets
+    pub static ref WALLETS: RwLock<HashMap<String, HDWallet>> = RwLock::new(HashMap::new());
 }
 
 /// Initialize globals

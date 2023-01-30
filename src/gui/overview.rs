@@ -6,7 +6,7 @@
 
 use iced::{
     alignment::{Alignment, Horizontal, Vertical},
-    button, text_input, Button, Column, Container, Element, Length, Row, Rule, Text, TextInput,
+    pick_list, Column, Container, Element, Length, PickList, Row, Rule, Text,
 };
 use iced_aw::TabLabel;
 use rust_decimal::Decimal;
@@ -17,41 +17,32 @@ use crate::gui::{Icon, Message, Tab};
 
 #[derive(Debug, Clone)]
 pub enum OverviewMessage {
-    UsernameChanged(String),
-    PasswordChanged(String),
-    ClearPressed,
+    WalletSelected(String),
     OverviewPressed,
 }
 
 pub struct OverviewTab {
-    username: String,
-    username_state: text_input::State,
-    password: String,
-    password_state: text_input::State,
-    clear_button: button::State,
-    login_button: button::State,
+    selected_wallet: Option<String>,
+    pick_list: pick_list::State<String>,
 }
 
 impl OverviewTab {
     pub fn new() -> Self {
+        let mut keys = crate::global::WALLETS
+            .read()
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        keys.sort();
         OverviewTab {
-            username: String::new(),
-            username_state: text_input::State::default(),
-            password: String::new(),
-            password_state: text_input::State::default(),
-            clear_button: button::State::default(),
-            login_button: button::State::default(),
+            selected_wallet: keys.first().cloned(),
+            pick_list: pick_list::State::default(),
         }
     }
 
     pub fn update(&mut self, message: OverviewMessage) {
         match message {
-            OverviewMessage::UsernameChanged(value) => self.username = value,
-            OverviewMessage::PasswordChanged(value) => self.password = value,
-            OverviewMessage::ClearPressed => {
-                self.username = String::new();
-                self.password = String::new();
-            }
+            OverviewMessage::WalletSelected(value) => self.selected_wallet = Some(value),
             OverviewMessage::OverviewPressed => {}
         }
     }
@@ -71,12 +62,30 @@ impl Tab for OverviewTab {
     fn content(&mut self) -> Element<'_, Self::Message> {
         let coin_str: String = format!("{}", crate::consensus::COIN);
         let coin = Decimal::from_str(&coin_str).unwrap();
-        let available: Decimal = crate::global::get_balance("hot").into();
+        let available: Decimal = if let Some(selected_wallet) = &self.selected_wallet {
+            crate::global::get_balance(selected_wallet).into()
+        } else {
+            dec!(0)
+        };
         let pending = dec!(0);
         let total = available + pending;
         let available = available.checked_div(coin).unwrap();
         let pending = pending.checked_div(coin).unwrap();
         let total = total.checked_div(coin).unwrap();
+        let mut wallet_names = crate::global::WALLETS
+            .read()
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        wallet_names.sort();
+
+        let pick_list = PickList::new(
+            &mut self.pick_list,
+            wallet_names,
+            self.selected_wallet.clone(),
+            OverviewMessage::WalletSelected,
+        )
+        .placeholder("Choose wallet...");
 
         let content: Element<'_, OverviewMessage> = Container::new(
             Row::new()
@@ -86,6 +95,11 @@ impl Tab for OverviewTab {
                         .align_items(Alignment::Start)
                         .padding(16)
                         //.spacing(16)
+                        .push(
+                            Row::new()
+                                .align_items(Alignment::Fill)
+                                .push(Text::new("   ").size(32)),
+                        )
                         .push(
                             Row::new()
                                 .align_items(Alignment::Fill)
@@ -147,6 +161,17 @@ impl Tab for OverviewTab {
                     Column::new()
                         .align_items(Alignment::Start)
                         .padding(16)
+                        .push(
+                            Row::new()
+                                .align_items(Alignment::Fill)
+                                //.push(Text::new("Wallet: ").size(32).horizontal_alignment(Horizontal::Left)
+                                //.width(Length::FillPortion(1)),)
+                                .push(
+                                    Container::new(pick_list)
+                                        .align_x(Horizontal::Right)
+                                        .width(Length::FillPortion(1)),
+                                ),
+                        )
                         .push(Text::new("Recent transactions").size(32))
                         .push(
                             Row::new().align_items(Alignment::Fill).push(

@@ -57,6 +57,7 @@ impl From<Icon> for char {
 
 pub struct GUI {
     active_tab: usize,
+    onboarded: bool,
     overview_tab: OverviewTab,
     send_and_receive_tab: SendAndReceiveTab,
     trade_tab: TradeTab,
@@ -81,6 +82,7 @@ impl Application for GUI {
     fn new(_: Self::Flags) -> (Self, Command<Self::Message>) {
         (
             GUI {
+                onboarded: true,
                 active_tab: 0,
                 overview_tab: OverviewTab::new(),
                 send_and_receive_tab: SendAndReceiveTab::new(),
