@@ -29,6 +29,8 @@ mod welcome;
 use welcome::{WelcomeMessage, WelcomeScreen};
 
 mod choose_wallet_creation;
+use choose_wallet_creation::{ChooseWalletCreationMessage, ChooseWalletCreationScreen};
+
 mod create_wallet;
 mod create_wallet_mnemonic_backup;
 mod create_wallet_mnemonic_confirm;
@@ -90,6 +92,7 @@ pub struct GUI {
     trade_tab: TradeTab,
     settings_tab: SettingsTab,
     welcome_screen: WelcomeScreen,
+    choose_wallet_creation_screen: ChooseWalletCreationScreen,
 }
 
 #[derive(Clone, Debug)]
@@ -103,6 +106,7 @@ pub enum Message {
 
     // Screens
     Welcome(WelcomeMessage),
+    ChooseWalletCreation(ChooseWalletCreationMessage),
 
     // Global
     Tick(Instant),
@@ -129,6 +133,7 @@ impl Application for GUI {
                 trade_tab: TradeTab::new(),
                 settings_tab: SettingsTab::new(),
                 welcome_screen: WelcomeScreen::new(),
+                choose_wallet_creation_screen: ChooseWalletCreationScreen::new(),
             },
             Command::none(),
         )
@@ -147,6 +152,12 @@ impl Application for GUI {
             Message::Settings(message) => self.settings_tab.update(message),
             Message::Welcome(WelcomeMessage::NextPressed) => {
                 self.active_screen = ActiveScreen::ChooseWalletCreation
+            }
+            Message::ChooseWalletCreation(ChooseWalletCreationMessage::CreatePressed) => {
+                self.active_screen = ActiveScreen::CreateWallet
+            }
+            Message::ChooseWalletCreation(ChooseWalletCreationMessage::ImportPressed) => {
+                self.active_screen = ActiveScreen::ImportWallet
             }
             Message::Tick(_) => {}
         }
@@ -186,6 +197,7 @@ impl Application for GUI {
             }
 
             ActiveScreen::Welcome => self.welcome_screen.view(),
+            ActiveScreen::ChooseWalletCreation => self.choose_wallet_creation_screen.view(),
 
             _ => {
                 unimplemented!()
