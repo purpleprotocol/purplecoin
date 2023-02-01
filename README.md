@@ -136,7 +136,7 @@ Purplecoin uses the Green PoW model which lowers the energy consumption of minin
 Purplecoin uses 2 Proof of Work algorithms in tandem: RandomX and a choice out of several hash functions. One is suited to CPU mining and the other for ASIC miners. Algorithms are switched every Green PoW epoch.
 
 ## Donations
-While the development of Purplecoin initially happened in the sphere of Purple Technologies, it is not backed in any way by it or any other company. Purple Technologies is a for-profit company while Purplecoin is a decentralized project. Thereforce, the decisions and development happens at the community level. As such, the project also relies on the community at a funding level. 
+While the development of Purplecoin initially happened in the sphere of Purple Technologies, it is not backed in any way by it or any other company. Purple Technologies is a for-profit company while Purplecoin is a decentralized project. Therefore, the decisions and development happens at the community level. As such, the project also relies on the community at a funding level. 
 
 If you wish to support the development of Purplecoin, donations can be sent to the following BTC address:
 ```
