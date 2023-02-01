@@ -15,8 +15,11 @@ use parking_lot::{
 };
 use rust_randomx::Context;
 use std::collections::HashMap;
+use std::io;
 use std::num::NonZeroUsize;
 use triomphe::Arc;
+
+pub const LOGO: &[u8; 36124] = include_bytes!("./gui/img/logo_purple_square.png");
 
 type RandomXCtxStore = Mutex<LruCache<Hash256, Arc<Mutex<Option<Arc<Context>>>>>>;
 type GenesisCache = RwLock<HashMap<u8, Arc<RwLock<Option<Arc<BlockHeader>>>>>>;
@@ -39,6 +42,15 @@ lazy_static! {
 
     /// Wallets
     pub static ref WALLETS: RwLock<HashMap<String, HDWallet>> = RwLock::new(HashMap::new());
+
+    pub static ref LOGO_PIXELS: (Vec<u8>, u32, u32) = {
+        let logo_with_format = image::io::Reader::with_format(
+            io::Cursor::new(&crate::global::LOGO),
+            image::ImageFormat::Png,
+        );
+        let pixels = logo_with_format.decode().unwrap().to_rgba8();
+        (pixels.to_vec(), pixels.width(), pixels.height())
+    };
 }
 
 /// Initialize globals

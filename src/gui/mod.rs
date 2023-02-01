@@ -26,14 +26,16 @@ mod settings;
 use settings::{SettingsMessage, SettingsTab, TabBarPosition};
 
 mod welcome;
-mod import_wallet;
-mod import_wallet_mnemonic;
-mod import_wallet_file;
-mod import_wallet_private_key;
+use welcome::{WelcomeMessage, WelcomeScreen};
+
+mod choose_wallet_creation;
 mod create_wallet;
 mod create_wallet_mnemonic_backup;
 mod create_wallet_mnemonic_confirm;
-mod choose_wallet_creation;
+mod import_wallet;
+mod import_wallet_file;
+mod import_wallet_mnemonic;
+mod import_wallet_private_key;
 
 use std::time::{Duration, Instant};
 
@@ -87,15 +89,22 @@ pub struct GUI {
     send_and_receive_tab: SendAndReceiveTab,
     trade_tab: TradeTab,
     settings_tab: SettingsTab,
+    welcome_screen: WelcomeScreen,
 }
 
 #[derive(Clone, Debug)]
 pub enum Message {
+    // Tabs
     TabSelected(usize),
     Overview(OverviewMessage),
     SendAndReceive(SendAndReceiveMessage),
     Trade(TradeMessage),
     Settings(SettingsMessage),
+
+    // Screens
+    Welcome(WelcomeMessage),
+
+    // Global
     Tick(Instant),
 }
 
@@ -108,7 +117,7 @@ impl Application for GUI {
         let active_screen = if crate::global::WALLETS.read().is_empty() {
             ActiveScreen::Welcome
         } else {
-            ActiveScreen::Tabs,
+            ActiveScreen::Tabs
         };
 
         (
@@ -119,6 +128,7 @@ impl Application for GUI {
                 send_and_receive_tab: SendAndReceiveTab::new(),
                 trade_tab: TradeTab::new(),
                 settings_tab: SettingsTab::new(),
+                welcome_screen: WelcomeScreen::new(),
             },
             Command::none(),
         )
@@ -135,6 +145,9 @@ impl Application for GUI {
             Message::SendAndReceive(message) => self.send_and_receive_tab.update(message),
             Message::Trade(message) => self.trade_tab.update(message),
             Message::Settings(message) => self.settings_tab.update(message),
+            Message::Welcome(WelcomeMessage::NextPressed) => {
+                self.active_screen = ActiveScreen::ChooseWalletCreation
+            }
             Message::Tick(_) => {}
         }
 
@@ -169,12 +182,10 @@ impl Application for GUI {
                         TabBarPosition::Top => iced_aw::TabBarPosition::Top,
                         TabBarPosition::Bottom => iced_aw::TabBarPosition::Bottom,
                     })
-                    .into() 
+                    .into()
             }
 
-            ActiveScreen::Welcome => {
-                unimplemented!()
-            }
+            ActiveScreen::Welcome => self.welcome_screen.view(),
 
             _ => {
                 unimplemented!()
@@ -216,8 +227,6 @@ trait Screen {
     type Message;
 
     fn title(&self) -> String;
-
-    fn tab_label(&self) -> TabLabel;
 
     fn view(&mut self) -> Element<'_, Self::Message> {
         let column = Column::new()

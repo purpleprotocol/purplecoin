@@ -12,7 +12,7 @@ use iced::{Application, Settings};
 use log::*;
 use mimalloc::MiMalloc;
 use purplecoin::chain::backend::disk::DiskBackend;
-use purplecoin::chain::backend::ShardBackend;
+
 use purplecoin::chain::*;
 
 use purplecoin::node::*;
@@ -28,15 +28,15 @@ use std::env;
 
 use std::sync::atomic::AtomicBool;
 
+use rust_decimal::Decimal;
 use std::fs;
+use std::str::FromStr;
 use std::thread;
 use std::time::Duration;
 use tarpc::server::{self, incoming::Incoming, Channel};
 use tokio::runtime::Builder;
 use tokio::time::sleep;
 use tracing_subscriber::prelude::*;
-use rust_decimal::Decimal;
-use std::str::FromStr;
 
 use warp::Filter;
 
@@ -167,14 +167,14 @@ fn load_wallets() {
             .unwrap_or_else(|err| panic!("could not load wallet {wallet_name}! reason: {err}"));
 
         let coin_str: String = format!("{}", purplecoin::consensus::COIN);
-        let coin = Decimal::from_str(&coin_str).unwrap();
+        let _coin = Decimal::from_str(&coin_str).unwrap();
         let mut amount: i128 = 0;
         for o in wallet.outputs.iter() {
             let a = o.amount;
             amount += a;
         }
 
-        purplecoin::global::set_balance(wallet_name, amount as i128);
+        purplecoin::global::set_balance(wallet_name, amount);
         wallets_lock.insert(wallet_name.to_owned(), wallet);
     }
 }
@@ -188,13 +188,14 @@ fn start_gui() -> iced::Result {
 
     // Set application icon
     {
-        let icon_with_format = image::io::Reader::with_format(
-            std::io::Cursor::new(include_bytes!("./gui/img/logo_purple_square.png")),
-            image::ImageFormat::Png,
+        gui_settings.window.icon = Some(
+            Icon::from_rgba(
+                purplecoin::global::LOGO_PIXELS.0.clone(),
+                purplecoin::global::LOGO_PIXELS.1,
+                purplecoin::global::LOGO_PIXELS.2,
+            )
+            .unwrap(),
         );
-        let pixels = icon_with_format.decode().unwrap().to_rgba8();
-        gui_settings.window.icon =
-            Some(Icon::from_rgba(pixels.to_vec(), pixels.width(), pixels.height()).unwrap());
     }
 
     // Don't close application implicitly when clicking the close window button
