@@ -324,7 +324,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned16Var) => {
                             let mut failed = false;
                             let mut arr: [u8; 2] = [0; 2];
-                            
+
                             for j in 0..2 {
                                 frame.i_ptr += 1;
                                 let i = &f.script[frame.i_ptr];
@@ -338,16 +338,23 @@ impl Script {
                                         failed = true;
                                         frame.executor.state = ScriptExecutorState::Error(
                                             ExecutionResult::BadFormat,
-                                            (frame.i_ptr, frame.func_idx, *op, frame.stack.as_slice())
+                                            (
+                                                frame.i_ptr,
+                                                frame.func_idx,
+                                                *op,
+                                                frame.stack.as_slice(),
+                                            )
                                                 .into(),
                                         );
                                         break;
                                     }
                                 }
-                            }                            
-                            
+                            }
+
                             if !failed {
-                                frame.stack.push(VmTerm::Unsigned16(u16::from_le_bytes(arr)));
+                                frame
+                                    .stack
+                                    .push(VmTerm::Unsigned16(u16::from_le_bytes(arr)));
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                                 memory_size += 2;
@@ -357,7 +364,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned32Var) => {
                             let mut failed = false;
                             let mut arr: [u8; 4] = [0; 4];
-                            
+
                             for j in 0..4 {
                                 frame.i_ptr += 1;
                                 let i = &f.script[frame.i_ptr];
@@ -371,16 +378,23 @@ impl Script {
                                         failed = true;
                                         frame.executor.state = ScriptExecutorState::Error(
                                             ExecutionResult::BadFormat,
-                                            (frame.i_ptr, frame.func_idx, *op, frame.stack.as_slice())
+                                            (
+                                                frame.i_ptr,
+                                                frame.func_idx,
+                                                *op,
+                                                frame.stack.as_slice(),
+                                            )
                                                 .into(),
                                         );
                                         break;
                                     }
                                 }
-                            }                            
-                            
+                            }
+
                             if !failed {
-                                frame.stack.push(VmTerm::Unsigned32(u32::from_le_bytes(arr)));
+                                frame
+                                    .stack
+                                    .push(VmTerm::Unsigned32(u32::from_le_bytes(arr)));
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                                 memory_size += 4;
@@ -390,7 +404,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned64Var) => {
                             let mut failed = false;
                             let mut arr: [u8; 8] = [0; 8];
-                            
+
                             for j in 0..8 {
                                 frame.i_ptr += 1;
                                 let i = &f.script[frame.i_ptr];
@@ -404,16 +418,23 @@ impl Script {
                                         failed = true;
                                         frame.executor.state = ScriptExecutorState::Error(
                                             ExecutionResult::BadFormat,
-                                            (frame.i_ptr, frame.func_idx, *op, frame.stack.as_slice())
+                                            (
+                                                frame.i_ptr,
+                                                frame.func_idx,
+                                                *op,
+                                                frame.stack.as_slice(),
+                                            )
                                                 .into(),
                                         );
                                         break;
                                     }
                                 }
-                            }                            
-                            
+                            }
+
                             if !failed {
-                                frame.stack.push(VmTerm::Unsigned64(u64::from_le_bytes(arr)));
+                                frame
+                                    .stack
+                                    .push(VmTerm::Unsigned64(u64::from_le_bytes(arr)));
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                                 memory_size += 8;
@@ -423,7 +444,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned128Var) => {
                             let mut failed = false;
                             let mut arr: [u8; 16] = [0; 16];
-                            
+
                             for j in 0..16 {
                                 frame.i_ptr += 1;
                                 let i = &f.script[frame.i_ptr];
@@ -437,16 +458,23 @@ impl Script {
                                         failed = true;
                                         frame.executor.state = ScriptExecutorState::Error(
                                             ExecutionResult::BadFormat,
-                                            (frame.i_ptr, frame.func_idx, *op, frame.stack.as_slice())
+                                            (
+                                                frame.i_ptr,
+                                                frame.func_idx,
+                                                *op,
+                                                frame.stack.as_slice(),
+                                            )
                                                 .into(),
                                         );
                                         break;
                                     }
                                 }
-                            }                            
-                            
+                            }
+
                             if !failed {
-                                frame.stack.push(VmTerm::Unsigned128(u128::from_le_bytes(arr)));
+                                frame
+                                    .stack
+                                    .push(VmTerm::Unsigned128(u128::from_le_bytes(arr)));
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                                 memory_size += 16;
@@ -459,7 +487,9 @@ impl Script {
 
                             match i {
                                 ScriptEntry::Byte(byte) => {
-                                    frame.stack.push(VmTerm::Signed8(i8::from_le_bytes([*byte])));
+                                    frame
+                                        .stack
+                                        .push(VmTerm::Signed8(i8::from_le_bytes([*byte])));
                                     frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                     frame.i_ptr += 1;
                                     memory_size += 1;
@@ -478,7 +508,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed16Var) => {
                             let mut failed = false;
                             let mut arr: [u8; 2] = [0; 2];
-                            
+
                             for j in 0..2 {
                                 frame.i_ptr += 1;
                                 let i = &f.script[frame.i_ptr];
@@ -492,14 +522,19 @@ impl Script {
                                         failed = true;
                                         frame.executor.state = ScriptExecutorState::Error(
                                             ExecutionResult::BadFormat,
-                                            (frame.i_ptr, frame.func_idx, *op, frame.stack.as_slice())
+                                            (
+                                                frame.i_ptr,
+                                                frame.func_idx,
+                                                *op,
+                                                frame.stack.as_slice(),
+                                            )
                                                 .into(),
                                         );
                                         break;
                                     }
                                 }
-                            }                            
-                            
+                            }
+
                             if !failed {
                                 frame.stack.push(VmTerm::Signed16(i16::from_le_bytes(arr)));
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
@@ -511,7 +546,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed32Var) => {
                             let mut failed = false;
                             let mut arr: [u8; 4] = [0; 4];
-                            
+
                             for j in 0..4 {
                                 frame.i_ptr += 1;
                                 let i = &f.script[frame.i_ptr];
@@ -525,14 +560,19 @@ impl Script {
                                         failed = true;
                                         frame.executor.state = ScriptExecutorState::Error(
                                             ExecutionResult::BadFormat,
-                                            (frame.i_ptr, frame.func_idx, *op, frame.stack.as_slice())
+                                            (
+                                                frame.i_ptr,
+                                                frame.func_idx,
+                                                *op,
+                                                frame.stack.as_slice(),
+                                            )
                                                 .into(),
                                         );
                                         break;
                                     }
                                 }
-                            }                            
-                            
+                            }
+
                             if !failed {
                                 frame.stack.push(VmTerm::Signed32(i32::from_le_bytes(arr)));
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
@@ -544,7 +584,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed64Var) => {
                             let mut failed = false;
                             let mut arr: [u8; 8] = [0; 8];
-                            
+
                             for j in 0..8 {
                                 frame.i_ptr += 1;
                                 let i = &f.script[frame.i_ptr];
@@ -558,14 +598,19 @@ impl Script {
                                         failed = true;
                                         frame.executor.state = ScriptExecutorState::Error(
                                             ExecutionResult::BadFormat,
-                                            (frame.i_ptr, frame.func_idx, *op, frame.stack.as_slice())
+                                            (
+                                                frame.i_ptr,
+                                                frame.func_idx,
+                                                *op,
+                                                frame.stack.as_slice(),
+                                            )
                                                 .into(),
                                         );
                                         break;
                                     }
                                 }
-                            }                            
-                            
+                            }
+
                             if !failed {
                                 frame.stack.push(VmTerm::Signed64(i64::from_le_bytes(arr)));
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
@@ -577,7 +622,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed128Var) => {
                             let mut failed = false;
                             let mut arr: [u8; 16] = [0; 16];
-                            
+
                             for j in 0..16 {
                                 frame.i_ptr += 1;
                                 let i = &f.script[frame.i_ptr];
@@ -591,16 +636,23 @@ impl Script {
                                         failed = true;
                                         frame.executor.state = ScriptExecutorState::Error(
                                             ExecutionResult::BadFormat,
-                                            (frame.i_ptr, frame.func_idx, *op, frame.stack.as_slice())
+                                            (
+                                                frame.i_ptr,
+                                                frame.func_idx,
+                                                *op,
+                                                frame.stack.as_slice(),
+                                            )
                                                 .into(),
                                         );
                                         break;
                                     }
                                 }
-                            }                            
-                            
+                            }
+
                             if !failed {
-                                frame.stack.push(VmTerm::Signed128(i128::from_le_bytes(arr)));
+                                frame
+                                    .stack
+                                    .push(VmTerm::Signed128(i128::from_le_bytes(arr)));
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                                 memory_size += 16;
@@ -1557,7 +1609,8 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::Unsigned128Var) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned128Var);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned128Var);
                 }
 
                 ScriptEntry::Opcode(OP::Signed8Var) => {
@@ -4159,7 +4212,6 @@ mod tests {
         assert_eq!(outs, base.out);
     }
 
-
     #[test]
     fn it_loads_unsigned_64var() {
         let key = "test_key";
@@ -4398,7 +4450,6 @@ mod tests {
         );
         assert_eq!(outs, base.out);
     }
-
 
     #[test]
     fn it_loads_signed_64var() {
