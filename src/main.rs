@@ -35,6 +35,8 @@ use tarpc::server::{self, incoming::Incoming, Channel};
 use tokio::runtime::Builder;
 use tokio::time::sleep;
 use tracing_subscriber::prelude::*;
+use rust_decimal::Decimal;
+use std::str::FromStr;
 
 use warp::Filter;
 
@@ -145,7 +147,7 @@ fn load_wallets() {
             .unwrap()
             .file_name()
             .into_string()
-            .expect("Could not decode wallet filename");
+            .expect("could not decode wallet filename");
         let file_len = file.len();
 
         // .dat extension is not possible
@@ -162,8 +164,17 @@ fn load_wallets() {
 
         let wallet_name = file.split(".dat").next().unwrap();
         let wallet = purplecoin::wallet::load_hdwallet(wallet_name)
-            .unwrap_or_else(|_| panic!("Could not load wallet: {wallet_name}"));
+            .unwrap_or_else(|err| panic!("could not load wallet {wallet_name}! reason: {err}"));
 
+        let coin_str: String = format!("{}", purplecoin::consensus::COIN);
+        let coin = Decimal::from_str(&coin_str).unwrap();
+        let mut amount: i128 = 0;
+        for o in wallet.outputs.iter() {
+            let a = o.amount;
+            amount += a;
+        }
+
+        purplecoin::global::set_balance(wallet_name, amount as i128);
         wallets_lock.insert(wallet_name.to_owned(), wallet);
     }
 }

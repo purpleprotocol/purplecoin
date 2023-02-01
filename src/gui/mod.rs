@@ -24,12 +24,24 @@ use trade::{TradeMessage, TradeTab};
 
 mod settings;
 use settings::{SettingsMessage, SettingsTab, TabBarPosition};
+
+mod welcome;
+mod import_wallet;
+mod import_wallet_mnemonic;
+mod import_wallet_file;
+mod import_wallet_private_key;
+mod create_wallet;
+mod create_wallet_mnemonic_backup;
+mod create_wallet_mnemonic_confirm;
+mod choose_wallet_creation;
+
 use std::time::{Duration, Instant};
 
 mod theme;
 
 const HEADER_SIZE: u16 = 32;
 const TAB_PADDING: u16 = 16;
+const SCREEN_PADDING: u16 = 16;
 const WINDOW_TITLE: &str = "Purplecoin Core";
 
 const ICON_FONT: Font = iced::Font::External {
@@ -42,6 +54,19 @@ enum Icon {
     Heart,
     Calc,
     CogAlt,
+}
+
+enum ActiveScreen {
+    Welcome,
+    Tabs,
+    ImportWallet,
+    ImportWalletMnemonic,
+    ImportWalletFile,
+    ImportWalletPrivateKey,
+    CreateWallet,
+    CreateWalletMnemonicBackup,
+    CreateWalletMnemonicConfirm,
+    ChooseWalletCreation,
 }
 
 impl From<Icon> for char {
@@ -57,7 +82,7 @@ impl From<Icon> for char {
 
 pub struct GUI {
     active_tab: usize,
-    onboarded: bool,
+    active_screen: ActiveScreen,
     overview_tab: OverviewTab,
     send_and_receive_tab: SendAndReceiveTab,
     trade_tab: TradeTab,
@@ -80,10 +105,16 @@ impl Application for GUI {
     type Flags = ();
 
     fn new(_: Self::Flags) -> (Self, Command<Self::Message>) {
+        let active_screen = if crate::global::WALLETS.read().is_empty() {
+            ActiveScreen::Welcome
+        } else {
+            ActiveScreen::Tabs,
+        };
+
         (
             GUI {
-                onboarded: true,
                 active_tab: 0,
+                active_screen,
                 overview_tab: OverviewTab::new(),
                 send_and_receive_tab: SendAndReceiveTab::new(),
                 trade_tab: TradeTab::new(),
@@ -111,32 +142,44 @@ impl Application for GUI {
     }
 
     fn view(&mut self) -> Element<'_, Self::Message> {
-        let position = self
-            .settings_tab
-            .settings()
-            .tab_bar_position
-            .unwrap_or_default();
-        let theme = self
-            .settings_tab
-            .settings()
-            .tab_bar_theme
-            .unwrap_or_default();
+        match self.active_screen {
+            ActiveScreen::Tabs => {
+                let position = self
+                    .settings_tab
+                    .settings()
+                    .tab_bar_position
+                    .unwrap_or_default();
+                let theme = self
+                    .settings_tab
+                    .settings()
+                    .tab_bar_theme
+                    .unwrap_or_default();
 
-        Tabs::new(self.active_tab, Message::TabSelected)
-            .push(self.overview_tab.tab_label(), self.overview_tab.view())
-            .push(
-                self.send_and_receive_tab.tab_label(),
-                self.send_and_receive_tab.view(),
-            )
-            .push(self.trade_tab.tab_label(), self.trade_tab.view())
-            .push(self.settings_tab.tab_label(), self.settings_tab.view())
-            .tab_bar_style(theme)
-            .icon_font(ICON_FONT)
-            .tab_bar_position(match position {
-                TabBarPosition::Top => iced_aw::TabBarPosition::Top,
-                TabBarPosition::Bottom => iced_aw::TabBarPosition::Bottom,
-            })
-            .into()
+                Tabs::new(self.active_tab, Message::TabSelected)
+                    .push(self.overview_tab.tab_label(), self.overview_tab.view())
+                    .push(
+                        self.send_and_receive_tab.tab_label(),
+                        self.send_and_receive_tab.view(),
+                    )
+                    .push(self.trade_tab.tab_label(), self.trade_tab.view())
+                    .push(self.settings_tab.tab_label(), self.settings_tab.view())
+                    .tab_bar_style(theme)
+                    .icon_font(ICON_FONT)
+                    .tab_bar_position(match position {
+                        TabBarPosition::Top => iced_aw::TabBarPosition::Top,
+                        TabBarPosition::Bottom => iced_aw::TabBarPosition::Bottom,
+                    })
+                    .into() 
+            }
+
+            ActiveScreen::Welcome => {
+                unimplemented!()
+            }
+
+            _ => {
+                unimplemented!()
+            }
+        }
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -163,6 +206,31 @@ trait Tab {
             .align_x(Horizontal::Center)
             .align_y(Vertical::Center)
             .padding(TAB_PADDING)
+            .into()
+    }
+
+    fn content(&mut self) -> Element<'_, Self::Message>;
+}
+
+trait Screen {
+    type Message;
+
+    fn title(&self) -> String;
+
+    fn tab_label(&self) -> TabLabel;
+
+    fn view(&mut self) -> Element<'_, Self::Message> {
+        let column = Column::new()
+            .spacing(20)
+            .push(Text::new(self.title()).size(HEADER_SIZE))
+            .push(self.content());
+
+        Container::new(column)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center)
+            .padding(SCREEN_PADDING)
             .into()
     }
 
