@@ -12,6 +12,13 @@ This document contains important information regarding the Purplecoin Crowdsale.
 * The sale is hosted at https://sale.purplecoin.io
 * The Metamask browser extension is required to participate.
 
+### How to participate
+* First create a [Metamask](https://metamask.io/download/) wallet if you already don't have one.
+* Transfer at least 0.25 ETH to your Metamask wallet. We recomend 0.26 ETH min to account for transaction fees.
+* Visit https://sale.purplecoin.io and follow the instructions
+* Once the KYC verification is complete, you must wait for the sale to end.
+* Once the sale has ended, you can generate a Purplecoin address and transfer your XPU to the main chain.
+
 ### KYC Escrow
 All funds are held in escrow in the crowdsale smart contract until a beneficiary's identity has been confirmed. The beneficiary is able to refund their purchase if their identity verification failed.
 
