@@ -32,8 +32,8 @@ mod choose_wallet_creation;
 use choose_wallet_creation::{ChooseWalletCreationMessage, ChooseWalletCreationScreen};
 
 mod create_wallet;
-mod create_wallet_mnemonic_backup;
-mod create_wallet_mnemonic_confirm;
+use create_wallet::{CreateWalletMessage, CreateWalletScreen};
+
 mod import_wallet;
 mod import_wallet_file;
 mod import_wallet_mnemonic;
@@ -93,6 +93,7 @@ pub struct GUI {
     settings_tab: SettingsTab,
     welcome_screen: WelcomeScreen,
     choose_wallet_creation_screen: ChooseWalletCreationScreen,
+    create_wallet_screen: CreateWalletScreen,
 }
 
 #[derive(Clone, Debug)]
@@ -107,6 +108,7 @@ pub enum Message {
     // Screens
     Welcome(WelcomeMessage),
     ChooseWalletCreation(ChooseWalletCreationMessage),
+    CreateWallet(CreateWalletMessage),
 
     // Global
     Tick(Instant),
@@ -134,6 +136,7 @@ impl Application for GUI {
                 settings_tab: SettingsTab::new(),
                 welcome_screen: WelcomeScreen::new(),
                 choose_wallet_creation_screen: ChooseWalletCreationScreen::new(),
+                create_wallet_screen: CreateWalletScreen::new(),
             },
             Command::none(),
         )
@@ -159,6 +162,7 @@ impl Application for GUI {
             Message::ChooseWalletCreation(ChooseWalletCreationMessage::ImportPressed) => {
                 self.active_screen = ActiveScreen::ImportWallet
             }
+            Message::CreateWallet(message) => self.create_wallet_screen.update(message),
             Message::Tick(_) => {}
         }
 
@@ -198,6 +202,7 @@ impl Application for GUI {
 
             ActiveScreen::Welcome => self.welcome_screen.view(),
             ActiveScreen::ChooseWalletCreation => self.choose_wallet_creation_screen.view(),
+            ActiveScreen::CreateWallet => self.create_wallet_screen.view(),
 
             _ => {
                 unimplemented!()

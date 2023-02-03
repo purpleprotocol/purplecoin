@@ -166,8 +166,6 @@ fn load_wallets() {
         let wallet = purplecoin::wallet::load_hdwallet(wallet_name)
             .unwrap_or_else(|err| panic!("could not load wallet {wallet_name}! reason: {err}"));
 
-        let coin_str: String = format!("{}", purplecoin::consensus::COIN);
-        let _coin = Decimal::from_str(&coin_str).unwrap();
         let mut amount: i128 = 0;
         for o in wallet.outputs.iter() {
             let a = o.amount;

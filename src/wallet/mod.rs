@@ -484,74 +484,73 @@ pub fn load_hdwallet(wallet_name: &str) -> Result<HDWallet, &'static str> {
 pub fn generate_hdwallet_bip39_english(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::English)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(wallet_name, passphrase, Mnemonic::new(MnemonicType::Words24, Language::English))
 }
 
 pub fn generate_hdwallet_bip39_chinese_simplified(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::ChineseSimplified)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(wallet_name, passphrase, Mnemonic::new(MnemonicType::Words24, Language::ChineseSimplified))
 }
 
 pub fn generate_hdwallet_bip39_chinese_traditional(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::ChineseTraditional)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(wallet_name, passphrase,  Mnemonic::new(MnemonicType::Words24, Language::ChineseTraditional))
 }
 
 pub fn generate_hdwallet_bip39_french(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::French)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(wallet_name, passphrase,  Mnemonic::new(MnemonicType::Words24, Language::French))
 }
 
 pub fn generate_hdwallet_bip39_italian(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::Italian)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(wallet_name, passphrase,  Mnemonic::new(MnemonicType::Words24, Language::Italian))
 }
 
 pub fn generate_hdwallet_bip39_japanese(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::Japanese)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(wallet_name, passphrase,  Mnemonic::new(MnemonicType::Words24, Language::Japanese))
 }
 
 pub fn generate_hdwallet_bip39_korean(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::Korean)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(wallet_name, passphrase,  Mnemonic::new(MnemonicType::Words24, Language::Korean))
 }
 
 pub fn generate_hdwallet_bip39_spanish(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::Spanish)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(wallet_name, passphrase,  Mnemonic::new(MnemonicType::Words24, Language::Spanish))
 }
 
 pub fn gen_hdwallet_bip39(
     wallet_name: &str,
     passphrase: &str,
-    language: Language,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    let mnemonic = Mnemonic::new(MnemonicType::Words24, language);
+    mnemonic: Mnemonic,
+) -> Result<HDWallet, &'static str> {
     let phrase: &str = mnemonic.phrase();
-
     let mut seed = [0; 64];
     let mut hasher = blake3::Hasher::new();
     hasher.update(mnemonic.phrase().as_bytes());
     let mut out = hasher.finalize_xof();
     out.fill(&mut seed);
-
-    Ok((generate_hdwallet(wallet_name, passphrase, seed)?, mnemonic))
+    let result = generate_hdwallet(wallet_name, passphrase, seed)?;
+    seed.zeroize();
+    Ok(result)
 }
 
 pub fn generate_hdwallet(
