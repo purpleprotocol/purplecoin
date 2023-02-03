@@ -14,7 +14,7 @@ This document contains important information regarding the Purplecoin Crowdsale.
 
 ### How to participate
 * First create a [Metamask](https://metamask.io/download/) wallet if you don't already have one.
-* Transfer at least 0.25 ETH to your Metamask wallet. We recomend 0.26 ETH min to account for transaction fees.
+* Transfer at least 0.25 ETH to your Metamask wallet. We recommend 0.26 ETH min to account for transaction fees.
 * Visit https://sale.purplecoin.io and follow the instructions.
 * Once the KYC verification is complete, you must wait for the sale to end.
 * Once the sale has ended, you can generate a Purplecoin address and transfer your XPU to the main chain.
