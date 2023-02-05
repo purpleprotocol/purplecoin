@@ -24,3 +24,9 @@ All funds are held in escrow in the crowdsale smart contract until a beneficiary
 
 ### Cold storage
 Raised funds are kept in a 3 of 5 multi-sig setup with keys being stored at different compounds which we will not disclose the location or any other details of.
+
+### Fund allocation
+This is how we plan to allocate the raised funds:
+* 50% will be used to fund the foundation responsible for governing post-launch.
+* 25% to pre-launch development/marketing/bounties.
+* 25% kept in reserve for unforeseen circumstances.
