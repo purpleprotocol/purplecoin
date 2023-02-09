@@ -15,6 +15,7 @@ use rand::prelude::*;
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 use std::collections::HashMap;
+use std::mem;
 
 /// Max frame stack size
 pub const MAX_FRAMES: usize = 512;
@@ -52,6 +53,28 @@ macro_rules! check_top_stack_val {
             }
 
             return Err((ExecutionResult::Invalid, stack_trace)).into();
+        }
+    };
+}
+
+macro_rules! var_load {
+    ($frame:expr, $script:expr, $sum:ident, $type:ty, $step:expr) => {
+        $frame.i_ptr += 1;
+        if let ScriptEntry::Byte(byte) = $script.script[$frame.i_ptr] {
+            $sum += (byte as $type);
+        } else {
+            unreachable!()
+        }
+    };
+
+    ($frame:expr, $script:expr, $sum:ident, $type:ty, $step:expr, $($tail:expr), +) => {
+        var_load!($frame, $script, $sum, $type, $($tail), +);
+
+        $frame.i_ptr += 1;
+        if let ScriptEntry::Byte(byte) = $script.script[$frame.i_ptr] {
+            $sum += (byte as $type) << $step;
+        } else {
+            unreachable!()
         }
     };
 }
@@ -301,24 +324,127 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8Var) => {
                             frame.i_ptr += 1;
-                            let i = &f.script[frame.i_ptr];
 
-                            match i {
-                                ScriptEntry::Byte(byte) => {
-                                    frame.stack.push(VmTerm::Unsigned8(*byte));
-                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                    frame.i_ptr += 1;
-                                    memory_size += 1;
-                                }
-
-                                ScriptEntry::Opcode(op) => {
-                                    frame.executor.state = ScriptExecutorState::Error(
-                                        ExecutionResult::BadFormat,
-                                        (frame.i_ptr, frame.func_idx, *op, frame.stack.as_slice())
-                                            .into(),
-                                    );
-                                }
+                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                frame.stack.push(VmTerm::Unsigned8(*byte));
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                frame.i_ptr += 1;
+                                memory_size += 1;
+                            } else {
+                                unreachable!()
                             }
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned16Var) => {
+                            let mut sum: u16 = 0;
+
+                            var_load!(frame, f, sum, u16, 8, 0);
+
+                            frame.stack.push(VmTerm::Unsigned16(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 2;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned32Var) => {
+                            let mut sum: u32 = 0;
+
+                            var_load!(frame, f, sum, u32, 24, 16, 8, 0);
+
+                            frame.stack.push(VmTerm::Unsigned32(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 4;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned64Var) => {
+                            let mut sum: u64 = 0;
+
+                            var_load!(frame, f, sum, u64, 56, 48, 40, 32, 24, 16, 8, 0);
+
+                            frame.stack.push(VmTerm::Unsigned64(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 8;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned128Var) => {
+                            let mut sum: u128 = 0;
+
+                            var_load!(
+                                frame, f, sum, u128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40,
+                                32, 24, 16, 8, 0
+                            );
+
+                            frame.stack.push(VmTerm::Unsigned128(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 16;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed8Var) => {
+                            frame.i_ptr += 1;
+
+                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                let byte = unsafe { mem::transmute::<u8, i8>(*byte) };
+                                frame.stack.push(VmTerm::Signed8(byte));
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                frame.i_ptr += 1;
+                                memory_size += 1;
+                            } else {
+                                unreachable!()
+                            }
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed16Var) => {
+                            let mut sum: u16 = 0;
+
+                            var_load!(frame, f, sum, u16, 8, 0);
+
+                            let sum = unsafe { mem::transmute::<u16, i16>(sum) };
+                            frame.stack.push(VmTerm::Signed16(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 2;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed32Var) => {
+                            let mut sum: u32 = 0;
+
+                            var_load!(frame, f, sum, u32, 24, 16, 8, 0);
+
+                            let sum = unsafe { mem::transmute::<u32, i32>(sum) };
+                            frame.stack.push(VmTerm::Signed32(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 4;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed64Var) => {
+                            let mut sum: u64 = 0;
+
+                            var_load!(frame, f, sum, u64, 56, 48, 40, 32, 24, 16, 8, 0);
+
+                            let sum = unsafe { mem::transmute::<u64, i64>(sum) };
+                            frame.stack.push(VmTerm::Signed64(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 8;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed128Var) => {
+                            let mut sum: u128 = 0;
+
+                            var_load!(
+                                frame, f, sum, u128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40,
+                                32, 24, 16, 8, 0
+                            );
+
+                            let sum = unsafe { mem::transmute::<u128, i128>(sum) };
+                            frame.stack.push(VmTerm::Signed128(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 16;
                         }
 
                         // Extend stack trace
@@ -1256,6 +1382,43 @@ impl<'a> ScriptExecutor<'a> {
 
                 ScriptEntry::Opcode(OP::Unsigned8Var) => {
                     self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8Var);
+                }
+
+                ScriptEntry::Opcode(OP::Unsigned16Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned16Var);
+                }
+
+                ScriptEntry::Opcode(OP::Unsigned32Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned32Var);
+                }
+
+                ScriptEntry::Opcode(OP::Unsigned64Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned64Var);
+                }
+
+                ScriptEntry::Opcode(OP::Unsigned128Var) => {
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned128Var);
+                }
+
+                ScriptEntry::Opcode(OP::Signed8Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed8Var);
+                }
+
+                ScriptEntry::Opcode(OP::Signed16Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed16Var);
+                }
+
+                ScriptEntry::Opcode(OP::Signed32Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed32Var);
+                }
+
+                ScriptEntry::Opcode(OP::Signed64Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed64Var);
+                }
+
+                ScriptEntry::Opcode(OP::Signed128Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed128Var);
                 }
 
                 ScriptEntry::Opcode(OP::Add1) => {
@@ -3733,5 +3896,483 @@ mod tests {
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
+    }
+
+    #[test]
+    fn it_loads_unsigned_16var() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned16Var),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned16Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Opcode(OP::Unsigned16Var),
+                ScriptEntry::Byte(0x11),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned16(0x0011),
+            VmTerm::Unsigned16(0x2301),
+            VmTerm::Unsigned16(0x0123),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_unsigned_32var() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned32Var),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned32Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned32Var),
+                ScriptEntry::Byte(0x11),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned32(0x00000011),
+            VmTerm::Unsigned32(0x00002301),
+            VmTerm::Unsigned32(0x00000123),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_unsigned_64var() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned64Var),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned64Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned64Var),
+                ScriptEntry::Byte(0x11),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned64(0x0000000000000011),
+            VmTerm::Unsigned64(0x0123000000002301),
+            VmTerm::Unsigned64(0x0123000000000123),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_unsigned_128var() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned128Var),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x11),
+                ScriptEntry::Opcode(OP::Unsigned128Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x22),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned128(0x22000000000000000123000000002301),
+            VmTerm::Unsigned128(0x11000000000000000123000000000123),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_signed_16var() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Signed16Var),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Signed16Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Opcode(OP::Signed16Var),
+                ScriptEntry::Byte(0x11),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Signed16(0x0011),
+            VmTerm::Signed16(0x2301),
+            VmTerm::Signed16(0x0123),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_signed_32var() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Signed32Var),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Signed32Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Signed32Var),
+                ScriptEntry::Byte(0x11),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Signed32(0x00000011),
+            VmTerm::Signed32(0x00002301),
+            VmTerm::Signed32(0x00000123),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_signed_64var() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Signed64Var),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Signed64Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Signed64Var),
+                ScriptEntry::Byte(0x11),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Signed64(0x0000000000000011),
+            VmTerm::Signed64(0x0123000000002301),
+            VmTerm::Signed64(0x0123000000000123),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_signed_128var() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Signed128Var),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x11),
+                ScriptEntry::Opcode(OP::Signed128Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x22),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Signed128(0x22000000000000000123000000002301),
+            VmTerm::Signed128(0x11000000000000000123000000000123),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
     }
 }
