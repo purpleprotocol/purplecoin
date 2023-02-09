@@ -58,7 +58,7 @@ macro_rules! check_top_stack_val {
 }
 
 macro_rules! var_load {
-    ($frame:expr, $script:expr, $sum:ident, $type:ty, $step:expr) => { 
+    ($frame:expr, $script:expr, $sum:ident, $type:ty, $step:expr) => {
         $frame.i_ptr += 1;
         if let ScriptEntry::Byte(byte) = $script.script[$frame.i_ptr] {
             $sum += (byte as $type);
@@ -324,7 +324,7 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8Var) => {
                             frame.i_ptr += 1;
-                         
+
                             if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
                                 frame.stack.push(VmTerm::Unsigned8(*byte));
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
@@ -371,7 +371,10 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned128Var) => {
                             let mut sum: u128 = 0;
 
-                            var_load!(frame, f, sum, u128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 0);
+                            var_load!(
+                                frame, f, sum, u128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40,
+                                32, 24, 16, 8, 0
+                            );
 
                             frame.stack.push(VmTerm::Unsigned128(sum));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
@@ -381,11 +384,9 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed8Var) => {
                             frame.i_ptr += 1;
-                         
+
                             if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
-                                let byte = unsafe {
-                                    mem::transmute::<u8, i8>(*byte)
-                                };
+                                let byte = unsafe { mem::transmute::<u8, i8>(*byte) };
                                 frame.stack.push(VmTerm::Signed8(byte));
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
@@ -400,9 +401,7 @@ impl Script {
 
                             var_load!(frame, f, sum, u16, 8, 0);
 
-                            let sum = unsafe {
-                                mem::transmute::<u16, i16>(sum)
-                            };
+                            let sum = unsafe { mem::transmute::<u16, i16>(sum) };
                             frame.stack.push(VmTerm::Signed16(sum));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -414,9 +413,7 @@ impl Script {
 
                             var_load!(frame, f, sum, u32, 24, 16, 8, 0);
 
-                            let sum = unsafe {
-                                mem::transmute::<u32, i32>(sum)
-                            };
+                            let sum = unsafe { mem::transmute::<u32, i32>(sum) };
                             frame.stack.push(VmTerm::Signed32(sum));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -428,23 +425,22 @@ impl Script {
 
                             var_load!(frame, f, sum, u64, 56, 48, 40, 32, 24, 16, 8, 0);
 
-                            let sum = unsafe {
-                                mem::transmute::<u64, i64>(sum)
-                            };
+                            let sum = unsafe { mem::transmute::<u64, i64>(sum) };
                             frame.stack.push(VmTerm::Signed64(sum));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 8;
-                    }
+                        }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed128Var) => {
                             let mut sum: u128 = 0;
 
-                            var_load!(frame, f, sum, u128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 0);
-                            
-                            let sum = unsafe {
-                                mem::transmute::<u128, i128>(sum)
-                            };
+                            var_load!(
+                                frame, f, sum, u128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40,
+                                32, 24, 16, 8, 0
+                            );
+
+                            let sum = unsafe { mem::transmute::<u128, i128>(sum) };
                             frame.stack.push(VmTerm::Signed128(sum));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;

@@ -284,7 +284,7 @@ fn bench_vm_load_var(c: &mut Criterion) {
     let inputs_hash = Hash160::hash_from_slice(ins_hashes.as_slice(), key);
     let inputs_hash: Hash160 = ins.iter().cloned().cycle().take(0).fold(
         inputs_hash.clone(),
-        |mut acc: Hash160, v: Input| {
+        |mut acc: Hash160, _v: Input| {
             let inputs_hashes = vec![acc.0, inputs_hash.0]
                 .iter()
                 .flatten()
