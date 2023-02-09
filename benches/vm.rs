@@ -198,9 +198,149 @@ fn bench_vm_abuse(c: &mut Criterion) {
     }
 }
 
+fn bench_vm_load_var(c: &mut Criterion) {
+    let key = "test_key";
+    let ss = Script {
+        version: 1,
+        script: vec![
+            ScriptEntry::Byte(0x03),
+            ScriptEntry::Opcode(OP::Unsigned128Var),
+            ScriptEntry::Byte(0x12),
+            ScriptEntry::Byte(0x34),
+            ScriptEntry::Byte(0x56),
+            ScriptEntry::Byte(0x78),
+            ScriptEntry::Byte(0x90),
+            ScriptEntry::Byte(0x12),
+            ScriptEntry::Byte(0x34),
+            ScriptEntry::Byte(0x56),
+            ScriptEntry::Byte(0x78),
+            ScriptEntry::Byte(0x90),
+            ScriptEntry::Byte(0x12),
+            ScriptEntry::Byte(0x34),
+            ScriptEntry::Byte(0x56),
+            ScriptEntry::Byte(0x78),
+            ScriptEntry::Byte(0x90),
+            ScriptEntry::Byte(0x12),
+            ScriptEntry::Opcode(OP::Unsigned128Var),
+            ScriptEntry::Byte(0x12),
+            ScriptEntry::Byte(0x34),
+            ScriptEntry::Byte(0x56),
+            ScriptEntry::Byte(0x78),
+            ScriptEntry::Byte(0x90),
+            ScriptEntry::Byte(0x12),
+            ScriptEntry::Byte(0x34),
+            ScriptEntry::Byte(0x56),
+            ScriptEntry::Byte(0x78),
+            ScriptEntry::Byte(0x90),
+            ScriptEntry::Byte(0x12),
+            ScriptEntry::Byte(0x34),
+            ScriptEntry::Byte(0x56),
+            ScriptEntry::Byte(0x78),
+            ScriptEntry::Byte(0x90),
+            ScriptEntry::Byte(0x12),
+            ScriptEntry::Opcode(OP::PopToScriptOuts),
+            ScriptEntry::Opcode(OP::PopToScriptOuts),
+            ScriptEntry::Opcode(OP::PushOut),
+            ScriptEntry::Opcode(OP::Verify),
+        ],
+    };
+    let script_output: Vec<VmTerm> = vec![
+        VmTerm::Unsigned128(0x12907856341290785634129078563412),
+        VmTerm::Unsigned128(0x12907856341290785634129078563412),
+    ];
+    let sh = ss.to_script_hash(key);
+    let args = vec![
+        VmTerm::Signed128(30),
+        VmTerm::Hash160([0; 20]),
+        VmTerm::Hash160(sh.0),
+    ];
+    let mut ins = vec![Input {
+        out: None,
+        nsequence: 0xffffffff,
+        colour_script_args: None,
+        spending_pkey: None,
+        spend_proof: None,
+        witness: None,
+        script: ss.clone(),
+        script_args: args.clone(),
+        colour_proof: None,
+        colour_proof_without_address: None,
+        colour_script: None,
+        hash: None,
+    }]
+    .iter()
+    .cloned()
+    .map(|mut i| {
+        i.compute_hash(key);
+        i
+    })
+    .collect::<Vec<_>>();
+
+    let ins_hashes: Vec<u8> = ins.iter_mut().fold(vec![], |mut acc, v: &mut Input| {
+        v.compute_hash(key);
+        acc.extend(v.hash().unwrap().0);
+        acc
+    });
+    let inputs_hash = Hash160::hash_from_slice(ins_hashes.as_slice(), key);
+    let inputs_hash: Hash160 = ins.iter().cloned().cycle().take(0).fold(
+        inputs_hash.clone(),
+        |mut acc: Hash160, v: Input| {
+            let inputs_hashes = vec![acc.0, inputs_hash.0]
+                .iter()
+                .flatten()
+                .cloned()
+                .collect::<Vec<_>>();
+            acc = Hash160::hash_from_slice(inputs_hashes.as_slice(), key);
+            acc
+        },
+    );
+    let mut oracle_out = Output {
+        address: Some(Hash160::zero().to_address()),
+        amount: 30,
+        script_hash: sh,
+        inputs_hash,
+        coloured_address: None,
+        coinbase_height: None,
+        hash: None,
+        script_outs: script_output,
+        idx: 0,
+    };
+    oracle_out.compute_hash(key);
+    let expected = vec![oracle_out];
+
+    let batch_sizes = vec![100, 500, 1000, 1500, 2000];
+    for batch_size in batch_sizes {
+        c.bench_function(&format!("load u128 var, batch {batch_size}"), |b| {
+            b.iter(|| {
+                (0..batch_size).into_par_iter().for_each(|_| {
+                    let mut outs = vec![];
+                    let mut idx_map = HashMap::new();
+                    assert_eq!(
+                        ss.execute(
+                            &args,
+                            ins.as_slice(),
+                            &mut outs,
+                            &mut idx_map,
+                            [0; 32],
+                            key,
+                            VmFlags {
+                                build_stacktrace: false,
+                                validate_output_amounts: false
+                            }
+                        ),
+                        Ok(ExecutionResult::OkVerify).into()
+                    );
+                    assert_eq!(outs, expected);
+                });
+            })
+        });
+    }
+}
+
 pub fn vm_benchmark(c: &mut Criterion) {
     bench_coinbase(c);
     bench_vm_abuse(c);
+    bench_vm_load_var(c);
 }
 
 criterion_group!(benches, vm_benchmark);

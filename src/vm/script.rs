@@ -15,6 +15,7 @@ use rand::prelude::*;
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 use std::collections::HashMap;
+use std::mem;
 
 /// Max frame stack size
 pub const MAX_FRAMES: usize = 512;
@@ -52,6 +53,28 @@ macro_rules! check_top_stack_val {
             }
 
             return Err((ExecutionResult::Invalid, stack_trace)).into();
+        }
+    };
+}
+
+macro_rules! var_load {
+    ($frame:expr, $script:expr, $sum:ident, $type:ty, $step:expr) => { 
+        $frame.i_ptr += 1;
+        if let ScriptEntry::Byte(byte) = $script.script[$frame.i_ptr] {
+            $sum += (byte as $type);
+        } else {
+            unreachable!()
+        }
+    };
+
+    ($frame:expr, $script:expr, $sum:ident, $type:ty, $step:expr, $($tail:expr), +) => {
+        var_load!($frame, $script, $sum, $type, $($tail), +);
+
+        $frame.i_ptr += 1;
+        if let ScriptEntry::Byte(byte) = $script.script[$frame.i_ptr] {
+            $sum += (byte as $type) << $step;
+        } else {
+            unreachable!()
         }
     };
 }
@@ -301,362 +324,131 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8Var) => {
                             frame.i_ptr += 1;
-                            let i = &f.script[frame.i_ptr];
-
-                            match i {
-                                ScriptEntry::Byte(byte) => {
-                                    frame.stack.push(VmTerm::Unsigned8(*byte));
-                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                    frame.i_ptr += 1;
-                                    memory_size += 1;
-                                }
-
-                                ScriptEntry::Opcode(op) => {
-                                    frame.executor.state = ScriptExecutorState::Error(
-                                        ExecutionResult::BadFormat,
-                                        (frame.i_ptr, frame.func_idx, *op, frame.stack.as_slice())
-                                            .into(),
-                                    );
-                                }
+                         
+                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                frame.stack.push(VmTerm::Unsigned8(*byte));
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                frame.i_ptr += 1;
+                                memory_size += 1;
+                            } else {
+                                unreachable!()
                             }
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned16Var) => {
-                            let mut failed = false;
-                            let mut arr: [u8; 2] = [0; 2];
+                            let mut sum: u16 = 0;
 
-                            for j in 0..2 {
-                                frame.i_ptr += 1;
-                                let i = &f.script[frame.i_ptr];
+                            var_load!(frame, f, sum, u16, 8, 0);
 
-                                match i {
-                                    ScriptEntry::Byte(byte) => {
-                                        arr[j] = *byte;
-                                    }
-
-                                    ScriptEntry::Opcode(op) => {
-                                        failed = true;
-                                        frame.executor.state = ScriptExecutorState::Error(
-                                            ExecutionResult::BadFormat,
-                                            (
-                                                frame.i_ptr,
-                                                frame.func_idx,
-                                                *op,
-                                                frame.stack.as_slice(),
-                                            )
-                                                .into(),
-                                        );
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if !failed {
-                                frame
-                                    .stack
-                                    .push(VmTerm::Unsigned16(u16::from_le_bytes(arr)));
-                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                frame.i_ptr += 1;
-                                memory_size += 2;
-                            }
+                            frame.stack.push(VmTerm::Unsigned16(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 2;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned32Var) => {
-                            let mut failed = false;
-                            let mut arr: [u8; 4] = [0; 4];
+                            let mut sum: u32 = 0;
 
-                            for j in 0..4 {
-                                frame.i_ptr += 1;
-                                let i = &f.script[frame.i_ptr];
+                            var_load!(frame, f, sum, u32, 24, 16, 8, 0);
 
-                                match i {
-                                    ScriptEntry::Byte(byte) => {
-                                        arr[j] = *byte;
-                                    }
-
-                                    ScriptEntry::Opcode(op) => {
-                                        failed = true;
-                                        frame.executor.state = ScriptExecutorState::Error(
-                                            ExecutionResult::BadFormat,
-                                            (
-                                                frame.i_ptr,
-                                                frame.func_idx,
-                                                *op,
-                                                frame.stack.as_slice(),
-                                            )
-                                                .into(),
-                                        );
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if !failed {
-                                frame
-                                    .stack
-                                    .push(VmTerm::Unsigned32(u32::from_le_bytes(arr)));
-                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                frame.i_ptr += 1;
-                                memory_size += 4;
-                            }
+                            frame.stack.push(VmTerm::Unsigned32(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 4;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned64Var) => {
-                            let mut failed = false;
-                            let mut arr: [u8; 8] = [0; 8];
+                            let mut sum: u64 = 0;
 
-                            for j in 0..8 {
-                                frame.i_ptr += 1;
-                                let i = &f.script[frame.i_ptr];
+                            var_load!(frame, f, sum, u64, 56, 48, 40, 32, 24, 16, 8, 0);
 
-                                match i {
-                                    ScriptEntry::Byte(byte) => {
-                                        arr[j] = *byte;
-                                    }
-
-                                    ScriptEntry::Opcode(op) => {
-                                        failed = true;
-                                        frame.executor.state = ScriptExecutorState::Error(
-                                            ExecutionResult::BadFormat,
-                                            (
-                                                frame.i_ptr,
-                                                frame.func_idx,
-                                                *op,
-                                                frame.stack.as_slice(),
-                                            )
-                                                .into(),
-                                        );
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if !failed {
-                                frame
-                                    .stack
-                                    .push(VmTerm::Unsigned64(u64::from_le_bytes(arr)));
-                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                frame.i_ptr += 1;
-                                memory_size += 8;
-                            }
+                            frame.stack.push(VmTerm::Unsigned64(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 8;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned128Var) => {
-                            let mut failed = false;
-                            let mut arr: [u8; 16] = [0; 16];
+                            let mut sum: u128 = 0;
 
-                            for j in 0..16 {
-                                frame.i_ptr += 1;
-                                let i = &f.script[frame.i_ptr];
+                            var_load!(frame, f, sum, u128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 0);
 
-                                match i {
-                                    ScriptEntry::Byte(byte) => {
-                                        arr[j] = *byte;
-                                    }
-
-                                    ScriptEntry::Opcode(op) => {
-                                        failed = true;
-                                        frame.executor.state = ScriptExecutorState::Error(
-                                            ExecutionResult::BadFormat,
-                                            (
-                                                frame.i_ptr,
-                                                frame.func_idx,
-                                                *op,
-                                                frame.stack.as_slice(),
-                                            )
-                                                .into(),
-                                        );
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if !failed {
-                                frame
-                                    .stack
-                                    .push(VmTerm::Unsigned128(u128::from_le_bytes(arr)));
-                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                frame.i_ptr += 1;
-                                memory_size += 16;
-                            }
+                            frame.stack.push(VmTerm::Unsigned128(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 16;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed8Var) => {
                             frame.i_ptr += 1;
-                            let i = &f.script[frame.i_ptr];
-
-                            match i {
-                                ScriptEntry::Byte(byte) => {
-                                    frame
-                                        .stack
-                                        .push(VmTerm::Signed8(i8::from_le_bytes([*byte])));
-                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                    frame.i_ptr += 1;
-                                    memory_size += 1;
-                                }
-
-                                ScriptEntry::Opcode(op) => {
-                                    frame.executor.state = ScriptExecutorState::Error(
-                                        ExecutionResult::BadFormat,
-                                        (frame.i_ptr, frame.func_idx, *op, frame.stack.as_slice())
-                                            .into(),
-                                    );
-                                }
+                         
+                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                let byte = unsafe {
+                                    mem::transmute::<u8, i8>(*byte)
+                                };
+                                frame.stack.push(VmTerm::Signed8(byte));
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                frame.i_ptr += 1;
+                                memory_size += 1;
+                            } else {
+                                unreachable!()
                             }
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed16Var) => {
-                            let mut failed = false;
-                            let mut arr: [u8; 2] = [0; 2];
+                            let mut sum: u16 = 0;
 
-                            for j in 0..2 {
-                                frame.i_ptr += 1;
-                                let i = &f.script[frame.i_ptr];
+                            var_load!(frame, f, sum, u16, 8, 0);
 
-                                match i {
-                                    ScriptEntry::Byte(byte) => {
-                                        arr[j] = *byte;
-                                    }
-
-                                    ScriptEntry::Opcode(op) => {
-                                        failed = true;
-                                        frame.executor.state = ScriptExecutorState::Error(
-                                            ExecutionResult::BadFormat,
-                                            (
-                                                frame.i_ptr,
-                                                frame.func_idx,
-                                                *op,
-                                                frame.stack.as_slice(),
-                                            )
-                                                .into(),
-                                        );
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if !failed {
-                                frame.stack.push(VmTerm::Signed16(i16::from_le_bytes(arr)));
-                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                frame.i_ptr += 1;
-                                memory_size += 2;
-                            }
+                            let sum = unsafe {
+                                mem::transmute::<u16, i16>(sum)
+                            };
+                            frame.stack.push(VmTerm::Signed16(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 2;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed32Var) => {
-                            let mut failed = false;
-                            let mut arr: [u8; 4] = [0; 4];
+                            let mut sum: u32 = 0;
 
-                            for j in 0..4 {
-                                frame.i_ptr += 1;
-                                let i = &f.script[frame.i_ptr];
+                            var_load!(frame, f, sum, u32, 24, 16, 8, 0);
 
-                                match i {
-                                    ScriptEntry::Byte(byte) => {
-                                        arr[j] = *byte;
-                                    }
-
-                                    ScriptEntry::Opcode(op) => {
-                                        failed = true;
-                                        frame.executor.state = ScriptExecutorState::Error(
-                                            ExecutionResult::BadFormat,
-                                            (
-                                                frame.i_ptr,
-                                                frame.func_idx,
-                                                *op,
-                                                frame.stack.as_slice(),
-                                            )
-                                                .into(),
-                                        );
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if !failed {
-                                frame.stack.push(VmTerm::Signed32(i32::from_le_bytes(arr)));
-                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                frame.i_ptr += 1;
-                                memory_size += 4;
-                            }
+                            let sum = unsafe {
+                                mem::transmute::<u32, i32>(sum)
+                            };
+                            frame.stack.push(VmTerm::Signed32(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 4;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed64Var) => {
-                            let mut failed = false;
-                            let mut arr: [u8; 8] = [0; 8];
+                            let mut sum: u64 = 0;
 
-                            for j in 0..8 {
-                                frame.i_ptr += 1;
-                                let i = &f.script[frame.i_ptr];
+                            var_load!(frame, f, sum, u64, 56, 48, 40, 32, 24, 16, 8, 0);
 
-                                match i {
-                                    ScriptEntry::Byte(byte) => {
-                                        arr[j] = *byte;
-                                    }
-
-                                    ScriptEntry::Opcode(op) => {
-                                        failed = true;
-                                        frame.executor.state = ScriptExecutorState::Error(
-                                            ExecutionResult::BadFormat,
-                                            (
-                                                frame.i_ptr,
-                                                frame.func_idx,
-                                                *op,
-                                                frame.stack.as_slice(),
-                                            )
-                                                .into(),
-                                        );
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if !failed {
-                                frame.stack.push(VmTerm::Signed64(i64::from_le_bytes(arr)));
-                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                frame.i_ptr += 1;
-                                memory_size += 8;
-                            }
-                        }
+                            let sum = unsafe {
+                                mem::transmute::<u64, i64>(sum)
+                            };
+                            frame.stack.push(VmTerm::Signed64(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 8;
+                    }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed128Var) => {
-                            let mut failed = false;
-                            let mut arr: [u8; 16] = [0; 16];
+                            let mut sum: u128 = 0;
 
-                            for j in 0..16 {
-                                frame.i_ptr += 1;
-                                let i = &f.script[frame.i_ptr];
-
-                                match i {
-                                    ScriptEntry::Byte(byte) => {
-                                        arr[j] = *byte;
-                                    }
-
-                                    ScriptEntry::Opcode(op) => {
-                                        failed = true;
-                                        frame.executor.state = ScriptExecutorState::Error(
-                                            ExecutionResult::BadFormat,
-                                            (
-                                                frame.i_ptr,
-                                                frame.func_idx,
-                                                *op,
-                                                frame.stack.as_slice(),
-                                            )
-                                                .into(),
-                                        );
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if !failed {
-                                frame
-                                    .stack
-                                    .push(VmTerm::Signed128(i128::from_le_bytes(arr)));
-                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                frame.i_ptr += 1;
-                                memory_size += 16;
-                            }
+                            var_load!(frame, f, sum, u128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40, 32, 24, 16, 8, 0);
+                            
+                            let sum = unsafe {
+                                mem::transmute::<u128, i128>(sum)
+                            };
+                            frame.stack.push(VmTerm::Signed128(sum));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 16;
                         }
 
                         // Extend stack trace
