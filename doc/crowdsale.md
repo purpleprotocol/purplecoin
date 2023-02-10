@@ -30,3 +30,7 @@ This is how we plan to allocate the raised funds:
 * 50% will be used to fund the foundation responsible for governing post-launch.
 * 25% to pre-launch development/marketing/bounties.
 * 25% kept in reserve for unforeseen circumstances.
+
+## Source code
+* Crowdsale smart contract source code: https://github.com/purpleprotocol/crowdsale_contract
+* Crowdsale front-end source code: https://github.com/purpleprotocol/crowdsale_web
