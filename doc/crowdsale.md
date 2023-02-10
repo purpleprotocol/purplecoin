@@ -31,6 +31,20 @@ This is how we plan to allocate the raised funds:
 * 25% to pre-launch development/marketing/bounties.
 * 25% kept in reserve for unforeseen circumstances.
 
+## Links
+* Website - https://purplecoin.io/
+* Crowdsale info - https://github.com/purpleprotocol/purplecoin/blob/main/doc/crowdsale.md
+* Whitepaper - https://github.com/purpleprotocol/purplecoin_whitepaper/blob/main/whitepaper.pdf
+* README - https://github.com/purpleprotocol/purplecoin/blob/main/README.md
+* Technical roadmap https://github.com/purpleprotocol/purplecoin-core/blob/main/ROADMAP.md
+* Source Code - https://github.com/purpleprotocol/purplecoin-core
+* Github - https://github.com/purpleprotocol
+* Reddit - https://www.reddit.com/r/purplecoin
+* Twitter - https://twitter.com/purplecoin_io
+* Discord - https://discord.gg/5ZVZnKd
+* Telegram - https://t.me/purplecoin_io
+* ANN - https://bitcointalk.org/index.php?topic=5417004.0
+
 ## Source code
 * Crowdsale smart contract source code: https://github.com/purpleprotocol/crowdsale_contract
 * Crowdsale front-end source code: https://github.com/purpleprotocol/crowdsale_web
