@@ -33,7 +33,6 @@ This is how we plan to allocate the raised funds:
 
 ## Links
 * Website - https://purplecoin.io/
-* Crowdsale info - https://github.com/purpleprotocol/purplecoin/blob/main/doc/crowdsale.md
 * Whitepaper - https://github.com/purpleprotocol/purplecoin_whitepaper/blob/main/whitepaper.pdf
 * README - https://github.com/purpleprotocol/purplecoin/blob/main/README.md
 * Technical roadmap https://github.com/purpleprotocol/purplecoin-core/blob/main/ROADMAP.md
