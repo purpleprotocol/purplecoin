@@ -336,12 +336,18 @@ impl Script {
                             memory_size += 32;
                         }
 
-                        // ScriptExecutorState::ExpectingRandomTerm(OP::RandomHash512Var) => {
-                        //     frame.stack.push(VmTerm::Hash512(rng.gen::<[u8; 64]>()));
-                        //     frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                        //     frame.i_ptr += 1;
-                        //     memory_size += 64;
-                        // }
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomHash512Var) => {
+                            let mut res = [0; 64];
+
+                            res[..32].copy_from_slice(&rng.gen::<[u8; 32]>());
+                            res[32..64].copy_from_slice(&rng.gen::<[u8; 32]>());
+
+                            frame.stack.push(VmTerm::Hash512(res));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 64;
+                        }
+
                         ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned8Var) => {
                             frame.stack.push(VmTerm::Unsigned8(rng.gen::<u8>()));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
@@ -4630,6 +4636,61 @@ mod tests {
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Hash256(rng.gen::<[u8; 32]>()),
             VmTerm::Hash256(rng.gen::<[u8; 32]>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_512_hash() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomHash512Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomHash512Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let p1 = rng.gen::<[u8; 32]>();
+        let p2 = rng.gen::<[u8; 32]>();
+        let p3 = rng.gen::<[u8; 32]>();
+        let p4 = rng.gen::<[u8; 32]>();
+
+        let mut res1 = [0; 64];
+        let mut res2 = [0; 64];
+
+        res1[..32].copy_from_slice(&p1);
+        res1[32..64].copy_from_slice(&p2);
+        res2[..32].copy_from_slice(&p3);
+        res2[32..64].copy_from_slice(&p4);
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Hash512(res1),
+            VmTerm::Hash512(res2),
         ];
         let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
