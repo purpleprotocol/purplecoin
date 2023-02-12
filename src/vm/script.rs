@@ -322,6 +322,133 @@ impl Script {
                             }
                         }
 
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomHash160Var) => {
+                            frame.stack.push(VmTerm::Hash160(rng.gen::<[u8; 20]>()));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 20;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomHash256Var) => {
+                            frame.stack.push(VmTerm::Hash256(rng.gen::<[u8; 32]>()));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 32;
+                        }
+
+                        // ScriptExecutorState::ExpectingRandomTerm(OP::RandomHash512Var) => {
+                        //     frame.stack.push(VmTerm::Hash512(rng.gen::<[u8; 64]>()));
+                        //     frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                        //     frame.i_ptr += 1;
+                        //     memory_size += 64;
+                        // }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned8Var) => {
+                            frame.stack.push(VmTerm::Unsigned8(rng.gen::<u8>()));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 1;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned16Var) => {
+                            frame.stack.push(VmTerm::Unsigned16(rng.gen::<u16>()));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 2;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned32Var) => {
+                            frame.stack.push(VmTerm::Unsigned32(rng.gen::<u32>()));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 4;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned64Var) => {
+                            frame.stack.push(VmTerm::Unsigned64(rng.gen::<u64>()));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 8;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned128Var) => {
+                            frame.stack.push(VmTerm::Unsigned128(rng.gen::<u128>()));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 16;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned8Var) => {
+                            frame.stack.push(VmTerm::Signed8(rng.gen::<i8>()));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 1;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned16Var) => {
+                            frame.stack.push(VmTerm::Signed16(rng.gen::<i16>()));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 2;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned32Var) => {
+                            frame.stack.push(VmTerm::Signed32(rng.gen::<i32>()));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 4;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned64Var) => {
+                            frame.stack.push(VmTerm::Signed64(rng.gen::<i64>()));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 8;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned128Var) => {
+                            frame.stack.push(VmTerm::Signed128(rng.gen::<i128>()));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 16;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash160Var) => {
+                            frame.i_ptr += 1;
+
+                            // &f.script[frame.i_ptr]
+                            
+
+                            // var_load_hash!(frame, f, arr, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19);
+
+                            // frame.stack.push(VmTerm::Hash160(arr));
+                            // frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            // frame.i_ptr += 1;
+                            // memory_size += 20;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash256Var) => {
+                            let mut arr: [u8; 32] = [0; 32];
+
+                            // TODO
+
+                            frame.stack.push(VmTerm::Hash256(arr));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 32;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash512Var) => {
+                            let mut arr: [u8; 64] = [0; 64];
+
+                            // TODO
+
+                            frame.stack.push(VmTerm::Hash512(arr));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 64;
+                        }
+
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8Var) => {
                             frame.i_ptr += 1;
 
@@ -361,7 +488,7 @@ impl Script {
                             let mut sum: u64 = 0;
 
                             var_load!(frame, f, sum, u64, 56, 48, 40, 32, 24, 16, 8, 0);
-
+                            
                             frame.stack.push(VmTerm::Unsigned64(sum));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1380,6 +1507,70 @@ impl<'a> ScriptExecutor<'a> {
                     exec_stack.push(e);
                 }
 
+                ScriptEntry::Opcode(OP::RandomHash160Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomHash160Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomHash256Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomHash256Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomHash512Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomHash512Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomUnsigned8Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned8Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomUnsigned16Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned16Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomUnsigned32Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned32Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomUnsigned64Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned64Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomUnsigned128Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned128Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomSigned8Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned8Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomSigned16Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned16Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomSigned32Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned32Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomSigned64Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned64Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomSigned128Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned128Var);
+                }
+
+                ScriptEntry::Opcode(OP::Hash160Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash160Var);
+                }
+
+                ScriptEntry::Opcode(OP::Hash256Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash256Var);
+                }
+
+                ScriptEntry::Opcode(OP::Hash512Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash512Var);
+                }
+
                 ScriptEntry::Opcode(OP::Unsigned8Var) => {
                     self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8Var);
                 }
@@ -1520,6 +1711,9 @@ enum ScriptExecutorState<'a> {
 
     /// Expecting bytes or a cached term
     ExpectingBytesOrCachedTerm(OP),
+
+    /// Expecting random term
+    ExpectingRandomTerm(OP),
 
     /// Expecting specific opcodes
     ExpectingInitialOPorOPs(&'a [OP]),
@@ -4368,6 +4562,510 @@ mod tests {
                 &mut outs,
                 &mut idx_map,
                 [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_160_hash() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomHash160Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomHash160Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Hash160(rng.gen::<[u8; 20]>()),
+            VmTerm::Hash160(rng.gen::<[u8; 20]>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_256_hash() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+        
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomHash256Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomHash256Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Hash256(rng.gen::<[u8; 32]>()),
+            VmTerm::Hash256(rng.gen::<[u8; 32]>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_unsigned_8var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomUnsigned8Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomUnsigned8Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(rng.gen::<u8>()),
+            VmTerm::Unsigned8(rng.gen::<u8>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_unsigned_16var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomUnsigned16Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomUnsigned16Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned16(rng.gen::<u16>()),
+            VmTerm::Unsigned16(rng.gen::<u16>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_unsigned_32var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomUnsigned32Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomUnsigned32Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned32(rng.gen::<u32>()),
+            VmTerm::Unsigned32(rng.gen::<u32>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_unsigned_64var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomUnsigned64Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomUnsigned64Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned64(rng.gen::<u64>()),
+            VmTerm::Unsigned64(rng.gen::<u64>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_unsigned_128var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomUnsigned128Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomUnsigned128Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned128(rng.gen::<u128>()),
+            VmTerm::Unsigned128(rng.gen::<u128>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_signed_8var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomSigned8Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomSigned8Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Signed8(rng.gen::<i8>()),
+            VmTerm::Signed8(rng.gen::<i8>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_signed_16var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomSigned16Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomSigned16Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Signed16(rng.gen::<i16>()),
+            VmTerm::Signed16(rng.gen::<i16>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_signed_32var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomSigned32Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomSigned32Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Signed32(rng.gen::<i32>()),
+            VmTerm::Signed32(rng.gen::<i32>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_signed_64var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomSigned64Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomSigned64Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Signed64(rng.gen::<i64>()),
+            VmTerm::Signed64(rng.gen::<i64>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_signed_128var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomSigned128Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomSigned128Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Signed128(rng.gen::<i128>()),
+            VmTerm::Signed128(rng.gen::<i128>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
                 key,
                 VmFlags::default()
             ),
