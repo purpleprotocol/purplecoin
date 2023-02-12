@@ -33,7 +33,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x0c` NSequence - Pushes the transaction `nsequence` onto the stack as a `Signed32`
     - [x] OP `0x0d` RandomHash160Var - Pushes a random `Hash160` onto the stack
     - [x] OP `0x0e` RandomHash256Var - Pushes a random `Hash256` onto the stack
-    - [ ] OP `0x0f` RandomHash512Var - Pushes a random `Hash512` onto the stack
+    - [x] OP `0x0f` RandomHash512Var - Pushes a random `Hash512` onto the stack
     - [x] OP `0x10` RandomUnsigned8Var - Pushes a random `Unsigned8` onto the stack
     - [x] OP `0x11` RandomUnsigned16Var - Pushes a random `Unsigned16` onto the stack
     - [x] OP `0x12` RandomUnsigned32Var - Pushes a random `Unsigned32` onto the stack
@@ -44,9 +44,9 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x17` RandomSigned32Var - Pushes a random `Signed32` onto the stack
     - [x] OP `0x18` RandomSigned64Var - Pushes a random `Signed64` onto the stack
     - [x] OP `0x19` RandomSigned128Var - Pushes a random `Signed128` onto the stack
-    - [ ] OP `0x20` Hash160Var - Pushes a `Hash160` onto the stack
-    - [ ] OP `0x21` Hash256Var - Pushes a `Hash256` onto the stack
-    - [ ] OP `0x22` Hash512Var - Pushes a `Hash512` onto the stack
+    - [x] OP `0x20` Hash160Var - Pushes a `Hash160` onto the stack
+    - [x] OP `0x21` Hash256Var - Pushes a `Hash256` onto the stack
+    - [x] OP `0x22` Hash512Var - Pushes a `Hash512` onto the stack
     - [x] OP `0x23` Unsigned8Var - Pushes an `Unsigned8` onto the stack
     - [x] OP `0x24` Unsigned16Var - Pushes an `Unsigned16` onto the stack
     - [x] OP `0x25` Unsigned32Var - Pushes an `Unsigned32` onto the stack

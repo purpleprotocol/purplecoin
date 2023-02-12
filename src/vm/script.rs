@@ -421,7 +421,14 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash160Var) => {
                             let mut arr: [u8; 20] = [0; 20];
 
-                            // TODO
+                            for i in 0..20 {
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                    arr[i] = *byte;
+                                } else {
+                                    unreachable!()
+                                }
+                            }
 
                             frame.stack.push(VmTerm::Hash160(arr));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
@@ -432,7 +439,14 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash256Var) => {
                             let mut arr: [u8; 32] = [0; 32];
 
-                            // TODO
+                            for i in 0..32 {
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                    arr[i] = *byte;
+                                } else {
+                                    unreachable!()
+                                }
+                            }
 
                             frame.stack.push(VmTerm::Hash256(arr));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
@@ -443,7 +457,14 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash512Var) => {
                             let mut arr: [u8; 64] = [0; 64];
 
-                            // TODO
+                            for i in 0..64 {
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                    arr[i] = *byte;
+                                } else {
+                                    unreachable!()
+                                }
+                            }
 
                             frame.stack.push(VmTerm::Hash512(arr));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
@@ -4092,6 +4113,400 @@ mod tests {
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
         );
+    }
+
+    #[test]
+    fn it_loads_hash_160var() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Hash160Var),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Byte(0x85),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x69),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x22),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x57),
+                ScriptEntry::Opcode(OP::Hash160Var),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Byte(0x85),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x69),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x22),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x57),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Hash160([0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34, 0x85, 0x36, 0x69, 0x09, 0x22, 0x35, 0x78, 0x57]),
+            VmTerm::Hash160([0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34, 0x85, 0x36, 0x69, 0x09, 0x22, 0x35, 0x78, 0x57]),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_hash_256var() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Hash256Var),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Byte(0x85),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x69),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x22),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x57),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Opcode(OP::Hash256Var),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Byte(0x85),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x69),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x22),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x57),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Hash256([0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34, 0x85, 0x36, 0x69, 0x09, 0x22, 0x35, 0x78, 0x57, 0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34]),
+            VmTerm::Hash256([0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34, 0x85, 0x36, 0x69, 0x09, 0x22, 0x35, 0x78, 0x57, 0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34]),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_hash_512var() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Hash512Var),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Byte(0x85),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x69),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x22),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x57),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Byte(0x85),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x69),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x22),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x57),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Opcode(OP::Hash512Var),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Byte(0x85),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x69),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x22),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x57),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Byte(0x85),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x69),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x22),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x57),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x78),
+                ScriptEntry::Byte(0x53),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Byte(0x47),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x12),
+                ScriptEntry::Byte(0x18),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Hash512([0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34, 0x85, 0x36, 0x69, 0x09, 0x22, 0x35, 0x78, 0x57, 0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34, 0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34, 0x85, 0x36, 0x69, 0x09, 0x22, 0x35, 0x78, 0x57, 0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34]),
+            VmTerm::Hash512([0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34, 0x85, 0x36, 0x69, 0x09, 0x22, 0x35, 0x78, 0x57, 0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34, 0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34, 0x85, 0x36, 0x69, 0x09, 0x22, 0x35, 0x78, 0x57, 0x36, 0x23, 0x74, 0x23, 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34]),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_unsigned_8var() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x23),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x11),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(0x11),
+            VmTerm::Unsigned8(0x23),
+            VmTerm::Unsigned8(0x01),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
     }
 
     #[test]
