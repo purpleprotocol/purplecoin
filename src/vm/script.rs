@@ -342,7 +342,6 @@ impl Script {
                         //     frame.i_ptr += 1;
                         //     memory_size += 64;
                         // }
-
                         ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned8Var) => {
                             frame.stack.push(VmTerm::Unsigned8(rng.gen::<u8>()));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
@@ -414,17 +413,14 @@ impl Script {
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash160Var) => {
+                            let mut arr: [u8; 20] = [0; 32];
+
+                            // TODO
+
+                            frame.stack.push(VmTerm::Hash160(arr));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
-
-                            // &f.script[frame.i_ptr]
-                            
-
-                            // var_load_hash!(frame, f, arr, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19);
-
-                            // frame.stack.push(VmTerm::Hash160(arr));
-                            // frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                            // frame.i_ptr += 1;
-                            // memory_size += 20;
+                            memory_size += 20;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash256Var) => {
@@ -488,7 +484,7 @@ impl Script {
                             let mut sum: u64 = 0;
 
                             var_load!(frame, f, sum, u64, 56, 48, 40, 32, 24, 16, 8, 0);
-                            
+
                             frame.stack.push(VmTerm::Unsigned64(sum));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -4616,7 +4612,7 @@ mod tests {
     fn it_generates_random_256_hash() {
         let seed = [0; 32];
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
-        
+
         let key = "test_key";
         let ss = Script {
             version: 1,
