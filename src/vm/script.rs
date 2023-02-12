@@ -413,7 +413,7 @@ impl Script {
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash160Var) => {
-                            let mut arr: [u8; 20] = [0; 32];
+                            let mut arr: [u8; 20] = [0; 20];
 
                             // TODO
 
