@@ -13,7 +13,7 @@ use std::fmt;
 const WORD_SIZE: usize = 8; // 8 bytes on 64bit machines
 const EMPTY_VEC_HEAP_SIZE: usize = 3 * WORD_SIZE; // 3 words
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum VmTerm {
     Hash160([u8; 20]),
     Hash256([u8; 32]),
@@ -249,6 +249,60 @@ impl VmTerm {
                 }
                 size
             }
+        }
+    }
+
+    /// Returns the type of the term
+    pub fn get_type(&self) -> u8 {
+        match self {
+            Self::Hash160(_) => 0x00_u8,
+            Self::Hash256(_) => 0x01_u8,
+            Self::Hash512(_) => 0x02_u8,
+            Self::Unsigned8(_) => 0x03_u8,
+            Self::Unsigned16(_) => 0x04_u8,
+            Self::Unsigned32(_) => 0x05_u8,
+            Self::Unsigned64(_) => 0x06_u8,
+            Self::Unsigned128(_) => 0x07_u8,
+            Self::UnsignedBig(_) => 0x08_u8,
+            Self::Signed8(_) => 0x09_u8,
+            Self::Signed16(_) => 0x0a_u8,
+            Self::Signed32(_) => 0x0b_u8,
+            Self::Signed64(_) => 0x0c_u8,
+            Self::Signed128(_) => 0x0d_u8,
+            Self::SignedBig(_) => 0x0e_u8,
+            Self::Hash160Array(_) => 0x0f_u8,
+            Self::Hash256Array(_) => 0x10_u8,
+            Self::Hash512Array(_) => 0x11_u8,
+            Self::Unsigned8Array(_) => 0x12_u8,
+            Self::Unsigned16Array(_) => 0x13_u8,
+            Self::Unsigned32Array(_) => 0x14_u8,
+            Self::Unsigned64Array(_) => 0x15_u8,
+            Self::Unsigned128Array(_) => 0x16_u8,
+            Self::UnsignedBigArray(_) => 0x17_u8,
+            Self::Signed8Array(_) => 0x18_u8,
+            Self::Signed16Array(_) => 0x19_u8,
+            Self::Signed32Array(_) => 0x1a_u8,
+            Self::Signed64Array(_) => 0x1b_u8,
+            Self::Signed128Array(_) => 0x1c_u8,
+            Self::SignedBigArray(_) => 0x1d_u8,
+        }
+    }
+
+    pub fn equals_0(self) -> bool {
+        match self {
+            Self::Unsigned8(val) => val == 0_u8,
+            Self::Unsigned16(val) => val == 0_u16,
+            Self::Unsigned32(val) => val == 0_u32,
+            Self::Unsigned64(val) => val == 0_u64,
+            Self::Unsigned128(val) => val == 0_u128,
+            Self::UnsignedBig(val) => val == ubig!(0),
+            Self::Signed8(val) => val == 0_i8,
+            Self::Signed16(val) => val == 0_i16,
+            Self::Signed32(val) => val == 0_i32,
+            Self::Signed64(val) => val == 0_i64,
+            Self::Signed128(val) => val == 0_i128,
+            Self::SignedBig(val) => val == ibig!(0),
+            _ => false,
         }
     }
 
@@ -828,6 +882,35 @@ mod tests {
     }
 
     #[test]
+    fn test_equals_0() {
+        assert_eq!(VmTerm::Unsigned8(0).equals_0(), true);
+        assert_eq!(VmTerm::Unsigned16(0).equals_0(), true);
+        assert_eq!(VmTerm::Unsigned32(0).equals_0(), true);
+        assert_eq!(VmTerm::Unsigned64(0).equals_0(), true);
+        assert_eq!(VmTerm::Unsigned128(0).equals_0(), true);
+        assert_eq!(VmTerm::UnsignedBig(ubig!(0)).equals_0(), true);
+        assert_eq!(VmTerm::Signed8(0).equals_0(), true);
+        assert_eq!(VmTerm::Signed16(0).equals_0(), true);
+        assert_eq!(VmTerm::Signed32(0).equals_0(), true);
+        assert_eq!(VmTerm::Signed64(0).equals_0(), true);
+        assert_eq!(VmTerm::Signed128(0).equals_0(), true);
+        assert_eq!(VmTerm::SignedBig(ibig!(0)).equals_0(), true);
+
+        assert_eq!(VmTerm::Unsigned8(1).equals_0(), false);
+        assert_eq!(VmTerm::Unsigned16(1).equals_0(), false);
+        assert_eq!(VmTerm::Unsigned32(1).equals_0(), false);
+        assert_eq!(VmTerm::Unsigned64(1).equals_0(), false);
+        assert_eq!(VmTerm::Unsigned128(1).equals_0(), false);
+        assert_eq!(VmTerm::UnsignedBig(ubig!(1)).equals_0(), false);
+        assert_eq!(VmTerm::Signed8(1).equals_0(), false);
+        assert_eq!(VmTerm::Signed16(1).equals_0(), false);
+        assert_eq!(VmTerm::Signed32(1).equals_0(), false);
+        assert_eq!(VmTerm::Signed64(1).equals_0(), false);
+        assert_eq!(VmTerm::Signed128(1).equals_0(), false);
+        assert_eq!(VmTerm::SignedBig(ibig!(1)).equals_0(), false);
+    }
+
+    #[test]
     fn test_equals_1() {
         assert_eq!(VmTerm::Unsigned8(1).equals_1(), true);
         assert_eq!(VmTerm::Unsigned16(1).equals_1(), true);
@@ -842,17 +925,17 @@ mod tests {
         assert_eq!(VmTerm::Signed128(1).equals_1(), true);
         assert_eq!(VmTerm::SignedBig(ibig!(1)).equals_1(), true);
 
-        assert_eq!(VmTerm::Unsigned8(10).equals_1(), false);
-        assert_eq!(VmTerm::Unsigned16(10).equals_1(), false);
-        assert_eq!(VmTerm::Unsigned32(10).equals_1(), false);
-        assert_eq!(VmTerm::Unsigned64(10).equals_1(), false);
-        assert_eq!(VmTerm::Unsigned128(10).equals_1(), false);
-        assert_eq!(VmTerm::UnsignedBig(ubig!(10)).equals_1(), false);
-        assert_eq!(VmTerm::Signed8(10).equals_1(), false);
-        assert_eq!(VmTerm::Signed16(10).equals_1(), false);
-        assert_eq!(VmTerm::Signed32(10).equals_1(), false);
-        assert_eq!(VmTerm::Signed64(10).equals_1(), false);
-        assert_eq!(VmTerm::Signed128(10).equals_1(), false);
-        assert_eq!(VmTerm::SignedBig(ibig!(10)).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned8(0).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned16(0).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned32(0).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned64(0).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned128(0).equals_1(), false);
+        assert_eq!(VmTerm::UnsignedBig(ubig!(0)).equals_1(), false);
+        assert_eq!(VmTerm::Signed8(0).equals_1(), false);
+        assert_eq!(VmTerm::Signed16(0).equals_1(), false);
+        assert_eq!(VmTerm::Signed32(0).equals_1(), false);
+        assert_eq!(VmTerm::Signed64(0).equals_1(), false);
+        assert_eq!(VmTerm::Signed128(0).equals_1(), false);
+        assert_eq!(VmTerm::SignedBig(ibig!(0)).equals_1(), false);
     }
 }
