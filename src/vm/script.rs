@@ -1714,7 +1714,8 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::UnsignedBigVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::UnsignedBigVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::UnsignedBigVar);
                 }
 
                 ScriptEntry::Opcode(OP::Signed8Var) => {
@@ -1806,7 +1807,7 @@ impl<'a> ScriptExecutor<'a> {
                         return;
                     }
 
-                    let tp = exec_stack[exec_stack.len() -1].get_type();
+                    let tp = exec_stack[exec_stack.len() - 1].get_type();
                     exec_stack.push(VmTerm::Unsigned8(tp));
                     *memory_size += 1;
                 }
