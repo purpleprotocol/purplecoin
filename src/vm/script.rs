@@ -1523,7 +1523,7 @@ impl<'a> ScriptExecutor<'a> {
                         return;
                     }
 
-                    if !exec_stack[len - 1].clone().equals_0() {
+                    if !exec_stack[len - 1].equals_0() {
                         let c = exec_stack[len - 1].clone();
                         *memory_size += c.size();
                         exec_stack.push(c);

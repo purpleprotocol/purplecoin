@@ -13,6 +13,10 @@ use std::fmt;
 const WORD_SIZE: usize = 8; // 8 bytes on 64bit machines
 const EMPTY_VEC_HEAP_SIZE: usize = 3 * WORD_SIZE; // 3 words
 
+const ZERO_HASH160: [u8; 20] = [0; 20];
+const ZERO_HASH256: [u8; 32] = [0; 32];
+const ZERO_HASH512: [u8; 64] = [0; 64];
+
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum VmTerm {
     Hash160([u8; 20]),
@@ -63,6 +67,17 @@ macro_rules! impl_hash_array_debug {
     ($f:expr, $val:expr, $struc:expr) => {{
         let encoded: Vec<_> = $val.iter().map(|e| hex::encode(e)).collect();
         $f.debug_tuple($struc).field(&encoded).finish()
+    }};
+}
+
+macro_rules! check_array_values {
+    ($arr:expr, $val:expr) => {{
+        for v in $arr.iter() {
+            if *v != $val {
+                return false
+            }
+        }
+        true
     }};
 }
 
@@ -288,39 +303,97 @@ impl VmTerm {
         }
     }
 
-    pub fn equals_0(self) -> bool {
+    pub fn equals_0(&self) -> bool {
         match self {
-            Self::Unsigned8(val) => val == 0_u8,
-            Self::Unsigned16(val) => val == 0_u16,
-            Self::Unsigned32(val) => val == 0_u32,
-            Self::Unsigned64(val) => val == 0_u64,
-            Self::Unsigned128(val) => val == 0_u128,
-            Self::UnsignedBig(val) => val == ubig!(0),
-            Self::Signed8(val) => val == 0_i8,
-            Self::Signed16(val) => val == 0_i16,
-            Self::Signed32(val) => val == 0_i32,
-            Self::Signed64(val) => val == 0_i64,
-            Self::Signed128(val) => val == 0_i128,
-            Self::SignedBig(val) => val == ibig!(0),
-            _ => false,
+            Self::Hash160(val) => *val == ZERO_HASH160,
+            Self::Hash256(val) => *val == ZERO_HASH256,
+            Self::Hash512(val) => *val == ZERO_HASH512,
+            Self::Unsigned8(val) => *val == 0_u8,
+            Self::Unsigned16(val) => *val == 0_u16,
+            Self::Unsigned32(val) => *val == 0_u32,
+            Self::Unsigned64(val) => *val == 0_u64,
+            Self::Unsigned128(val) => *val == 0_u128,
+            Self::UnsignedBig(val) => *val == ubig!(0),
+            Self::Signed8(val) => *val == 0_i8,
+            Self::Signed16(val) => *val == 0_i16,
+            Self::Signed32(val) => *val == 0_i32,
+            Self::Signed64(val) => *val == 0_i64,
+            Self::Signed128(val) => *val == 0_i128,
+            Self::SignedBig(val) => *val == ibig!(0),
+            Self::Hash160Array(val) => check_array_values!(*val, ZERO_HASH160),
+            Self::Hash256Array(val) => check_array_values!(*val, ZERO_HASH256),
+            Self::Hash512Array(val) => check_array_values!(*val, ZERO_HASH512),
+            Self::Unsigned8Array(val) => check_array_values!(*val, 0_u8),
+            Self::Unsigned16Array(val) => check_array_values!(*val, 0_u16),
+            Self::Unsigned32Array(val) => check_array_values!(*val, 0_u32),
+            Self::Unsigned64Array(val) => check_array_values!(*val, 0_u64),
+            Self::Unsigned128Array(val) => check_array_values!(*val, 0_u128),
+            Self::UnsignedBigArray(val) => check_array_values!(*val, ubig!(0)),
+            Self::Signed8Array(val) => check_array_values!(*val, 0_i8),
+            Self::Signed16Array(val) => check_array_values!(*val, 0_i16),
+            Self::Signed32Array(val) => check_array_values!(*val, 0_i32),
+            Self::Signed64Array(val) => check_array_values!(*val, 0_i64),
+            Self::Signed128Array(val) => check_array_values!(*val, 0_i128),
+            Self::SignedBigArray(val) => check_array_values!(*val, ibig!(0)),
         }
     }
 
-    pub fn equals_1(self) -> bool {
+    pub fn equals_1(&self) -> bool {
         match self {
-            Self::Unsigned8(val) => val == 1_u8,
-            Self::Unsigned16(val) => val == 1_u16,
-            Self::Unsigned32(val) => val == 1_u32,
-            Self::Unsigned64(val) => val == 1_u64,
-            Self::Unsigned128(val) => val == 1_u128,
-            Self::UnsignedBig(val) => val == ubig!(1),
-            Self::Signed8(val) => val == 1_i8,
-            Self::Signed16(val) => val == 1_i16,
-            Self::Signed32(val) => val == 1_i32,
-            Self::Signed64(val) => val == 1_i64,
-            Self::Signed128(val) => val == 1_i128,
-            Self::SignedBig(val) => val == ibig!(1),
-            _ => false,
+            Self::Hash160(val) => {
+                let mut arr: [u8; 20] = [0; 20];
+                arr[0] = 0x01;
+                *val == arr
+            },
+            Self::Hash256(val) => {
+                let mut arr: [u8; 32] = [0; 32];
+                arr[0] = 0x01;
+                *val == arr
+            },
+            Self::Hash512(val) => {
+                let mut arr: [u8; 64] = [0; 64];
+                arr[0] = 0x01;
+                *val == arr
+            },
+            Self::Unsigned8(val) => *val == 1_u8,
+            Self::Unsigned16(val) => *val == 1_u16,
+            Self::Unsigned32(val) => *val == 1_u32,
+            Self::Unsigned64(val) => *val == 1_u64,
+            Self::Unsigned128(val) => *val == 1_u128,
+            Self::UnsignedBig(val) => *val == ubig!(1),
+            Self::Signed8(val) => *val == 1_i8,
+            Self::Signed16(val) => *val == 1_i16,
+            Self::Signed32(val) => *val == 1_i32,
+            Self::Signed64(val) => *val == 1_i64,
+            Self::Signed128(val) => *val == 1_i128,
+            Self::SignedBig(val) => *val == ibig!(1),
+            Self::Hash160Array(val) => {
+                let mut arr: [u8; 20] = [0; 20];
+                arr[0] = 0x01;
+                check_array_values!(*val, arr)
+            },
+            Self::Hash256Array(val) => {
+                let mut arr: [u8; 32] = [0; 32];
+                arr[0] = 0x01;
+                check_array_values!(*val, arr)
+            },
+            Self::Hash512Array(val) => {
+                let mut arr: [u8; 64] = [0; 64];
+                arr[0] = 0x01;
+                check_array_values!(*val, arr)
+            },
+            Self::Unsigned8Array(val) => check_array_values!(*val, 1_u8),
+            Self::Unsigned16Array(val) => check_array_values!(*val, 1_u16),
+            Self::Unsigned32Array(val) => check_array_values!(*val, 1_u32),
+            Self::Unsigned64Array(val) => check_array_values!(*val, 1_u64),
+            Self::Unsigned128Array(val) => check_array_values!(*val, 1_u128),
+            Self::UnsignedBigArray(val) => check_array_values!(*val, ubig!(1)),
+            Self::Signed8Array(val) => check_array_values!(*val, 1_i8),
+            Self::Signed16Array(val) => check_array_values!(*val, 1_i16),
+            Self::Signed32Array(val) => check_array_values!(*val, 1_i32),
+            Self::Signed64Array(val) => check_array_values!(*val, 1_i64),
+            Self::Signed128Array(val) => check_array_values!(*val, 1_i128),
+            Self::SignedBigArray(val) => check_array_values!(*val, ibig!(1)),
         }
     }
 }
@@ -883,19 +956,40 @@ mod tests {
 
     #[test]
     fn test_equals_0() {
-        assert_eq!(VmTerm::Unsigned8(0).equals_0(), true);
-        assert_eq!(VmTerm::Unsigned16(0).equals_0(), true);
-        assert_eq!(VmTerm::Unsigned32(0).equals_0(), true);
-        assert_eq!(VmTerm::Unsigned64(0).equals_0(), true);
-        assert_eq!(VmTerm::Unsigned128(0).equals_0(), true);
-        assert_eq!(VmTerm::UnsignedBig(ubig!(0)).equals_0(), true);
-        assert_eq!(VmTerm::Signed8(0).equals_0(), true);
-        assert_eq!(VmTerm::Signed16(0).equals_0(), true);
-        assert_eq!(VmTerm::Signed32(0).equals_0(), true);
-        assert_eq!(VmTerm::Signed64(0).equals_0(), true);
-        assert_eq!(VmTerm::Signed128(0).equals_0(), true);
-        assert_eq!(VmTerm::SignedBig(ibig!(0)).equals_0(), true);
+        assert!(VmTerm::Hash160([0; 20]).equals_0());
+        assert!(VmTerm::Hash256([0; 32]).equals_0());
+        assert!(VmTerm::Hash512([0; 64]).equals_0());
+        assert!(VmTerm::Unsigned8(0).equals_0());
+        assert!(VmTerm::Unsigned16(0).equals_0());
+        assert!(VmTerm::Unsigned32(0).equals_0());
+        assert!(VmTerm::Unsigned64(0).equals_0());
+        assert!(VmTerm::Unsigned128(0).equals_0());
+        assert!(VmTerm::UnsignedBig(ubig!(0)).equals_0());
+        assert!(VmTerm::Signed8(0).equals_0());
+        assert!(VmTerm::Signed16(0).equals_0());
+        assert!(VmTerm::Signed32(0).equals_0());
+        assert!(VmTerm::Signed64(0).equals_0());
+        assert!(VmTerm::Signed128(0).equals_0());
+        assert!(VmTerm::SignedBig(ibig!(0)).equals_0());
+        assert!(VmTerm::Hash160Array(vec![[0; 20], [0; 20], [0; 20]]).equals_0());
+        assert!(VmTerm::Hash256Array(vec![[0; 32], [0; 32], [0; 32], [0; 32]]).equals_0());
+        assert!(VmTerm::Hash512Array(vec![[0; 64], [0; 64], [0; 64], [0; 64], [0; 64]]).equals_0());
+        assert!(VmTerm::Unsigned8Array(vec![0, 0, 0, 0, 0, 0]).equals_0());
+        assert!(VmTerm::Unsigned16Array(vec![0, 0, 0, 0, 0, 0, 0]).equals_0());
+        assert!(VmTerm::Unsigned32Array(vec![0, 0, 0, 0, 0, 0, 0, 0, 0]).equals_0());
+        assert!(VmTerm::Unsigned64Array(vec![0, 0, 0, 0, 0, 0, 0, 0, 0]).equals_0());
+        assert!(VmTerm::Unsigned128Array(vec![0, 0, 0, 0, 0, 0, 0, 0]).equals_0());
+        assert!(VmTerm::UnsignedBigArray(vec![ubig!(0), ubig!(0), ubig!(0)]).equals_0());
+        assert!(VmTerm::Signed8Array(vec![0, 0, 0, 0, 0, 0]).equals_0());
+        assert!(VmTerm::Signed16Array(vec![0, 0, 0, 0, 0, 0, 0]).equals_0());
+        assert!(VmTerm::Signed32Array(vec![0, 0, 0, 0, 0, 0, 0, 0, 0]).equals_0());
+        assert!(VmTerm::Signed64Array(vec![0, 0, 0, 0, 0, 0, 0, 0, 0]).equals_0());
+        assert!(VmTerm::Signed128Array(vec![0, 0, 0, 0, 0, 0, 0, 0]).equals_0());
+        assert!(VmTerm::SignedBigArray(vec![ibig!(0), ibig!(0), ibig!(0)]).equals_0());
 
+        assert_eq!(VmTerm::Hash160([1; 20]).equals_0(), false);
+        assert_eq!(VmTerm::Hash256([1; 32]).equals_0(), false);
+        assert_eq!(VmTerm::Hash512([1; 64]).equals_0(), false);
         assert_eq!(VmTerm::Unsigned8(1).equals_0(), false);
         assert_eq!(VmTerm::Unsigned16(1).equals_0(), false);
         assert_eq!(VmTerm::Unsigned32(1).equals_0(), false);
@@ -908,23 +1002,66 @@ mod tests {
         assert_eq!(VmTerm::Signed64(1).equals_0(), false);
         assert_eq!(VmTerm::Signed128(1).equals_0(), false);
         assert_eq!(VmTerm::SignedBig(ibig!(1)).equals_0(), false);
+        assert_eq!(VmTerm::Hash160Array(vec![[0; 20], [1; 20], [0; 20]]).equals_0(), false);
+        assert_eq!(VmTerm::Hash256Array(vec![[0; 32], [0; 32], [1; 32], [0; 32]]).equals_0(), false);
+        assert_eq!(VmTerm::Hash512Array(vec![[0; 64], [0; 64], [0; 64], [1; 64], [0; 64]]).equals_0(), false);
+        assert_eq!(VmTerm::Unsigned8Array(vec![0, 0, 0, 0, 1, 0]).equals_0(), false);
+        assert_eq!(VmTerm::Unsigned16Array(vec![0, 0, 0, 1, 0, 0, 0]).equals_0(), false);
+        assert_eq!(VmTerm::Unsigned32Array(vec![0, 0, 1, 0, 0, 0, 0, 0, 0]).equals_0(), false);
+        assert_eq!(VmTerm::Unsigned64Array(vec![0, 2, 0, 0, 0, 0, 0, 0, 0]).equals_0(), false);
+        assert_eq!(VmTerm::Unsigned128Array(vec![3, 0, 0, 0, 0, 0, 0, 0]).equals_0(), false);
+        assert_eq!(VmTerm::UnsignedBigArray(vec![ubig!(1), ubig!(1), ubig!(1)]).equals_0(), false);
+        assert_eq!(VmTerm::Signed8Array(vec![0, 0, 0, 0, 0, 1]).equals_0(), false);
+        assert_eq!(VmTerm::Signed16Array(vec![0, 0, 0, 0, 2, 0, 0]).equals_0(), false);
+        assert_eq!(VmTerm::Signed32Array(vec![0, 0, 0, 0, 3, 0, 0, 0, 0]).equals_0(), false);
+        assert_eq!(VmTerm::Signed64Array(vec![0, 0, 0, 0, 0, 4, 0, 0, 0]).equals_0(), false);
+        assert_eq!(VmTerm::Signed128Array(vec![0, 0, 0, 0, 0, 0, 10, 0]).equals_0(), false);
+        assert_eq!(VmTerm::SignedBigArray(vec![ibig!(1), ibig!(1), ibig!(1)]).equals_0(), false);
     }
 
     #[test]
     fn test_equals_1() {
-        assert_eq!(VmTerm::Unsigned8(1).equals_1(), true);
-        assert_eq!(VmTerm::Unsigned16(1).equals_1(), true);
-        assert_eq!(VmTerm::Unsigned32(1).equals_1(), true);
-        assert_eq!(VmTerm::Unsigned64(1).equals_1(), true);
-        assert_eq!(VmTerm::Unsigned128(1).equals_1(), true);
-        assert_eq!(VmTerm::UnsignedBig(ubig!(1)).equals_1(), true);
-        assert_eq!(VmTerm::Signed8(1).equals_1(), true);
-        assert_eq!(VmTerm::Signed16(1).equals_1(), true);
-        assert_eq!(VmTerm::Signed32(1).equals_1(), true);
-        assert_eq!(VmTerm::Signed64(1).equals_1(), true);
-        assert_eq!(VmTerm::Signed128(1).equals_1(), true);
-        assert_eq!(VmTerm::SignedBig(ibig!(1)).equals_1(), true);
+        let mut arr_160: [u8; 20] = [0; 20];
+        arr_160[0] = 0x01;
+        let mut arr_256: [u8; 32] = [0; 32];
+        arr_256[0] = 0x01;
+        let mut arr_512: [u8; 64] = [0; 64];
+        arr_512[0] = 0x01;
 
+        assert!(VmTerm::Hash160(arr_160).equals_1());
+        assert!(VmTerm::Hash256(arr_256).equals_1());
+        assert!(VmTerm::Hash512(arr_512).equals_1());
+        assert!(VmTerm::Unsigned8(1).equals_1());
+        assert!(VmTerm::Unsigned16(1).equals_1());
+        assert!(VmTerm::Unsigned32(1).equals_1());
+        assert!(VmTerm::Unsigned64(1).equals_1());
+        assert!(VmTerm::Unsigned128(1).equals_1());
+        assert!(VmTerm::UnsignedBig(ubig!(1)).equals_1());
+        assert!(VmTerm::Signed8(1).equals_1());
+        assert!(VmTerm::Signed16(1).equals_1());
+        assert!(VmTerm::Signed32(1).equals_1());
+        assert!(VmTerm::Signed64(1).equals_1());
+        assert!(VmTerm::Signed128(1).equals_1());
+        assert!(VmTerm::SignedBig(ibig!(1)).equals_1());
+        assert!(VmTerm::Hash160Array(vec![arr_160, arr_160, arr_160]).equals_1());
+        assert!(VmTerm::Hash256Array(vec![arr_256, arr_256, arr_256, arr_256]).equals_1());
+        assert!(VmTerm::Hash512Array(vec![arr_512, arr_512, arr_512, arr_512, arr_512]).equals_1());
+        assert!(VmTerm::Unsigned8Array(vec![1, 1, 1, 1, 1, 1]).equals_1());
+        assert!(VmTerm::Unsigned16Array(vec![1, 1, 1, 1, 1, 1]).equals_1());
+        assert!(VmTerm::Unsigned32Array(vec![1, 1, 1, 1, 1, 1, 1, 1, 1]).equals_1());
+        assert!(VmTerm::Unsigned64Array(vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]).equals_1());
+        assert!(VmTerm::Unsigned128Array(vec![1, 1, 1, 1, 1, 1, 1]).equals_1());
+        assert!(VmTerm::UnsignedBigArray(vec![ubig!(1), ubig!(1), ubig!(1)]).equals_1());
+        assert!(VmTerm::Signed8Array(vec![1, 1, 1, 1, 1, 1]).equals_1());
+        assert!(VmTerm::Signed16Array(vec![1, 1, 1, 1, 1, 1, 1]).equals_1());
+        assert!(VmTerm::Signed32Array(vec![1, 1, 1, 1, 1, 1, 1, 1]).equals_1());
+        assert!(VmTerm::Signed64Array(vec![1, 1, 1, 1, 1, 1, 1, 1, 1]).equals_1());
+        assert!(VmTerm::Signed128Array(vec![1, 1, 1, 1, 1, 1, 1, 1]).equals_1());
+        assert!(VmTerm::SignedBigArray(vec![ibig!(1), ibig!(1), ibig!(1)]).equals_1());
+
+        assert_eq!(VmTerm::Hash160([0; 20]).equals_1(), false);
+        assert_eq!(VmTerm::Hash256([0; 32]).equals_1(), false);
+        assert_eq!(VmTerm::Hash512([0; 64]).equals_1(), false);
         assert_eq!(VmTerm::Unsigned8(0).equals_1(), false);
         assert_eq!(VmTerm::Unsigned16(0).equals_1(), false);
         assert_eq!(VmTerm::Unsigned32(0).equals_1(), false);
@@ -937,5 +1074,20 @@ mod tests {
         assert_eq!(VmTerm::Signed64(0).equals_1(), false);
         assert_eq!(VmTerm::Signed128(0).equals_1(), false);
         assert_eq!(VmTerm::SignedBig(ibig!(0)).equals_1(), false);
+        assert_eq!(VmTerm::Hash160Array(vec![[0; 20], arr_160, arr_160]).equals_1(), false);
+        assert_eq!(VmTerm::Hash256Array(vec![arr_256, arr_256, arr_256, [0; 32]]).equals_1(), false);
+        assert_eq!(VmTerm::Hash512Array(vec![arr_512, arr_512, [0; 64], arr_512, arr_512]).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned8Array(vec![1, 1, 0, 1, 1, 1]).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned16Array(vec![1, 1, 1, 1, 1, 0, 1]).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned32Array(vec![1, 1, 1, 0, 1, 1, 1, 1, 1]).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned64Array(vec![1, 1, 1, 1, 1, 0, 0, 1, 1]).equals_1(), false);
+        assert_eq!(VmTerm::Unsigned128Array(vec![1, 1, 1, 1, 1, 1, 1, 0]).equals_1(), false);
+        assert_eq!(VmTerm::UnsignedBigArray(vec![ubig!(1), ubig!(1), ubig!(0)]).equals_1(), false);
+        assert_eq!(VmTerm::Signed8Array(vec![1, 1, 1, 1, 0, 1]).equals_1(), false);
+        assert_eq!(VmTerm::Signed16Array(vec![1, 1, 1, 1, 1, 0, 1]).equals_1(), false);
+        assert_eq!(VmTerm::Signed32Array(vec![1, 1, 1, 1, 1, 1, 1, 0, 0]).equals_1(), false);
+        assert_eq!(VmTerm::Signed64Array(vec![1, 1, 1, 1, 1, 1, 1, 1, 0]).equals_1(), false);
+        assert_eq!(VmTerm::Signed128Array(vec![1, 1, 1, 1, 1, 1, 0, 1]).equals_1(), false);
+        assert_eq!(VmTerm::SignedBigArray(vec![ibig!(1), ibig!(1), ibig!(0)]).equals_1(), false);
     }
 }
