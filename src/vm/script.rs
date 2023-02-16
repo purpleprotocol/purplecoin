@@ -1340,6 +1340,170 @@ impl<'a> ScriptExecutor<'a> {
                     self.state = ScriptExecutorState::ContinueLoop;
                 }
 
+                ScriptEntry::Opcode(OP::ContinueIf) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let top = exec_stack.pop().unwrap();
+                    *memory_size -= top.size();
+
+                    if top.equals_1() {
+                        self.state = ScriptExecutorState::ContinueLoop;
+                    } else {
+                        self.state = ScriptExecutorState::BreakLoop;
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::ContinueIfn) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let top = exec_stack.pop().unwrap();
+                    *memory_size -= top.size();
+
+                    if !top.equals_1() {
+                        self.state = ScriptExecutorState::ContinueLoop;
+                    } else {
+                        self.state = ScriptExecutorState::BreakLoop;
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::ContinueIfEq) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    *memory_size -= e1.size();
+                    let e2 = exec_stack.pop().unwrap();
+                    *memory_size -= e2.size();
+
+                    if e1 == e2 {
+                        self.state = ScriptExecutorState::ContinueLoop;
+                    } else {
+                        self.state = ScriptExecutorState::BreakLoop;
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::ContinueIfNeq) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    *memory_size -= e1.size();
+                    let e2 = exec_stack.pop().unwrap();
+                    *memory_size -= e2.size();
+
+                    if e1 != e2 {
+                        self.state = ScriptExecutorState::ContinueLoop;
+                    } else {
+                        self.state = ScriptExecutorState::BreakLoop;
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::ContinueIfLeq) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    *memory_size -= e1.size();
+                    let e2 = exec_stack.pop().unwrap();
+                    *memory_size -= e2.size();
+
+                    if e1 <= e2 {
+                        self.state = ScriptExecutorState::ContinueLoop;
+                    } else {
+                        self.state = ScriptExecutorState::BreakLoop;
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::ContinueIfGeq) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    *memory_size -= e1.size();
+                    let e2 = exec_stack.pop().unwrap();
+                    *memory_size -= e2.size();
+
+                    if e1 >= e2 {
+                        self.state = ScriptExecutorState::ContinueLoop;
+                    } else {
+                        self.state = ScriptExecutorState::BreakLoop;
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::ContinueIfLt) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    *memory_size -= e1.size();
+                    let e2 = exec_stack.pop().unwrap();
+                    *memory_size -= e2.size();
+
+                    if e1 < e2 {
+                        self.state = ScriptExecutorState::ContinueLoop;
+                    } else {
+                        self.state = ScriptExecutorState::BreakLoop;
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::ContinueIfGt) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    *memory_size -= e1.size();
+                    let e2 = exec_stack.pop().unwrap();
+                    *memory_size -= e2.size();
+
+                    if e1 > e2 {
+                        self.state = ScriptExecutorState::ContinueLoop;
+                    } else {
+                        self.state = ScriptExecutorState::BreakLoop;
+                    }
+                }
+
                 ScriptEntry::Opcode(OP::End) => {
                     self.state = ScriptExecutorState::EndBlock;
                 }
@@ -3088,6 +3252,474 @@ mod tests {
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::BreakIfGt),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_continues_loop_if_less_or_equal() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Sub1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::ContinueIfLeq),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_continues_loop_if_less_or_equal_test_2() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Sub1),
+                ScriptEntry::Opcode(OP::Sub1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::ContinueIfLeq),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_continues_loop_if_greater_or_equal() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::ContinueIfGeq),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_continues_loop_if_greater_or_equal_test_2() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::ContinueIfGeq),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_continues_loop_if_less() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Sub1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::ContinueIfLt),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_continues_loop_if_greater() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::ContinueIfGt),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_continues_loop_if_equals_1() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::ContinueIf),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_continues_loop_if_not_equals_1() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Sub1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::ContinueIfn),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_continues_loop_if_equals() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::ContinueIfEq),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_continues_loop_if_not_equals() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::ContinueIfNeq),
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
