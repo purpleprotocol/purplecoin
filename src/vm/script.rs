@@ -599,7 +599,7 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8ArrayVar) => {
                             let mut len: u16 = 0;
-                            
+
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
                                 len += *byte as u16;
@@ -613,7 +613,7 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut arr:Vec<u8> = Vec::new();
+                            let mut arr: Vec<u8> = Vec::new();
                             for _ in 0..len {
                                 frame.i_ptr += 1;
                                 if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
@@ -632,7 +632,7 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned16ArrayVar) => {
                             let mut len: u16 = 0;
-                            
+
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
                                 len += *byte as u16;
@@ -646,12 +646,12 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut arr:Vec<u16> = Vec::new();
+                            let mut arr: Vec<u16> = Vec::new();
                             for _ in 0..len {
                                 let mut sum: u16 = 0;
 
                                 var_load!(frame, f, sum, u16, 8, 0);
-                                
+
                                 arr.push(sum);
                             }
 
@@ -664,7 +664,7 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned32ArrayVar) => {
                             let mut len: u16 = 0;
-                            
+
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
                                 len += *byte as u16;
@@ -678,7 +678,7 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut arr:Vec<u32> = Vec::new();
+                            let mut arr: Vec<u32> = Vec::new();
                             for _ in 0..len {
                                 let mut sum: u32 = 0;
 
@@ -696,7 +696,7 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned64ArrayVar) => {
                             let mut len: u16 = 0;
-                            
+
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
                                 len += *byte as u16;
@@ -710,7 +710,7 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut arr:Vec<u64> = Vec::new();
+                            let mut arr: Vec<u64> = Vec::new();
                             for _ in 0..len {
                                 let mut sum: u64 = 0;
 
@@ -726,9 +726,11 @@ impl Script {
                             frame.i_ptr += 1;
                         }
 
-                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned128ArrayVar) => {
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(
+                            OP::Unsigned128ArrayVar,
+                        ) => {
                             let mut len: u16 = 0;
-                            
+
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
                                 len += *byte as u16;
@@ -742,13 +744,13 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut arr:Vec<u128> = Vec::new();
+                            let mut arr: Vec<u128> = Vec::new();
                             for _ in 0..len {
                                 let mut sum: u128 = 0;
 
                                 var_load!(
-                                    frame, f, sum, u128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40,
-                                    32, 24, 16, 8, 0
+                                    frame, f, sum, u128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48,
+                                    40, 32, 24, 16, 8, 0
                                 );
 
                                 arr.push(sum);
@@ -763,7 +765,7 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed8ArrayVar) => {
                             let mut len: u16 = 0;
-                            
+
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
                                 len += *byte as u16;
@@ -777,7 +779,7 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut arr:Vec<i8> = Vec::new();
+                            let mut arr: Vec<i8> = Vec::new();
                             for _ in 0..len {
                                 frame.i_ptr += 1;
                                 if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
@@ -797,7 +799,7 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed16ArrayVar) => {
                             let mut len: u16 = 0;
-                            
+
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
                                 len += *byte as u16;
@@ -811,12 +813,12 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut arr:Vec<i16> = Vec::new();
+                            let mut arr: Vec<i16> = Vec::new();
                             for _ in 0..len {
                                 let mut sum: u16 = 0;
 
                                 var_load!(frame, f, sum, u16, 8, 0);
-                                
+
                                 let sum = unsafe { mem::transmute::<u16, i16>(sum) };
                                 arr.push(sum);
                             }
@@ -830,7 +832,7 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed32ArrayVar) => {
                             let mut len: u16 = 0;
-                            
+
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
                                 len += *byte as u16;
@@ -844,7 +846,7 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut arr:Vec<i32> = Vec::new();
+                            let mut arr: Vec<i32> = Vec::new();
                             for _ in 0..len {
                                 let mut sum: u32 = 0;
 
@@ -863,7 +865,7 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed64ArrayVar) => {
                             let mut len: u16 = 0;
-                            
+
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
                                 len += *byte as u16;
@@ -877,7 +879,7 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut arr:Vec<i64> = Vec::new();
+                            let mut arr: Vec<i64> = Vec::new();
                             for _ in 0..len {
                                 let mut sum: u64 = 0;
 
@@ -896,7 +898,7 @@ impl Script {
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed128ArrayVar) => {
                             let mut len: u16 = 0;
-                            
+
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
                                 len += *byte as u16;
@@ -910,13 +912,13 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut arr:Vec<i128> = Vec::new();
+                            let mut arr: Vec<i128> = Vec::new();
                             for _ in 0..len {
                                 let mut sum: u128 = 0;
 
                                 var_load!(
-                                    frame, f, sum, u128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48, 40,
-                                    32, 24, 16, 8, 0
+                                    frame, f, sum, u128, 120, 112, 104, 96, 88, 80, 72, 64, 56, 48,
+                                    40, 32, 24, 16, 8, 0
                                 );
 
                                 let sum = unsafe { mem::transmute::<u128, i128>(sum) };
@@ -2240,51 +2242,63 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8ArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8ArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::Unsigned16ArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned16ArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned16ArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::Unsigned32ArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned32ArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned32ArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::Unsigned64ArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned64ArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned64ArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::Unsigned128ArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned128ArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned128ArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::UnsignedBigArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::UnsignedBigArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::UnsignedBigArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::Signed8ArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed8ArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed8ArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::Signed16ArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed16ArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed16ArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::Signed32ArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed32ArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed32ArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::Signed64ArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed64ArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed64ArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::Signed128ArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed128ArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed128ArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::SignedBigArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::SignedBigArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::SignedBigArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::Add1) => {
@@ -6805,7 +6819,9 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned32Array(vec![0xa5f6af41, 0x75167536, 0x75167536, 0x75167536, 0x75167536, 0xa5f6af41]),
+            VmTerm::Unsigned32Array(vec![
+                0xa5f6af41, 0x75167536, 0x75167536, 0x75167536, 0x75167536, 0xa5f6af41,
+            ]),
             VmTerm::Unsigned32Array(vec![0x01fe7814, 0x75167536, 0xa5f6af41, 0x75167536]),
         ];
         let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
@@ -6928,8 +6944,20 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned64Array(vec![0xa5f6af41a5f6af41, 0x7516753675167536, 0x7516753675167536, 0x7516753675167536, 0x7516753675167536, 0xa5f6af41a5f6af41]),
-            VmTerm::Unsigned64Array(vec![0x01fe781401fe7814, 0x7516753675167536, 0xa5f6af41a5f6af41, 0x7516753675167536]),
+            VmTerm::Unsigned64Array(vec![
+                0xa5f6af41a5f6af41,
+                0x7516753675167536,
+                0x7516753675167536,
+                0x7516753675167536,
+                0x7516753675167536,
+                0xa5f6af41a5f6af41,
+            ]),
+            VmTerm::Unsigned64Array(vec![
+                0x01fe781401fe7814,
+                0x7516753675167536,
+                0xa5f6af41a5f6af41,
+                0x7516753675167536,
+            ]),
         ];
         let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -7051,8 +7079,15 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned128Array(vec![0x7516753675167536a5f6af41a5f6af41, 0x75167536751675367516753675167536, 0xa5f6af41a5f6af417516753675167536]),
-            VmTerm::Unsigned128Array(vec![0x751675367516753601fe781401fe7814, 0x7516753675167536a5f6af41a5f6af41]),
+            VmTerm::Unsigned128Array(vec![
+                0x7516753675167536a5f6af41a5f6af41,
+                0x75167536751675367516753675167536,
+                0xa5f6af41a5f6af417516753675167536,
+            ]),
+            VmTerm::Unsigned128Array(vec![
+                0x751675367516753601fe781401fe7814,
+                0x7516753675167536a5f6af41a5f6af41,
+            ]),
         ];
         let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -7250,7 +7285,9 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Signed32Array(vec![0x15f6af41, 0x75167536, 0x75167536, 0x75167536, 0x75167536, 0x15f6af41]),
+            VmTerm::Signed32Array(vec![
+                0x15f6af41, 0x75167536, 0x75167536, 0x75167536, 0x75167536, 0x15f6af41,
+            ]),
             VmTerm::Signed32Array(vec![0x01fe7814, 0x75167536, 0x15f6af41, 0x75167536]),
         ];
         let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
@@ -7373,8 +7410,20 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Signed64Array(vec![0x15f6af41a5f6af41, 0x7516753675167536, 0x7516753675167536, 0x7516753675167536, 0x7516753675167536, 0x15f6af41a5f6af41]),
-            VmTerm::Signed64Array(vec![0x01fe781401fe7814, 0x7516753675167536, 0x15f6af41a5f6af41, 0x7516753675167536]),
+            VmTerm::Signed64Array(vec![
+                0x15f6af41a5f6af41,
+                0x7516753675167536,
+                0x7516753675167536,
+                0x7516753675167536,
+                0x7516753675167536,
+                0x15f6af41a5f6af41,
+            ]),
+            VmTerm::Signed64Array(vec![
+                0x01fe781401fe7814,
+                0x7516753675167536,
+                0x15f6af41a5f6af41,
+                0x7516753675167536,
+            ]),
         ];
         let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -7496,8 +7545,15 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Signed128Array(vec![0x7516753675167536a5f6af41a5f6af41, 0x75167536751675367516753675167536, 0x15f6af41a5f6af417516753675167536]),
-            VmTerm::Signed128Array(vec![0x751675367516753601fe781401fe7814, 0x7516753675167536a5f6af41a5f6af41]),
+            VmTerm::Signed128Array(vec![
+                0x7516753675167536a5f6af41a5f6af41,
+                0x75167536751675367516753675167536,
+                0x15f6af41a5f6af417516753675167536,
+            ]),
+            VmTerm::Signed128Array(vec![
+                0x751675367516753601fe781401fe7814,
+                0x7516753675167536a5f6af41a5f6af41,
+            ]),
         ];
         let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
