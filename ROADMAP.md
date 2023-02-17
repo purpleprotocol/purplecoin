@@ -75,7 +75,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x3e` Signed128ArrayVar - Pushes a `Signed128Array` onto the stack
     - [ ] OP `0x3f` SignedBigArrayVar - Pushes a `SignedBigArray` onto the stack
     - [ ] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
-    - [ ] OP `0x4b` GetType - Pushes on top of the stack the type code of the value currently on top of the stack as a `Unsigned8`
+    - [x] OP `0x4b` GetType - Pushes on top of the stack the type code of the value currently on top of the stack as a `Unsigned8`
     - [x] OP `0x4f` ClearStack - Clears the stack
     - [ ] OP `0x50` Add - Pops the two topmost items on the stack, performs addition and pushes the result on the stack
     - [ ] OP `0x51` Sub - Pops the two topmost items on the stack, performs subtraction and pushes the result on the stack
@@ -90,21 +90,21 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x5a` BreakIfn - Breaks the current loop if the topmost item on the stack is not equal to `1`
     - [x] OP `0x5b` BreakIfEq - Breaks the current loop if the two topmost items on the stack are equal
     - [x] OP `0x5c` BreakIfNeq - Breaks the current loop if the two topmost items on the stack are not equal
-    - [ ] OP `0x5d` BreakIfLeq - Breaks the current loop if the topmost item on the stack is less or equal than the second
-    - [ ] OP `0x5e` BreakIfGeq - Breaks the current loop if the topmost item on the stack is greater or equal than the second
-    - [ ] OP `0x5f` BreakIfLt - Breaks the current loop if the topmost item on the stack is less than the second
-    - [ ] OP `0x60` BreakIfGt - Breaks the current loop if the topmost item on the stack is greater than the second
+    - [x] OP `0x5d` BreakIfLeq - Breaks the current loop if the topmost item on the stack is less or equal than the second
+    - [x] OP `0x5e` BreakIfGeq - Breaks the current loop if the topmost item on the stack is greater or equal than the second
+    - [x] OP `0x5f` BreakIfLt - Breaks the current loop if the topmost item on the stack is less than the second
+    - [x] OP `0x60` BreakIfGt - Breaks the current loop if the topmost item on the stack is greater than the second
     - [x] OP `0x61` Continue - Moves to the next iteration of the current loop
-    - [ ] OP `0x62` ContinueIf - Moves to the next iteration of the current loop if the topmost item on the stack is equal to `1`
-    - [ ] OP `0x63` ContinueIfn - Moves to the next iteration of the current loop if the topmost item on the stack is not equal to `1`
-    - [ ] OP `0x64` ContinueIfEq - Moves to the next iteration of the current loop if the two topmost items on the stack are equal
-    - [ ] OP `0x66` ContinueIfNeq - Moves to the next iteration of the current loop if the two topmost items on the stack are not equal
-    - [ ] OP `0x66` ContinueIfLeq - Moves to the next iteration of the current loop if the topmost item on the stack is less or equal than the second
-    - [ ] OP `0x67` ContinueIfGeq - Moves to the next iteration of the current loop if the topmost item on the stack is greater or equal than the second
-    - [ ] OP `0x68` ContinueIfLt - Moves to the next iteration of the current loop if the topmost item on the stack is less than the second
-    - [ ] OP `0x69` ContinueIfGt - Moves to the next iteration of the current loop if the topmost item on the stack is greater than the second
-    - [ ] OP `0x6a` Depth - Pushes the depth of the current frame onto the stack as an `Unsigned16`
-    - [ ] OP `0x6b` IfDup - If the topmost item on the stack is not `0`, duplicate it
+    - [x] OP `0x62` ContinueIf - Moves to the next iteration of the current loop if the topmost item on the stack is equal to `1`
+    - [x] OP `0x63` ContinueIfn - Moves to the next iteration of the current loop if the topmost item on the stack is not equal to `1`
+    - [x] OP `0x64` ContinueIfEq - Moves to the next iteration of the current loop if the two topmost items on the stack are equal
+    - [x] OP `0x66` ContinueIfNeq - Moves to the next iteration of the current loop if the two topmost items on the stack are not equal
+    - [x] OP `0x66` ContinueIfLeq - Moves to the next iteration of the current loop if the topmost item on the stack is less or equal than the second
+    - [x] OP `0x67` ContinueIfGeq - Moves to the next iteration of the current loop if the topmost item on the stack is greater or equal than the second
+    - [x] OP `0x68` ContinueIfLt - Moves to the next iteration of the current loop if the topmost item on the stack is less than the second
+    - [x] OP `0x69` ContinueIfGt - Moves to the next iteration of the current loop if the topmost item on the stack is greater than the second
+    - [x] OP `0x6a` Depth - Pushes the depth of the current frame onto the stack as an `Unsigned16`
+    - [x] OP `0x6b` IfDup - If the topmost item on the stack is not `0`, duplicate it
     - [x] OP `0x6c` Drop - Removes the topmost item on the stack
     - [x] OP `0x6d` Dup - Duplicates the topmost item on the stack
     - [x] OP `0x6e` Nip - Removes the second item on the stack
