@@ -24,7 +24,7 @@ Purplecoins are used to pay the transactions fees when using the ledger for any 
 * File and then be able to authenticate any document publicly.
 * Create any form of digital asset, representation of a real asset, or any form of digital representation of something that can be exchanged. Examples: Cryptocurrencies, FIAT currency representations, shareholders register, concert or venue tickets, the currency of a video game economy, NFTs or any other use-case that requires a tamper-proof ledger.
 * Exchange any asset for any other asset that is built on top if the spending conditions on both assets allows it.
-* Build and deploy scalable smart contracts that can be used by billions of users.
+* Build and deploy scalable smart contracts that can be used by billions of users. Smart contracts in Purplecoin are asynchronous and have sharded state. One contract can achieve massive scale. Compilers can be written for languages such as C, C++ and Rust due to the ABI.
 
 Any asset can also be used to pay transaction fees by exchanging it with Purplecoins in an atomic swap in the same transaction if there exists a liquidity provider for the pair.
 
