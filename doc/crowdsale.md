@@ -27,9 +27,18 @@ Raised funds are kept in a 3 of 5 multi-sig setup with keys being stored at diff
 
 ### Fund allocation
 This is how we plan to allocate the raised funds:
-* 50% will be used to fund the foundation responsible for governing post-launch.
-* 25% to pre-launch development/marketing/bounties.
-* 25% kept in reserve for unforeseen circumstances.
+* 50% will be used to fund the foundation responsible for governing post-launch. The usage of these funds will depend on the governing body of the foundation.
+* 25% to pre-launch development/marketing/bounties/infrastructure.
+* 25% kept in reserve for unforeseen circumstances such as legal expenses, unfavorable market fluctuations, or external catastrophic events.
+
+### What can I do with Purplecoins?
+Purplecoins are used to pay the transactions fees when using the ledger for any purpose. They are the oil that powers the Purplecoin machine. As such, we should rather present what can be achieved with the Purplecoin platform. You can:
+* File and then be able to authenticate any document publicly.
+* Create any form of digital asset, representation of a real asset, or any form of digital representation of something that can be exchanged. Examples: Cryptocurrencies, FIAT currency representations, shareholders register, concert or venue tickets, the currency of a video game economy, NFTs or any other use-case that requires a tamper-proof ledger.
+* Exchange any asset for any other asset that is built on top if the spending conditions on both assets allows it.
+* Build and deploy scalable smart contracts that can be used by billions of users.
+
+Any asset can also be used to pay transaction fees by exchanging it with Purplecoins in an atomic swap in the same transaction if there exists a liquidity provider for the pair.
 
 ## Links
 * Website - https://purplecoin.io/
