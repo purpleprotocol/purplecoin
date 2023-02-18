@@ -62,17 +62,17 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x31` Hash160ArrayVar - Pushes a `Hash160Array` onto the stack
     - [ ] OP `0x32` Hash256ArrayVar - Pushes a `Hash256Array` onto the stack
     - [ ] OP `0x33` Hash512ArrayVar - Pushes a `Hash512Array` onto the stack
-    - [ ] OP `0x34` Unsigned8ArrayVar - Pushes a `Unsigned8Array` onto the stack
-    - [ ] OP `0x35` Unsigned16ArrayVar - Pushes a `Unsigned16Array` onto the stack
-    - [ ] OP `0x36` Unsigned32ArrayVar - Pushes a `Unsigned32Array` onto the stack
-    - [ ] OP `0x37` Unsigned64ArrayVar - Pushes a `Unsigned64` onto the stack
-    - [ ] OP `0x38` Unsigned128ArrayVar - Pushes a `Unsigned128Array` onto the stack
+    - [x] OP `0x34` Unsigned8ArrayVar - Pushes a `Unsigned8Array` onto the stack
+    - [x] OP `0x35` Unsigned16ArrayVar - Pushes a `Unsigned16Array` onto the stack
+    - [x] OP `0x36` Unsigned32ArrayVar - Pushes a `Unsigned32Array` onto the stack
+    - [x] OP `0x37` Unsigned64ArrayVar - Pushes a `Unsigned64` onto the stack
+    - [x] OP `0x38` Unsigned128ArrayVar - Pushes a `Unsigned128Array` onto the stack
     - [ ] OP `0x39` UnsignedBigArrayVar - Pushes a `UnsignedBigArray` onto the stack
-    - [ ] OP `0x3a` Signed8ArrayVar - Pushes a `Signed8Array` onto the stack
-    - [ ] OP `0x3b` Signed16ArrayVar - Pushes a `Signed16Array` onto the stack
-    - [ ] OP `0x3c` Signed32ArrayVar - Pushes a `Signed32Array` onto the stack
-    - [ ] OP `0x3d` Signed64ArrayVar - Pushes a `Signed64Array` onto the stack
-    - [ ] OP `0x3e` Signed128ArrayVar - Pushes a `Signed128Array` onto the stack
+    - [x] OP `0x3a` Signed8ArrayVar - Pushes a `Signed8Array` onto the stack
+    - [x] OP `0x3b` Signed16ArrayVar - Pushes a `Signed16Array` onto the stack
+    - [x] OP `0x3c` Signed32ArrayVar - Pushes a `Signed32Array` onto the stack
+    - [x] OP `0x3d` Signed64ArrayVar - Pushes a `Signed64Array` onto the stack
+    - [x] OP `0x3e` Signed128ArrayVar - Pushes a `Signed128Array` onto the stack
     - [ ] OP `0x3f` SignedBigArrayVar - Pushes a `SignedBigArray` onto the stack
     - [ ] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
     - [x] OP `0x4b` GetType - Pushes on top of the stack the type code of the value currently on top of the stack as a `Unsigned8`
