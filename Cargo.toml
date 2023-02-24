@@ -9,7 +9,8 @@ edition = "2021"
 
 [dependencies]
 rust-randomx = { path = "./vendor/rust-randomx" }
-iced = { version = "0.4.2", features = ["tokio", "image"] }
+iced = { version = "0.4.2", features = ["tokio", "glow", "image"] }
+iced_glow = "0.4.1"
 iced_lazy = "0.1.1"
 iced_native = "0.5.1"
 iced_aw = "0.2"
