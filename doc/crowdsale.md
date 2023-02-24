@@ -3,7 +3,7 @@ This document contains important information regarding the Purplecoin Crowdsale.
 
 ### General information
 * Start date 24 Jan 2023. There is no end date, the sale ends when all coins have been sold or until we decide to end it.
-* Total coins for sale: 113,997,000 XPU (5% of the total supply before tail emission).
+* Total coins for sale: 113,997,000 XPU (5% of the total supply before tail emission). 4.5% of the supply will be locked for 2 halving cycles. 0.5% will be used for contributor rewards, bounties or any endeavour of this sort.
 * Sale rate: 1 ETH = 7200 XPU for first third of coins sold, 1 ETH = 4800 XPU for the next third, and 1 ETH = 2400 XPU for the last third. We will be adjusting the rate according to market fluctuations on each Monday at around 12:00 GMT.
 * Individual cap: Max 50,000 XPU per person.
 * Coins will not be liquid until the sale ends.
@@ -38,7 +38,7 @@ Raised funds are kept in a 3 of 5 multi-sig setup with keys being stored at diff
 This is how we plan to allocate the raised funds:
 * 50% will be used to fund the foundation responsible for governing post-launch. The usage of these funds will depend on the governing body of the foundation.
 * 25% to pre-launch development/marketing/bounties/infrastructure.
-* 25% kept in reserve for unforeseen circumstances such as legal expenses, unfavorable market fluctuations, or external catastrophic events.
+* 25% kept in reserve for unforeseen circumstances such as legal expenses, unfavorable market fluctuations, or external catastrophic events. These funds will most probably be invested in other assets to hedge against ETH market volatility. They will flow to either the pre-launch pool or post-launch pool as needed.
 
 ## Links
 * Website - https://purplecoin.io/
