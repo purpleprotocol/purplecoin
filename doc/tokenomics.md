@@ -16,6 +16,6 @@ We can then say that from a user's perspective, XPU is completely abstracted. Pu
 We can see with this model that the value of XPU is directly dependant upon the number of applications/assets built on top. As demand increases, so does the value and vice-versa. It is the oil that powers the Purplecoin platform.
 
 ### High distribution
-XPU is highly distributed both in the crowdsale (via a low individual cap), and at the mining level. It should be close impossible for a single miner to receive the whole reward for all shards at once. This is because each shard has a different required PoW algorithm at any individual moment. A miner would have to hold a large proportion of the hashrate of all PoW algorithms (GR, Sha256, Blake2, Fugue, JH, etc) in order to receive the whole reward.
+XPU is highly distributed both in the crowdsale (via a low individual cap), and at the mining level. It should be close to impossible for a single miner to receive the whole reward for all shards at once. This is because each shard has a different required PoW algorithm at any individual moment. A miner would have to hold a large proportion of the hashrate of all PoW algorithms (GR, Sha256, Blake2, Fugue, JH, etc) in order to receive the whole reward.
 
 Miner monopolies are much harder to attain in Purplecoin. First-class support for decentralised mining pools is also included.
