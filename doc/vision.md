@@ -55,4 +55,4 @@ Blockchain is an incredible technology, but half of it is missing. In order to f
 2. Scale
 3. Work with banking 
 
-Nothing has hit all of these points so far, until Purplecoin.
+Nothing has hit all of these points so far, but we believe Purplecoin can.
