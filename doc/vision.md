@@ -68,3 +68,10 @@ Let's take the third point and break it down. In order for a blockchain to work 
 7. Miner fees should be paid in any currency built on top. 
 
 The asset model of Purplecoin can currently achieve all of the above. 
+
+### Links
+* [Website](https://purplecoin.io)
+* [Whitepaper](https://github.com/purpleprotocol/purplecoin_whitepaper/blob/main/whitepaper.pdf)
+* [README](https://github.com/purpleprotocol/purplecoin_whitepaper/blob/main/whitepaper.pdf)
+* [Telegram](https://t.me/purplecoin_io)
+* [Discord](https://discord.gg/5ZVZnKd)
