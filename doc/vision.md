@@ -65,5 +65,6 @@ Let's take the third point and break it down. In order for a blockchain to work 
 4. Banks should be able to block or reverse transfers of assets under their custody.
 5. Banks should be able to rotate the private keys of the dedicated account based on pre-agreed conditions with the client.
 6. The blockchain should be tied in to the fiduciary system.
+7. Miner fees should be paid in any currency built on top. 
 
 The asset model of Purplecoin can currently achieve all of the above. 
