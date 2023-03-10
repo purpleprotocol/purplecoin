@@ -56,3 +56,14 @@ Blockchain is an incredible technology, but half of it is missing. In order to f
 3. Work with banking 
 
 Nothing has hit all of these points so far, but we believe Purplecoin can.
+
+### Purplecoin as a digital banking backend
+Let's take the third point and break it down. In order for a blockchain to work with banks it must work the same as Bitcoin **while** allowing:
+1. Users to deposit or withdraw their assets in a dedicated account fully controlled by a bank
+2. Users must be able to do this if all regulatory checks pass
+3. Banks shouldn't be able to block transfers of withdrawn assets.
+4. Banks should be able to block or reverse transfers of assets under their custody.
+5. Banks should be able to rotate the private keys of the dedicated account based on pre-agreed conditions with the client.
+6. The blockchain should be tied in to the fiduciary system.
+
+The asset model of Purplecoin can currently achieve all of the above. 
