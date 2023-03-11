@@ -1,5 +1,5 @@
 ## Purplecoin Crowdsale
-This document contains important information regarding the Purplecoin Crowdsale. For more information, please read the [Token Sale Agreement](https://purplecoin.io/tsa).
+This document contains important information regarding the Purplecoin Crowdsale. For more information, please read the [Token Sale Agreement](https://purplecoin.io/tsa). To understand the scope of this project, take a look at the [Vision](https://github.com/purpleprotocol/purplecoin/blob/main/doc/vision.md) document.
 
 ### General information
 * Start date 24 Jan 2023. There is no end date, the sale ends when all coins have been sold or until we decide to end it.
