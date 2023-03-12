@@ -1571,6 +1571,14 @@ impl<'a> ScriptExecutor<'a> {
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
 
+                    if !e1.is_same(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     if e1 == e2 {
                         self.state = ScriptExecutorState::BreakLoop;
                     }
@@ -1589,6 +1597,14 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= e1.size();
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
+
+                    if !e1.is_same(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
 
                     if e1 != e2 {
                         self.state = ScriptExecutorState::BreakLoop;
@@ -1609,6 +1625,14 @@ impl<'a> ScriptExecutor<'a> {
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
 
+                    if !e1.is_same(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     if e1 <= e2 {
                         self.state = ScriptExecutorState::BreakLoop;
                     }
@@ -1627,6 +1651,14 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= e1.size();
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
+
+                    if !e1.is_same(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
 
                     if e1 >= e2 {
                         self.state = ScriptExecutorState::BreakLoop;
@@ -1647,6 +1679,14 @@ impl<'a> ScriptExecutor<'a> {
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
 
+                    if !e1.is_same(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     if e1 < e2 {
                         self.state = ScriptExecutorState::BreakLoop;
                     }
@@ -1665,6 +1705,14 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= e1.size();
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
+
+                    if !e1.is_same(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
 
                     if e1 > e2 {
                         self.state = ScriptExecutorState::BreakLoop;
@@ -1727,6 +1775,14 @@ impl<'a> ScriptExecutor<'a> {
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
 
+                    if !e1.is_same(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     if e1 == e2 {
                         self.state = ScriptExecutorState::ContinueLoop;
                     } else {
@@ -1747,6 +1803,14 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= e1.size();
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
+
+                    if !e1.is_same(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
 
                     if e1 != e2 {
                         self.state = ScriptExecutorState::ContinueLoop;
@@ -1769,6 +1833,14 @@ impl<'a> ScriptExecutor<'a> {
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
 
+                    if !e1.is_same(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     if e1 <= e2 {
                         self.state = ScriptExecutorState::ContinueLoop;
                     } else {
@@ -1789,6 +1861,14 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= e1.size();
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
+
+                    if !e1.is_same(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
 
                     if e1 >= e2 {
                         self.state = ScriptExecutorState::ContinueLoop;
@@ -1811,6 +1891,14 @@ impl<'a> ScriptExecutor<'a> {
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
 
+                    if !e1.is_same(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     if e1 < e2 {
                         self.state = ScriptExecutorState::ContinueLoop;
                     } else {
@@ -1831,6 +1919,14 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= e1.size();
                     let e2 = exec_stack.pop().unwrap();
                     *memory_size -= e2.size();
+
+                    if !e1.is_same(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
 
                     if e1 > e2 {
                         self.state = ScriptExecutorState::ContinueLoop;
@@ -2300,6 +2396,31 @@ impl<'a> ScriptExecutor<'a> {
                     self.state =
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::SignedBigArrayVar);
                 }
+
+                // ScriptEntry::Opcode(OP::ArrayLen) => {
+                //     if exec_stack.is_empty() {
+                //         self.state = ScriptExecutorState::Error(
+                //             ExecutionResult::InvalidArgs,
+                //             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                //         );
+                //         return;
+                //     }
+
+                //     let mut last = exec_stack.last_mut().unwrap();
+
+                //     if !last.is_array() {
+                //         self.state = ScriptExecutorState::Error(
+                //             ExecutionResult::InvalidArgs,
+                //             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                //         );
+                //         return;
+                //     }
+
+                //     let e = VmTerm::Unsigned16(last --> len as u64);
+
+                //     *memory_size += e.size();
+                //     exec_stack.push(e);
+                // }
 
                 ScriptEntry::Opcode(OP::Add1) => {
                     if exec_stack.is_empty() {
