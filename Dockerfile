@@ -13,6 +13,8 @@ RUN apt-get -y -qq update  && \
             m4 \
             cmake \
             clang \
+            libsdl2-dev \
+            libsdl2-2.0-0 \
             libclang-dev \
             llvm \
             llvm-dev \
