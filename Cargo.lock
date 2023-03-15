@@ -399,6 +399,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5738be7561b0eeb501ef1d5c5db3f24e01ceb55fededd9b00039aada34966ad"
 
 [[package]]
+name = "beryllium"
+version = "0.12.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48284ee5573a765c64e41650ddca6d66c288a2a5254af473aa93ab2f4ded6b0a"
+dependencies = [
+ "bytemuck",
+ "fermium",
+ "objc",
+ "zstring",
+]
+
+[[package]]
 name = "bimap"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -601,6 +613,12 @@ dependencies = [
  "getrandom 0.2.6",
  "siphasher",
 ]
+
+[[package]]
+name = "bool32"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8459737325e57ad10b38dc1af42f9228005dd6a3e9f43bdd76c8ceb6e9c46fc"
 
 [[package]]
 name = "bs58"
@@ -1636,6 +1654,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a407cfaa3385c4ae6b23e84623d48c2798d06e3e6a1878f7f59f17b3f86499"
 dependencies = [
  "instant",
+]
+
+[[package]]
+name = "fermium"
+version = "22604.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b08a8093682a39a7293b1fb718e60230d5c20c5400862f84a3b6447c3add32e7"
+dependencies = [
+ "bool32",
+ "raw_vulkan_handle",
 ]
 
 [[package]]
@@ -5006,6 +5034,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ptr_iter"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "331cd2c60ff9d3f52f319b935028b91be5fadb93ca413f408747d91dca3aff28"
+
+[[package]]
 name = "purplecoin"
 version = "0.1.0"
 dependencies = [
@@ -5015,6 +5049,7 @@ dependencies = [
  "arrayvec 0.7.2",
  "base64",
  "bech32",
+ "beryllium",
  "bincode 2.0.0-rc.1",
  "bindgen 0.60.1",
  "bitflags",
@@ -5292,6 +5327,12 @@ checksum = "ed7e3d950b66e19e0c372f3fa3fbbcf85b1746b571f74e0c2af6042a5c93420a"
 dependencies = [
  "cty",
 ]
+
+[[package]]
+name = "raw_vulkan_handle"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23dbf645f0376dccfbdfbb666545f389d8f836fb3607d9ba9fd8e652035ee4b2"
 
 [[package]]
 name = "rayon"
@@ -7533,4 +7574,13 @@ checksum = "9fd07cbbc53846d9145dbffdf6dd09a7a0aa52be46741825f5c97bdd4f73f12b"
 dependencies = [
  "cc",
  "libc",
+]
+
+[[package]]
+name = "zstring"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d64ee5f783fceb29945c98a527108dc9f940fc6c339337f6f939f325e25bc68"
+dependencies = [
+ "ptr_iter",
 ]

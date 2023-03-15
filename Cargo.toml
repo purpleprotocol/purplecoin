@@ -92,6 +92,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 constant_time_eq = "0.2.4"
 bs58 = "0.4.0"
 gmp-mpfr-sys = { version = "1.4.8", features = ["force-cross"] }
+beryllium = "0.12.2"
 
 [dev-dependencies]
 serial_test = "*"

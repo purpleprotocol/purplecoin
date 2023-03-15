@@ -26,11 +26,11 @@ enum CreateWalletState<'a> {
     ConfirmMnemonic(Mnemonic),
 }
 
-pub struct CreateWalletScreen {
+pub struct CreateWalletScreen<'a> {
     to_render_button_state: button::State,
     to_confirm_button_state: button::State,
     to_overview_button_state: button::State,
-    state: CreateWalletState,
+    state: CreateWalletState<'a>,
 }
 
 impl CreateWalletScreen {
