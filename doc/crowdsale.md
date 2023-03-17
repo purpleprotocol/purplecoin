@@ -56,3 +56,7 @@ This is how we plan to allocate the raised funds:
 ## Source code
 * Crowdsale smart contract source code: https://github.com/purpleprotocol/crowdsale_contract
 * Crowdsale front-end source code: https://github.com/purpleprotocol/crowdsale_web
+
+## Etherscan
+* Contract address: https://etherscan.io/address/0x113180ecac90987c7eb2757e608ecf2ab943554c
+* Token address: https://etherscan.io/address/0x396463b64028bc84bf1d5dd6185fa0cacb34a9ce
