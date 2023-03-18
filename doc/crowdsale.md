@@ -14,7 +14,7 @@ This document contains important information regarding the Purplecoin Crowdsale.
 * The Metamask browser extension is required to participate.
 
 ### How to participate
-* First create a [Metamask](https://metamask.io/download/) wallet if you don't already have one.
+* First create a [Metamask](https://metamask.io/download/) wallet if you don't already have one. We also recommend using a [Hardware Wallet](https://shop.ledger.com/?referral_code=QP0E3G3B2Y90Q) to connect to Metamask. A hardware wallet stores your ETH and XPU in cold storage, removing risk of funds being stolen by malware.
 * Transfer at least 0.01 ETH to your Metamask wallet.
 * Visit https://sale.purplecoin.io and follow the instructions.
 * Once the KYC verification is complete, you must wait for the sale to end.
