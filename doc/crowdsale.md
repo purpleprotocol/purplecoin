@@ -21,6 +21,9 @@ This document contains important information regarding the Purplecoin Crowdsale.
 * Once the KYC verification is complete, you must wait for the sale to end.
 * Once the sale has ended, you can generate a Purplecoin address and transfer your XPU to the main chain.
 
+### I failed the KYC verification. Can I get a refund?
+If you have failed the identity verification, you can request a refund from the sale website.
+
 ### What can I do with Purplecoins?
 Purplecoins are used to pay the transactions fees when using the ledger for any purpose. They are the oil that powers the Purplecoin machine. As such, we should rather present what can be achieved with the Purplecoin platform. You can:
 * File and then be able to authenticate any document publicly.
