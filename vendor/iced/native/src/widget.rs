@@ -22,6 +22,7 @@ pub mod progress_bar;
 pub mod radio;
 pub mod row;
 pub mod rule;
+pub mod safe_text;
 pub mod scrollable;
 pub mod slider;
 pub mod space;
@@ -53,6 +54,8 @@ pub use radio::Radio;
 pub use row::Row;
 #[doc(no_inline)]
 pub use rule::Rule;
+#[doc(no_inline)]
+pub use safe_text::SafeText;
 #[doc(no_inline)]
 pub use scrollable::Scrollable;
 #[doc(no_inline)]

@@ -25,6 +25,9 @@ pub type Row<'a, Message> =
 /// A paragraph of text.
 pub type Text = iced_native::widget::Text<crate::Renderer>;
 
+/// A paragraph of text that is zeroized on drop.
+pub type SafeText = iced_native::widget::Text<crate::Renderer>;
+
 pub mod button {
     //! Allow your users to perform actions by pressing a button.
     //!

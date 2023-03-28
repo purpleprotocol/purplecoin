@@ -28,9 +28,8 @@ use std::env;
 
 use std::sync::atomic::AtomicBool;
 
-use rust_decimal::Decimal;
 use std::fs;
-use std::str::FromStr;
+
 use std::thread;
 use std::time::Duration;
 use tarpc::server::{self, incoming::Incoming, Channel};

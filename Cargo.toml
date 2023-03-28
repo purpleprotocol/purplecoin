@@ -11,11 +11,17 @@ edition = "2021"
 rust-randomx = { path = "./vendor/rust-randomx" }
 iced = { path = "./vendor/iced", features = ["tokio", "glow", "image"] }
 iced_glow = { path = "./vendor/iced/glow" }
+iced_core = { path = "./vendor/iced/core" }
 iced_lazy = { path = "./vendor/iced/lazy" }
 iced_glutin = { path = "./vendor/iced/glutin" }
 iced_native = { path = "./vendor/iced/native" }
-iced_aw = "0.2"
-iced_futures = { version = "0.4.1", features = ["tokio"] }
+iced_futures = { path = "./vendor/iced/futures", features = ["tokio"] }
+iced_graphics = { path = "./vendor/iced/graphics" }
+iced_style = { path = "./vendor/iced/style" }
+iced_pure = { path = "./vendor/iced/pure" }
+iced_winit = { path = "./vendor/iced/winit" }
+iced_wgpu = { path = "./vendor/iced/wgpu" }
+iced_aw = { path = "./vendor/iced_aw" }
 image = "0.24.5"
 rocksdb = "0.20.1"
 blake2 = "0.10.4"

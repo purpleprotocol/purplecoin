@@ -56,7 +56,7 @@ impl Screen for WelcomeScreen {
                         .size(48)
                         .horizontal_alignment(Horizontal::Center),
                 )
-                .push(Container::new(image))
+                //.push(Container::new(image))
                 .push(Text::new(
                     "Let's start by creating or importing your wallet",
                 ))

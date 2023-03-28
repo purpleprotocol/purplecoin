@@ -485,56 +485,88 @@ pub fn generate_hdwallet_bip39_english(
     wallet_name: &str,
     passphrase: &str,
 ) -> Result<HDWallet, &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Mnemonic::new(MnemonicType::Words24, Language::English))
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::English),
+    )
 }
 
 pub fn generate_hdwallet_bip39_chinese_simplified(
     wallet_name: &str,
     passphrase: &str,
 ) -> Result<HDWallet, &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Mnemonic::new(MnemonicType::Words24, Language::ChineseSimplified))
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::ChineseSimplified),
+    )
 }
 
 pub fn generate_hdwallet_bip39_chinese_traditional(
     wallet_name: &str,
     passphrase: &str,
 ) -> Result<HDWallet, &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase,  Mnemonic::new(MnemonicType::Words24, Language::ChineseTraditional))
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::ChineseTraditional),
+    )
 }
 
 pub fn generate_hdwallet_bip39_french(
     wallet_name: &str,
     passphrase: &str,
 ) -> Result<HDWallet, &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase,  Mnemonic::new(MnemonicType::Words24, Language::French))
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::French),
+    )
 }
 
 pub fn generate_hdwallet_bip39_italian(
     wallet_name: &str,
     passphrase: &str,
 ) -> Result<HDWallet, &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase,  Mnemonic::new(MnemonicType::Words24, Language::Italian))
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::Italian),
+    )
 }
 
 pub fn generate_hdwallet_bip39_japanese(
     wallet_name: &str,
     passphrase: &str,
 ) -> Result<HDWallet, &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase,  Mnemonic::new(MnemonicType::Words24, Language::Japanese))
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::Japanese),
+    )
 }
 
 pub fn generate_hdwallet_bip39_korean(
     wallet_name: &str,
     passphrase: &str,
 ) -> Result<HDWallet, &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase,  Mnemonic::new(MnemonicType::Words24, Language::Korean))
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::Korean),
+    )
 }
 
 pub fn generate_hdwallet_bip39_spanish(
     wallet_name: &str,
     passphrase: &str,
 ) -> Result<HDWallet, &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase,  Mnemonic::new(MnemonicType::Words24, Language::Spanish))
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::Spanish),
+    )
 }
 
 pub fn gen_hdwallet_bip39(
@@ -726,9 +758,7 @@ mod tests {
     #[test]
     fn hdwallet_generate_then_load() {
         let wallet_name = generate_wallet_name();
-        let wallet = generate_hdwallet_bip39_english(&wallet_name, "test")
-            .unwrap()
-            .0;
+        let wallet = generate_hdwallet_bip39_english(&wallet_name, "test").unwrap();
         let loaded_wallet = load_hdwallet(&wallet_name).unwrap();
         assert_eq!(wallet, loaded_wallet);
     }
@@ -736,9 +766,7 @@ mod tests {
     #[test]
     fn hdwallet_generate_dump_then_load() {
         let wallet_name = generate_wallet_name();
-        let wallet = generate_hdwallet_bip39_english(&wallet_name, "test")
-            .unwrap()
-            .0;
+        let wallet = generate_hdwallet_bip39_english(&wallet_name, "test").unwrap();
         dump_hdwallet(&wallet, &wallet_name).unwrap();
         let loaded_wallet = load_hdwallet(&wallet_name).unwrap();
         assert_eq!(wallet, loaded_wallet);

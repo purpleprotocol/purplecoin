@@ -6,12 +6,13 @@
 
 use iced_aw::tabs;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Theme {
     Default,
     Red,
     Blue,
     Green,
+    #[default]
     Purple,
 }
 
@@ -23,12 +24,6 @@ impl Theme {
         Theme::Green,
         Theme::Purple,
     ];
-}
-
-impl Default for Theme {
-    fn default() -> Theme {
-        Theme::Purple
-    }
 }
 
 impl From<Theme> for String {

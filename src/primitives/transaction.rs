@@ -70,7 +70,7 @@ impl Transaction {
         out_stack
     }
 
-    pub fn get_ins<'a>(&'a self) -> &'a [Input] {
+    pub fn get_ins(&self) -> &[Input] {
         &self.ins
     }
 
@@ -210,7 +210,7 @@ pub struct TransactionWithFee {
 }
 
 impl TransactionWithFee {
-    pub fn hash<'a>(&'a self) -> Option<&'a Hash256> {
+    pub fn hash(&self) -> Option<&Hash256> {
         self.tx.hash()
     }
 }

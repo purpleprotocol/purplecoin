@@ -21,7 +21,7 @@ use crate::{Color, Element, Layout, Length, Point, Rectangle, Size, Widget};
 #[derive(Debug)]
 pub struct Text<Renderer: text::Renderer> {
     /// Content
-    pub content: String,
+    content: String,
     size: Option<u16>,
     color: Option<Color>,
     font: Renderer::Font,

@@ -5,11 +5,12 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use crate::gui::{Icon, Message, Screen};
-use bip39::{Mnemonic, MnemonicType, Language};
+use bip39::{Language, Mnemonic, MnemonicType};
 use iced::image::Handle;
 use iced::widget::Image;
 use iced::{
-    alignment::Horizontal, button, Alignment, Button, Column, Container, Element, Length, Text,
+    alignment::Horizontal, button, Alignment, Button, Column, Container, Element, Length,
+    SafeText as Text,
 };
 use std::io;
 use zeroize::Zeroize;
@@ -23,7 +24,7 @@ pub enum CreateWalletMessage {
 
 enum CreateWalletState {
     Null,
-    RenderMnemonic(Mnemonic, Option<Box<String>>),
+    RenderMnemonic(Mnemonic),
     ConfirmMnemonic(Mnemonic),
 }
 
@@ -47,17 +48,22 @@ impl CreateWalletScreen {
     pub fn update(&mut self, message: CreateWalletMessage) {
         match message {
             CreateWalletMessage::RenderMnemonic => {
-                self.state = CreateWalletState::RenderMnemonic(Mnemonic::new(MnemonicType::Words24, Language::English), None)
+                self.state = CreateWalletState::RenderMnemonic(Mnemonic::new(
+                    MnemonicType::Words24,
+                    Language::English,
+                ))
             }
             CreateWalletMessage::ConfirmMnemonic => {
-                if let CreateWalletState::RenderMnemonic(mnemonic, content_ptr) = self.state {
-                    self.state = CreateWalletState::ConfirmMnemonic(mnemonic.clone());
-                    content_ptr.expect("unreachable").zeroize();
+                let mut mnemonic = None;
+                if let CreateWalletState::RenderMnemonic(mn) = &mut self.state {
+                    mnemonic = Some(mn.clone());
                 } else {
                     unreachable!()
                 }
+
+                self.state = CreateWalletState::ConfirmMnemonic(mnemonic.unwrap());
             }
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 }
@@ -95,17 +101,12 @@ impl Screen for CreateWalletScreen {
                         ),
                 )
                 .into();
-        
+
                 content.map(Message::CreateWallet)
             }
 
-            CreateWalletState::RenderMnemonic(ref mnemonic, content_ptr) => {
-                let secure_text = Text::new(
-                    mnemonic.phrase(),
-                ).size(24);
-
-                // We need to keep a separate pointer to the secure text content so we can zeroize it later
-                content_ptr = Some(&secure_text.content);
+            CreateWalletState::RenderMnemonic(ref mnemonic) => {
+                let secure_text = Text::new(mnemonic.phrase()).size(24);
 
                 let content: Element<'_, CreateWalletMessage> = Container::new(
                     Column::new()
@@ -128,11 +129,11 @@ impl Screen for CreateWalletScreen {
                         ),
                 )
                 .into();
-        
+
                 content.map(Message::CreateWallet)
             }
-        
-            _ => unimplemented!()
+
+            _ => unimplemented!(),
         }
     }
 }
