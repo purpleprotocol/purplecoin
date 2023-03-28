@@ -202,7 +202,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xfc` Blake3_256Internal - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key, and then pushes the result to the stack. 
     - [ ] OP `0xfd` Blake3_512Internal - Pops the topmost item on the stack, hashes it with Blake3_512 keyed with the current shard key, and then pushes the result to the stack. 
     - [ ] OP `0xfe` Blake3_256_160Internal - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key, and then pushes the result to the stack. 
-    - [ ] OP `0xff` Nop - Does nothing
+    - [x] OP `0xff` Nop - Does nothing
 * [ ] Network layer
   - [ ] Sector networking
     - [x] Seed nodes DNS resolution

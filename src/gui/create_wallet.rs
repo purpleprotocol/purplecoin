@@ -12,6 +12,7 @@ use iced::{
     alignment::Horizontal, button, Alignment, Button, Column, Container, Element, Length, Text,
 };
 use std::io;
+use zeroize::Zeroize;
 
 #[derive(Debug, Clone)]
 pub enum CreateWalletMessage {
@@ -20,17 +21,17 @@ pub enum CreateWalletMessage {
     Done,
 }
 
-enum CreateWalletState<'a> {
+enum CreateWalletState {
     Null,
-    RenderMnemonic(Mnemonic, Box<String>),
+    RenderMnemonic(Mnemonic, Option<Box<String>>),
     ConfirmMnemonic(Mnemonic),
 }
 
-pub struct CreateWalletScreen<'a> {
+pub struct CreateWalletScreen {
     to_render_button_state: button::State,
     to_confirm_button_state: button::State,
     to_overview_button_state: button::State,
-    state: CreateWalletState<'a>,
+    state: CreateWalletState,
 }
 
 impl CreateWalletScreen {
@@ -46,12 +47,12 @@ impl CreateWalletScreen {
     pub fn update(&mut self, message: CreateWalletMessage) {
         match message {
             CreateWalletMessage::RenderMnemonic => {
-                self.state = CreateWalletState::RenderMnemonic(Mnemonic::new(MnemonicType::Words24, Language::English))
+                self.state = CreateWalletState::RenderMnemonic(Mnemonic::new(MnemonicType::Words24, Language::English), None)
             }
             CreateWalletMessage::ConfirmMnemonic => {
                 if let CreateWalletState::RenderMnemonic(mnemonic, content_ptr) = self.state {
                     self.state = CreateWalletState::ConfirmMnemonic(mnemonic.clone());
-                    content_ptr.zeroize();
+                    content_ptr.expect("unreachable").zeroize();
                 } else {
                     unreachable!()
                 }

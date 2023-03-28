@@ -1,0 +1,59 @@
+[package]
+name = "iced_graphics"
+version = "0.3.1"
+authors = ["Héctor Ramón Jiménez <hector0193@gmail.com>"]
+edition = "2021"
+description = "A bunch of backend-agnostic types that can be leveraged to build a renderer for Iced"
+license = "MIT"
+repository = "https://github.com/iced-rs/iced"
+documentation = "https://docs.rs/iced_graphics"
+keywords = ["gui", "ui", "graphics", "interface", "widgets"]
+categories = ["gui"]
+
+[features]
+canvas = ["lyon"]
+qr_code = ["qrcode", "canvas"]
+font-source = ["font-kit"]
+font-fallback = []
+font-icons = []
+opengl = []
+pure = ["iced_pure"]
+
+[dependencies]
+glam = "0.10"
+raw-window-handle = "0.4"
+thiserror = "1.0"
+
+[dependencies.bytemuck]
+version = "1.4"
+features = ["derive"]
+
+[dependencies.iced_native]
+version = "0.5"
+path = "../native"
+
+[dependencies.iced_style]
+version = "0.4"
+path = "../style"
+
+[dependencies.iced_pure]
+version = "0.2"
+path = "../pure"
+optional = true
+
+[dependencies.lyon]
+version = "0.17"
+optional = true
+
+[dependencies.qrcode]
+version = "0.12"
+optional = true
+default-features = false
+
+[dependencies.font-kit]
+version = "0.10"
+optional = true
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
+all-features = true
