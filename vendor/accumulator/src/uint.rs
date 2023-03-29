@@ -530,7 +530,7 @@ where
 }
 
 fn i32_to_mpz(i: i32, data: &mut u64) -> mpz_t {
-    *data = i.abs() as u64;
+    *data = i.unsigned_abs() as u64;
     mpz_t {
         size: i.signum(),
         d: std::ptr::NonNull::new(data).unwrap(),

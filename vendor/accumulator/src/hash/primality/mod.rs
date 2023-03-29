@@ -21,7 +21,7 @@ pub fn is_prob_prime(n: &U256) -> bool {
             return *n == p;
         }
     }
-    passes_miller_rabin_base_2(&n) && passes_lucas(&n)
+    passes_miller_rabin_base_2(n) && passes_lucas(n)
 }
 
 /// A single iteration of the Miller-Rabin test (base-2 Fermat test).
@@ -116,7 +116,7 @@ fn compute_lucas_sequences(
     // Mod an `i32` into the `[0, n)` range.
     let i_mod_n = |x: i32| {
         if x < 0 {
-            *n - (u256(x.abs() as u64) % n)
+            *n - (u256(x.unsigned_abs() as u64) % n)
         } else {
             u256(x as u64) % n
         }

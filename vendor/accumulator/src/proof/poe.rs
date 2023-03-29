@@ -17,7 +17,7 @@ impl<G: Group> Poe<G> {
         let l = hash_to_prime(&(base, exp, result));
         let q = exp / l;
         Self {
-            Q: G::exp(&base, &q),
+            Q: G::exp(base, &q),
         }
     }
 
@@ -26,7 +26,7 @@ impl<G: Group> Poe<G> {
         let l = hash_to_prime(&(base, exp, result));
         let r = int(exp % &l);
         // w = Q^l * u^r
-        let (a, b) = rayon::join(|| G::exp(&proof.Q, &l), || G::exp(&base, &r));
+        let (a, b) = rayon::join(|| G::exp(&proof.Q, &l), || G::exp(base, &r));
         let w = G::op(&a, &b);
         w == *result
     }

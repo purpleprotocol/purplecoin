@@ -24,7 +24,7 @@ impl<G: UnknownOrderGroup> Poke2<G> {
         let alpha = int::<U256>(hash(&(base, result, &z, &l)).into());
         let (q, r) = <(Integer, Integer)>::from(exp.div_rem_euc_ref(&l));
         #[allow(non_snake_case)]
-        let Q = G::exp(&G::op(&base, &G::exp(&g, &alpha)), &q);
+        let Q = G::exp(&G::op(base, &G::exp(&g, &alpha)), &q);
         Self { z, Q, r }
     }
 
@@ -36,9 +36,9 @@ impl<G: UnknownOrderGroup> Poke2<G> {
         let alpha = int::<U256>(hash(&(base, result, &z, &l)).into());
         let lhs = G::op(
             &G::exp(Q, &l),
-            &G::exp(&G::op(&base, &G::exp(&g, &alpha)), &r),
+            &G::exp(&G::op(base, &G::exp(&g, &alpha)), r),
         );
-        let rhs = G::op(result, &G::exp(&z, &alpha));
+        let rhs = G::op(result, &G::exp(z, &alpha));
         lhs == rhs
     }
 }

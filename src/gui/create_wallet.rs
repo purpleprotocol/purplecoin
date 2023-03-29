@@ -9,7 +9,7 @@ use bip39::{Language, Mnemonic, MnemonicType};
 use iced::image::Handle;
 use iced::widget::Image;
 use iced::{
-    alignment::Horizontal, button, Alignment, Button, Column, Container, Element, Length, Checkbox,
+    alignment::Horizontal, button, Alignment, Button, Checkbox, Column, Container, Element, Length,
     SafeText as Text,
 };
 use std::io;
@@ -27,7 +27,7 @@ pub enum CreateWalletMessage {
 enum CreateWalletState {
     Null,
     RenderMnemonic(Mnemonic),
-    ChooseWalletNameAndPassword(Mnemonic),
+    ChooseWalletNameAndPassword(Mnemonic, String, Zeroizing<String>),
     ConfirmMnemonic(Mnemonic, String, Zeroizing<String>),
 }
 
@@ -38,7 +38,7 @@ pub struct CreateWalletScreen {
     is_checked: bool,
 
     // Encryption key for password state
-    // 
+    //
     // We encrypt the wallet password before it is being passed to the text input
     // and we decrypt it when the local state is being updated. We then zeroize
     // the encryption key and the local state once we are done. In this way we do
@@ -56,12 +56,14 @@ impl CreateWalletScreen {
             to_overview_button_state: button::State::new(),
             is_checked: false,
             state: CreateWalletState::Null,
+            pass_encr_key: [0; 32],
         }
     }
 
-    pub fn reset(&mut self) -> {
+    pub fn reset(&mut self) {
         self.is_checked = false;
         self.state = CreateWalletState::Null;
+        self.pass_encr_key.zeroize();
     }
 
     pub fn update(&mut self, message: CreateWalletMessage) {
@@ -72,25 +74,30 @@ impl CreateWalletScreen {
                     Language::English,
                 ))
             }
-            CreateWalletMessage::ConfirmMnemonic => {
-                let mut mnemonic = None;
-                if let CreateWalletState::RenderMnemonic(mn) = &mut self.state {
-                    mnemonic = Some(mn.clone());
-                } else {
-                    unreachable!()
-                }
-
-                self.state = CreateWalletState::ConfirmMnemonic(mnemonic.unwrap());
-            }
             CreateWalletMessage::ChooseWalletNameAndPassword => {
-                let mut mnemonic = None;
-                if let CreateWalletState::RenderMnemonic(mn) = &mut self.state {
-                    mnemonic = Some(mn.clone());
+                let mnemonic = if let CreateWalletState::RenderMnemonic(mn) = &self.state {
+                    mn.clone()
                 } else {
                     unreachable!()
-                }
+                };
 
-                self.state = CreateWalletState::ChooseWalletNameAndPassword(mnemonic.unwrap());
+                self.state = CreateWalletState::ChooseWalletNameAndPassword(
+                    mnemonic,
+                    String::new(),
+                    Zeroizing::new(String::new()),
+                );
+            }
+            CreateWalletMessage::ConfirmMnemonic => {
+                let (mnemonic, wallet_name, wallet_password) =
+                    if let CreateWalletState::ChooseWalletNameAndPassword(mn, wn, wp) = &self.state
+                    {
+                        (mn.clone(), wn.clone(), wp.clone())
+                    } else {
+                        unreachable!()
+                    };
+
+                self.state =
+                    CreateWalletState::ConfirmMnemonic(mnemonic, wallet_name, wallet_password);
             }
             CreateWalletMessage::CheckboxToggled(state) => {
                 self.is_checked = state;
@@ -108,7 +115,7 @@ impl Screen for CreateWalletScreen {
     }
 
     fn content(&mut self) -> Element<'_, Self::Message> {
-        match self.state {
+        match &self.state {
             CreateWalletState::Null => {
                 let content: Element<'_, CreateWalletMessage> = Container::new(
                     Column::new()
@@ -193,7 +200,7 @@ impl Screen for CreateWalletScreen {
                 }
             }
 
-            CreateWalletState::ChooseWalletNameAndPassword(mnemonic) => {
+            CreateWalletState::ChooseWalletNameAndPassword(mnemonic, wallet_name, password) => {
                 let secure_text = Text::new(mnemonic.phrase()).size(28);
 
                 let content: Element<'_, CreateWalletMessage> = Container::new(
@@ -219,7 +226,7 @@ impl Screen for CreateWalletScreen {
                 content.map(Message::CreateWallet)
             }
 
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 }
