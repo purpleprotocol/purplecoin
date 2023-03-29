@@ -12,6 +12,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [x] Benchmark accumulator code in order to determine optimum number of sectors and shards
   - [x] Implement difficulty calculation
   - [x] Green PoW implementation
+  - [ ] Update RandomX to GhostRider
   - [x] Sequence PoW algorithms
   - [ ] Choose minimum mainnet difficulty
   - [x] Determine ASIC friendly hash functions
