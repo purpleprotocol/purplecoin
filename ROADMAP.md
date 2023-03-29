@@ -294,7 +294,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [ ] Render alternative asset balances
   - [ ] Render alternative asset transaction histories
   - [ ] Render wallet addresses
-  - [ ] Create wallet
+  - [x] Create wallet
   - [ ] Import wallet
     - [ ] Import wallet from encrypted private key with secure window to enter the decryption key
     - [ ] Import wallet from unencrypted private key with secure window
