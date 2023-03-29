@@ -1,13 +1,13 @@
 //! This module wraps `blake2b_rfc` into a convenient hashing interface (`GeneralHasher`) and
 //! exports the generalized `hash` function. Also exported is `hash_to_prime`, which works by
 //! repeatedly `hash`ing a value together with an incrementing nonce until the output is prime.
-use crate::uint::{u256, U256};
+use crate::uint::u256;
 use lazy_static::*;
 use lru::LruCache;
 use parking_lot::Mutex;
 use rand::Rng;
 use rayon::prelude::*;
-use rug::integer::Order;
+
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroUsize;

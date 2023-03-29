@@ -8,9 +8,10 @@ use crate::gui::{theme::Theme, Icon, Message, Tab};
 use iced::{Column, Container, Element, Radio, Text};
 use iced_aw::TabLabel;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TabBarPosition {
     Top,
+    #[default]
     Bottom,
 }
 
@@ -24,12 +25,6 @@ impl From<TabBarPosition> for String {
             TabBarPosition::Top => "Top",
             TabBarPosition::Bottom => "Bottom",
         })
-    }
-}
-
-impl Default for TabBarPosition {
-    fn default() -> Self {
-        TabBarPosition::Bottom
     }
 }
 

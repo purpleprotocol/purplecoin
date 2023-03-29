@@ -63,7 +63,7 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
         vc_acc_set: &[Integer],
         bits: &[(bool, Integer)],
     ) -> Result<(Self, VectorProof<G>), VCError> {
-        let (elems_with_zero, elems_with_one) = group_elems_by_bit(&bits)?;
+        let (elems_with_zero, elems_with_one) = group_elems_by_bit(bits)?;
         let (new_acc, membership_proof) = vc.0.add_with_proof(&elems_with_one);
         let nonmembership_proof = new_acc
             .prove_nonmembership(vc_acc_set, &elems_with_zero)
@@ -115,7 +115,7 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
             nonmembership_proof,
         }: &VectorProof<G>,
     ) -> bool {
-        let group_result = group_elems_by_bit(&bits);
+        let group_result = group_elems_by_bit(bits);
         if group_result.is_err() {
             return false;
         }
@@ -123,13 +123,13 @@ impl<G: UnknownOrderGroup> VectorCommitment<G> {
         let mut verified_membership = false;
         let mut verified_nonmembership = false;
         //for empty elems, default as true verify.
-        if elems_with_one.len() == 0 {
+        if elems_with_one.is_empty() {
             verified_membership = true;
         } else {
             verified_membership =
                 vc.0.verify_membership_batch(&elems_with_one, membership_proof);
         }
-        if elems_with_zero.len() == 0 {
+        if elems_with_zero.is_empty() {
             verified_nonmembership = true;
         } else {
             verified_nonmembership =

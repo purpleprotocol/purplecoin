@@ -2758,7 +2758,7 @@ pub struct StackTrace {
 }
 
 impl StackTrace {
-    pub fn extend_from_frame_stack<'a>(&mut self, stack: &[Frame<'a>], script: &Script) {
+    pub fn extend_from_frame_stack(&mut self, stack: &[Frame<'_>], script: &Script) {
         let trace = stack.iter().rev().take(TRACE_SIZE).map(|frame| TraceItem {
             i_ptr: frame.i_ptr,
             func_idx: frame.func_idx,

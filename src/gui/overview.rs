@@ -46,6 +46,16 @@ impl OverviewTab {
             OverviewMessage::OverviewPressed => {}
         }
     }
+
+    pub fn reload_wallets(&mut self) {
+        let mut keys = crate::global::WALLETS
+            .read()
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        keys.sort();
+        self.selected_wallet = keys.first().cloned();
+    }
 }
 
 impl Tab for OverviewTab {

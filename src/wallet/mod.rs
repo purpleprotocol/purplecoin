@@ -484,74 +484,105 @@ pub fn load_hdwallet(wallet_name: &str) -> Result<HDWallet, &'static str> {
 pub fn generate_hdwallet_bip39_english(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::English)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::English),
+    )
 }
 
 pub fn generate_hdwallet_bip39_chinese_simplified(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::ChineseSimplified)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::ChineseSimplified),
+    )
 }
 
 pub fn generate_hdwallet_bip39_chinese_traditional(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::ChineseTraditional)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::ChineseTraditional),
+    )
 }
 
 pub fn generate_hdwallet_bip39_french(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::French)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::French),
+    )
 }
 
 pub fn generate_hdwallet_bip39_italian(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::Italian)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::Italian),
+    )
 }
 
 pub fn generate_hdwallet_bip39_japanese(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::Japanese)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::Japanese),
+    )
 }
 
 pub fn generate_hdwallet_bip39_korean(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::Korean)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::Korean),
+    )
 }
 
 pub fn generate_hdwallet_bip39_spanish(
     wallet_name: &str,
     passphrase: &str,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    gen_hdwallet_bip39(wallet_name, passphrase, Language::Spanish)
+) -> Result<HDWallet, &'static str> {
+    gen_hdwallet_bip39(
+        wallet_name,
+        passphrase,
+        Mnemonic::new(MnemonicType::Words24, Language::Spanish),
+    )
 }
 
 pub fn gen_hdwallet_bip39(
     wallet_name: &str,
     passphrase: &str,
-    language: Language,
-) -> Result<(HDWallet, Mnemonic), &'static str> {
-    let mnemonic = Mnemonic::new(MnemonicType::Words24, language);
+    mnemonic: Mnemonic,
+) -> Result<HDWallet, &'static str> {
     let phrase: &str = mnemonic.phrase();
-
     let mut seed = [0; 64];
     let mut hasher = blake3::Hasher::new();
     hasher.update(mnemonic.phrase().as_bytes());
     let mut out = hasher.finalize_xof();
     out.fill(&mut seed);
-
-    Ok((generate_hdwallet(wallet_name, passphrase, seed)?, mnemonic))
+    let result = generate_hdwallet(wallet_name, passphrase, seed)?;
+    seed.zeroize();
+    Ok(result)
 }
 
 pub fn generate_hdwallet(
@@ -713,6 +744,52 @@ pub fn generate_hdwallet(
     Ok(wallet)
 }
 
+pub fn load_wallets() {
+    let mut wallets_path = dirs::config_dir().unwrap();
+
+    wallets_path.push("Purplecoin");
+    wallets_path.push("wallets");
+
+    fs::create_dir_all(wallets_path.clone()).unwrap();
+    let paths = fs::read_dir(wallets_path).expect("IO read error");
+    let mut wallets_lock = crate::global::WALLETS.write();
+    wallets_lock.clear();
+
+    for path in paths {
+        let file = path
+            .unwrap()
+            .file_name()
+            .into_string()
+            .expect("could not decode wallet filename");
+        let file_len = file.len();
+
+        // .dat extension is not possible
+        if file_len < 4 {
+            continue;
+        }
+
+        let extension = &file.as_bytes()[file_len - 4..];
+
+        // Check for .dat extension
+        if extension != ".dat".as_bytes() {
+            continue;
+        }
+
+        let wallet_name = file.split(".dat").next().unwrap();
+        let wallet = crate::wallet::load_hdwallet(wallet_name)
+            .unwrap_or_else(|err| panic!("could not load wallet {wallet_name}! reason: {err}"));
+
+        let mut amount: i128 = 0;
+        for o in wallet.outputs.iter() {
+            let a = o.amount;
+            amount += a;
+        }
+
+        crate::global::set_balance(wallet_name, amount);
+        wallets_lock.insert(wallet_name.to_owned(), wallet);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -727,9 +804,7 @@ mod tests {
     #[test]
     fn hdwallet_generate_then_load() {
         let wallet_name = generate_wallet_name();
-        let wallet = generate_hdwallet_bip39_english(&wallet_name, "test")
-            .unwrap()
-            .0;
+        let wallet = generate_hdwallet_bip39_english(&wallet_name, "test").unwrap();
         let loaded_wallet = load_hdwallet(&wallet_name).unwrap();
         assert_eq!(wallet, loaded_wallet);
     }
@@ -737,9 +812,7 @@ mod tests {
     #[test]
     fn hdwallet_generate_dump_then_load() {
         let wallet_name = generate_wallet_name();
-        let wallet = generate_hdwallet_bip39_english(&wallet_name, "test")
-            .unwrap()
-            .0;
+        let wallet = generate_hdwallet_bip39_english(&wallet_name, "test").unwrap();
         dump_hdwallet(&wallet, &wallet_name).unwrap();
         let loaded_wallet = load_hdwallet(&wallet_name).unwrap();
         assert_eq!(wallet, loaded_wallet);

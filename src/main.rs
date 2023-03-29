@@ -12,13 +12,9 @@ use iced::{Application, Settings};
 use log::*;
 use mimalloc::MiMalloc;
 use purplecoin::chain::backend::disk::DiskBackend;
-use purplecoin::chain::backend::ShardBackend;
 use purplecoin::chain::*;
-
 use purplecoin::node::*;
-
 use purplecoin::primitives::*;
-
 use purplecoin::settings::SETTINGS;
 
 use rand::prelude::*;
@@ -28,7 +24,6 @@ use std::env;
 
 use std::sync::atomic::AtomicBool;
 
-use std::fs;
 use std::thread;
 use std::time::Duration;
 use tarpc::server::{self, incoming::Incoming, Channel};
@@ -60,7 +55,7 @@ fn run_init() -> anyhow::Result<()> {
     #[cfg(feature = "gui")]
     thread::spawn(start_runtime);
 
-    load_wallets();
+    purplecoin::wallet::load_wallets();
 
     #[cfg(not(feature = "gui"))]
     start_runtime()?;
@@ -131,43 +126,6 @@ fn start_runtime() -> anyhow::Result<()> {
     })
 }
 
-fn load_wallets() {
-    let mut wallets_path = dirs::config_dir().unwrap();
-
-    wallets_path.push("Purplecoin");
-    wallets_path.push("wallets");
-
-    let paths = fs::read_dir(wallets_path).expect("IO read error");
-    let mut wallets_lock = purplecoin::global::WALLETS.write();
-
-    for path in paths {
-        let file = path
-            .unwrap()
-            .file_name()
-            .into_string()
-            .expect("Could not decode wallet filename");
-        let file_len = file.len();
-
-        // .dat extension is not possible
-        if file_len < 4 {
-            continue;
-        }
-
-        let extension = &file.as_bytes()[file_len - 4..];
-
-        // Check for .dat extension
-        if extension != ".dat".as_bytes() {
-            continue;
-        }
-
-        let wallet_name = file.split(".dat").next().unwrap();
-        let wallet = purplecoin::wallet::load_hdwallet(wallet_name)
-            .unwrap_or_else(|_| panic!("Could not load wallet: {wallet_name}"));
-
-        wallets_lock.insert(wallet_name.to_owned(), wallet);
-    }
-}
-
 #[cfg(feature = "gui")]
 fn start_gui() -> iced::Result {
     let mut gui_settings = Settings {
@@ -177,13 +135,14 @@ fn start_gui() -> iced::Result {
 
     // Set application icon
     {
-        let icon_with_format = image::io::Reader::with_format(
-            std::io::Cursor::new(include_bytes!("./gui/img/logo_purple_square.png")),
-            image::ImageFormat::Png,
+        gui_settings.window.icon = Some(
+            Icon::from_rgba(
+                purplecoin::global::LOGO_PIXELS.0.clone(),
+                purplecoin::global::LOGO_PIXELS.1,
+                purplecoin::global::LOGO_PIXELS.2,
+            )
+            .unwrap(),
         );
-        let pixels = icon_with_format.decode().unwrap().to_rgba8();
-        gui_settings.window.icon =
-            Some(Icon::from_rgba(pixels.to_vec(), pixels.width(), pixels.height()).unwrap());
     }
 
     // Don't close application implicitly when clicking the close window button

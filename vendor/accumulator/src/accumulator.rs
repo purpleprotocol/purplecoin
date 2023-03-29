@@ -1,8 +1,8 @@
 //! Accumulator library, built on a generic group interface.
-use crate::group::{Codec, ToInteger, UnknownOrderGroup};
+use crate::group::{Codec, UnknownOrderGroup};
 use crate::hash::hash_to_prime;
 use crate::proof::{Poe, Poke2};
-use crate::util::{divide_and_conquer, int, prime_hash_product, shamir_trick};
+use crate::util::{divide_and_conquer, int, prime_hash_product};
 use rayon::prelude::*;
 use rug::Integer;
 use std::hash::Hash;
@@ -187,7 +187,7 @@ impl<G: UnknownOrderGroup, T: Hash + Clone> ProofOfCorrectness<G, T> {
 
     /// Deserialize from bytes
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, &'static str> {
-        if bytes.len() == 0 {
+        if bytes.is_empty() {
             return Err("empty bytes received");
         }
 
@@ -275,7 +275,7 @@ impl<G: UnknownOrderGroup, T: Hash + Clone> ProofOfCorrectness<G, T> {
                 let q: G::Elem = qref.clone();
                 let proof_added = MembershipProof {
                     witness: witness.clone(),
-                    proof: proof.clone(),
+                    proof,
                 };
 
                 let proof_deleted = MembershipProof {
@@ -313,7 +313,7 @@ impl<G: UnknownOrderGroup, T: Hash + Clone> ProofOfCorrectness<G, T> {
                 let q: G::Elem = qref.clone();
                 let proof_deleted = MembershipProof {
                     witness: witness.clone(),
-                    proof: proof.clone(),
+                    proof,
                 };
 
                 let proof_added = MembershipProof {
@@ -368,7 +368,7 @@ impl<G: UnknownOrderGroup, T: Hash + Clone> ProofOfCorrectness<G, T> {
                 })
             }
 
-            _ => return Err("bad format"),
+            _ => Err("bad format"),
         }
     }
 }
@@ -490,7 +490,7 @@ impl<G: UnknownOrderGroup, T: Eq + Hash + Clone + Send + Sync> Accumulator<G, T>
 
         #[cfg(debug_assertions)]
         for (p, witness_elem) in &prime_witnesses {
-            if G::exp(&witness_elem, &p) != self.value {
+            if G::exp(witness_elem, p) != self.value {
                 return Err(AccError::BadWitness);
             }
         }

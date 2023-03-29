@@ -135,6 +135,7 @@ pub trait UnknownOrderGroup: Group {
 
 /// Trait to convert G::Elem to Integer
 pub trait ToInteger {
+    /// Convert to integer
     fn to_integer(&self) -> Integer;
 }
 

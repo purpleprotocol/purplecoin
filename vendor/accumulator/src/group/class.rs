@@ -224,7 +224,7 @@ impl ToInteger for ClassElem {
 }
 
 impl From<Integer> for ClassElem {
-    fn from(other: Integer) -> Self {
+    fn from(_other: Integer) -> Self {
         unimplemented!()
     }
 }

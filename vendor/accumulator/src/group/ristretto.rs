@@ -39,7 +39,7 @@ impl Ristretto {
 /// A Ristretto group element, directly wrapping a Ristretto point.
 pub struct RistrettoElem(RistrettoPoint);
 
-#[allow(clippy::derive_hash_xor_eq)]
+#[allow(clippy::derived_hash_with_manual_eq)]
 impl Hash for RistrettoElem {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.compress().as_bytes().hash(state);
@@ -101,7 +101,7 @@ impl ToInteger for RistrettoElem {
 }
 
 impl From<Integer> for RistrettoElem {
-    fn from(other: Integer) -> Self {
+    fn from(_other: Integer) -> Self {
         unimplemented!()
     }
 }

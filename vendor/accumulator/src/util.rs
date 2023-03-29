@@ -45,7 +45,11 @@ pub fn shamir_trick<G: Group>(
         return None;
     }
 
-    let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(&y));
+    #[cfg(debug_assertions)]
+    let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(y));
+
+    #[cfg(not(debug_assertions))]
+    let (_, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(y));
 
     #[cfg(debug_assertions)]
     if gcd != int(1) {

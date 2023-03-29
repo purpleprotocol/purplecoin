@@ -2,7 +2,7 @@
 use super::{ElemFrom, Group, UnknownOrderGroup};
 use crate::group::{Codec, ToInteger};
 use crate::hash::{INTERNAL_LRU, INTERNAL_LRU_SHARDS};
-use crate::uint::u256;
+
 use crate::util::{int, TypeRep};
 use rug::integer::Order;
 use rug::Integer;
@@ -117,7 +117,7 @@ where
         let modulus = Self::rep();
         let val = int(t) % modulus;
         if val > *HALF_MODULUS {
-            Rsa2048Elem(<(Integer, Integer)>::from((-val).div_rem_euc_ref(&modulus)).1)
+            Rsa2048Elem(<(Integer, Integer)>::from((-val).div_rem_euc_ref(modulus)).1)
         } else {
             Rsa2048Elem(val)
         }
