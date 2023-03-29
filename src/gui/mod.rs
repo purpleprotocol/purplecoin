@@ -32,7 +32,7 @@ mod choose_wallet_creation;
 use choose_wallet_creation::{ChooseWalletCreationMessage, ChooseWalletCreationScreen};
 
 mod create_wallet;
-use create_wallet::{CreateWalletMessage, CreateWalletScreen};
+use create_wallet::{CreateWalletMessage, CreateWalletScreen, CreateWalletState};
 
 mod import_wallet;
 mod import_wallet_file;
@@ -163,7 +163,20 @@ impl Application for GUI {
                 self.active_screen = ActiveScreen::ImportWallet
             }
             Message::CreateWallet(CreateWalletMessage::ConfirmMnemonic) => {
-                //crate::wallet::create
+                self.create_wallet_screen
+                    .update(CreateWalletMessage::ConfirmMnemonic);
+
+                // Create wallet and dump it to disk
+                if let CreateWalletState::ConfirmMnemonic(mnemonic, name, password) =
+                    &self.create_wallet_screen.state
+                {
+                    crate::wallet::gen_hdwallet_bip39(&name, password.as_ref(), mnemonic.clone())
+                        .unwrap();
+                } else {
+                    unreachable!();
+                };
+                crate::wallet::load_wallets();
+                self.overview_tab.reload_wallets();
                 self.create_wallet_screen.reset();
                 self.active_screen = ActiveScreen::Tabs;
             }

@@ -275,7 +275,7 @@ impl<G: UnknownOrderGroup, T: Hash + Clone> ProofOfCorrectness<G, T> {
                 let q: G::Elem = qref.clone();
                 let proof_added = MembershipProof {
                     witness: witness.clone(),
-                    proof: proof,
+                    proof,
                 };
 
                 let proof_deleted = MembershipProof {
@@ -313,7 +313,7 @@ impl<G: UnknownOrderGroup, T: Hash + Clone> ProofOfCorrectness<G, T> {
                 let q: G::Elem = qref.clone();
                 let proof_deleted = MembershipProof {
                     witness: witness.clone(),
-                    proof: proof,
+                    proof,
                 };
 
                 let proof_added = MembershipProof {

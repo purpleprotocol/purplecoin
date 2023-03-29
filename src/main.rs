@@ -12,13 +12,9 @@ use iced::{Application, Settings};
 use log::*;
 use mimalloc::MiMalloc;
 use purplecoin::chain::backend::disk::DiskBackend;
-
 use purplecoin::chain::*;
-
 use purplecoin::node::*;
-
 use purplecoin::primitives::*;
-
 use purplecoin::settings::SETTINGS;
 
 use rand::prelude::*;
@@ -27,8 +23,6 @@ use rayon::prelude::*;
 use std::env;
 
 use std::sync::atomic::AtomicBool;
-
-use std::fs;
 
 use std::thread;
 use std::time::Duration;
@@ -61,7 +55,7 @@ fn run_init() -> anyhow::Result<()> {
     #[cfg(feature = "gui")]
     thread::spawn(start_runtime);
 
-    load_wallets();
+    purplecoin::wallet::load_wallets();
 
     #[cfg(not(feature = "gui"))]
     start_runtime()?;
@@ -130,50 +124,6 @@ fn start_runtime() -> anyhow::Result<()> {
 
         Ok(())
     })
-}
-
-fn load_wallets() {
-    let mut wallets_path = dirs::config_dir().unwrap();
-
-    wallets_path.push("Purplecoin");
-    wallets_path.push("wallets");
-
-    let paths = fs::read_dir(wallets_path).expect("IO read error");
-    let mut wallets_lock = purplecoin::global::WALLETS.write();
-
-    for path in paths {
-        let file = path
-            .unwrap()
-            .file_name()
-            .into_string()
-            .expect("could not decode wallet filename");
-        let file_len = file.len();
-
-        // .dat extension is not possible
-        if file_len < 4 {
-            continue;
-        }
-
-        let extension = &file.as_bytes()[file_len - 4..];
-
-        // Check for .dat extension
-        if extension != ".dat".as_bytes() {
-            continue;
-        }
-
-        let wallet_name = file.split(".dat").next().unwrap();
-        let wallet = purplecoin::wallet::load_hdwallet(wallet_name)
-            .unwrap_or_else(|err| panic!("could not load wallet {wallet_name}! reason: {err}"));
-
-        let mut amount: i128 = 0;
-        for o in wallet.outputs.iter() {
-            let a = o.amount;
-            amount += a;
-        }
-
-        purplecoin::global::set_balance(wallet_name, amount);
-        wallets_lock.insert(wallet_name.to_owned(), wallet);
-    }
 }
 
 #[cfg(feature = "gui")]

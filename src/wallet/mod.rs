@@ -744,6 +744,52 @@ pub fn generate_hdwallet(
     Ok(wallet)
 }
 
+pub fn load_wallets() {
+    let mut wallets_path = dirs::config_dir().unwrap();
+
+    wallets_path.push("Purplecoin");
+    wallets_path.push("wallets");
+
+    fs::create_dir_all(wallets_path.clone()).unwrap();
+    let paths = fs::read_dir(wallets_path).expect("IO read error");
+    let mut wallets_lock = crate::global::WALLETS.write();
+    wallets_lock.clear();
+
+    for path in paths {
+        let file = path
+            .unwrap()
+            .file_name()
+            .into_string()
+            .expect("could not decode wallet filename");
+        let file_len = file.len();
+
+        // .dat extension is not possible
+        if file_len < 4 {
+            continue;
+        }
+
+        let extension = &file.as_bytes()[file_len - 4..];
+
+        // Check for .dat extension
+        if extension != ".dat".as_bytes() {
+            continue;
+        }
+
+        let wallet_name = file.split(".dat").next().unwrap();
+        let wallet = crate::wallet::load_hdwallet(wallet_name)
+            .unwrap_or_else(|err| panic!("could not load wallet {wallet_name}! reason: {err}"));
+
+        let mut amount: i128 = 0;
+        for o in wallet.outputs.iter() {
+            let a = o.amount;
+            amount += a;
+        }
+
+        crate::global::set_balance(wallet_name, amount);
+        wallets_lock.insert(wallet_name.to_owned(), wallet);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
