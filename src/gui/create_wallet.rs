@@ -36,15 +36,6 @@ pub struct CreateWalletScreen {
     to_confirm_button_state: button::State,
     to_overview_button_state: button::State,
     is_checked: bool,
-
-    // Encryption key for password state
-    //
-    // We encrypt the wallet password before it is being passed to the text input
-    // and we decrypt it when the local state is being updated. We then zeroize
-    // the encryption key and the local state once we are done. In this way we do
-    // not leave any readable traces in memory.
-    pass_encr_key: [u8; 32],
-
     state: CreateWalletState,
 }
 
@@ -56,14 +47,12 @@ impl CreateWalletScreen {
             to_overview_button_state: button::State::new(),
             is_checked: false,
             state: CreateWalletState::Null,
-            pass_encr_key: [0; 32],
         }
     }
 
     pub fn reset(&mut self) {
         self.is_checked = false;
         self.state = CreateWalletState::Null;
-        self.pass_encr_key.zeroize();
     }
 
     pub fn update(&mut self, message: CreateWalletMessage) {

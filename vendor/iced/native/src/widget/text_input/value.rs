@@ -1,10 +1,11 @@
 use unicode_segmentation::UnicodeSegmentation;
+use zeroize::Zeroize;
 
 /// The value of a [`TextInput`].
 ///
 /// [`TextInput`]: crate::widget::TextInput
 // TODO: Reduce allocations, cache results (?)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Zeroize)]
 pub struct Value {
     graphemes: Vec<String>,
 }
