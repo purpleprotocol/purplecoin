@@ -224,7 +224,7 @@ impl Frame {
 
         // TODO: Use vectorial text instead of primitive
         self.primitives.push(Primitive::Text {
-            content: text.content,
+            content: text.content.to_string().into(),
             bounds: Rectangle {
                 x: position.x,
                 y: position.y,

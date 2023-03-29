@@ -1,6 +1,7 @@
 use iced_native::image;
 use iced_native::svg;
 use iced_native::{Background, Color, Font, Rectangle, Size, Vector};
+use zeroize::Zeroizing;
 
 use crate::alignment;
 use crate::triangle;
@@ -19,8 +20,8 @@ pub enum Primitive {
     },
     /// A text primitive
     Text {
-        /// The contents of the text
-        content: String,
+        /// The contents of the text. Zeroize all text passed to the renderer by default.
+        content: Zeroizing<String>,
         /// The bounds of the text
         bounds: Rectangle,
         /// The color of the text

@@ -9,29 +9,42 @@ use bip39::{Language, Mnemonic, MnemonicType};
 use iced::image::Handle;
 use iced::widget::Image;
 use iced::{
-    alignment::Horizontal, button, Alignment, Button, Column, Container, Element, Length,
+    alignment::Horizontal, button, Alignment, Button, Column, Container, Element, Length, Checkbox,
     SafeText as Text,
 };
 use std::io;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 #[derive(Debug, Clone)]
 pub enum CreateWalletMessage {
     RenderMnemonic,
     ConfirmMnemonic,
+    ChooseWalletNameAndPassword,
+    CheckboxToggled(bool),
     Done,
 }
 
 enum CreateWalletState {
     Null,
     RenderMnemonic(Mnemonic),
-    ConfirmMnemonic(Mnemonic),
+    ChooseWalletNameAndPassword(Mnemonic),
+    ConfirmMnemonic(Mnemonic, String, Zeroizing<String>),
 }
 
 pub struct CreateWalletScreen {
     to_render_button_state: button::State,
     to_confirm_button_state: button::State,
     to_overview_button_state: button::State,
+    is_checked: bool,
+
+    // Encryption key for password state
+    // 
+    // We encrypt the wallet password before it is being passed to the text input
+    // and we decrypt it when the local state is being updated. We then zeroize
+    // the encryption key and the local state once we are done. In this way we do
+    // not leave any readable traces in memory.
+    pass_encr_key: [u8; 32],
+
     state: CreateWalletState,
 }
 
@@ -41,8 +54,14 @@ impl CreateWalletScreen {
             to_render_button_state: button::State::new(),
             to_confirm_button_state: button::State::new(),
             to_overview_button_state: button::State::new(),
+            is_checked: false,
             state: CreateWalletState::Null,
         }
+    }
+
+    pub fn reset(&mut self) -> {
+        self.is_checked = false;
+        self.state = CreateWalletState::Null;
     }
 
     pub fn update(&mut self, message: CreateWalletMessage) {
@@ -62,6 +81,19 @@ impl CreateWalletScreen {
                 }
 
                 self.state = CreateWalletState::ConfirmMnemonic(mnemonic.unwrap());
+            }
+            CreateWalletMessage::ChooseWalletNameAndPassword => {
+                let mut mnemonic = None;
+                if let CreateWalletState::RenderMnemonic(mn) = &mut self.state {
+                    mnemonic = Some(mn.clone());
+                } else {
+                    unreachable!()
+                }
+
+                self.state = CreateWalletState::ChooseWalletNameAndPassword(mnemonic.unwrap());
+            }
+            CreateWalletMessage::CheckboxToggled(state) => {
+                self.is_checked = state;
             }
             _ => unimplemented!(),
         }
@@ -90,7 +122,7 @@ impl Screen for CreateWalletScreen {
                                 .horizontal_alignment(Horizontal::Center),
                         )
                         .push(Text::new(
-                            "We will start by generating a 24 word recovery phrase for your wallet. Write it down on a piece of paper and keep it safe. You risk losing your assets if you lose the recovery phrase.",
+                            "We will start by generating a 24 word recovery phrase for your wallet. Write it down on a piece of paper and keep it safe.",
                         ))
                         .push(Text::new(
                             "You risk losing your assets if you lose the recovery phrase.",
@@ -106,7 +138,63 @@ impl Screen for CreateWalletScreen {
             }
 
             CreateWalletState::RenderMnemonic(ref mnemonic) => {
-                let secure_text = Text::new(mnemonic.phrase()).size(24);
+                if self.is_checked {
+                    let secure_text = Text::new(mnemonic.phrase()).size(28);
+
+                    let content: Element<'_, CreateWalletMessage> = Container::new(
+                        Column::new()
+                            .align_items(Alignment::Center)
+                            .max_width(600)
+                            .padding(20)
+                            .spacing(16)
+                            .push(
+                                Text::new("Write down recovery phrase")
+                                    .size(48)
+                                    .horizontal_alignment(Horizontal::Center),
+                            )
+                            .push(secure_text)
+                            .push(Text::new(
+                                "Write these on a piece of paper and keep it safe. Make sure to double check that it is correct before continuing.",
+                            ))
+                            .push(
+                                Checkbox::new(self.is_checked, "I have written down my recovery phrase and double checked that it is correct.", CreateWalletMessage::CheckboxToggled))
+                            .push(
+                                Button::new(&mut self.to_render_button_state, Text::new("Continue"))
+                                    .on_press(CreateWalletMessage::ChooseWalletNameAndPassword),
+                            ),
+                    )
+                    .into();
+
+                    content.map(Message::CreateWallet)
+                } else {
+                    let secure_text = Text::new(mnemonic.phrase()).size(28);
+
+                    let content: Element<'_, CreateWalletMessage> = Container::new(
+                        Column::new()
+                            .align_items(Alignment::Center)
+                            .max_width(600)
+                            .padding(20)
+                            .spacing(16)
+                            .push(
+                                Text::new("Write down recovery phrase")
+                                    .size(48)
+                                    .horizontal_alignment(Horizontal::Center),
+                            )
+                            .push(secure_text)
+                            .push(Text::new(
+                                "Write these on a piece of paper and keep it safe. Make sure to double check that it is correct before continuing.",
+                            ))
+                            .push(
+                                Checkbox::new(self.is_checked, "I have written down my recovery phrase and double checked that it is correct.", CreateWalletMessage::CheckboxToggled))
+                    )
+                    .into();
+
+                    content.map(Message::CreateWallet)
+                }
+            }
+
+            CreateWalletState::ChooseWalletNameAndPassword(mnemonic) => {
+                let secure_text = Text::new(mnemonic.phrase()).size(28);
 
                 let content: Element<'_, CreateWalletMessage> = Container::new(
                     Column::new()
@@ -121,19 +209,17 @@ impl Screen for CreateWalletScreen {
                         )
                         .push(secure_text)
                         .push(Text::new(
-                            "Write these on a piece of paper and keep it safe.",
+                            "Write these on a piece of paper and keep it safe. Make sure to double check that it is correct before continuing.",
                         ))
                         .push(
-                            Button::new(&mut self.to_render_button_state, Text::new("Continue"))
-                                .on_press(CreateWalletMessage::RenderMnemonic),
-                        ),
+                            Checkbox::new(self.is_checked, "I have written down my recovery phrase and double checked that it is correct.", CreateWalletMessage::CheckboxToggled))
                 )
                 .into();
 
                 content.map(Message::CreateWallet)
             }
 
-            _ => unimplemented!(),
+            _ => unimplemented!()
         }
     }
 }

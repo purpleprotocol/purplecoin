@@ -23,6 +23,7 @@ pure = ["iced_pure"]
 glam = "0.10"
 raw-window-handle = "0.4"
 thiserror = "1.0"
+zeroize = { version = "1.4.3", features = ["zeroize_derive"] }
 
 [dependencies.bytemuck]
 version = "1.4"

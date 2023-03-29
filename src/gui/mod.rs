@@ -162,6 +162,11 @@ impl Application for GUI {
             Message::ChooseWalletCreation(ChooseWalletCreationMessage::ImportPressed) => {
                 self.active_screen = ActiveScreen::ImportWallet
             }
+            Message::CreateWallet(ConfirmMnemonic(mnemonic)) => {
+                //crate::wallet::create
+                self.create_wallet_screen.reset();
+                self.active_screen = ActiveScreen::Overview;
+            }
             Message::CreateWallet(message) => self.create_wallet_screen.update(message),
             Message::Tick(_) => {}
         }

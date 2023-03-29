@@ -160,7 +160,7 @@ where
 
     fn fill_text(&mut self, text: Text<'_, Self::Font>) {
         self.primitives.push(Primitive::Text {
-            content: text.content.to_string(),
+            content: text.content.to_string().into(),
             bounds: text.bounds,
             size: text.size,
             color: text.color,
