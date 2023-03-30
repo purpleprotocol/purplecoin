@@ -1232,9 +1232,8 @@ mod tests {
             .is_comparable(&VmTerm::Unsigned128Array(vec!(2_u128, 2_u128))));
         assert!(VmTerm::UnsignedBigArray(vec!(ubig!(1), ubig!(1)))
             .is_comparable(&VmTerm::UnsignedBigArray(vec!(ubig!(2), ubig!(2)))));
-        assert!(
-            VmTerm::Signed8Array(vec!(1_i8, 1_i8)).is_comparable(&VmTerm::Signed8Array(vec!(2_i8, 2_i8)))
-        );
+        assert!(VmTerm::Signed8Array(vec!(1_i8, 1_i8))
+            .is_comparable(&VmTerm::Signed8Array(vec!(2_i8, 2_i8))));
         assert!(VmTerm::Signed16Array(vec!(1_i16, 1_i16))
             .is_comparable(&VmTerm::Signed16Array(vec!(2_i16, 2_i16))));
         assert!(VmTerm::Signed32Array(vec!(1_i32, 1_i32))
@@ -1252,9 +1251,8 @@ mod tests {
             .is_comparable(&VmTerm::Hash256Array(vec!([2; 32], [2; 32]))));
         assert!(!VmTerm::Hash512Array(vec!([1; 64], [1; 64], [1; 64]))
             .is_comparable(&VmTerm::Hash512Array(vec!([2; 64]))));
-        assert!(
-            !VmTerm::Unsigned8Array(vec!(1_u8)).is_comparable(&VmTerm::Unsigned8Array(vec!(2_u8, 2_u8)))
-        );
+        assert!(!VmTerm::Unsigned8Array(vec!(1_u8))
+            .is_comparable(&VmTerm::Unsigned8Array(vec!(2_u8, 2_u8))));
         assert!(!VmTerm::Unsigned16Array(vec!(1_u16))
             .is_comparable(&VmTerm::Unsigned16Array(vec!(2_u16, 2_u16))));
         assert!(!VmTerm::Unsigned32Array(vec!(1_u32))
@@ -1265,16 +1263,14 @@ mod tests {
             .is_comparable(&VmTerm::Unsigned128Array(vec!(2_u128, 2_u128))));
         assert!(!VmTerm::UnsignedBigArray(vec!(ubig!(1)))
             .is_comparable(&VmTerm::UnsignedBigArray(vec!(ubig!(2), ubig!(2)))));
-        assert!(!VmTerm::Signed8Array(vec!(1_i8)).is_comparable(&VmTerm::Signed8Array(vec!(2_i8, 2_i8))));
-        assert!(
-            !VmTerm::Signed16Array(vec!(1_i16)).is_comparable(&VmTerm::Signed16Array(vec!(2_i16, 2_i16)))
-        );
-        assert!(
-            !VmTerm::Signed32Array(vec!(1_i32)).is_comparable(&VmTerm::Signed32Array(vec!(2_i32, 2_i32)))
-        );
-        assert!(
-            !VmTerm::Signed64Array(vec!(1_i64)).is_comparable(&VmTerm::Signed64Array(vec!(2_i64, 2_i64)))
-        );
+        assert!(!VmTerm::Signed8Array(vec!(1_i8))
+            .is_comparable(&VmTerm::Signed8Array(vec!(2_i8, 2_i8))));
+        assert!(!VmTerm::Signed16Array(vec!(1_i16))
+            .is_comparable(&VmTerm::Signed16Array(vec!(2_i16, 2_i16))));
+        assert!(!VmTerm::Signed32Array(vec!(1_i32))
+            .is_comparable(&VmTerm::Signed32Array(vec!(2_i32, 2_i32))));
+        assert!(!VmTerm::Signed64Array(vec!(1_i64))
+            .is_comparable(&VmTerm::Signed64Array(vec!(2_i64, 2_i64))));
         assert!(!VmTerm::Signed128Array(vec!(1_i128))
             .is_comparable(&VmTerm::Signed128Array(vec!(2_i128, 2_i128))));
         assert!(!VmTerm::SignedBigArray(vec!(ibig!(1)))
