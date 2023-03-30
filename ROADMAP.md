@@ -155,10 +155,10 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xb8` ReturnFunc - Returns from the current function and moves the terms on the current frame to the parent frame. Behaves the same as `Return` if called from the main function
     - [ ] OP `0xb9` Return - Stops script execution and succeeds if the topmost item on the stack is `1`
     - [ ] OP `0xba` EqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are equal
-    - [ ] OP `0xbb` Lt - Pushes `1` on top of the stack if the topmost item on the stack is less than the second item on stack
-    - [ ] OP `0xbc` Gt - Pushes `1` on top of the stack if the topmost item on the stack is greater than the second item on stack
-    - [ ] OP `0xbd` Leq - Pushes `1` on top of the stack if the topmost item on the stack is less or equal than the second item on stack
-    - [ ] OP `0xbe` Geq - Pushes `1` on top of the stack if the topmost item on the stack is greater or equal than the second item on stack
+    - [x] OP `0xbb` Lt - Pushes `1` on top of the stack if the topmost item on the stack is less than the second item on stack
+    - [x] OP `0xbc` Gt - Pushes `1` on top of the stack if the topmost item on the stack is greater than the second item on stack
+    - [x] OP `0xbd` Leq - Pushes `1` on top of the stack if the topmost item on the stack is less or equal than the second item on stack
+    - [x] OP `0xbe` Geq - Pushes `1` on top of the stack if the topmost item on the stack is greater or equal than the second item on stack
     - [ ] OP `0xbf` IfLt - If less than control operator
     - [ ] OP `0xc0` IfGt - If greater than control operator
     - [ ] OP `0xc1` IfLeq - If less or equal control operator
