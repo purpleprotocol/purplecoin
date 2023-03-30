@@ -6,6 +6,7 @@
 
 use crate::chain::backend::disk::DB;
 use crate::chain::{ChainConfig, SectorConfig, ShardConfig};
+use crate::consensus::*;
 use crate::primitives::*;
 use accumulator::group::Rsa2048;
 use accumulator::Witness;
@@ -134,7 +135,7 @@ pub trait PowChainBackend<'a>: Sized + Clone {
                 .filter(|r| ruhashes.contains(r.hash().unwrap()))
                 .count();
 
-            if valid_runnerups_count != 3 {
+            if valid_runnerups_count != SECTORS - 1 {
                 return Err(PowChainBackendErr::Block(
                     BlockVerifyErr::InvalidRunnerupHash,
                 ));

@@ -170,7 +170,7 @@ impl Application for GUI {
                 if let CreateWalletState::ConfirmMnemonic(mnemonic, name, password) =
                     &self.create_wallet_screen.state
                 {
-                    crate::wallet::gen_hdwallet_bip39(&name, password.as_ref(), mnemonic.clone())
+                    crate::wallet::gen_hdwallet_bip39(name, password.as_ref(), mnemonic.clone())
                         .unwrap();
                 } else {
                     unreachable!();

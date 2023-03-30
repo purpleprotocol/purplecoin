@@ -229,7 +229,7 @@ impl Screen for CreateWalletScreen {
 
             CreateWalletState::ChooseWalletNameAndPassword(mnemonic, wallet_name, password) => {
                 let content: Element<'_, CreateWalletMessage> =
-                    if self.password.len() == 0 && self.password_confirm.len() == 0 {
+                    if self.password.is_empty() && self.password_confirm.is_empty() {
                         Container::new(
                             Column::new()
                                 .align_items(Alignment::Center)

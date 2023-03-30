@@ -70,7 +70,7 @@ anyhow = "1.0.62"
 futures = "0.3"
 tarpc = { version = "0.31", features = ["full"] }
 tokio = { version = "1.0", features = ["full"] }
-warp = "0.3"
+warp = "0.3.3"
 rayon = "1.5.3"
 libp2p = "0.46.1"
 bloomfilter = "1.0.9"

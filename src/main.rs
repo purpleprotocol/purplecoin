@@ -6,7 +6,6 @@
 
 #![feature(stmt_expr_attributes)]
 
-use futures::prelude::*;
 use iced::window::icon::Icon;
 use iced::{Application, Settings};
 use log::*;
@@ -17,13 +16,8 @@ use purplecoin::node::*;
 use purplecoin::primitives::*;
 use purplecoin::settings::SETTINGS;
 
-use rand::prelude::*;
-use rayon::prelude::*;
-
 use std::env;
-
 use std::sync::atomic::AtomicBool;
-
 use std::thread;
 use std::time::Duration;
 use tarpc::server::{self, incoming::Incoming, Channel};

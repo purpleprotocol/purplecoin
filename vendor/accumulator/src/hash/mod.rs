@@ -152,11 +152,12 @@ pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
         hash[0] |= 1;
         let candidate_prime = u256(hash);
         if primality::is_prob_prime(&candidate_prime) {
+            let prime = Integer::from(candidate_prime);
             {
                 let mut lru = (*INTERNAL_LRU)[shard].lock();
-                lru.put(first_hash, Integer::from(candidate_prime));
+                lru.put(first_hash, prime.clone());
             }
-            return Integer::from(candidate_prime);
+            return prime;
         }
 
         // Second pass
@@ -181,11 +182,12 @@ pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
                 checked_count += 1;
                 let candidate_prime = u256(hash);
                 if primality::is_prob_prime(&candidate_prime) {
+                    let prime = Integer::from(candidate_prime);
                     {
                         let mut lru = (*INTERNAL_LRU)[shard].lock();
-                        lru.put(first_hash, Integer::from(candidate_prime));
+                        lru.put(first_hash, prime.clone());
                     }
-                    return Integer::from(candidate_prime);
+                    return prime;
                 }
             }
 
