@@ -74,7 +74,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x3d` Signed64ArrayVar - Pushes a `Signed64Array` onto the stack
     - [x] OP `0x3e` Signed128ArrayVar - Pushes a `Signed128Array` onto the stack
     - [ ] OP `0x3f` SignedBigArrayVar - Pushes a `SignedBigArray` onto the stack
-    - [ ] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
+    - [x] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
     - [x] OP `0x4b` GetType - Pushes on top of the stack the type code of the value currently on top of the stack as a `Unsigned8`
     - [x] OP `0x4f` ClearStack - Clears the stack
     - [ ] OP `0x50` Add - Pops the two topmost items on the stack, performs addition and pushes the result on the stack

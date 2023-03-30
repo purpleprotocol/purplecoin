@@ -471,6 +471,28 @@ impl VmTerm {
             Self::SignedBigArray(_) => true,
         }
     }
+
+    /// Returns the length if the VmTerm is an array type, 0 otherwise
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Hash160Array(arr) => arr.len(),
+            Self::Hash256Array(arr) => arr.len(),
+            Self::Hash512Array(arr) => arr.len(),
+            Self::Unsigned8Array(arr) => arr.len(),
+            Self::Unsigned16Array(arr) => arr.len(),
+            Self::Unsigned32Array(arr) => arr.len(),
+            Self::Unsigned64Array(arr) => arr.len(),
+            Self::Unsigned128Array(arr) => arr.len(),
+            Self::UnsignedBigArray(arr) => arr.len(),
+            Self::Signed8Array(arr) => arr.len(),
+            Self::Signed16Array(arr) => arr.len(),
+            Self::Signed32Array(arr) => arr.len(),
+            Self::Signed64Array(arr) => arr.len(),
+            Self::Signed128Array(arr) => arr.len(),
+            Self::SignedBigArray(arr) => arr.len(),
+            _ => 0
+        }
+    }
 }
 
 impl Encode for VmTerm {
