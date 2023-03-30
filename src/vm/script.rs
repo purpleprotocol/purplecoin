@@ -7853,10 +7853,8 @@ mod tests {
             ],
         };
 
-        let script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned16(0x0004),
-            VmTerm::Unsigned16(0x0006),
-        ];
+        let script_output: Vec<VmTerm> =
+            vec![VmTerm::Unsigned16(0x0004), VmTerm::Unsigned16(0x0006)];
         let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
