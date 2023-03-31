@@ -75,7 +75,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x3d` Signed64ArrayVar - Pushes a `Signed64Array` onto the stack
     - [x] OP `0x3e` Signed128ArrayVar - Pushes a `Signed128Array` onto the stack
     - [ ] OP `0x3f` SignedBigArrayVar - Pushes a `SignedBigArray` onto the stack
-    - [ ] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
+    - [x] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
     - [x] OP `0x4b` GetType - Pushes on top of the stack the type code of the value currently on top of the stack as a `Unsigned8`
     - [x] OP `0x4f` ClearStack - Clears the stack
     - [ ] OP `0x50` Add - Pops the two topmost items on the stack, performs addition and pushes the result on the stack
@@ -156,10 +156,10 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xb8` ReturnFunc - Returns from the current function and moves the terms on the current frame to the parent frame. Behaves the same as `Return` if called from the main function
     - [ ] OP `0xb9` Return - Stops script execution and succeeds if the topmost item on the stack is `1`
     - [ ] OP `0xba` EqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are equal
-    - [ ] OP `0xbb` Lt - Pushes `1` on top of the stack if the topmost item on the stack is less than the second item on stack
-    - [ ] OP `0xbc` Gt - Pushes `1` on top of the stack if the topmost item on the stack is greater than the second item on stack
-    - [ ] OP `0xbd` Leq - Pushes `1` on top of the stack if the topmost item on the stack is less or equal than the second item on stack
-    - [ ] OP `0xbe` Geq - Pushes `1` on top of the stack if the topmost item on the stack is greater or equal than the second item on stack
+    - [x] OP `0xbb` Lt - Pushes `1` on top of the stack if the topmost item on the stack is less than the second item on stack
+    - [x] OP `0xbc` Gt - Pushes `1` on top of the stack if the topmost item on the stack is greater than the second item on stack
+    - [x] OP `0xbd` Leq - Pushes `1` on top of the stack if the topmost item on the stack is less or equal than the second item on stack
+    - [x] OP `0xbe` Geq - Pushes `1` on top of the stack if the topmost item on the stack is greater or equal than the second item on stack
     - [ ] OP `0xbf` IfLt - If less than control operator
     - [ ] OP `0xc0` IfGt - If greater than control operator
     - [ ] OP `0xc1` IfLeq - If less or equal control operator
