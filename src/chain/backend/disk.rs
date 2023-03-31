@@ -7,6 +7,7 @@
 use crate::chain::mmr::*;
 use crate::chain::*;
 use crate::primitives::*;
+use rocksdb::Error as RocksDBErr;
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::Witness;
 use dashmap::{DashMap as HashMap, DashSet as HashSet};
@@ -17,7 +18,9 @@ use std::sync::Arc;
 pub type DB = TransactionDB<MultiThreaded>;
 pub type WriteBatch = WriteBatchWithTransaction<true>;
 
-pub const HEADERS_CF: &str = "headers";
+pub const SECTOR_HEADERS_CF: &str = "sector_headers";
+pub const SHARD_HEADERS_CF: &str = "shard_headers";
+pub const MMR_CF: &str = "mmr";
 pub const TRANSACTIONS_CF: &str = "transactions";
 pub const OUTPUTS_CF: &str = "outputs";
 pub const SHARE_CHAIN_CF: &str = "sharechain";
@@ -59,6 +62,14 @@ impl<'a> DiskBackend<'a> {
     pub fn is_sector(&self) -> bool {
         debug_assert!(self.shard_config.is_none());
         self.sector_config.is_some()
+    }
+
+    pub fn get(&self, cf: &str, k: &[u8]) -> Result<Option<Vec<u8>>, RocksDBErr> {
+        unimplemented!();
+    } 
+
+    pub fn put(&self, cf: &str, k: Vec<u8>, v: Vec<u8>) -> Result<Option<Vec<u8>>, RocksDBErr>  {
+        unimplemented!();
     }
 }
 
@@ -167,7 +178,7 @@ impl<'a> PowChainBackend<'a> for DiskBackend<'a> {
     ) -> Result<(), PowChainBackendErr> {
         let header: PowBlockHeaderWithHash = block_header.clone().into();
         let mut batch = self.db.transaction();
-        let headers_cf = self.db.cf_handle(HEADERS_CF).unwrap();
+        let headers_cf = self.db.cf_handle(SECTOR_HEADERS_CF).unwrap();
         batch.put_cf(
             &headers_cf,
             header.hash.as_bytes(),
@@ -194,7 +205,7 @@ impl<'a> ShardBackend<'a> for DiskBackend<'a> {
         let mut tx = self.db.transaction();
         let hkey = &["h".as_bytes(), &[block_header.chain_id]].concat();
         let bhkey = &[[block_header.chain_id].as_slice(), &hbytes].concat();
-        let headers_cf = self.db.cf_handle(HEADERS_CF).unwrap();
+        let headers_cf = self.db.cf_handle(SHARD_HEADERS_CF).unwrap();
         let cur_height = tx
             .get_cf(&headers_cf, hkey)?
             .map(|bytes| {
@@ -269,7 +280,7 @@ impl<'a> ShardBackend<'a> for DiskBackend<'a> {
         h: u64,
     ) -> Result<Option<BlockHeader>, ShardBackendErr> {
         let bhkey = &[[self.shard_config().chain_id].as_slice(), &h.to_le_bytes()].concat();
-        let headers_cf = self.db.cf_handle(HEADERS_CF).unwrap();
+        let headers_cf = self.db.cf_handle(SHARD_HEADERS_CF).unwrap();
         let hash = self.db.get_cf(&headers_cf, bhkey)?;
         if hash.is_none() {
             return Ok(None);
@@ -306,7 +317,7 @@ impl<'a> ShardBackend<'a> for DiskBackend<'a> {
     // TODO: Cache this
     fn height(&self) -> Result<u64, ShardBackendErr> {
         let key = &["h".as_bytes(), &[self.shard_config().chain_id]].concat();
-        let headers_cf = self.db.cf_handle(HEADERS_CF).unwrap();
+        let headers_cf = self.db.cf_handle(SHARD_HEADERS_CF).unwrap();
         let tx = self.db.transaction();
         match tx.get_cf(&headers_cf, key) {
             Ok(Some(bheight)) => {
@@ -388,8 +399,29 @@ impl<'a> MMRBackend<Vec<u8>> for DiskBackend<'a> {
         unimplemented!()
     }
 
-    fn unpruned_size(&self) -> u64 {
-        unimplemented!()
+    fn unpruned_size(&self) -> Result<u64, MMRBackendErr>  {
+        let key = &["u".as_bytes(), &[self.sector_config().sector_id]].concat();
+        let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
+        let tx = self.db.transaction();
+        match tx.get_cf(&mmr_cf, key) {
+            Ok(Some(bheight)) => {
+                let bheight = self
+                    .db
+                    .get_cf(&mmr_cf, key)?
+                    .ok_or(MMRBackendErr::CorruptData)?;
+                let mut out = [0; 8];
+                out.copy_from_slice(&bheight);
+                Ok(u64::from_le_bytes(out))
+            }
+
+            Ok(None) => {
+                tx.put_cf(&mmr_cf, key, 1_u64.to_le_bytes())?;
+                tx.commit()?;
+                Ok(1)
+            }
+
+            Err(err) => Err(err.into()),
+        }
     }
 
     fn hash_key(&self) -> &str {
@@ -404,8 +436,29 @@ impl<'a> MMRBackend<Vec<u8>> for DiskBackend<'a> {
         unreachable!()
     }
 
-    fn size(&self) -> u64 {
-        unimplemented!()
+    fn size(&self) -> Result<u64, MMRBackendErr>  {
+        let key = &["s".as_bytes(), &[self.sector_config().sector_id]].concat();
+        let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
+        let tx = self.db.transaction();
+        match tx.get_cf(&mmr_cf, key) {
+            Ok(Some(bheight)) => {
+                let bheight = self
+                    .db
+                    .get_cf(&mmr_cf, key)?
+                    .ok_or(MMRBackendErr::CorruptData)?;
+                let mut out = [0; 8];
+                out.copy_from_slice(&bheight);
+                Ok(u64::from_le_bytes(out))
+            }
+
+            Ok(None) => {
+                tx.put_cf(&mmr_cf, key, 1_u64.to_le_bytes())?;
+                tx.commit()?;
+                Ok(1)
+            }
+
+            Err(err) => Err(err.into()),
+        }
     }
 
     fn flush(&mut self) -> Result<(), MMRBackendErr> {

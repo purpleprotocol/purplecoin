@@ -480,7 +480,9 @@ pub fn create_rocksdb_backend<'a>() -> Arc<DB> {
     let mut cf_opts = Options::default();
     cf_opts.set_max_write_buffer_number(3);
     let cfs = vec![
-        ColumnFamilyDescriptor::new(crate::chain::backend::disk::HEADERS_CF, cf_opts.clone()),
+        ColumnFamilyDescriptor::new(crate::chain::backend::disk::SECTOR_HEADERS_CF, cf_opts.clone()),
+        ColumnFamilyDescriptor::new(crate::chain::backend::disk::SHARD_HEADERS_CF, cf_opts.clone()),
+        ColumnFamilyDescriptor::new(crate::chain::backend::disk::MMR_CF, cf_opts.clone()),
         ColumnFamilyDescriptor::new(
             crate::chain::backend::disk::TRANSACTIONS_CF,
             cf_opts.clone(),

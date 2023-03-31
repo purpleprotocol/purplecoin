@@ -234,7 +234,7 @@ impl<'a> MMRBackend<Vec<u8>> for MemoryBackend<'a> {
         unimplemented!()
     }
 
-    fn unpruned_size(&self) -> u64 {
+    fn unpruned_size(&self) -> Result<u64, MMRBackendErr> {
         unimplemented!()
     }
 
@@ -242,7 +242,7 @@ impl<'a> MMRBackend<Vec<u8>> for MemoryBackend<'a> {
         unimplemented!()
     }
 
-    fn size(&self) -> u64 {
+    fn size(&self) -> Result<u64, MMRBackendErr> {
         unimplemented!()
     }
 

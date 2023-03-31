@@ -7,6 +7,7 @@
 use crate::chain::mmr::merkle_proof::MMRMerkleProof;
 use crate::chain::mmr::util::*;
 use crate::primitives::Hash256;
+use rocksdb::Error as RocksDBErr;
 use bincode::Encode;
 
 /// MMR trait
@@ -18,7 +19,7 @@ pub trait MMR<'a, T: Encode, B: MMRBackend<T> + 'a> {
 
     /// Attempts to append a new leaf to the mmr
     fn append(&'a mut self, leaf: &T) -> Result<(), MMRBackendErr> {
-        let mut pos = self.backend().size();
+        let mut pos = self.backend().size()?;
         let mut current_hash = hash_leaf_with_pos(leaf, pos, self.hash_key());
         let mut hashes = vec![current_hash];
 
@@ -63,7 +64,7 @@ pub trait MMRBackend<T: Encode> {
         self.write_leaf(hashes[0], leaf)?;
 
         // Write hashes
-        let mut pos = self.unpruned_size();
+        let mut pos = self.unpruned_size()?;
         for h in hashes.iter() {
             self.write_hash_at_pos(*h, pos)?;
             pos += 1;
@@ -91,22 +92,17 @@ pub trait MMRBackend<T: Encode> {
     fn write_hash_at_pos(&self, hash: Hash256, pos: u64) -> Result<(), MMRBackendErr>;
 
     /// Returns the size of the mmr
-    fn size(&self) -> u64;
+    fn size(&self) -> Result<u64, MMRBackendErr>;
 
     /// Returns the unpruned size of the mmr
-    fn unpruned_size(&self) -> u64;
-
-    /// Returns `true` if the MMR is empty
-    fn is_empty(&self) -> bool {
-        self.unpruned_size() == 0
-    }
+    fn unpruned_size(&self) -> Result<u64, MMRBackendErr>;
 
     /// Returns the key passed to the hash function used in constructing the MMR
     fn hash_key(&self) -> &str;
 
     /// Returns `true` if the mmr is empty
-    fn empty(&self) -> bool {
-        self.size() == 0
+    fn is_empty(&self) -> Result<bool, MMRBackendErr> {
+        Ok(self.unpruned_size()? == 0)
     }
 
     /// Taken from https://github.com/mimblewimble/grin/blob/master/core/src/core/pmmr/pmmr.rs
@@ -116,7 +112,7 @@ pub trait MMRBackend<T: Encode> {
     /// If this return a hash then this is our peaks sibling.
     /// If none then the sibling of our peak is the peak to the left.
     fn bag_the_rhs(&self, peak_pos0: u64) -> Result<Option<Hash256>, MMRBackendErr> {
-        let size = self.unpruned_size();
+        let size = self.unpruned_size()?;
         let rhs = peaks(size).into_iter().filter(|&x| x > peak_pos0);
 
         let mut res = None;
@@ -139,7 +135,7 @@ pub trait MMRBackend<T: Encode> {
     /// Returns a vec of the peaks of this MMR.
     fn peaks(&self) -> Result<Vec<Hash256>, MMRBackendErr> {
         let mut res = vec![];
-        for pi0 in peaks(self.unpruned_size()).into_iter() {
+        for pi0 in peaks(self.unpruned_size()?).into_iter() {
             let p = self.get_peak(pi0)?;
             if let Some(p) = p {
                 res.push(p);
@@ -156,7 +152,7 @@ pub trait MMRBackend<T: Encode> {
         let rhs = self.bag_the_rhs(peak_pos0)?;
         let mut res = vec![];
 
-        for x in peaks(self.unpruned_size())
+        for x in peaks(self.unpruned_size()?)
             .into_iter()
             .filter(|&x| x < peak_pos0)
         {
@@ -184,7 +180,7 @@ pub trait MMRBackend<T: Encode> {
     /// Walks all unpruned nodes in the MMR and revalidate all parent hashes
     fn validate(&self) -> Result<(), MMRBackendErr> {
         // iterate on all parent nodes
-        for n in 0..self.size() {
+        for n in 0..self.size()? {
             let height = bintree_postorder_height(n);
             if height > 0 {
                 if let Some(hash) = self.get_hash(n)? {
@@ -214,12 +210,12 @@ pub trait MMRBackend<T: Encode> {
     /// Computes the root of the MMR. Find all the peaks in the current
     /// tree and "bags" them to get a single peak.
     fn root(&self) -> Result<Hash256, MMRBackendErr> {
-        if self.is_empty() {
+        if self.is_empty()? {
             return Ok(Hash256::zero());
         }
         let mut res = None;
         let peaks = self.peaks()?;
-        let mmr_size = self.size();
+        let mmr_size = self.size()?;
         for peak in peaks.into_iter().rev() {
             res = match res {
                 None => Some(peak),
@@ -237,7 +233,7 @@ pub trait MMRBackend<T: Encode> {
     ///
     /// Build a Merkle proof for the element at the given position.
     fn merkle_proof(&self, pos0: u64) -> Result<MMRMerkleProof, MMRBackendErr> {
-        let size = self.unpruned_size();
+        let size = self.unpruned_size()?;
         #[cfg(debug_assertions)]
         println!("merkle_proof  {pos0}, size {size}");
 
@@ -281,7 +277,15 @@ pub trait MMRBackend<T: Encode> {
 pub enum MMRBackendErr {
     InvalidMMRSize,
     InvalidMMRParentHash(u64),
+    CorruptData,
     CustomString(String),
+    RocksDB(RocksDBErr),
+}
+
+impl From<RocksDBErr> for MMRBackendErr {
+    fn from(error: RocksDBErr) -> Self {
+        Self::RocksDB(error)
+    }
 }
 
 impl From<String> for MMRBackendErr {
