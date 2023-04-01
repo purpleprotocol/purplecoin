@@ -393,10 +393,16 @@ static void mi_segment_os_free(mi_segment_t* segment, mi_segments_tld_t* tld) {
   // mi_segment_try_purge(segment,true,tld->stats);
   
   const size_t size = mi_segment_size(segment);
-  const size_t csize = _mi_commit_mask_committed_size(&segment->commit_mask, size);
-
-  _mi_abandoned_await_readers();  // wait until safe to free
-  _mi_arena_free(segment, mi_segment_size(segment), csize, segment->memid, tld->stats);
+  if (size != MI_SEGMENT_SIZE || segment->mem_align_offset != 0 || segment->kind == MI_SEGMENT_HUGE || // only push regular segments on the cache
+       !_mi_segment_cache_push(segment, size, segment->memid, &segment->commit_mask, &segment->decommit_mask, segment->mem_is_large, segment->mem_is_pinned, tld->os)) 
+  {
+    if (!segment->mem_is_pinned) {
+      const size_t csize = _mi_commit_mask_committed_size(&segment->commit_mask, size);
+      if (csize > 0) { _mi_stat_decrease(&_mi_stats_main.committed, csize); }
+    }
+    _mi_abandoned_await_readers();  // wait until safe to free
+    _mi_arena_free(segment, mi_segment_size(segment), segment->mem_alignment, segment->mem_align_offset, segment->memid, segment->mem_is_pinned /* pretend not committed to not double count decommits */, tld->stats);
+  }
 }
 
 // called by threads that are terminating 
@@ -493,9 +499,9 @@ static bool mi_segment_commit(mi_segment_t* segment, uint8_t* p, size_t size, mi
 static bool mi_segment_ensure_committed(mi_segment_t* segment, uint8_t* p, size_t size, mi_stats_t* stats) {
   mi_assert_internal(mi_commit_mask_all_set(&segment->commit_mask, &segment->purge_mask));
   // note: assumes commit_mask is always full for huge segments as otherwise the commit mask bits can overflow
-  if (mi_commit_mask_is_full(&segment->commit_mask) && mi_commit_mask_is_empty(&segment->purge_mask)) return true; // fully committed
+  if (mi_commit_mask_is_full(&segment->commit_mask) && mi_commit_mask_is_empty(&segment->decommit_mask)) return true; // fully committed
   mi_assert_internal(segment->kind != MI_SEGMENT_HUGE);
-  return mi_segment_commit(segment, p, size, stats);
+  return mi_segment_commitx(segment,true,p,size,stats);
 }
 
 static bool mi_segment_purge(mi_segment_t* segment, uint8_t* p, size_t size, mi_stats_t* stats) {    
@@ -816,30 +822,27 @@ static mi_segment_t* mi_segment_os_alloc( size_t required, size_t page_alignment
     *psegment_slices = mi_segment_calculate_slices(required + extra, ppre_size, pinfo_slices);
   }
 
-  const size_t segment_size = (*psegment_slices) * MI_SEGMENT_SLICE_SIZE;
-  mi_segment_t* segment = (mi_segment_t*)_mi_arena_alloc_aligned(segment_size, alignment, align_offset, commit, allow_large, req_arena_id, &memid, os_tld);
-  if (segment == NULL) {
-    return NULL;  // failed to allocate
-  }
-
-  // ensure metadata part of the segment is committed  
-  mi_commit_mask_t commit_mask; 
-  if (memid.initially_committed) { 
-    mi_commit_mask_create_full(&commit_mask);  
-  }
-  else { 
-    // at least commit the info slices
-    const size_t commit_needed = _mi_divide_up((*pinfo_slices)*MI_SEGMENT_SLICE_SIZE, MI_COMMIT_SIZE);
-    mi_assert_internal(commit_needed>0);
-    mi_commit_mask_create(0, commit_needed, &commit_mask);    
-    mi_assert_internal(commit_needed*MI_COMMIT_SIZE >= (*pinfo_slices)*MI_SEGMENT_SLICE_SIZE);
-    if (!_mi_os_commit(segment, commit_needed*MI_COMMIT_SIZE, NULL, tld->stats)) {
-      _mi_arena_free(segment,segment_size,0,memid,tld->stats);
-      return NULL;
-    }    
+  // get from cache?
+  if (page_alignment == 0) {
+    segment = (mi_segment_t*)_mi_segment_cache_pop(segment_size, pcommit_mask, pdecommit_mask, mem_large, &mem_large, &is_pinned, is_zero, req_arena_id, &memid, os_tld);
   }
   mi_assert_internal(segment != NULL && (uintptr_t)segment % MI_SEGMENT_SIZE == 0);
 
+  const size_t commit_needed = _mi_divide_up((*pinfo_slices)*MI_SEGMENT_SLICE_SIZE, MI_COMMIT_SIZE);
+  mi_assert_internal(commit_needed>0);
+  mi_commit_mask_t commit_needed_mask;
+  mi_commit_mask_create(0, commit_needed, &commit_needed_mask);
+  if (!mi_commit_mask_all_set(pcommit_mask, &commit_needed_mask)) {
+    // at least commit the info slices
+    mi_assert_internal(commit_needed*MI_COMMIT_SIZE >= (*pinfo_slices)*MI_SEGMENT_SLICE_SIZE);
+    bool ok = _mi_os_commit(segment, commit_needed*MI_COMMIT_SIZE, is_zero, tld->stats);
+    if (!ok) return NULL; // failed to commit 
+    mi_commit_mask_set(pcommit_mask, &commit_needed_mask); 
+  }
+  else if (*is_zero) {
+    // track zero initialization for valgrind
+    mi_track_mem_defined(segment, commit_needed * MI_COMMIT_SIZE);        
+  }
   segment->memid = memid;
   segment->allow_decommit = !memid.is_pinned;
   segment->allow_purge = segment->allow_decommit && (mi_option_get(mi_option_purge_delay) >= 0);
@@ -877,15 +880,36 @@ static mi_segment_t* mi_segment_alloc(size_t required, size_t page_alignment, mi
                                               &segment_slices, &pre_size, &info_slices, commit, tld, os_tld);
   if (segment == NULL) return NULL;
   
-  // zero the segment info? -- not always needed as it may be zero initialized from the OS   
-  if (!segment->memid.initially_zero) {
+  // zero the segment info? -- not always needed as it may be zero initialized from the OS 
+  mi_atomic_store_ptr_release(mi_segment_t, &segment->abandoned_next, NULL);  // tsan
+  {
     ptrdiff_t ofs    = offsetof(mi_segment_t, next);
     size_t    prefix = offsetof(mi_segment_t, slices) - ofs;
-    size_t    zsize  = prefix + (sizeof(mi_slice_t) * (segment_slices + 1)); // one more  
-    _mi_memzero((uint8_t*)segment + ofs, zsize);
+    size_t    zsize  = prefix + (sizeof(mi_slice_t) * (segment_slices + 1)); // one more
+    if (!is_zero) {
+      memset((uint8_t*)segment + ofs, 0, zsize);
+    }  
   }
   
-  // initialize the rest of the segment info
+  segment->commit_mask = commit_mask; // on lazy commit, the initial part is always committed
+  segment->allow_decommit = (mi_option_is_enabled(mi_option_allow_decommit) && !segment->mem_is_pinned && !segment->mem_is_large);    
+  if (segment->allow_decommit) {
+    segment->decommit_expire = 0; // don't decommit just committed memory // _mi_clock_now() + mi_option_get(mi_option_decommit_delay);
+    segment->decommit_mask = decommit_mask;
+    mi_assert_internal(mi_commit_mask_all_set(&segment->commit_mask, &segment->decommit_mask));
+    #if MI_DEBUG>2
+    const size_t commit_needed = _mi_divide_up(info_slices*MI_SEGMENT_SLICE_SIZE, MI_COMMIT_SIZE);
+    mi_commit_mask_t commit_needed_mask;
+    mi_commit_mask_create(0, commit_needed, &commit_needed_mask);
+    mi_assert_internal(!mi_commit_mask_any_set(&segment->decommit_mask, &commit_needed_mask));
+    #endif
+  }    
+  else {
+    segment->decommit_expire = 0;
+    mi_commit_mask_create_empty( &segment->decommit_mask );
+  }
+  
+  // initialize segment info
   const size_t slice_entries = (segment_slices > MI_SLICES_PER_SEGMENT ? MI_SLICES_PER_SEGMENT : segment_slices);
   segment->segment_slices = segment_slices;
   segment->segment_info_slices = info_slices;

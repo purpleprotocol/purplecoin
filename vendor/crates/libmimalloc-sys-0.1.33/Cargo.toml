@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "libmimalloc-sys"
-version = "0.1.33"
+version = "0.1.31"
 authors = ["Octavian Oncescu <octavonce@gmail.com>"]
 links = "mimalloc"
 description = "Sys crate wrapping the mimalloc allocator"

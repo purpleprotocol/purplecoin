@@ -564,3 +564,4 @@ impl From<BlockHeaderWithHash> for BlockHeader {
 
 pub mod disk;
 pub mod memory;
+pub mod memory_store;

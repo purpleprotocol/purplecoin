@@ -62,7 +62,7 @@ extern inline void* _mi_page_malloc(mi_heap_t* heap, mi_page_t* page, size_t siz
   }
 
 #if (MI_DEBUG>0) && !MI_TRACK_ENABLED && !MI_TSAN
-  if (!zero && !mi_page_is_huge(page)) {
+  if (!page->is_zero && !zero && !mi_page_is_huge(page)) {
     memset(block, MI_DEBUG_UNINIT, mi_page_usable_block_size(page));
   }
 #elif (MI_SECURE!=0)
@@ -121,11 +121,6 @@ static inline mi_decl_restrict void* mi_heap_malloc_small_zero(mi_heap_t* heap, 
     mi_heap_stat_increase(heap, malloc, mi_usable_size(p));
   }
   #endif
-  #if MI_DEBUG>3
-  if (p != NULL && zero) {
-    mi_assert_expensive(mi_mem_is_zero(p, size));
-  }
-  #endif
   return p;
 }
 
@@ -153,11 +148,6 @@ extern inline void* _mi_heap_malloc_zero_ex(mi_heap_t* heap, size_t size, bool z
     if (p != NULL) {
       if (!mi_heap_is_initialized(heap)) { heap = mi_prim_get_default_heap(); }
       mi_heap_stat_increase(heap, malloc, mi_usable_size(p));
-    }
-    #endif
-    #if MI_DEBUG>3
-    if (p != NULL && zero) {
-      mi_assert_expensive(mi_mem_is_zero(p, size));
     }
     #endif
     return p;
@@ -422,8 +412,8 @@ static mi_decl_noinline void _mi_free_block_mt(mi_page_t* page, mi_block_t* bloc
     #endif
   }
   
-  #if (MI_DEBUG>0) && !MI_TRACK_ENABLED && !MI_TSAN        // note: when tracking, cannot use mi_usable_size with multi-threading
-  if (segment->kind != MI_SEGMENT_HUGE) {                  // not for huge segments as we just reset the content
+  #if (MI_DEBUG!=0) && !MI_TRACK_ENABLED && !MI_TSAN        // note: when tracking, cannot use mi_usable_size with multi-threading
+  if (segment->kind != MI_SEGMENT_HUGE) {                   // not for huge segments as we just reset the content
     memset(block, MI_DEBUG_FREED, mi_usable_size(block));
   }
   #endif
@@ -476,7 +466,7 @@ static inline void _mi_free_block(mi_page_t* page, bool local, mi_block_t* block
     // owning thread can free a block directly
     if mi_unlikely(mi_check_is_double_free(page, block)) return;
     mi_check_padding(page, block);
-    #if (MI_DEBUG>0) && !MI_TRACK_ENABLED && !MI_TSAN
+    #if (MI_DEBUG!=0) && !MI_TRACK_ENABLED && !MI_TSAN
     if (!mi_page_is_huge(page)) {   // huge page content may be already decommitted
       memset(block, MI_DEBUG_FREED, mi_page_block_size(page));
     }
@@ -572,7 +562,7 @@ void mi_free(void* p) mi_attr_noexcept
       if mi_unlikely(mi_check_is_double_free(page, block)) return;
       mi_check_padding(page, block);
       mi_stat_free(page, block);
-      #if (MI_DEBUG>0) && !MI_TRACK_ENABLED  && !MI_TSAN
+      #if (MI_DEBUG!=0) && !MI_TRACK_ENABLED  && !MI_TSAN
       memset(block, MI_DEBUG_FREED, mi_page_block_size(page));
       #endif
       mi_track_free_size(p, mi_page_usable_size_of(page,block)); // faster then mi_usable_size as we already know the page and that p is unaligned
@@ -712,7 +702,6 @@ void* _mi_heap_realloc_zero(mi_heap_t* heap, void* p, size_t newsize, bool zero)
     mi_assert_internal(p!=NULL);
     // todo: do not track as the usable size is still the same in the free; adjust potential padding?
     // mi_track_resize(p,size,newsize)
-    // if (newsize < size) { mi_track_mem_noaccess((uint8_t*)p + newsize, size - newsize); }
     return p;  // reallocation still fits and not more than 50% waste
   }
   void* newp = mi_heap_malloc(heap,newsize);
@@ -1053,7 +1042,7 @@ void* _mi_externs[] = {
   (void*)&mi_zalloc_small,
   (void*)&mi_heap_malloc,
   (void*)&mi_heap_zalloc,
-  (void*)&mi_heap_malloc_small,
+  (void*)&mi_heap_malloc_small
   // (void*)&mi_heap_alloc_new,
   // (void*)&mi_heap_alloc_new_n
 };
