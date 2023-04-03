@@ -7,10 +7,10 @@
 use crate::chain::mmr::*;
 use crate::chain::*;
 use crate::primitives::*;
-use rocksdb::Error as RocksDBErr;
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::Witness;
 use dashmap::{DashMap as HashMap, DashSet as HashSet};
+use rocksdb::Error as RocksDBErr;
 use rocksdb::{MultiThreaded, TransactionDB, WriteBatchWithTransaction};
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
@@ -66,9 +66,9 @@ impl<'a> DiskBackend<'a> {
 
     pub fn get(&self, cf: &str, k: &[u8]) -> Result<Option<Vec<u8>>, RocksDBErr> {
         unimplemented!();
-    } 
+    }
 
-    pub fn put(&self, cf: &str, k: Vec<u8>, v: Vec<u8>) -> Result<Option<Vec<u8>>, RocksDBErr>  {
+    pub fn put(&self, cf: &str, k: Vec<u8>, v: Vec<u8>) -> Result<Option<Vec<u8>>, RocksDBErr> {
         unimplemented!();
     }
 }
@@ -141,7 +141,7 @@ impl<'a> PowChainBackend<'a> for DiskBackend<'a> {
     }
 
     fn chain_config(&self) -> &ChainConfig {
-        unimplemented!()
+        self.chain_config.as_ref()
     }
 
     fn chain_ids(&self) -> (u8, u8) {
@@ -149,7 +149,7 @@ impl<'a> PowChainBackend<'a> for DiskBackend<'a> {
     }
 
     fn sector_config(&self) -> &SectorConfig {
-        unimplemented!()
+        self.sector_config.as_ref().unwrap()
     }
 
     fn height(&self) -> Result<u64, PowChainBackendErr> {
@@ -399,7 +399,7 @@ impl<'a> MMRBackend<Vec<u8>> for DiskBackend<'a> {
         unimplemented!()
     }
 
-    fn unpruned_size(&self) -> Result<u64, MMRBackendErr>  {
+    fn unpruned_size(&self) -> Result<u64, MMRBackendErr> {
         let key = &["u".as_bytes(), &[self.sector_config().sector_id]].concat();
         let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
         let tx = self.db.transaction();
@@ -436,7 +436,7 @@ impl<'a> MMRBackend<Vec<u8>> for DiskBackend<'a> {
         unreachable!()
     }
 
-    fn size(&self) -> Result<u64, MMRBackendErr>  {
+    fn size(&self) -> Result<u64, MMRBackendErr> {
         let key = &["s".as_bytes(), &[self.sector_config().sector_id]].concat();
         let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
         let tx = self.db.transaction();

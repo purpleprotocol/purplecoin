@@ -7,8 +7,8 @@
 use crate::chain::mmr::merkle_proof::MMRMerkleProof;
 use crate::chain::mmr::util::*;
 use crate::primitives::Hash256;
-use rocksdb::Error as RocksDBErr;
 use bincode::Encode;
+use rocksdb::Error as RocksDBErr;
 
 /// MMR trait
 pub trait MMR<'a, T: Encode, B: MMRBackend<T> + 'a> {

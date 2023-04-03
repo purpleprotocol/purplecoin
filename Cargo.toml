@@ -112,6 +112,10 @@ constant_time_eq = "0.2.4"
 bs58 = "0.4.0"
 gmp-mpfr-sys = { version = "1.4.8", features = ["force-cross"] }
 
+[dependencies.xxhash-rust]
+version = "0.8.6"
+features = ["xxh3", "const_xxh3"]
+
 [dev-dependencies]
 serial_test = "*"
 criterion = "0.3"
