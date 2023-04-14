@@ -222,6 +222,14 @@ impl<'a> MMRBackend<Vec<u8>> for MemoryBackend<'a> {
         unimplemented!()
     }
 
+    fn leaf_pos_iter(&self) -> Box<dyn Iterator<Item = u64> + '_> {
+        unimplemented!();
+    }
+
+    fn leaf_idx_iter(&self, from_idx: u64) -> Box<dyn Iterator<Item = u64> + '_> {
+        unimplemented!();
+    }
+
     fn get_peak(&self, pos: u64) -> Result<Option<Hash256>, MMRBackendErr> {
         unimplemented!()
     }

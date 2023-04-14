@@ -94,8 +94,20 @@ pub trait MMRBackend<T: Encode> {
     /// Returns the size of the mmr
     fn size(&self) -> Result<u64, MMRBackendErr>;
 
+    /// Iterator over current (unpruned, unremoved) leaf positions.
+	fn leaf_pos_iter(&self) -> Box<dyn Iterator<Item = u64> + '_>;
+
+	/// Iterator over current (unpruned, unremoved) leaf insertion indices.
+	fn leaf_idx_iter(&self, from_idx: u64) -> Box<dyn Iterator<Item = u64> + '_>;
+
     /// Returns the unpruned size of the mmr
     fn unpruned_size(&self) -> Result<u64, MMRBackendErr>;
+
+    /// Number of leaves in the MMR
+	fn n_unpruned_leaves(&self) -> u64;
+
+	/// Number of leaves in the MMR up to index
+	fn n_unpruned_leaves_to_index(&self, to_index: u64) -> u64;
 
     /// Returns the key passed to the hash function used in constructing the MMR
     fn hash_key(&self) -> &str;

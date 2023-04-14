@@ -399,6 +399,14 @@ impl<'a> MMRBackend<Vec<u8>> for DiskBackend<'a> {
         unimplemented!()
     }
 
+    fn leaf_pos_iter(&self) -> Box<dyn Iterator<Item = u64> + '_> {
+        unimplemented!();
+    }
+
+    fn leaf_idx_iter(&self, from_idx: u64) -> Box<dyn Iterator<Item = u64> + '_> {
+        unimplemented!();
+    }
+
     fn unpruned_size(&self) -> Result<u64, MMRBackendErr> {
         let key = &["u".as_bytes(), &[self.sector_config().sector_id]].concat();
         let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();

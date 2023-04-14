@@ -188,3 +188,19 @@ pub fn is_left_sibling(pos0: u64) -> bool {
     let peak = 1 << height;
     (peak_map & peak) == 0
 }
+
+/// returns least position >= pos0 with height 0
+pub fn round_up_to_leaf_pos(pos0: u64) -> u64 {
+	let (insert_idx, height) = peak_map_height(pos0);
+	let leaf_idx = if height == 0 {
+		insert_idx
+	} else {
+		insert_idx + 1
+	};
+	return insertion_to_pmmr_index(leaf_idx);
+}
+
+/// Returns the 0-based pmmr index of 0-based leaf index n
+pub fn insertion_to_pmmr_index(nleaf0: u64) -> u64 {
+	2 * nleaf0 - nleaf0.count_ones() as u64
+}
