@@ -8,7 +8,8 @@ use bincode::{Decode, Encode};
 use ibig::ops::Abs;
 use ibig::{ibig, ubig, IBig, UBig};
 use num_traits::identities::Zero;
-use std::fmt;
+use num_traits::ToPrimitive;
+use std::{fmt, mem};
 
 const WORD_SIZE: usize = 8; // 8 bytes on 64bit machines
 const EMPTY_VEC_HEAP_SIZE: usize = 3 * WORD_SIZE; // 3 words
@@ -119,8 +120,69 @@ impl fmt::Debug for VmTerm {
 }
 
 impl VmTerm {
+    /// Converts the term to a byte vector.
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
+    }
+
+    /// Converts the term to a byte vector without encoding the type.
+    pub fn to_bytes_raw(&self) -> Vec<u8> {
+        match self {
+            Self::Hash160(val) => val.to_vec(),
+            Self::Hash256(val) => val.to_vec(),
+            Self::Hash512(val) => val.to_vec(),
+            Self::Unsigned8(val) => val.to_le_bytes().to_vec(),
+            Self::Unsigned16(val) => val.to_le_bytes().to_vec(),
+            Self::Unsigned32(val) => val.to_le_bytes().to_vec(),
+            Self::Unsigned64(val) => val.to_le_bytes().to_vec(),
+            Self::Unsigned128(val) => val.to_le_bytes().to_vec(),
+            Self::UnsignedBig(val) => val.to_le_bytes().to_vec(),
+            Self::Signed8(val) => val.to_le_bytes().to_vec(),
+            Self::Signed16(val) => val.to_le_bytes().to_vec(),
+            Self::Signed32(val) => val.to_le_bytes().to_vec(),
+            Self::Signed64(val) => val.to_le_bytes().to_vec(),
+            Self::Signed128(val) => val.to_le_bytes().to_vec(),
+            Self::SignedBig(val) => {
+                let sign = val.signum().to_f32() as i8;
+                let v = val.abs();
+
+                let num: UBig = v.try_into().unwrap();
+                let mut bytes = num.to_le_bytes();
+                let mut sign_num = unsafe { mem::transmute::<i8, u8>(sign) };
+                bytes.push(sign_num);
+
+                bytes
+            }
+            Self::Unsigned8Array(val) => val.clone(),
+            Self::Unsigned16Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Unsigned32Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Unsigned64Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Unsigned128Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::UnsignedBigArray(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Signed8Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Signed16Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Signed32Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Signed64Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Signed128Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::SignedBigArray(val) => val
+                .iter()
+                .map(|v| {
+                    let sign = v.signum().to_f32() as i8;
+                    let v = v.abs();
+
+                    let num: UBig = v.try_into().unwrap();
+                    let mut bytes = num.to_le_bytes().to_vec();
+                    let sign_num = unsafe { mem::transmute::<i8, u8>(sign) };
+                    bytes.push(sign_num);
+
+                    bytes
+                })
+                .flatten()
+                .collect(),
+            Self::Hash160Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
+            Self::Hash256Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
+            Self::Hash512Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
+        }
     }
 
     pub fn add_one(&mut self) -> Option<()> {
@@ -1331,5 +1393,129 @@ mod tests {
         assert!(VmTerm::Signed64Array(vec![0, 0, 0, 0, 0, 0, 0, 0, 0]).is_array());
         assert!(VmTerm::Signed128Array(vec![0, 0, 0, 0, 0, 0, 0, 0]).is_array());
         assert!(VmTerm::SignedBigArray(vec![ibig!(0), ibig!(0), ibig!(0)]).is_array());
+    }
+
+    #[test]
+    fn test_vm_term_to_bytes_raw() {
+        assert_eq!(VmTerm::Hash160([0; 20]).to_bytes_raw(), [0; 20]);
+        assert_eq!(VmTerm::Hash256([0; 32]).to_bytes_raw(), [0; 32]);
+        assert_eq!(VmTerm::Hash512([0; 64]).to_bytes_raw(), [0; 64]);
+        assert_eq!(VmTerm::Unsigned8(0x01).to_bytes_raw(), [1]);
+        assert_eq!(VmTerm::Unsigned16(0x01).to_bytes_raw(), [1, 0]);
+        assert_eq!(VmTerm::Unsigned32(0x01).to_bytes_raw(), [1, 0, 0, 0]);
+        assert_eq!(
+            VmTerm::Unsigned64(0x01).to_bytes_raw(),
+            [1, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            VmTerm::Unsigned128(0x01).to_bytes_raw(),
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(VmTerm::UnsignedBig(ubig!(0x01)).to_bytes_raw(), [1]);
+        assert_eq!(VmTerm::Signed8(0x01).to_bytes_raw(), [1]);
+        assert_eq!(VmTerm::Signed8(-1).to_bytes_raw(), [255]);
+        assert_eq!(VmTerm::Signed16(0x01).to_bytes_raw(), [1, 0]);
+        assert_eq!(VmTerm::Signed32(0x01).to_bytes_raw(), [1, 0, 0, 0]);
+        assert_eq!(
+            VmTerm::Signed64(0x01).to_bytes_raw(),
+            [1, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            VmTerm::Signed128(-2).to_bytes_raw(),
+            [254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]
+        );
+        assert_eq!(
+            VmTerm::Signed128(1).to_bytes_raw(),
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            VmTerm::Signed128(0).to_bytes_raw(),
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(VmTerm::SignedBig(ibig!(0x01)).to_bytes_raw(), [1, 1]);
+        assert_eq!(VmTerm::SignedBig(ibig!(-1)).to_bytes_raw(), [1, 255]);
+        assert_eq!(VmTerm::SignedBig(ibig!(0)).to_bytes_raw(), [0]);
+        assert_eq!(
+            VmTerm::Hash160Array(vec![[0; 20], [0; 20], [0; 20]]).to_bytes_raw(),
+            [0; 60]
+        );
+        assert_eq!(
+            VmTerm::Hash256Array(vec![[0; 32], [0; 32], [0; 32], [0; 32]]).to_bytes_raw(),
+            [0; 128]
+        );
+        assert_eq!(
+            VmTerm::Hash512Array(vec![[0; 64], [0; 64], [0; 64], [0; 64], [0; 64]]).to_bytes_raw(),
+            [0; 320]
+        );
+        assert_eq!(
+            VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06]).to_bytes_raw(),
+            [1, 2, 3, 4, 5, 6]
+        );
+        assert_eq!(
+            VmTerm::Unsigned16Array(vec![0x01, 0x02]).to_bytes_raw(),
+            [1, 0, 2, 0]
+        );
+        assert_eq!(
+            VmTerm::Unsigned32Array(vec![0x01, 0x02]).to_bytes_raw(),
+            [1, 0, 0, 0, 2, 0, 0, 0]
+        );
+        assert_eq!(
+            VmTerm::Unsigned64Array(vec![0x01, 0x02]).to_bytes_raw(),
+            [1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            VmTerm::Unsigned128Array(vec![0x01, 0x02]).to_bytes_raw(),
+            [
+                1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0
+            ]
+        );
+        assert_eq!(
+            VmTerm::UnsignedBigArray(vec![ubig!(0x01), ubig!(0x02)]).to_bytes_raw(),
+            [1, 2]
+        );
+        assert_eq!(
+            VmTerm::Signed8Array(vec![-6, 2, -1]).to_bytes_raw(),
+            [250, 2, 255]
+        );
+        assert_eq!(
+            VmTerm::Signed16Array(vec![0x01, 0x02]).to_bytes_raw(),
+            [1, 0, 2, 0]
+        );
+        assert_eq!(
+            VmTerm::Signed32Array(vec![0x01, 0x02]).to_bytes_raw(),
+            [1, 0, 0, 0, 2, 0, 0, 0]
+        );
+        assert_eq!(
+            VmTerm::Signed64Array(vec![0x01, 0x02]).to_bytes_raw(),
+            [1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            VmTerm::Signed128Array(vec![0x01, 0x02]).to_bytes_raw(),
+            [
+                1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0
+            ]
+        );
+        assert_eq!(
+            VmTerm::SignedBigArray(vec![ibig!(0x01), ibig!(0x02)]).to_bytes_raw(),
+            [1, 1, 2, 1]
+        );
+        assert_eq!(
+            VmTerm::SignedBigArray(vec![ibig!(-1), ibig!(0x02)]).to_bytes_raw(),
+            [1, 255, 2, 1]
+        );
+        assert_eq!(
+            VmTerm::Hash160Array(vec![[0; 20], [0; 20], [0; 20]]).to_bytes_raw(),
+            [0; 60]
+        );
+        assert_eq!(
+            VmTerm::Hash256Array(vec![[0; 32], [0; 32], [0; 32], [0; 32]]).to_bytes_raw(),
+            [0; 128]
+        );
+        assert_eq!(
+            VmTerm::Hash512Array(vec![[0; 64], [0; 64], [0; 64], [0; 64], [0; 64]]).to_bytes_raw(),
+            [0; 320]
+        );
     }
 }
