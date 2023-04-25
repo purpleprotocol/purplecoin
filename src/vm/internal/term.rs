@@ -142,7 +142,11 @@ impl VmTerm {
             Self::Signed32(val) => val.to_le_bytes().to_vec(),
             Self::Signed64(val) => val.to_le_bytes().to_vec(),
             Self::Signed128(val) => val.to_le_bytes().to_vec(),
-            Self::SignedBig(val) => val.to_f64().to_i8().unwrap().to_le_bytes().to_vec(),
+            Self::SignedBig(val) => {
+                let v = val.abs();
+                let num: UBig = v.try_into().unwrap();
+                num.to_le_bytes().to_vec()
+            }
             Self::Unsigned8Array(val) => val.clone(),
             Self::Unsigned16Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
             Self::Unsigned32Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
@@ -156,7 +160,11 @@ impl VmTerm {
             Self::Signed128Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
             Self::SignedBigArray(val) => val
                 .iter()
-                .map(|v| v.to_f64().to_i8().unwrap().to_le_bytes())
+                .map(|v| {
+                    let val = v.abs();
+                    let num: UBig = val.try_into().unwrap();
+                    num.to_le_bytes().to_vec()
+                })
                 .flatten()
                 .collect(),
             Self::Hash160Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
@@ -1400,8 +1408,16 @@ mod tests {
             [1, 0, 0, 0, 0, 0, 0, 0]
         );
         assert_eq!(
-            VmTerm::Signed128(0x01).to_bytes_raw(),
+            VmTerm::Signed128(-2).to_bytes_raw(),
+            [254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]
+        );
+        assert_eq!(
+            VmTerm::Signed128(1).to_bytes_raw(),
             [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        );
+        assert_eq!(
+            VmTerm::Signed128(0).to_bytes_raw(),
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         );
         assert_eq!(VmTerm::SignedBig(ibig!(0x01)).to_bytes_raw(), [1]);
         assert_eq!(
