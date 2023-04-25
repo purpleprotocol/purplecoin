@@ -230,6 +230,14 @@ impl<'a> MMRBackend<Vec<u8>> for MemoryBackend<'a> {
         unimplemented!();
     }
 
+    fn n_unpruned_leaves(&self) -> u64 {
+        unimplemented!();
+    }
+
+    fn n_unpruned_leaves_to_index(&self, to_index: u64) -> u64 {
+        unimplemented!();
+    }
+
     fn get_peak(&self, pos: u64) -> Result<Option<Hash256>, MMRBackendErr> {
         unimplemented!()
     }

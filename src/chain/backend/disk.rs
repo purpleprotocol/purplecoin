@@ -407,6 +407,14 @@ impl<'a> MMRBackend<Vec<u8>> for DiskBackend<'a> {
         unimplemented!();
     }
 
+    fn n_unpruned_leaves(&self) -> u64 {
+        unimplemented!();
+    }
+
+    fn n_unpruned_leaves_to_index(&self, to_index: u64) -> u64 {
+        unimplemented!();
+    }
+
     fn unpruned_size(&self) -> Result<u64, MMRBackendErr> {
         let key = &["u".as_bytes(), &[self.sector_config().sector_id]].concat();
         let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
