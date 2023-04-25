@@ -508,18 +508,18 @@ static void mi_option_init(mi_option_desc_t* desc) {
   char buf[64+1];
   _mi_strlcpy(buf, "mimalloc_", sizeof(buf));
   _mi_strlcat(buf, desc->name, sizeof(buf));
-  bool found = mi_getenv(buf,s,sizeof(s));
+  bool found = mi_getenv(buf, s, sizeof(s));
   if (!found && desc->legacy_name != NULL) {
     _mi_strlcpy(buf, "mimalloc_", sizeof(buf));
     _mi_strlcat(buf, desc->legacy_name, sizeof(buf));
-    found = mi_getenv(buf,s,sizeof(s));
+    found = mi_getenv(buf, s, sizeof(s));
     if (found) {
       _mi_warning_message("environment option \"mimalloc_%s\" is deprecated -- use \"mimalloc_%s\" instead.\n", desc->legacy_name, desc->name);
     }
   }
 
   if (found) {
-    size_t len = _mi_strnlen(s,sizeof(buf)-1);
+    size_t len = _mi_strnlen(s, sizeof(buf) - 1);
     for (size_t i = 0; i < len; i++) {
       buf[i] = _mi_toupper(s[i]);
     }

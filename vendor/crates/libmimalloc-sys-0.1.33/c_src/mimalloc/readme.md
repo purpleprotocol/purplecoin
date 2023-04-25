@@ -12,8 +12,8 @@ is a general purpose allocator with excellent [performance](#performance) charac
 Initially developed by Daan Leijen for the runtime systems of the
 [Koka](https://koka-lang.github.io) and [Lean](https://github.com/leanprover/lean) languages.
 
-Latest release tag: `v2.1.1` (2023-04-03).
-Latest stable  tag: `v1.8.1` (2023-04-03).
+Latest release tag: `v2.1.2` (2023-04-24).
+Latest stable  tag: `v1.8.2` (2023-04-24).
 
 mimalloc is a drop-in replacement for `malloc` and can be used in other programs
 without code changes, for example, on dynamically linked ELF-based systems (Linux, BSD, etc.) you can use it as:
@@ -78,6 +78,10 @@ Note: the `v2.x` version has a new algorithm for managing internal mimalloc page
   and fragmentation compared to mimalloc `v1.x` (especially for large workloads). Should otherwise have similar performance
   (see [below](#performance)); please report if you observe any significant performance regression.
 
+* 2023-04-24, `v1.8.2`, `v2.1.2`: Fixes build issues on freeBSD, musl, and C17 (UE 5.1.1). Reduce code size/complexity 
+  by removing regions and segment-cache's and only use arenas with improved memory purging -- this may improve memory
+  usage as well for larger services. Renamed options for consistency. Improved Valgrind and ASAN checking.
+  
 * 2023-04-03, `v1.8.1`, `v2.1.1`: Fixes build issues on some platforms.
 
 * 2023-03-29, `v1.8.0`, `v2.1.0`: Improved support dynamic overriding on Windows 11. Improved tracing precision
@@ -508,7 +512,7 @@ Adress sanitizer support is in its initial development -- please report any issu
 ### ETW
 
 Event tracing for Windows ([ETW]) provides a high performance way to capture all allocations though
-mimalloc and analyze them later. To build with ETW support, use the `-DMI_TRACE_ETW=ON` cmake option. 
+mimalloc and analyze them later. To build with ETW support, use the `-DMI_TRACK_ETW=ON` cmake option. 
 
 You can then capture an allocation trace using the Windows performance recorder (WPR), using the 
 `src/prim/windows/etw-mimalloc.wprp` profile. In an admin prompt, you can use:

@@ -302,8 +302,19 @@ typedef _Atomic(uintptr_t) mi_atomic_once_t;
 static inline bool mi_atomic_once( mi_atomic_once_t* once ) {
   if (mi_atomic_load_relaxed(once) != 0) return false;     // quick test 
   uintptr_t expected = 0;
-  return mi_atomic_cas_strong_acq_rel(once, &expected, 1); // try to set to 1
+  return mi_atomic_cas_strong_acq_rel(once, &expected, (uintptr_t)1); // try to set to 1
 }
+
+typedef _Atomic(uintptr_t) mi_atomic_guard_t;
+
+// Allows only one thread to execute at a time
+#define mi_atomic_guard(guard) \
+  uintptr_t _mi_guard_expected = 0; \
+  for(bool _mi_guard_once = true; \
+      _mi_guard_once && mi_atomic_cas_strong_acq_rel(guard,&_mi_guard_expected,(uintptr_t)1); \
+      (mi_atomic_store_release(guard,(uintptr_t)0), _mi_guard_once = false) )
+
+
 
 // Yield
 #if defined(__cplusplus)

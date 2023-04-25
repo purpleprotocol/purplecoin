@@ -62,7 +62,7 @@ extern inline void* _mi_page_malloc(mi_heap_t* heap, mi_page_t* page, size_t siz
   }
 
 #if (MI_DEBUG>0) && !MI_TRACK_ENABLED && !MI_TSAN
-  if (!page->is_zero && !zero && !mi_page_is_huge(page)) {
+  if (!zero && !mi_page_is_huge(page)) {
     memset(block, MI_DEBUG_UNINIT, mi_page_usable_block_size(page));
   }
 #elif (MI_SECURE!=0)
@@ -121,6 +121,11 @@ static inline mi_decl_restrict void* mi_heap_malloc_small_zero(mi_heap_t* heap, 
     mi_heap_stat_increase(heap, malloc, mi_usable_size(p));
   }
   #endif
+  #if MI_DEBUG>3
+  if (p != NULL && zero) {
+    mi_assert_expensive(mi_mem_is_zero(p, size));
+  }
+  #endif
   return p;
 }
 
@@ -148,6 +153,11 @@ extern inline void* _mi_heap_malloc_zero_ex(mi_heap_t* heap, size_t size, bool z
     if (p != NULL) {
       if (!mi_heap_is_initialized(heap)) { heap = mi_prim_get_default_heap(); }
       mi_heap_stat_increase(heap, malloc, mi_usable_size(p));
+    }
+    #endif
+    #if MI_DEBUG>3
+    if (p != NULL && zero) {
+      mi_assert_expensive(mi_mem_is_zero(p, size));
     }
     #endif
     return p;
@@ -702,6 +712,7 @@ void* _mi_heap_realloc_zero(mi_heap_t* heap, void* p, size_t newsize, bool zero)
     mi_assert_internal(p!=NULL);
     // todo: do not track as the usable size is still the same in the free; adjust potential padding?
     // mi_track_resize(p,size,newsize)
+    // if (newsize < size) { mi_track_mem_noaccess((uint8_t*)p + newsize, size - newsize); }
     return p;  // reallocation still fits and not more than 50% waste
   }
   void* newp = mi_heap_malloc(heap,newsize);
@@ -1042,7 +1053,7 @@ void* _mi_externs[] = {
   (void*)&mi_zalloc_small,
   (void*)&mi_heap_malloc,
   (void*)&mi_heap_zalloc,
-  (void*)&mi_heap_malloc_small
+  (void*)&mi_heap_malloc_small,
   // (void*)&mi_heap_alloc_new,
   // (void*)&mi_heap_alloc_new_n
 };
