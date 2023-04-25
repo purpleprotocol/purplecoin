@@ -119,8 +119,46 @@ impl fmt::Debug for VmTerm {
 }
 
 impl VmTerm {
+
+    /// Converts the term to a byte vector.
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
+    }
+
+    /// Converts the term to a byte vector without encoding the type.
+    pub fn to_bytes_raw(&self) -> Vec<u8> {
+        match self {
+            Self::Hash160(val) => val.to_vec(),
+            Self::Hash256(val) => val.to_vec(),
+            Self::Hash512(val) => val.to_vec(),
+            Self::Unsigned8(val) => val.to_le_bytes().to_vec(),
+            Self::Unsigned16(val) => val.to_le_bytes().to_vec(),
+            Self::Unsigned32(val) => val.to_le_bytes().to_vec(),
+            Self::Unsigned64(val) => val.to_le_bytes().to_vec(),
+            Self::Unsigned128(val) => val.to_le_bytes().to_vec(),
+            Self::UnsignedBig(val) => val.to_le_bytes().to_vec(),
+            Self::Signed8(val) => val.to_le_bytes().to_vec(),
+            Self::Signed16(val) => val.to_le_bytes().to_vec(),
+            Self::Signed32(val) => val.to_le_bytes().to_vec(),
+            Self::Signed64(val) => val.to_le_bytes().to_vec(),
+            Self::Signed128(val) => val.to_le_bytes().to_vec(),
+            Self::SignedBig(val) => val.to_f64().to_le_bytes().to_vec(),
+            Self::Unsigned8Array(val) => val.clone(),
+            Self::Unsigned16Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Unsigned32Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Unsigned64Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Unsigned128Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::UnsignedBigArray(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Signed8Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Signed16Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Signed32Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Signed64Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Signed128Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::SignedBigArray(val) => val.iter().map(|v| v.to_f64().to_le_bytes()).flatten().collect(),
+            Self::Hash160Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
+            Self::Hash256Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
+            Self::Hash512Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
+        }
     }
 
     pub fn add_one(&mut self) -> Option<()> {
