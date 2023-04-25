@@ -119,7 +119,6 @@ impl fmt::Debug for VmTerm {
 }
 
 impl VmTerm {
-
     /// Converts the term to a byte vector.
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
@@ -154,7 +153,11 @@ impl VmTerm {
             Self::Signed32Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
             Self::Signed64Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
             Self::Signed128Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
-            Self::SignedBigArray(val) => val.iter().map(|v| v.to_f64().to_le_bytes()).flatten().collect(),
+            Self::SignedBigArray(val) => val
+                .iter()
+                .map(|v| v.to_f64().to_le_bytes())
+                .flatten()
+                .collect(),
             Self::Hash160Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
             Self::Hash256Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
             Self::Hash512Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
