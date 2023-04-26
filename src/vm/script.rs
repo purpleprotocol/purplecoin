@@ -2748,24 +2748,22 @@ impl<'a> ScriptExecutor<'a> {
                     }
                 },
 
-                ScriptEntry::Opcode(OP::Blake2s256) => {
-                    match exec_stack.pop() {
-                        Some(val) => {
-                            *memory_size -= val.size();
+                ScriptEntry::Opcode(OP::Blake2s256) => match exec_stack.pop() {
+                    Some(val) => {
+                        *memory_size -= val.size();
 
-                            let hash_term = bifs::blake2s_256(&val);
+                        let hash_term = bifs::blake2s_256(&val);
 
-                            *memory_size += hash_term.size();
-                            exec_stack.push(hash_term);
-                        }
-                        None => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
                     }
-                }
+                    None => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
 
                 ScriptEntry::Opcode(OP::Blake3_256) => match exec_stack.pop() {
                     Some(val) => {
