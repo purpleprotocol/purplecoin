@@ -9175,4 +9175,192 @@ mod tests {
         );
         assert_eq!(outs, base.out);
     }
+
+    #[test]
+    fn it_hashes_with_blake3_256() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_256),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Blake3_256),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        for term in test_terms {
+            let hashed_term = bifs::blake3_256(&term);
+            script_output.push(hashed_term);
+        }
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_hashes_with_blake3_512() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_512),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Blake3_512),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        for term in test_terms {
+            let hashed_term = bifs::blake3_512(&term);
+            script_output.push(hashed_term);
+        }
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_hashes_with_blake3_256internal() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_256Internal),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Blake3_256Internal),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        for term in test_terms {
+            let hashed_term = bifs::blake3_256_internal(&term, key);
+            script_output.push(hashed_term);
+        }
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_hashes_with_blake3_512Internal() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_512Internal),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Blake3_512Internal),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        for term in test_terms {
+            let hashed_term = bifs::blake3_512_internal(&term, key);
+            script_output.push(hashed_term);
+        }
+
+        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
 }
