@@ -77,14 +77,6 @@ pub fn blake2s_256(term: &Term) -> Term {
     Term::Hash256(hashed_term.to_vec().try_into().unwrap())
 }
 
-pub fn blake2s_512(term: &Term) -> Term {
-    let mut hasher = Blake2sVar::new(64).unwrap();
-    hasher.update(&term.to_bytes_raw());
-    let hashed_term = hasher.finalize_boxed();
-
-    Term::Hash512(hashed_term.to_vec().try_into().unwrap())
-}
-
 pub fn blake3_256(term: &Term) -> Term {
     let mut out_buffer = [0u8; 32];
     let mut hasher = blake3::Hasher::new();
