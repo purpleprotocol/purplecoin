@@ -7,12 +7,11 @@
 use crate::primitives::{Hash256, Hash512};
 use crate::vm::internal::VmTerm as Term;
 
-use ripemd::{Ripemd160, Digest as RipemdDigest};
-use sha2::{Sha256, Sha512, Digest as ShaDigest};
-use sha3::{Keccak256, Keccak512, Digest as KeccakDigest};
-use blake2::{Blake2bVar, Blake2s, Digest as Blake2Digest, Blake2sVar};
-use blake2::digest::{VariableOutput, Update};
-
+use blake2::digest::{Update, VariableOutput};
+use blake2::{Blake2bVar, Blake2s, Blake2sVar, Digest as Blake2Digest};
+use ripemd::{Digest as RipemdDigest, Ripemd160};
+use sha2::{Digest as ShaDigest, Sha256, Sha512};
+use sha3::{Digest as KeccakDigest, Keccak256, Keccak512};
 
 pub fn ripemd160(term: &Term) -> Term {
     let mut hasher = Ripemd160::new();

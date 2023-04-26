@@ -2629,214 +2629,192 @@ impl<'a> ScriptExecutor<'a> {
                     );
                 }
 
-                ScriptEntry::Opcode(OP::Ripemd160) => {
-                    match exec_stack.pop() {
-                        Some(val) => {
-                            *memory_size -= val.size();
+                ScriptEntry::Opcode(OP::Ripemd160) => match exec_stack.pop() {
+                    Some(val) => {
+                        *memory_size -= val.size();
 
-                            let hash_term = bifs::ripemd160(&val);
+                        let hash_term = bifs::ripemd160(&val);
 
-                            *memory_size += hash_term.size();
-                            exec_stack.push(hash_term);
-                        },
-                        None => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
                     }
-                }
-
-                ScriptEntry::Opcode(OP::Sha256) => {
-                    match exec_stack.pop() {
-                        Some(val) => {
-                            *memory_size -= val.size();
-
-                            let hash_term = bifs::sha256(&val);
-
-                            *memory_size += hash_term.size();
-                            exec_stack.push(hash_term);
-                        },
-                        None => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
+                    None => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
                     }
-                }
+                },
 
-                ScriptEntry::Opcode(OP::Sha512) => {
-                    match exec_stack.pop() {
-                        Some(val) => {
-                            *memory_size -= val.size();
+                ScriptEntry::Opcode(OP::Sha256) => match exec_stack.pop() {
+                    Some(val) => {
+                        *memory_size -= val.size();
 
-                            let hash_term = bifs::sha512(&val);
+                        let hash_term = bifs::sha256(&val);
 
-                            *memory_size += hash_term.size();
-                            exec_stack.push(hash_term);
-                        },
-                        None => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
                     }
-                }
-
-                ScriptEntry::Opcode(OP::Keccak256) => {
-                    match exec_stack.pop() {
-                        Some(val) => {
-                            *memory_size -= val.size();
-
-                            let hash_term = bifs::keccak256(&val);
-
-                            *memory_size += hash_term.size();
-                            exec_stack.push(hash_term);
-                        },
-                        None => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
+                    None => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
                     }
-                }
+                },
 
-                ScriptEntry::Opcode(OP::Keccak512) => {
-                    match exec_stack.pop() {
-                        Some(val) => {
-                            *memory_size -= val.size();
+                ScriptEntry::Opcode(OP::Sha512) => match exec_stack.pop() {
+                    Some(val) => {
+                        *memory_size -= val.size();
 
-                            let hash_term = bifs::keccak512(&val);
+                        let hash_term = bifs::sha512(&val);
 
-                            *memory_size += hash_term.size();
-                            exec_stack.push(hash_term);
-                        },
-                        None => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
                     }
-                }
-
-                ScriptEntry::Opcode(OP::Blake2b256) => {
-                    match exec_stack.pop() {
-                        Some(val) => {
-                            *memory_size -= val.size();
-
-                            let hash_term = bifs::blake2b_256(&val);
-
-                            *memory_size += hash_term.size();
-                            exec_stack.push(hash_term);
-                        },
-                        None => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
+                    None => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
                     }
-                }
+                },
 
-                ScriptEntry::Opcode(OP::Blake2b512) => {
-                    match exec_stack.pop() {
-                        Some(val) => {
-                            *memory_size -= val.size();
+                ScriptEntry::Opcode(OP::Keccak256) => match exec_stack.pop() {
+                    Some(val) => {
+                        *memory_size -= val.size();
 
-                            let hash_term = bifs::blake2b_512(&val);
+                        let hash_term = bifs::keccak256(&val);
 
-                            *memory_size += hash_term.size();
-                            exec_stack.push(hash_term);
-                        },
-                        None => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
                     }
-                }
-
-                ScriptEntry::Opcode(OP::Blake3_256) => {
-                    match exec_stack.pop() {
-                        Some(val) => {
-                            *memory_size -= val.size();
-
-                            let hash_term = bifs::blake3_256(&val);
-
-                            *memory_size += hash_term.size();
-                            exec_stack.push(hash_term);
-                        },
-                        None => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
+                    None => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
                     }
-                }
+                },
 
-                ScriptEntry::Opcode(OP::Blake3_512) => {
-                    match exec_stack.pop() {
-                        Some(val) => {
-                            *memory_size -= val.size();
+                ScriptEntry::Opcode(OP::Keccak512) => match exec_stack.pop() {
+                    Some(val) => {
+                        *memory_size -= val.size();
 
-                            let hash_term = bifs::blake3_512(&val);
+                        let hash_term = bifs::keccak512(&val);
 
-                            *memory_size += hash_term.size();
-                            exec_stack.push(hash_term);
-                        },
-                        None => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
                     }
-                }
-
-                ScriptEntry::Opcode(OP::Blake3_256Internal) => {
-                    match exec_stack.pop() {
-                        Some(val) => {
-                            *memory_size -= val.size();
-
-                            let hash_term = bifs::blake3_256_internal(&val, key);
-
-                            *memory_size += hash_term.size();
-                            exec_stack.push(hash_term);
-                        },
-                        None => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
+                    None => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
                     }
-                }
+                },
 
-                ScriptEntry::Opcode(OP::Blake3_512Internal) => {
-                    match exec_stack.pop() {
-                        Some(val) => {
-                            *memory_size -= val.size();
+                ScriptEntry::Opcode(OP::Blake2b256) => match exec_stack.pop() {
+                    Some(val) => {
+                        *memory_size -= val.size();
 
-                            let hash_term = bifs::blake3_512_internal(&val, key);
+                        let hash_term = bifs::blake2b_256(&val);
 
-                            *memory_size += hash_term.size();
-                            exec_stack.push(hash_term);
-                        },
-                        None => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        },
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
                     }
-                }
+                    None => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
+
+                ScriptEntry::Opcode(OP::Blake2b512) => match exec_stack.pop() {
+                    Some(val) => {
+                        *memory_size -= val.size();
+
+                        let hash_term = bifs::blake2b_512(&val);
+
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
+                    }
+                    None => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
+
+                ScriptEntry::Opcode(OP::Blake3_256) => match exec_stack.pop() {
+                    Some(val) => {
+                        *memory_size -= val.size();
+
+                        let hash_term = bifs::blake3_256(&val);
+
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
+                    }
+                    None => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
+
+                ScriptEntry::Opcode(OP::Blake3_512) => match exec_stack.pop() {
+                    Some(val) => {
+                        *memory_size -= val.size();
+
+                        let hash_term = bifs::blake3_512(&val);
+
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
+                    }
+                    None => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
+
+                ScriptEntry::Opcode(OP::Blake3_256Internal) => match exec_stack.pop() {
+                    Some(val) => {
+                        *memory_size -= val.size();
+
+                        let hash_term = bifs::blake3_256_internal(&val, key);
+
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
+                    }
+                    None => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
+
+                ScriptEntry::Opcode(OP::Blake3_512Internal) => match exec_stack.pop() {
+                    Some(val) => {
+                        *memory_size -= val.size();
+
+                        let hash_term = bifs::blake3_512_internal(&val, key);
+
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
+                    }
+                    None => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
 
                 ScriptEntry::Opcode(_) => {
                     self.state = ScriptExecutorState::Error(
@@ -2844,7 +2822,7 @@ impl<'a> ScriptExecutor<'a> {
                         (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                     );
                 }
-            }
+            },
             _ => unimplemented!(),
         }
     }
@@ -9014,14 +8992,11 @@ mod tests {
                 ScriptEntry::Opcode(OP::Ripemd160),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
-                ScriptEntry::Opcode(OP::Verify)
-            ]
+                ScriptEntry::Opcode(OP::Verify),
+            ],
         };
 
-        let test_terms = vec![
-            VmTerm::Unsigned8(0x01),
-            VmTerm::Signed8(-1),
-        ];
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
@@ -9064,14 +9039,11 @@ mod tests {
                 ScriptEntry::Opcode(OP::Sha256),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
-                ScriptEntry::Opcode(OP::Verify)
-            ]
+                ScriptEntry::Opcode(OP::Verify),
+            ],
         };
 
-        let test_terms = vec![
-            VmTerm::Unsigned8(0x01),
-            VmTerm::Signed8(-1),
-        ];
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
@@ -9114,14 +9086,11 @@ mod tests {
                 ScriptEntry::Opcode(OP::Sha512),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
-                ScriptEntry::Opcode(OP::Verify)
-            ]
+                ScriptEntry::Opcode(OP::Verify),
+            ],
         };
 
-        let test_terms = vec![
-            VmTerm::Unsigned8(0x01),
-            VmTerm::Signed8(-1),
-        ];
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
@@ -9172,14 +9141,11 @@ mod tests {
                 ScriptEntry::Opcode(OP::Blake2b512),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
-                ScriptEntry::Opcode(OP::Verify)
-            ]
+                ScriptEntry::Opcode(OP::Verify),
+            ],
         };
 
-        let test_terms = vec![
-            VmTerm::Unsigned8(0x01),
-            VmTerm::Signed8(-1),
-        ];
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms.iter() {
