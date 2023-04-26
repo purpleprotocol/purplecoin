@@ -185,6 +185,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xd9` PushOutIfGt - Pushes a new output to the output stack if the topmost item on the stack is greater than the second item on the stack. The following arguments are poped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [ ] OP `0xda` PushOutIfLeq - Pushes a new output to the output stack if the topmost item on the stack is less or equal than the second item on the stack. The following arguments are poped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [ ] OP `0xdb` PushOutIfGeq - Pushes a new output to the output stack if the topmost item on the stack is greater or equal than the second item on the stack. The following arguments are poped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
+    - [ ] OP `0xec` Blake2s256 - Pops the topmost item on the stack, hashes it with Blake2s256 and then pushes the result to the stack. 
     - [x] OP `0xed` Trap - Breaks script execution and returns an implicit error.
     - [ ] OP `0xee` Sha256 - Pops the topmost item on the stack, hashes it with Sha256 and then pushes the result to the stack. 
     - [ ] OP `0xef` Sha512 - Pops the topmost item on the stack, hashes it with Sha512 and then pushes the result to the stack. 

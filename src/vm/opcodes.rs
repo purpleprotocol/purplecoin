@@ -176,6 +176,7 @@ pub enum OP {
     HasOutput = 0xe0,
     HasColouredInput = 0xe1,
     HasColouredOutput = 0xe2,
+    Blake2s256 = 0xec,
     Trap = 0xed,
     Sha256 = 0xee,
     Sha512 = 0xef,
