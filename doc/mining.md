@@ -3,13 +3,13 @@ We are using the [Green PoW](https://arxiv.org/pdf/2007.04086.pdf) consensus mod
 
 When at least 16 miners manage to mine the block, the second round begins. These miners are called runner-ups. Only runner-ups are entitled to mine the block in the second round. Once one of the runner-ups mines the second round block, the next epoch begins. This mechanism brings energy efficiency to mining (up to 50% compared to if it wasn't employed) and secures shard sectors against 51% attacks. More details around this can be found in the Whitepaper. 
 
-Now, every epoch will use a different algorithm. Half of the epochs will be mined exclusively with RandomX, in order to prevent ASICs from mining a longer chain while allowing CPU/GPU mining. The other half of the epochs will be mined with an ASIC friendly algorithm, chosen randomly every epoch. This is in order to balance RandomX, as fully ASIC resistant algorithms are subject to hashpower marketplace attacks, while ASIC algorithms are less likely to be subject to these attacks. 
+Now, every epoch will use a different algorithm. Half of the epochs will be mined exclusively with GhostRider, in order to prevent ASICs from mining a longer chain while allowing CPU/GPU mining. The other half of the epochs will be mined with an ASIC friendly algorithm, chosen randomly every epoch. This is in order to balance GhostRider, as fully ASIC resistant algorithms are subject to hashpower marketplace attacks, while ASIC algorithms are less likely to be subject to these attacks. 
 
 Example:
 ```
-Epoch 1: RandomX
+Epoch 1: GhostRider
 Epoch 2: Sha256
-Epoch 3: RandomX
+Epoch 3: GhostRider
 Epoch 4: Fugue
 ```
 
