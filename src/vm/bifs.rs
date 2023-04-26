@@ -78,7 +78,7 @@ pub fn blake2s_256(term: &Term) -> Term {
 }
 
 pub fn blake2s_512(term: &Term) -> Term {
-    let mut hasher = Blake2sVar::new(32).unwrap();
+    let mut hasher = Blake2sVar::new(64).unwrap();
     hasher.update(&term.to_bytes_raw());
     let hashed_term = hasher.finalize_boxed();
 
