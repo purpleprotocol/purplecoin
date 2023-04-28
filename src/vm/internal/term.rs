@@ -405,6 +405,98 @@ impl VmTerm {
         Some(())
     }
 
+    pub fn mul(&mut self, rhs: &VmTerm) -> Option<()> {
+        match (self, rhs) {
+            (Self::Unsigned8(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
+                *lhs_val = lhs_val.checked_mul(*rhs_val)?;
+            }
+            (Self::Unsigned16(ref mut lhs_val), Self::Unsigned16(rhs_val)) => {
+                *lhs_val = lhs_val.checked_mul(*rhs_val)?;
+            }
+            (Self::Unsigned32(ref mut lhs_val), Self::Unsigned32(rhs_val)) => {
+                *lhs_val = lhs_val.checked_mul(*rhs_val)?;
+            }
+            (Self::Unsigned64(ref mut lhs_val), Self::Unsigned64(rhs_val)) => {
+                *lhs_val = lhs_val.checked_mul(*rhs_val)?;
+            }
+            (Self::Unsigned128(ref mut lhs_val), Self::Unsigned128(rhs_val)) => {
+                *lhs_val = lhs_val.checked_mul(*rhs_val)?;
+            }
+            (Self::UnsignedBig(ref mut lhs_val), Self::UnsignedBig(rhs_val)) => {
+                *lhs_val *= rhs_val;
+            }
+            (Self::Signed8(ref mut lhs_val), Self::Signed8(rhs_val)) => {
+                *lhs_val = lhs_val.checked_mul(*rhs_val)?;
+            }
+            (Self::Signed16(ref mut lhs_val), Self::Signed16(rhs_val)) => {
+                *lhs_val = lhs_val.checked_mul(*rhs_val)?;
+            }
+            (Self::Signed32(ref mut lhs_val), Self::Signed32(rhs_val)) => {
+                *lhs_val = lhs_val.checked_mul(*rhs_val)?;
+            }
+            (Self::Signed64(ref mut lhs_val), Self::Signed64(rhs_val)) => {
+                *lhs_val = lhs_val.checked_mul(*rhs_val)?;
+            }
+            (Self::Signed128(ref mut lhs_val), Self::Signed128(rhs_val)) => {
+                *lhs_val = lhs_val.checked_mul(*rhs_val)?;
+            }
+            (Self::SignedBig(ref mut lhs_val), Self::SignedBig(rhs_val)) => {
+                *lhs_val *= rhs_val;
+            }
+            _ => {
+                return None;
+            }
+        }
+
+        Some(())
+    }
+
+    pub fn div(&mut self, rhs: &VmTerm) -> Option<()> {
+        match (self, rhs) {
+            (Self::Unsigned8(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
+                *lhs_val = lhs_val.checked_div(*rhs_val)?;
+            }
+            (Self::Unsigned16(ref mut lhs_val), Self::Unsigned16(rhs_val)) => {
+                *lhs_val = lhs_val.checked_div(*rhs_val)?;
+            }
+            (Self::Unsigned32(ref mut lhs_val), Self::Unsigned32(rhs_val)) => {
+                *lhs_val = lhs_val.checked_div(*rhs_val)?;
+            }
+            (Self::Unsigned64(ref mut lhs_val), Self::Unsigned64(rhs_val)) => {
+                *lhs_val = lhs_val.checked_div(*rhs_val)?;
+            }
+            (Self::Unsigned128(ref mut lhs_val), Self::Unsigned128(rhs_val)) => {
+                *lhs_val = lhs_val.checked_div(*rhs_val)?;
+            }
+            (Self::UnsignedBig(ref mut lhs_val), Self::UnsignedBig(rhs_val)) => {
+                *lhs_val /= rhs_val;
+            }
+            (Self::Signed8(ref mut lhs_val), Self::Signed8(rhs_val)) => {
+                *lhs_val = lhs_val.checked_div(*rhs_val)?;
+            }
+            (Self::Signed16(ref mut lhs_val), Self::Signed16(rhs_val)) => {
+                *lhs_val = lhs_val.checked_div(*rhs_val)?;
+            }
+            (Self::Signed32(ref mut lhs_val), Self::Signed32(rhs_val)) => {
+                *lhs_val = lhs_val.checked_div(*rhs_val)?;
+            }
+            (Self::Signed64(ref mut lhs_val), Self::Signed64(rhs_val)) => {
+                *lhs_val = lhs_val.checked_div(*rhs_val)?;
+            }
+            (Self::Signed128(ref mut lhs_val), Self::Signed128(rhs_val)) => {
+                *lhs_val = lhs_val.checked_div(*rhs_val)?;
+            }
+            (Self::SignedBig(ref mut lhs_val), Self::SignedBig(rhs_val)) => {
+                *lhs_val /= rhs_val;
+            }
+            _ => {
+                return None;
+            }
+        }
+
+        Some(())
+    }
+
     /// Returns the virtual heap size of the term in bytes
     pub fn size(&self) -> usize {
         match self {
