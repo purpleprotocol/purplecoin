@@ -9704,6 +9704,188 @@ mod tests {
     }
 
     #[test]
+    fn it_subs_from_array() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Sub),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x01, 0x02])];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_subs_array_from_array() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x0A),
+                ScriptEntry::Byte(0x14),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Sub),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x08, 0x11])];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_subs_array_from_array_overflow() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x0A),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Sub),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x08, 0x11])];
+        assert_script_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_multiples_array_with_number() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Mult),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x04, 0x6])];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_multiples_array_with_array() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Mult),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x04, 0x09])];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_multiplies_array_with_array_overflow() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Mult),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![])];
+        assert_script_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_cannot_multiply_two_arrays_with_different_length() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Mult),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_fail(ss, script_output, key);
+    }
+
+    #[test]
     fn it_multiplies_two_numbers() {
         let key = "test_key";
         let ss = Script {
@@ -9777,5 +9959,118 @@ mod tests {
             VmTerm::Signed8(-1),
         ];
         assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_divides_array_with_number() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Div),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x02, 0x4])];
+        assert_script_ok(ss, script_output, key);
+
+        let ss_2 = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Signed8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xFE),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Div),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let mut script_output_2: Vec<VmTerm> = vec![VmTerm::Signed8Array(vec![0x00, -1])];
+        assert_script_ok(ss_2, script_output_2, key);
+    }
+
+    #[test]
+    fn it_divides_array_with_another_array() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Opcode(OP::Div),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Signed8ArrayVar),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xFC),
+                ScriptEntry::Opcode(OP::Signed8ArrayVar),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xFE),
+                ScriptEntry::Opcode(OP::Div),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8Array(vec![1, 1]),
+            VmTerm::Signed8Array(vec![2]),
+        ];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_divides_array_with_another_array_overflow() {
+        let key = "test_key";
+        let ss = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Div),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_fail(ss, script_output, key);
     }
 }
