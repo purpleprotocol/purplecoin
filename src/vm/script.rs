@@ -9543,6 +9543,8 @@ mod tests {
                 ScriptEntry::Byte(0xFF),
                 ScriptEntry::Opcode(OP::Signed8Var),
                 ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
