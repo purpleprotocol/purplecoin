@@ -16,7 +16,6 @@ pub enum OP {
     ChainTimestamp = 0x09,
     IsCoinbase = 0x0a,
     PrevBlockHash = 0x0b,
-    NSequence = 0x0c,
     RandomHash160Var = 0x0d,
     RandomHash256Var = 0x0e,
     RandomHash512Var = 0x0f,

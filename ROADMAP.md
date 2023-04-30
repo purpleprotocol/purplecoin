@@ -23,15 +23,18 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [x] Transaction serialization
   - [x] Script arguments serialization
   - [ ] Headers MMR implementation
+  - [ ] Find a way to dynamically determine the minimum fee for acceptance into the mempool
+  - [ ] Find the optimal number of maximum suspends a transaction is allowed to have. With a limit on suspends, nodes can execute the whole chain of transactions and pre-validate them in order to determine if they will all execute whenever they receive a transaction which hits the `Suspend` opcode. By placing the correct upper bound on suspendable transactions, we can run long computations on the blockchain while also mitigating DDOS vectors in the mempool. The idea is that on the first transaction in a chain of these, the whole computation would be run up to either the number of suspends or the limit on suspends to validate the whole chain. Further transactions wouldn't require validating the whole chain as the VM state proves it was validated via a sequence number included in the vm state binary blob via consensus.
+  - [ ] Implement suspendable transactions i.e. transactions that execute over several blocks.
   - [ ] Implement optimal atomic asset exchange script and use it as a default script
   * [ ] Implement VM opcodes
     - [ ] OP `0x00` Func - Start a function definition
+    - [ ] OP `0x05` Suspend - Suspends execution of the VM and creates an opaque output with the hash of the current execution state i.e. stack frame + input_stack + output_stack. This output can be respent to resume execution by anyone who includes it in a new transaction along with another input to pay the transaction fees. The VM must be started with special flags to resume the execution of the opaque output which must receive as arguments in the new transaction the following things: the original spending script, and the VM state binary blob. 
     - [ ] OP `0x07` ChainId - Pushes the current `chain_id` onto the stack
     - [ ] OP `0x08` ChainHeight - Pushes the current `chain_height` onto the stack
     - [ ] OP `0x09` ChainTimestamp - Pushes the current timestamp of the chain onto the stack as a `Signed64`
     - [ ] OP `0x0a` IsCoinbase - Pushes `1` as an `Signed8` onto the stack if the current input is a coinbase otherwise pushes `0`
     - [ ] OP `0x0b` PrevBlockHash - Pushes the previous block hash onto the stack as a `Hash256`
-    - [ ] OP `0x0c` NSequence - Pushes the transaction `nsequence` onto the stack as a `Signed32`
     - [x] OP `0x0d` RandomHash160Var - Pushes a random `Hash160` onto the stack
     - [x] OP `0x0e` RandomHash256Var - Pushes a random `Hash256` onto the stack
     - [x] OP `0x0f` RandomHash512Var - Pushes a random `Hash512` onto the stack
@@ -135,7 +138,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x88` BoolOr - Or control operator
     - [ ] OP `0x89` Negate - If the topmost item on the stack is `1`, turns it into a `0`. If the topmost item on the stack is anything but `1` it turns it into a `1`
     - [ ] OP `0x8a` Abs - Returns the absolute value of the topmost item on the stack
-    - [ ] OP `0x8b` PushPrevScriptOuts - Pushes previous spend script outs on top of the stack
+    - [ ] OP `0x8b` PushPrevScriptOuts - Pushes previous spend script outs on top of the stack up to `n`
     - [ ] OP `0x8c` PushPrevScriptOutsLen - Pushes the length of previous spend script outs on top of the stack
     - [ ] OP `0x8e` PushExecCount - Pushes the current amount of opcodes that have been executed to the top of the stack
     - [ ] OP `0x8f` FlushToScriptOuts - Flushes the terms on the current frame to the script outputs stack
