@@ -2500,10 +2500,10 @@ impl<'a> ScriptExecutor<'a> {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match second.sub(&mut last) {
+                    match last.sub(&mut second) {
                         Some(_) => {
-                            *memory_size += second.size();
-                            exec_stack.push(second);
+                            *memory_size += last.size();
+                            exec_stack.push(last);
                         }
                         None => {
                             self.state = ScriptExecutorState::Error(
@@ -2554,10 +2554,10 @@ impl<'a> ScriptExecutor<'a> {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match second.div(&mut last) {
+                    match last.div(&mut second) {
                         Some(_) => {
-                            *memory_size += second.size();
-                            exec_stack.push(second);
+                            *memory_size += last.size();
+                            exec_stack.push(last);
                         }
                         None => {
                             self.state = ScriptExecutorState::Error(
@@ -9673,21 +9673,21 @@ mod tests {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x02),
-                ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Sub),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::Signed8Var),
-                ScriptEntry::Byte(0xFF),
                 ScriptEntry::Opcode(OP::Signed8Var),
                 ScriptEntry::Byte(0xFE),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0xFF),
                 ScriptEntry::Opcode(OP::Sub),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::Signed8Var),
-                ScriptEntry::Byte(0xFF),
-                ScriptEntry::Opcode(OP::Signed8Var),
                 ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0xFF),
                 ScriptEntry::Opcode(OP::Sub),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -9710,13 +9710,13 @@ mod tests {
             version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Byte(0x03),
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Sub),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -9737,13 +9737,13 @@ mod tests {
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x0A),
-                ScriptEntry::Byte(0x14),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x02),
-                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x0A),
+                ScriptEntry::Byte(0x14),
                 ScriptEntry::Opcode(OP::Sub),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -9931,21 +9931,21 @@ mod tests {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x04),
-                ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x04),
                 ScriptEntry::Opcode(OP::Div),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::Signed8Var),
-                ScriptEntry::Byte(0xFC),
                 ScriptEntry::Opcode(OP::Signed8Var),
                 ScriptEntry::Byte(0xFE),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0xFC),
                 ScriptEntry::Opcode(OP::Div),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::Signed8Var),
-                ScriptEntry::Byte(0xFF),
-                ScriptEntry::Opcode(OP::Signed8Var),
                 ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0xFF),
                 ScriptEntry::Opcode(OP::Div),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -9968,13 +9968,13 @@ mod tests {
             version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0x05),
                 ScriptEntry::Byte(0x08),
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Div),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -9988,13 +9988,13 @@ mod tests {
             version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Signed8ArrayVar),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0xFE),
-                ScriptEntry::Opcode(OP::Signed8Var),
-                ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Div),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -10028,11 +10028,11 @@ mod tests {
                 ScriptEntry::Opcode(OP::Signed8ArrayVar),
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0xFC),
+                ScriptEntry::Byte(0xFE),
                 ScriptEntry::Opcode(OP::Signed8ArrayVar),
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0xFE),
+                ScriptEntry::Byte(0xFC),
                 ScriptEntry::Opcode(OP::Div),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
