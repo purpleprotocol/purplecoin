@@ -81,10 +81,10 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
     - [x] OP `0x4b` GetType - Pushes on top of the stack the type code of the value currently on top of the stack as a `Unsigned8`
     - [x] OP `0x4f` ClearStack - Clears the stack
-    - [ ] OP `0x50` Add - Pops the two topmost items on the stack, performs addition and pushes the result on the stack
-    - [ ] OP `0x51` Sub - Pops the two topmost items on the stack, performs subtraction and pushes the result on the stack
-    - [ ] OP `0x52` Mult - Pops the two topmost items on the stack, performs multiplication and pushes the result on the stack
-    - [ ] OP `0x53` Div - Pops the two topmost items on the stack, performs division and pushes the result on the stack
+    - [x] OP `0x50` Add - Pops the two topmost items on the stack, performs addition and pushes the result on the stack
+    - [x] OP `0x51` Sub - Pops the two topmost items on the stack, performs subtraction and pushes the result on the stack
+    - [x] OP `0x52` Mult - Pops the two topmost items on the stack, performs multiplication and pushes the result on the stack
+    - [x] OP `0x53` Div - Pops the two topmost items on the stack, performs division and pushes the result on the stack
     - [ ] OP `0x54` BitSHLeft - Pops the two topmost items on the stack, performs a left bit shift operation on the first operand and then pushes the result on the stack
     - [ ] OP `0x55` BitSHRight - Pops the two topmost items on the stack, performs a right bit shift operation on the first operand and then pushes the result on the stack
     - [ ] OP `0x56` BitXOR - Pops the two topmost items on the stack, performs bit exclusive OR on the operands and then pushes the result on the stack
