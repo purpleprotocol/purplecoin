@@ -11,8 +11,7 @@ use crate::node::peer_info::PeerInfo;
 use futures::*;
 use libp2p::{
     core::upgrade,
-    identity,
-    ping,
+    identity, ping,
     swarm::{SwarmBuilder, SwarmEvent},
     Multiaddr, PeerId, Swarm, Transport,
 };
