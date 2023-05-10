@@ -53,7 +53,7 @@ pub const MAX_BLOCK_TIME: i64 = 60;
 /// Coinbase outputs cannot be spent in the same epoch they are created in. These are not Green PoW epochs.
 ///
 /// All transactions are considered final after the end of a coinbase epoch.
-/// 
+///
 /// All unspent outputs we don't care about are pruned after COINBASE_EPOCH_LEN blocks past the current height
 pub const COINBASE_EPOCH_LEN: u64 = 32;
 
