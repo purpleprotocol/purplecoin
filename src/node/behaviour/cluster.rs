@@ -4,22 +4,23 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use libp2p::{identify, ping, NetworkBehaviour};
+use libp2p::swarm::NetworkBehaviour;
+use libp2p::{identify, ping};
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "ClusterEvent")]
 pub struct ClusterBehaviour {
-    identify: identify::Identify,
+    identify: identify::Behaviour,
     ping: ping::Behaviour,
 }
 
 pub enum ClusterEvent {
-    Identify(identify::IdentifyEvent),
+    Identify(identify::Event),
     Ping(ping::Event),
 }
 
-impl From<identify::IdentifyEvent> for ClusterEvent {
-    fn from(other: identify::IdentifyEvent) -> Self {
+impl From<identify::Event> for ClusterEvent {
+    fn from(other: identify::Event) -> Self {
         Self::Identify(other)
     }
 }

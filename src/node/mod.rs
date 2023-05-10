@@ -11,12 +11,9 @@ use crate::node::peer_info::PeerInfo;
 use futures::*;
 use libp2p::{
     core::upgrade,
-    floodsub::{self, Floodsub, FloodsubEvent},
-    identity,
-    mdns::MdnsEvent,
-    mplex, noise, ping,
+    identity, ping,
     swarm::{SwarmBuilder, SwarmEvent},
-    tcp, Multiaddr, NetworkBehaviour, PeerId, Swarm, Transport,
+    Multiaddr, PeerId, Swarm, Transport,
 };
 pub use mempool::*;
 use parking_lot::RwLock;
