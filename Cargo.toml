@@ -72,7 +72,15 @@ tarpc = { version = "0.31", features = ["full"] }
 tokio = { version = "1.0", features = ["full"] }
 warp = "0.3.3"
 rayon = "1.5.3"
-libp2p = "0.46.1"
+libp2p = { version = "0.51.3", features = [
+    "ping",
+    "identify",
+    "kad",
+    "mplex",
+    "yamux",
+    "macros",
+]}
+either = "1.8.1"
 bloomfilter = "1.0.9"
 croaring = "0.6.1"
 dashmap = "5.3.4"
