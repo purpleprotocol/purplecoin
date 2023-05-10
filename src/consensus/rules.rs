@@ -35,11 +35,11 @@ pub const TRANSACTION_LIMIT_SIZE: u64 = 10_000;
 /// Max number of opcodes that can be executed per script
 pub const SCRIPT_LIMIT_OPCODES: u64 = 2_500;
 
-/// Initial block reward
+/// Initial block reward, per shard. The miner reward is equal to INITIAL_BLOCK_REWARD * SHARDS_PER_SECTOR
 pub const INITIAL_BLOCK_REWARD: Money = COIN; // 1 XPU
 
 /// Amount of coins mined in the genesis block
-pub const PRE_MINED_COINS: Money = COIN * 228_802_307;
+pub const PRE_MINED_COINS: Money = COIN * 227_994_000;
 
 /// Reward is halved after `n` blocks
 pub const HALVING_INTERVAL: u64 = 4_200_000;
@@ -50,9 +50,11 @@ pub const MAX_HALVINGS: u64 = 20;
 /// Max blocktime in regards to consensus calculations
 pub const MAX_BLOCK_TIME: i64 = 60;
 
-/// Coinbase outputs cannot be spent in the same epoch they are created in.
+/// Coinbase outputs cannot be spent in the same epoch they are created in. These are not Green PoW epochs.
 ///
-/// All transactions are considered final after the end of an epoch
+/// All transactions are considered final after the end of a coinbase epoch.
+/// 
+/// All unspent outputs we don't care about are pruned after COINBASE_EPOCH_LEN blocks past the current height
 pub const COINBASE_EPOCH_LEN: u64 = 32;
 
 /// RandomX key prefix

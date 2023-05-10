@@ -1,4 +1,4 @@
-pu1wyzgxpzedr24l28ku8nsfwd2h4zrsqas69s3mp = 150802307
+pu1wyzgxpzedr24l28ku8nsfwd2h4zrsqas69s3mp = 149994000
 pu1jqyulajz96292qnk92z6n3y7am7nyqtm6j5ndn = 48000000
 pu1d4xs5j673mzvpz57fakpqhfcqhzjshv53jqrrd = 17000000
 pu17dsunv4kdgkw5utzvduyaqzyjfhva3ey0q4a9w = 13000000

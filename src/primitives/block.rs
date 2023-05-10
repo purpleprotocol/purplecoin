@@ -48,9 +48,9 @@ macro_rules! addresses_file_mainnet {
     () => {
         concat!(
             "genesisbalances.mainnet.",
-            "sha256_806d5b429966d975b1957628ec1275043697fdc0df9850d487525f07e0357280",
+            "sha256_197bb59e3dfc07d820f3e3cc64409c4a6b6eef3c79e448fa84eef89be92ae468",
             ".",
-            "blake3_3607b3b126b0bd0a3302b2e6ae1f909ebf0661b47944e215acfb2c061ef90983",
+            "blake3_8741ab9e5bae2aef39543a2a251a94662c5f5927c346d5dfef5aabbec489f7af",
             ".txt"
         )
     };
@@ -60,9 +60,9 @@ macro_rules! addresses_file_testnet {
     () => {
         concat!(
             "genesisbalances.testnet.",
-            "sha256_dd35493dbb97e1062fd7c4779977c4e0f309b4b2728e09916bd62505c66e5917",
+            "sha256_57e4c01400a9af2e28e0f76e4ff7f7d7001bc012bb14934776193d00ca118def",
             ".",
-            "blake3_4de3d1f680251ce49332a4d256bc973fdc7648337ee154250ba9777bbd4a4eeb",
+            "blake3_1c8021242b1bb0495b88fadfabb0bdf2405cb1a7b6dd093fe65592ae2ffda5db",
             ".txt"
         )
     };
