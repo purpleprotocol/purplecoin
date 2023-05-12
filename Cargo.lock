@@ -3362,6 +3362,7 @@ dependencies = [
  "libp2p-mdns",
  "libp2p-metrics",
  "libp2p-mplex",
+ "libp2p-noise",
  "libp2p-ping",
  "libp2p-quic",
  "libp2p-swarm",
