@@ -17,7 +17,6 @@ use purplecoin::primitives::*;
 use purplecoin::settings::SETTINGS;
 
 use std::env;
-use triomphe::Arc;
 use std::sync::atomic::AtomicBool;
 use std::thread;
 use std::time::Duration;
@@ -27,7 +26,6 @@ use tokio::time::sleep;
 use tracing_subscriber::prelude::*;
 
 use warp::Filter;
-
 
 #[cfg(feature = "sha256sum")]
 use sha2::{Digest, Sha256};
@@ -116,7 +114,6 @@ fn start_runtime() -> anyhow::Result<()> {
             #[cfg(feature = "rpc")]
             run_rpc(),
             run_periodics(),
-            run_network(_chain, &config),
         )?;
 
         Ok(())
@@ -191,19 +188,6 @@ async fn run_rpc() -> anyhow::Result<()> {
 
         warp::serve(rpc_path).run(([127, 0, 0, 1], port)).await;
     }
-
-    Ok(())
-}
-
-async fn run_network<'a, B>(
-    chain: Chain<'a, B>,
-    config: &ChainConfig
-) -> anyhow::Result<()>
-where
-    B: PowChainBackend<'a> + ShardBackend<'a>
-{
-    let node = Node::new(chain, Arc::new(config.clone()));
-    node.run().await;
 
     Ok(())
 }

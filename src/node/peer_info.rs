@@ -50,10 +50,9 @@ impl Decode for PeerInfo {
         let parsed_id_bytes = bs58::decode(&id)
             .into_vec()
             .map_err(|_| bincode::error::DecodeError::OtherString("invalid peer id".to_owned()))?;
-        let internal_id =
-            Some(PeerId::from_bytes(&parsed_id_bytes).map_err(|_| {
-                bincode::error::DecodeError::OtherString("invalid peer id".to_owned())
-            })?);
+        let internal_id = Some(PeerId::from_bytes(&parsed_id_bytes).map_err(|_| {
+            bincode::error::DecodeError::OtherString("invalid internal peer id".to_owned())
+        })?);
 
         Ok(Self {
             id,

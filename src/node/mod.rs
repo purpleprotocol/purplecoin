@@ -11,14 +11,16 @@ use crate::node::peer_info::PeerInfo;
 use futures::*;
 use libp2p::{
     core::upgrade,
-    identity::{self, ed25519::SecretKey, Keypair}, ping, identify,
+    identify,
+    identity::{self, ed25519::SecretKey, Keypair},
+    mplex, noise, ping,
     swarm::{SwarmBuilder, SwarmEvent},
-    Multiaddr, PeerId, Swarm, Transport, tcp, noise, mplex,
+    tcp, Multiaddr, PeerId, Swarm, Transport,
 };
+use log::*;
 pub use mempool::*;
 use parking_lot::RwLock;
 pub use rpc::*;
-use log::*;
 use std::collections::HashMap;
 use triomphe::Arc;
 
@@ -34,13 +36,8 @@ pub struct Node<'a, B: PowChainBackend<'a> + ShardBackend<'a>> {
     shards: Arc<HashMap<u8, Option<Arc<Shard<'a, DiskBackend<'a>>>>>>,
 }
 
-
 impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
-
-    pub fn new(
-        chain: Chain<'a, B>,
-        chain_config: Arc<ChainConfig>,
-    ) -> Self {
+    pub fn new(chain: Chain<'a, B>, chain_config: Arc<ChainConfig>) -> Self {
         // TODO: Add secret key bytes to settings
         let local_pk = Keypair::generate_ed25519();
         let local_pbk = local_pk.public();
@@ -53,9 +50,13 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
             .authenticate(noise::Config::new(&local_pk).unwrap())
             .multiplex(mplex::MplexConfig::default())
             .boxed();
-        let mut sector_swarm = SwarmBuilder::with_tokio_executor(swarm_transport, sector_behaviour, local_peer_id).build();
+        let mut sector_swarm =
+            SwarmBuilder::with_tokio_executor(swarm_transport, sector_behaviour, local_peer_id)
+                .build();
 
-        sector_swarm.listen_on("/ip4/0.0.0.0/tcp/8080".parse().unwrap()).unwrap();
+        sector_swarm
+            .listen_on("/ip4/0.0.0.0/tcp/8080".parse().unwrap())
+            .unwrap();
 
         // Exchange swarm
         let exchange_behaviour = ExchangeBehaviour::new(&local_pbk);
@@ -64,7 +65,12 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
             .authenticate(noise::Config::new(&local_pk).unwrap())
             .multiplex(mplex::MplexConfig::default())
             .boxed();
-        let exchange_swarm = SwarmBuilder::with_tokio_executor(exchange_transport, exchange_behaviour, local_peer_id).build();
+        let exchange_swarm = SwarmBuilder::with_tokio_executor(
+            exchange_transport,
+            exchange_behaviour,
+            local_peer_id,
+        )
+        .build();
 
         // Cluster swarm
         let cluster_behaviour = ClusterBehaviour::new(&local_pbk);
@@ -73,14 +79,16 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
             .authenticate(noise::Config::new(&local_pk).unwrap())
             .multiplex(mplex::MplexConfig::default())
             .boxed();
-        let cluster_swarm = SwarmBuilder::with_tokio_executor(cluster_transport, cluster_behaviour, local_peer_id).build();
+        let cluster_swarm =
+            SwarmBuilder::with_tokio_executor(cluster_transport, cluster_behaviour, local_peer_id)
+                .build();
 
         let peer_info = PeerInfo {
             id: local_peer_id.to_string(),
             internal_id: Some(local_peer_id),
-            startup_time: 0,  // TODO: Add correct startup time
-            min_relay_fee: 0, // TODO: Add correct min relay fee
-            listening_sectors: [true; 16],  // TODO: Add correct listening sectors
+            startup_time: 0,               // TODO: Add correct startup time
+            min_relay_fee: 0,              // TODO: Add correct min relay fee
+            listening_sectors: [true; 16], // TODO: Add correct listening sectors
         };
 
         Self {
@@ -91,25 +99,16 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
             exchange_swarm,
             cluster_swarm,
             chain_config,
-            shards: Arc::new(HashMap::new()),  // TODO: Initiate correct shards
+            shards: Arc::new(HashMap::new()), // TODO: Initiate correct shards
         }
     }
-
 
     pub async fn run(mut self) {
         loop {
             tokio::select! {
                 sector_event = self.sector_swarm.select_next_some() => match sector_event {
                     SwarmEvent::NewListenAddr { address, .. } => { info!("Node listing on {}", address); }
-                    SwarmEvent::Behaviour(SectorEvent::Identify(event)) => match event {
-                        identify::Event::Received { peer_id, info, .. } => {
-                            info!("Received identify event from {}", peer_id);
-                            for addr in info.listen_addrs {
-                                self.sector_swarm.behaviour_mut().kademlia.add_address(&peer_id, addr);
-                            }
-                        }
-                        _ => ()
-                    }
+                    SwarmEvent::Behaviour(SectorEvent::Identify(event)) => self.handle_identify_event(event),
                     _ => ()
                 },
                 exchange_event = self.exchange_swarm.next() => unimplemented!(),
@@ -117,9 +116,24 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
             }
         }
     }
+
+    fn handle_identify_event(&mut self, event: identify::Event) {
+        match event {
+            identify::Event::Received { peer_id, info, .. } => {
+                for addr in info.listen_addrs {
+                    self.sector_swarm
+                        .behaviour_mut()
+                        .kademlia
+                        .add_address(&peer_id, addr);
+                }
+            }
+            _ => (),
+        }
+    }
 }
 
 mod behaviour;
 mod mempool;
 mod peer_info;
+mod request_peer;
 mod rpc;
