@@ -14,7 +14,9 @@ use libp2p::{
 };
 use libp2p::{request_response, PeerId};
 
-use crate::node::request_peer::{PeerInfoRequestCodec, PeerInfoRequestProtocol, PeerInfoRequest, PeerInfoResponse};
+use crate::node::request_peer::{
+    PeerInfoRequest, PeerInfoRequestCodec, PeerInfoRequestProtocol, PeerInfoResponse,
+};
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "SectorEvent")]
