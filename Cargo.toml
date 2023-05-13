@@ -83,6 +83,7 @@ libp2p = { version = "0.51.3", features = [
     "tcp",
     "tokio",
     "noise",
+    "request-response"
 ]}
 either = "1.8.1"
 bloomfilter = "1.0.9"
