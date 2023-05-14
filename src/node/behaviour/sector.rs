@@ -24,7 +24,7 @@ pub struct SectorBehaviour {
     identify: identify::Behaviour,
     ping: ping::Behaviour,
     pub kademlia: kad::Kademlia<store::MemoryStore>,
-    peer_request: request_response::Behaviour<PeerInfoRequestCodec>,
+    pub peer_request: request_response::Behaviour<PeerInfoRequestCodec>,
 }
 
 impl SectorBehaviour {
