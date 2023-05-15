@@ -2451,7 +2451,7 @@ impl<'a> ScriptExecutor<'a> {
                         );
                     }
 
-                    if !exec_stack[len-1].is_comparable(&exec_stack[len-2]) {
+                    if !exec_stack[len - 1].is_comparable(&exec_stack[len - 2]) {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
@@ -2459,8 +2459,8 @@ impl<'a> ScriptExecutor<'a> {
                         return;
                     }
 
-                    if exec_stack[len-1] < exec_stack[len-2] {
-                        let e = exec_stack.remove(len - 2 as usize);
+                    if exec_stack[len - 1] < exec_stack[len - 2] {
+                        let e = exec_stack.remove(len - 2_usize);
                         *memory_size -= e.size();
                     } else {
                         let e = exec_stack.pop().unwrap();
@@ -2477,7 +2477,7 @@ impl<'a> ScriptExecutor<'a> {
                         );
                     }
 
-                    if !exec_stack[len-1].is_comparable(&exec_stack[len-2]) {
+                    if !exec_stack[len - 1].is_comparable(&exec_stack[len - 2]) {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
@@ -2485,8 +2485,8 @@ impl<'a> ScriptExecutor<'a> {
                         return;
                     }
 
-                    if exec_stack[len-1] > exec_stack[len-2] {
-                        let e = exec_stack.remove(len - 2 as usize);
+                    if exec_stack[len - 1] > exec_stack[len - 2] {
+                        let e = exec_stack.remove(len - 2_usize);
                         *memory_size -= e.size();
                     } else {
                         let e = exec_stack.pop().unwrap();
@@ -9363,11 +9363,11 @@ mod tests {
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms.iter() {
-            let hashed_term_256 = bifs::blake2b_256(&term);
+            let hashed_term_256 = bifs::blake2b_256(term);
             script_output.push(hashed_term_256);
         }
         for term in test_terms.iter() {
-            let hashed_term_512 = bifs::blake2b_512(&term);
+            let hashed_term_512 = bifs::blake2b_512(term);
             script_output.push(hashed_term_512);
         }
 
