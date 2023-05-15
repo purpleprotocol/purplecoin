@@ -131,8 +131,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x80` IsUTF8 - Pushes `1` on top of the stack if the given `Unsigned8Array` is a valid UTF8 byte sequence
     - [x] OP `0x82` Add1 - Adds `1` to the topmost item on the stack
     - [x] OP `0x83` Sub1 - Subtracts `1` from the topmost item on the stack
-    - [ ] OP `0x84` Min - Returns the minimum of the two topmost items on the stack
-    - [ ] OP `0x85` Max - Returns the maximum of the two topmost items on the stack
+    - [x] OP `0x84` Min - Returns the minimum of the two topmost items on the stack
+    - [x] OP `0x85` Max - Returns the maximum of the two topmost items on the stack
     - [ ] OP `0x86` Within - Pushes `1` on top of the stack if the topmost item on the stack is between the second and the third.
     - [ ] OP `0x87` BoolAnd - And control operator
     - [ ] OP `0x88` BoolOr - Or control operator
