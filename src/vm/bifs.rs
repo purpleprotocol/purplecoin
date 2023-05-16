@@ -98,13 +98,13 @@ pub fn blake3_512(term: &Term) -> Term {
 }
 
 pub fn blake3_256_internal(term: &Term, key: &str) -> Term {
-    let primitive_hash = Hash256::hash_from_slice(&term.to_bytes_raw(), key);
+    let primitive_hash = Hash256::hash_from_slice(term.to_bytes_raw(), key);
 
     Term::Hash256(primitive_hash.0)
 }
 
 pub fn blake3_512_internal(term: &Term, key: &str) -> Term {
-    let primitive_hash = Hash512::hash_from_slice(&term.to_bytes_raw(), key);
+    let primitive_hash = Hash512::hash_from_slice(term.to_bytes_raw(), key);
 
     Term::Hash512(primitive_hash.0)
 }
