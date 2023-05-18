@@ -96,7 +96,8 @@ impl<'a> SectorConfig<'a> {
     /// Returns the min chain id and max chain id in this sector
     pub fn chain_ids(&self) -> (u8, u8) {
         let sps = SHARDS_PER_SECTOR as u8;
-        (self.sector_id * sps, self.sector_id * sps + (sps - 1))
+        let ssps = self.sector_id * sps;
+        (ssps, ssps + (sps - 1))
     }
 
     pub fn key(&self) -> &'a str {
