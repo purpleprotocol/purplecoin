@@ -85,15 +85,11 @@ impl<'a> PowChainBackend<'a> for MemoryBackend<'a> {
     }
 
     fn chain_config(&self) -> &ChainConfig {
-        unimplemented!()
-    }
-
-    fn chain_ids(&self) -> (u8, u8) {
-        unimplemented!()
+        &self.chain_config
     }
 
     fn sector_config(&self) -> &SectorConfig {
-        unimplemented!()
+        &self.sector_config
     }
 
     fn height(&self) -> Result<u64, PowChainBackendErr> {

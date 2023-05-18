@@ -57,7 +57,7 @@ impl ChainConfig {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 /// Sector wide configuration
 pub struct SectorConfig<'a> {
     /// Sector key
@@ -91,6 +91,12 @@ impl<'a> SectorConfig<'a> {
             prune_transactions,
             prune_utxos,
         }
+    }
+
+    /// Returns the min chain id and max chain id in this sector
+    pub fn chain_ids(&self) -> (u8, u8) {
+        let sps = SHARDS_PER_SECTOR as u8;
+        (self.sector_id * sps, self.sector_id * sps + (sps - 1))
     }
 
     pub fn key(&self) -> &'a str {
@@ -137,5 +143,25 @@ impl<'a> ShardConfig<'a> {
 
     pub fn key(&self) -> &'a str {
         self.key
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sector_config_returns_correct_chain_ids() {
+        let mut config = SectorConfig::default();
+        let sps = SHARDS_PER_SECTOR as u8;
+
+        assert_eq!((0, sps - 1), config.chain_ids());
+        config.sector_id += 1;
+        assert_eq!((sps, sps * 2 - 1), config.chain_ids());
+        config.sector_id = SECTORS as u8 - 1;
+        assert_eq!(
+            (config.sector_id * sps, config.sector_id * sps + (sps - 1)),
+            config.chain_ids()
+        );
     }
 }

@@ -91,7 +91,9 @@ pub trait PowChainBackend<'a>: Sized + Clone {
     fn chain_config(&self) -> &ChainConfig;
 
     /// Returns the min chain id and max chain id in this sector
-    fn chain_ids(&self) -> (u8, u8);
+    fn chain_ids(&self) -> (u8, u8) {
+        self.sector_config().chain_ids()
+    }
 
     /// Returns the sector config
     fn sector_config(&self) -> &SectorConfig;
@@ -530,7 +532,7 @@ pub struct PowBlockHeaderWithHash {
 impl From<PowBlockHeader> for PowBlockHeaderWithHash {
     fn from(mut header: PowBlockHeader) -> Self {
         Self {
-            hash: mem::replace(&mut header.hash, None).unwrap(),
+            hash: header.hash.take().unwrap(),
             header,
         }
     }
@@ -554,7 +556,7 @@ pub struct BlockHeaderWithHash {
 impl From<BlockHeader> for BlockHeaderWithHash {
     fn from(mut header: BlockHeader) -> Self {
         Self {
-            hash: mem::replace(&mut header.hash, None).unwrap(),
+            hash: header.hash.take().unwrap(),
             header,
         }
     }

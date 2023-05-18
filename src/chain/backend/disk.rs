@@ -144,10 +144,6 @@ impl<'a> PowChainBackend<'a> for DiskBackend<'a> {
         self.chain_config.as_ref()
     }
 
-    fn chain_ids(&self) -> (u8, u8) {
-        unimplemented!()
-    }
-
     fn sector_config(&self) -> &SectorConfig {
         self.sector_config.as_ref().unwrap()
     }
