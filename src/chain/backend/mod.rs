@@ -91,7 +91,9 @@ pub trait PowChainBackend<'a>: Sized + Clone {
     fn chain_config(&self) -> &ChainConfig;
 
     /// Returns the min chain id and max chain id in this sector
-    fn chain_ids(&self) -> (u8, u8);
+    fn chain_ids(&self) -> (u8, u8) {
+        self.sector_config().chain_ids()
+    }
 
     /// Returns the sector config
     fn sector_config(&self) -> &SectorConfig;
@@ -480,7 +482,15 @@ pub fn create_rocksdb_backend<'a>() -> Arc<DB> {
     let mut cf_opts = Options::default();
     cf_opts.set_max_write_buffer_number(3);
     let cfs = vec![
-        ColumnFamilyDescriptor::new(crate::chain::backend::disk::HEADERS_CF, cf_opts.clone()),
+        ColumnFamilyDescriptor::new(
+            crate::chain::backend::disk::SECTOR_HEADERS_CF,
+            cf_opts.clone(),
+        ),
+        ColumnFamilyDescriptor::new(
+            crate::chain::backend::disk::SHARD_HEADERS_CF,
+            cf_opts.clone(),
+        ),
+        ColumnFamilyDescriptor::new(crate::chain::backend::disk::MMR_CF, cf_opts.clone()),
         ColumnFamilyDescriptor::new(
             crate::chain::backend::disk::TRANSACTIONS_CF,
             cf_opts.clone(),
@@ -522,7 +532,7 @@ pub struct PowBlockHeaderWithHash {
 impl From<PowBlockHeader> for PowBlockHeaderWithHash {
     fn from(mut header: PowBlockHeader) -> Self {
         Self {
-            hash: mem::replace(&mut header.hash, None).unwrap(),
+            hash: header.hash.take().unwrap(),
             header,
         }
     }
@@ -546,7 +556,7 @@ pub struct BlockHeaderWithHash {
 impl From<BlockHeader> for BlockHeaderWithHash {
     fn from(mut header: BlockHeader) -> Self {
         Self {
-            hash: mem::replace(&mut header.hash, None).unwrap(),
+            hash: header.hash.take().unwrap(),
             header,
         }
     }
@@ -562,3 +572,4 @@ impl From<BlockHeaderWithHash> for BlockHeader {
 
 pub mod disk;
 pub mod memory;
+pub mod memory_store;

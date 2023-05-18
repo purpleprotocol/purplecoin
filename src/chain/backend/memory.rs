@@ -85,15 +85,11 @@ impl<'a> PowChainBackend<'a> for MemoryBackend<'a> {
     }
 
     fn chain_config(&self) -> &ChainConfig {
-        unimplemented!()
-    }
-
-    fn chain_ids(&self) -> (u8, u8) {
-        unimplemented!()
+        &self.chain_config
     }
 
     fn sector_config(&self) -> &SectorConfig {
-        unimplemented!()
+        &self.sector_config
     }
 
     fn height(&self) -> Result<u64, PowChainBackendErr> {
@@ -222,6 +218,22 @@ impl<'a> MMRBackend<Vec<u8>> for MemoryBackend<'a> {
         unimplemented!()
     }
 
+    fn leaf_pos_iter(&self) -> Box<dyn Iterator<Item = u64> + '_> {
+        unimplemented!();
+    }
+
+    fn leaf_idx_iter(&self, from_idx: u64) -> Box<dyn Iterator<Item = u64> + '_> {
+        unimplemented!();
+    }
+
+    fn n_unpruned_leaves(&self) -> u64 {
+        unimplemented!();
+    }
+
+    fn n_unpruned_leaves_to_index(&self, to_index: u64) -> u64 {
+        unimplemented!();
+    }
+
     fn get_peak(&self, pos: u64) -> Result<Option<Hash256>, MMRBackendErr> {
         unimplemented!()
     }
@@ -234,7 +246,7 @@ impl<'a> MMRBackend<Vec<u8>> for MemoryBackend<'a> {
         unimplemented!()
     }
 
-    fn unpruned_size(&self) -> u64 {
+    fn unpruned_size(&self) -> Result<u64, MMRBackendErr> {
         unimplemented!()
     }
 
@@ -242,7 +254,7 @@ impl<'a> MMRBackend<Vec<u8>> for MemoryBackend<'a> {
         unimplemented!()
     }
 
-    fn size(&self) -> u64 {
+    fn size(&self) -> Result<u64, MMRBackendErr> {
         unimplemented!()
     }
 

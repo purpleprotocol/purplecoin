@@ -5267,6 +5267,7 @@ dependencies = [
  "triomphe",
  "warp",
  "web-sys",
+ "xxhash-rust",
  "zeroize",
 ]
 
