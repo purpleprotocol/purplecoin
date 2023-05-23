@@ -7,8 +7,25 @@
 fn main() {
     let mut build = cc::Build::new();
 
+    build.include("c_src/compat/byteswap");
+    build.include("c_src/compat/endian");
+    build.include("c_src/crypto/common");
     build.include("c_src/crypto/sph_types");
     build.include("c_src/crypto/sph_fugue");
+    build.include("c_src/crypto/sph_blake");
+    build.include("c_src/crypto/sph_bmw");
+    build.include("c_src/crypto/sph_cubehash");
+    build.include("c_src/crypto/sph_echo");
+    build.include("c_src/crypto/sph_groestl");
+    build.include("c_src/crypto/sph_hamsi");
+    build.include("c_src/crypto/sph_jh");
+    build.include("c_src/crypto/sph_keccak");
+    build.include("c_src/crypto/sph_luffa");
+    build.include("c_src/crypto/sph_sha2");
+    build.include("c_src/crypto/sph_shabal");
+    build.include("c_src/crypto/sph_skein");
+    build.include("c_src/crypto/sph_simd");
+    build.include("c_src/crypto/sph_whirlpool");
     build.include("c_src/cryptonote/oaes_lib");
     build.include("c_src/cryptonote/slow-hash");
     build.include("c_src/cryptonote/c_keccak");
@@ -24,6 +41,11 @@ fn main() {
     build.include("c_src/hash_selection");
     build.include("c_src/hash");
     build.file("c_src/crypto/sph_fugue.c");
+    build.file("c_src/crypto/sph_hamsi.c");
+    build.file("c_src/crypto/sph_sha2.c");
+    build.file("c_src/crypto/sph_sha512.c");
+    build.file("c_src/crypto/sph_shabal.c");
+    build.file("c_src/crypto/sph_whirlpool.c");
     build.file("c_src/cryptonote/c_keccak.c");
     build.file("c_src/cryptonote/c_groestl.c");
     build.file("c_src/cryptonote/c_blake256.c");
