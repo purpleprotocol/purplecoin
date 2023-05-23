@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <cryptonote/hash-ops.h>
+#include "hash-ops.h"
 
 #define CN_PAGE_SIZE          2097152
 #define CN_ITERATIONS          524288

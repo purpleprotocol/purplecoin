@@ -5,7 +5,7 @@
 #ifndef BITCOIN_COMPAT_ENDIAN_H
 #define BITCOIN_COMPAT_ENDIAN_H
 
-#include <compat/byteswap.h>
+#include "byteswap.h"
 
 #include <stdint.h>
 

@@ -12,8 +12,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <cryptonote/int-util.h>
-#include <cryptonote/warnings.h>
+#include "int-util.h"
+#include "warnings.h"
 
 static inline void *padd(void *p, size_t i) {
   return (char *) p + i;

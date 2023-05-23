@@ -12,7 +12,7 @@ typedef crypto_uint32 uint32_t;
 typedef crypto_uint64 uint64_t;
 */
 #include <stdint.h>
-#include <cryptonote/slow-hash.h>
+#include "slow-hash.h"
 
 /* some sizes (number of bytes) */
 #define ROWS 8

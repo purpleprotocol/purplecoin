@@ -56,8 +56,8 @@ static const char _NR[] = {
 #else
 #define GETPID() getpid()
 #endif
-#include <cryptonote/oaes_config.h>
-#include <cryptonote/oaes_lib.h>
+#include "oaes_config.h"
+#include "oaes_lib.h"
 
 #ifdef OAES_HAVE_ISAAC
 #include <rand.h>

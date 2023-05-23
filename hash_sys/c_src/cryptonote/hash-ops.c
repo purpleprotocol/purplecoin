@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <cryptonote/hash-ops.h>
-#include <cryptonote/c_keccak.h>
+#include "hash-ops.h"
+#include "c_keccak.h"
 
 void hash_permutation(union hash_state *state) {
 #if BYTE_ORDER == LITTLE_ENDIAN
