@@ -1,9 +1,10 @@
-/* $Id: sph_blake.h 252 2011-06-07 17:55:14Z tp $ */
+/* $Id: sph_shavite.h 208 2010-06-02 20:33:00Z tp $ */
 /**
- * BLAKE interface. BLAKE is a family of functions which differ by their
- * output size; this implementation defines BLAKE for output sizes 224,
- * 256, 384 and 512 bits. This implementation conforms to the "third
- * round" specification.
+ * SHAvite-3 interface. This code implements SHAvite-3 with the
+ * recommended parameters for SHA-3, with outputs of 224, 256, 384 and
+ * 512 bits. In the following, we call the function "SHAvite" (without
+ * the "-3" suffix), thus "SHAvite-224" is "SHAvite-3 with a 224-bit
+ * output".
  *
  * ==========================(LICENSE BEGIN)============================
  *
@@ -30,51 +31,47 @@
  *
  * ===========================(LICENSE END)=============================
  *
- * @file     sph_blake.h
+ * @file     sph_shavite.h
  * @author   Thomas Pornin <thomas.pornin@cryptolog.com>
  */
 
-#ifndef SPH_BLAKE_H__
-#define SPH_BLAKE_H__
+#ifndef SPH_SHAVITE_H__
+#define SPH_SHAVITE_H__
+
+#include <stddef.h>
+#include "sph_types.h"
 
 #ifdef __cplusplus
 extern "C"{
 #endif
 
-#include <stddef.h>
-#include "sph_types.h"
-
 /**
- * Output size (in bits) for BLAKE-224.
+ * Output size (in bits) for SHAvite-224.
  */
-#define SPH_SIZE_blake224   224
+#define SPH_SIZE_shavite224   224
 
 /**
- * Output size (in bits) for BLAKE-256.
+ * Output size (in bits) for SHAvite-256.
  */
-#define SPH_SIZE_blake256   256
-
-#if SPH_64
+#define SPH_SIZE_shavite256   256
 
 /**
- * Output size (in bits) for BLAKE-384.
+ * Output size (in bits) for SHAvite-384.
  */
-#define SPH_SIZE_blake384   384
+#define SPH_SIZE_shavite384   384
 
 /**
- * Output size (in bits) for BLAKE-512.
+ * Output size (in bits) for SHAvite-512.
  */
-#define SPH_SIZE_blake512   512
-
-#endif
+#define SPH_SIZE_shavite512   512
 
 /**
- * This structure is a context for BLAKE-224 and BLAKE-256 computations:
+ * This structure is a context for SHAvite-224 and SHAvite-256 computations:
  * it contains the intermediate values and some data from the last
- * entered block. Once a BLAKE computation has been performed, the
+ * entered block. Once a SHAvite computation has been performed, the
  * context can be reused for another computation.
  *
- * The contents of this structure are private. A running BLAKE
+ * The contents of this structure are private. A running SHAvite
  * computation can be cloned by copying the context (e.g. with a simple
  * <code>memcpy()</code>).
  */
@@ -82,33 +79,30 @@ typedef struct {
 #ifndef DOXYGEN_IGNORE
 	unsigned char buf[64];    /* first field, for alignment */
 	size_t ptr;
-	sph_u32 H[8];
-	sph_u32 S[4];
-	sph_u32 T0, T1;
+	sph_u32 h[8];
+	sph_u32 count0, count1;
 #endif
-} sph_blake_small_context;
+} sph_shavite_small_context;
 
 /**
- * This structure is a context for BLAKE-224 computations. It is
- * identical to the common <code>sph_blake_small_context</code>.
+ * This structure is a context for SHAvite-224 computations. It is
+ * identical to the common <code>sph_shavite_small_context</code>.
  */
-typedef sph_blake_small_context sph_blake224_context;
+typedef sph_shavite_small_context sph_shavite224_context;
 
 /**
- * This structure is a context for BLAKE-256 computations. It is
- * identical to the common <code>sph_blake_small_context</code>.
+ * This structure is a context for SHAvite-256 computations. It is
+ * identical to the common <code>sph_shavite_small_context</code>.
  */
-typedef sph_blake_small_context sph_blake256_context;
-
-#if SPH_64
+typedef sph_shavite_small_context sph_shavite256_context;
 
 /**
- * This structure is a context for BLAKE-384 and BLAKE-512 computations:
+ * This structure is a context for SHAvite-384 and SHAvite-512 computations:
  * it contains the intermediate values and some data from the last
- * entered block. Once a BLAKE computation has been performed, the
+ * entered block. Once a SHAvite computation has been performed, the
  * context can be reused for another computation.
  *
- * The contents of this structure are private. A running BLAKE
+ * The contents of this structure are private. A running SHAvite
  * computation can be cloned by copying the context (e.g. with a simple
  * <code>memcpy()</code>).
  */
@@ -116,54 +110,51 @@ typedef struct {
 #ifndef DOXYGEN_IGNORE
 	unsigned char buf[128];    /* first field, for alignment */
 	size_t ptr;
-	sph_u64 H[8];
-	sph_u64 S[4];
-	sph_u64 T0, T1;
+	sph_u32 h[16];
+	sph_u32 count0, count1, count2, count3;
 #endif
-} sph_blake_big_context;
+} sph_shavite_big_context;
 
 /**
- * This structure is a context for BLAKE-384 computations. It is
- * identical to the common <code>sph_blake_small_context</code>.
+ * This structure is a context for SHAvite-384 computations. It is
+ * identical to the common <code>sph_shavite_small_context</code>.
  */
-typedef sph_blake_big_context sph_blake384_context;
+typedef sph_shavite_big_context sph_shavite384_context;
 
 /**
- * This structure is a context for BLAKE-512 computations. It is
- * identical to the common <code>sph_blake_small_context</code>.
+ * This structure is a context for SHAvite-512 computations. It is
+ * identical to the common <code>sph_shavite_small_context</code>.
  */
-typedef sph_blake_big_context sph_blake512_context;
-
-#endif
+typedef sph_shavite_big_context sph_shavite512_context;
 
 /**
- * Initialize a BLAKE-224 context. This process performs no memory allocation.
+ * Initialize a SHAvite-224 context. This process performs no memory allocation.
  *
- * @param cc   the BLAKE-224 context (pointer to a
- *             <code>sph_blake224_context</code>)
+ * @param cc   the SHAvite-224 context (pointer to a
+ *             <code>sph_shavite224_context</code>)
  */
-void sph_blake224_init(void *cc);
+void sph_shavite224_init(void *cc);
 
 /**
  * Process some data bytes. It is acceptable that <code>len</code> is zero
  * (in which case this function does nothing).
  *
- * @param cc     the BLAKE-224 context
+ * @param cc     the SHAvite-224 context
  * @param data   the input data
  * @param len    the input data length (in bytes)
  */
-void sph_blake224(void *cc, const void *data, size_t len);
+void sph_shavite224(void *cc, const void *data, size_t len);
 
 /**
- * Terminate the current BLAKE-224 computation and output the result into
+ * Terminate the current SHAvite-224 computation and output the result into
  * the provided buffer. The destination buffer must be wide enough to
  * accomodate the result (28 bytes). The context is automatically
  * reinitialized.
  *
- * @param cc    the BLAKE-224 context
+ * @param cc    the SHAvite-224 context
  * @param dst   the destination buffer
  */
-void sph_blake224_close(void *cc, void *dst);
+void sph_shavite224_close(void *cc, void *dst);
 
 /**
  * Add a few additional bits (0 to 7) to the current computation, then
@@ -173,42 +164,42 @@ void sph_blake224_close(void *cc, void *dst);
  * numbered 7 downto 8-n (this is the big-endian convention at the byte
  * level). The context is automatically reinitialized.
  *
- * @param cc    the BLAKE-224 context
+ * @param cc    the SHAvite-224 context
  * @param ub    the extra bits
  * @param n     the number of extra bits (0 to 7)
  * @param dst   the destination buffer
  */
-void sph_blake224_addbits_and_close(
+void sph_shavite224_addbits_and_close(
 	void *cc, unsigned ub, unsigned n, void *dst);
 
 /**
- * Initialize a BLAKE-256 context. This process performs no memory allocation.
+ * Initialize a SHAvite-256 context. This process performs no memory allocation.
  *
- * @param cc   the BLAKE-256 context (pointer to a
- *             <code>sph_blake256_context</code>)
+ * @param cc   the SHAvite-256 context (pointer to a
+ *             <code>sph_shavite256_context</code>)
  */
-void sph_blake256_init(void *cc);
+void sph_shavite256_init(void *cc);
 
 /**
  * Process some data bytes. It is acceptable that <code>len</code> is zero
  * (in which case this function does nothing).
  *
- * @param cc     the BLAKE-256 context
+ * @param cc     the SHAvite-256 context
  * @param data   the input data
  * @param len    the input data length (in bytes)
  */
-void sph_blake256(void *cc, const void *data, size_t len);
+void sph_shavite256(void *cc, const void *data, size_t len);
 
 /**
- * Terminate the current BLAKE-256 computation and output the result into
+ * Terminate the current SHAvite-256 computation and output the result into
  * the provided buffer. The destination buffer must be wide enough to
  * accomodate the result (32 bytes). The context is automatically
  * reinitialized.
  *
- * @param cc    the BLAKE-256 context
+ * @param cc    the SHAvite-256 context
  * @param dst   the destination buffer
  */
-void sph_blake256_close(void *cc, void *dst);
+void sph_shavite256_close(void *cc, void *dst);
 
 /**
  * Add a few additional bits (0 to 7) to the current computation, then
@@ -218,44 +209,42 @@ void sph_blake256_close(void *cc, void *dst);
  * numbered 7 downto 8-n (this is the big-endian convention at the byte
  * level). The context is automatically reinitialized.
  *
- * @param cc    the BLAKE-256 context
+ * @param cc    the SHAvite-256 context
  * @param ub    the extra bits
  * @param n     the number of extra bits (0 to 7)
  * @param dst   the destination buffer
  */
-void sph_blake256_addbits_and_close(
+void sph_shavite256_addbits_and_close(
 	void *cc, unsigned ub, unsigned n, void *dst);
 
-#if SPH_64
-
 /**
- * Initialize a BLAKE-384 context. This process performs no memory allocation.
+ * Initialize a SHAvite-384 context. This process performs no memory allocation.
  *
- * @param cc   the BLAKE-384 context (pointer to a
- *             <code>sph_blake384_context</code>)
+ * @param cc   the SHAvite-384 context (pointer to a
+ *             <code>sph_shavite384_context</code>)
  */
-void sph_blake384_init(void *cc);
+void sph_shavite384_init(void *cc);
 
 /**
  * Process some data bytes. It is acceptable that <code>len</code> is zero
  * (in which case this function does nothing).
  *
- * @param cc     the BLAKE-384 context
+ * @param cc     the SHAvite-384 context
  * @param data   the input data
  * @param len    the input data length (in bytes)
  */
-void sph_blake384(void *cc, const void *data, size_t len);
+void sph_shavite384(void *cc, const void *data, size_t len);
 
 /**
- * Terminate the current BLAKE-384 computation and output the result into
+ * Terminate the current SHAvite-384 computation and output the result into
  * the provided buffer. The destination buffer must be wide enough to
  * accomodate the result (48 bytes). The context is automatically
  * reinitialized.
  *
- * @param cc    the BLAKE-384 context
+ * @param cc    the SHAvite-384 context
  * @param dst   the destination buffer
  */
-void sph_blake384_close(void *cc, void *dst);
+void sph_shavite384_close(void *cc, void *dst);
 
 /**
  * Add a few additional bits (0 to 7) to the current computation, then
@@ -265,42 +254,42 @@ void sph_blake384_close(void *cc, void *dst);
  * numbered 7 downto 8-n (this is the big-endian convention at the byte
  * level). The context is automatically reinitialized.
  *
- * @param cc    the BLAKE-384 context
+ * @param cc    the SHAvite-384 context
  * @param ub    the extra bits
  * @param n     the number of extra bits (0 to 7)
  * @param dst   the destination buffer
  */
-void sph_blake384_addbits_and_close(
+void sph_shavite384_addbits_and_close(
 	void *cc, unsigned ub, unsigned n, void *dst);
 
 /**
- * Initialize a BLAKE-512 context. This process performs no memory allocation.
+ * Initialize a SHAvite-512 context. This process performs no memory allocation.
  *
- * @param cc   the BLAKE-512 context (pointer to a
- *             <code>sph_blake512_context</code>)
+ * @param cc   the SHAvite-512 context (pointer to a
+ *             <code>sph_shavite512_context</code>)
  */
-void sph_blake512_init(void *cc);
+void sph_shavite512_init(void *cc);
 
 /**
  * Process some data bytes. It is acceptable that <code>len</code> is zero
  * (in which case this function does nothing).
  *
- * @param cc     the BLAKE-512 context
+ * @param cc     the SHAvite-512 context
  * @param data   the input data
  * @param len    the input data length (in bytes)
  */
-void sph_blake512(void *cc, const void *data, size_t len);
+void sph_shavite512(void *cc, const void *data, size_t len);
 
 /**
- * Terminate the current BLAKE-512 computation and output the result into
+ * Terminate the current SHAvite-512 computation and output the result into
  * the provided buffer. The destination buffer must be wide enough to
  * accomodate the result (64 bytes). The context is automatically
  * reinitialized.
  *
- * @param cc    the BLAKE-512 context
+ * @param cc    the SHAvite-512 context
  * @param dst   the destination buffer
  */
-void sph_blake512_close(void *cc, void *dst);
+void sph_shavite512_close(void *cc, void *dst);
 
 /**
  * Add a few additional bits (0 to 7) to the current computation, then
@@ -310,15 +299,13 @@ void sph_blake512_close(void *cc, void *dst);
  * numbered 7 downto 8-n (this is the big-endian convention at the byte
  * level). The context is automatically reinitialized.
  *
- * @param cc    the BLAKE-512 context
+ * @param cc    the SHAvite-512 context
  * @param ub    the extra bits
  * @param n     the number of extra bits (0 to 7)
  * @param dst   the destination buffer
  */
-void sph_blake512_addbits_and_close(
+void sph_shavite512_addbits_and_close(
 	void *cc, unsigned ub, unsigned n, void *dst);
-
-#endif
 
 #ifdef __cplusplus
 }
