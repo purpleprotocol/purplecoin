@@ -1,29 +1,29 @@
-# /* **************************************************************************
-#  *                                                                          *
-#  *     (C) Copyright Paul Mensonides 2002-2011.                             *
-#  *     (C) Copyright Edward Diener 2011-2020.                               *
-#  *     Distributed under the Boost Software License, Version 1.0. (See      *
-#  *     accompanying file LICENSE_1_0.txt or copy at                         *
-#  *     http://www.boost.org/LICENSE_1_0.txt)                                *
-#  *                                                                          *
-#  ************************************************************************** */
-#
-# /* See http://www.boost.org for most recent version. */
-#
+ /* **************************************************************************
+  *                                                                          *
+  *     (C) Copyright Paul Mensonides 2002-2011.                             *
+  *     (C) Copyright Edward Diener 2011-2020.                               *
+  *     Distributed under the Boost Software License, Version 1.0. (See      *
+  *     accompanying file LICENSE_1_0.txt or copy at                         *
+  *     http://www.boost.org/LICENSE_1_0.txt)                                *
+  *                                                                          *
+  ************************************************************************** */
+
+ /* See http://www.boost.org for most recent version. */
+
 # ifndef BOOST_PREPROCESSOR_CONFIG_CONFIG_HPP
 # define BOOST_PREPROCESSOR_CONFIG_CONFIG_HPP
-#
-# /* BOOST_PP_CONFIG_FLAGS */
-#
+
+ /* BOOST_PP_CONFIG_FLAGS */
+
 # define BOOST_PP_CONFIG_STRICT() 0x0001
 # define BOOST_PP_CONFIG_IDEAL() 0x0002
-#
+
 # define BOOST_PP_CONFIG_MSVC() 0x0004
 # define BOOST_PP_CONFIG_MWCC() 0x0008
 # define BOOST_PP_CONFIG_BCC() 0x0010
 # define BOOST_PP_CONFIG_EDG() 0x0020
 # define BOOST_PP_CONFIG_DMC() 0x0040
-#
+
 # ifndef BOOST_PP_CONFIG_FLAGS
 #    if defined(__GCCXML__) || defined(__WAVE__) || defined(__MWERKS__) && __MWERKS__ >= 0x3200
 #        define BOOST_PP_CONFIG_FLAGS() (BOOST_PP_CONFIG_STRICT())
@@ -57,15 +57,15 @@
 #        define BOOST_PP_CONFIG_FLAGS() (BOOST_PP_CONFIG_STRICT())
 #    endif
 # endif
-#
-# /* BOOST_PP_CONFIG_EXTENDED_LINE_INFO */
-#
+
+ /* BOOST_PP_CONFIG_EXTENDED_LINE_INFO */
+
 # ifndef BOOST_PP_CONFIG_EXTENDED_LINE_INFO
 #    define BOOST_PP_CONFIG_EXTENDED_LINE_INFO 0
 # endif
-#
-# /* BOOST_PP_CONFIG_ERRORS */
-#
+
+ /* BOOST_PP_CONFIG_ERRORS */
+
 # ifndef BOOST_PP_CONFIG_ERRORS
 #    ifdef NDEBUG
 #        define BOOST_PP_CONFIG_ERRORS 0
@@ -73,9 +73,9 @@
 #        define BOOST_PP_CONFIG_ERRORS 1
 #    endif
 # endif
-#
-# /* BOOST_PP_VARIADICS */
-#
+
+ /* BOOST_PP_VARIADICS */
+
 # if defined BOOST_PP_VARIADICS
 #    undef BOOST_PP_VARIADICS
 # endif
@@ -88,12 +88,12 @@
 # else
 #     define BOOST_PP_VARIADICS_MSVC 0
 # endif
-#
+
 # if BOOST_PP_CONFIG_FLAGS() & BOOST_PP_CONFIG_STRICT()
 # define BOOST_PP_IS_STANDARD() 1
 # else
 # define BOOST_PP_IS_STANDARD() 0
 # endif
-#
+
 # endif
 

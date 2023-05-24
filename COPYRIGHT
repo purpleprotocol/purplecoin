@@ -294,7 +294,7 @@ their own copyright notices and license terms:
     accompanying file LICENSE_1_0.txt or copy at
     http://www.boost.org/LICENSE_1_0.txt)
 
-    Revised by Paul Mensonides (2002) */
+    Revised by Paul Mensonides (2002)
 
 * various implementations of hash functions related to blockchain software, under hash_sys
     Copyright (c) 2009-2010 Satoshi Nakamoto

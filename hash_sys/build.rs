@@ -103,8 +103,8 @@ fn main() {
     cpp_build.include("c_src/cryptonote/warnings");
     cpp_build.include("c_src/cryptonote/hash-ops");
     cpp_build.include("c_src/cryptonote/variant2_int_sqrt");
-    cpp_build.include("c_src/config");
-    cpp_build.include("c_src/stringize");
+    cpp_build.include("c_src/cryptonote/config");
+    cpp_build.include("c_src/cryptonote/stringize");
     cpp_build.include("c_src/utilstrencodings");
     cpp_build.include("c_src/uint256");
     cpp_build.include("c_src/tinyformat");
