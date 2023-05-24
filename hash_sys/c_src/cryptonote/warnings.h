@@ -11,7 +11,7 @@
 
 #else
 
-#include <boost/preprocessor/stringize.hpp>
+#include "stringize.hpp"
 
 #define PUSH_WARNINGS _Pragma("GCC diagnostic push")
 #define POP_WARNINGS _Pragma("GCC diagnostic pop")
