@@ -45,21 +45,6 @@ fn main() {
     c_build.include("c_src/cryptonote/variant2_int_sqrt");
     c_build.include("c_src/fugue");
     c_build.include("c_src/hash");
-    c_build.file("c_src/crypto/sph_fugue.c");
-    c_build.file("c_src/crypto/sph_hamsi_helper.c");
-    c_build.file("c_src/crypto/sph_hamsi.c");
-    c_build.file("c_src/crypto/sph_sha2.c");
-    c_build.file("c_src/crypto/sph_sha512.c");
-    c_build.file("c_src/crypto/sph_shabal.c");
-    c_build.file("c_src/crypto/sph_whirlpool.c");
-    c_build.file("c_src/cryptonote/c_keccak.c");
-    c_build.file("c_src/cryptonote/c_groestl.c");
-    c_build.file("c_src/cryptonote/c_blake256.c");
-    c_build.file("c_src/cryptonote/c_jh.c");
-    c_build.file("c_src/cryptonote/c_skein.c");
-    c_build.file("c_src/cryptonote/hash-ops.c");
-    c_build.file("c_src/cryptonote/oaes_lib.c");
-    c_build.file("c_src/cryptonote/slow-hash.c");
     c_build.file("c_src/fugue.c");
 
     c_build.compile("c_hash_sys");
@@ -115,14 +100,13 @@ fn main() {
     cpp_build.include("c_src/span");
     cpp_build.include("c_src/compat");
     cpp_build.include("c_src/prevector");
-    cpp_build.file("c_src/crypto/ripemd160.cpp");
-    cpp_build.file("c_src/crypto/sha256.cpp");
-    cpp_build.file("c_src/hash.cpp");
-
-    // Link C library
-    println!("cargo:rustc-link-lib=c_hash_sys");
+    cpp_build.include("c_src/gr");
+    cpp_build.file("c_src/gr.cpp");
 
     cpp_build.cpp(true);
     cpp_build.flag_if_supported("-std=c++11");
     cpp_build.compile("hash_sys");
+
+    println!("cargo:rustc-link-lib=static=c_hash_sys");
+    println!("cargo:rustc-link-lib=static=hash_sys");
 }

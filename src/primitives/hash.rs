@@ -16,6 +16,16 @@ pub fn hash_bytes_fugue256(mut bytes: &[u8]) -> [u8; 32] {
     out
 }
 
+#[inline]
+pub fn hash_bytes_gr(bytes: [u8; 32], key: [u8; 32]) -> [u8; 32] {
+    let mut out: [u8; 32] = [0; 32];
+    let data_ptr: *const c_char = &bytes as *const _ as *const c_char;
+    let key_ptr: *const c_char = &key as *const _ as *const c_char;
+    let mut out_ptr: *mut c_char = &mut out as *mut _ as *mut c_char;
+    unsafe { gr_hash(data_ptr, key_ptr, out_ptr) };
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -24,6 +34,17 @@ mod tests {
     fn hash_bytes_fugue256_test() {
         let test_vector = "";
         let result = hash_bytes_fugue256(test_vector.as_bytes());
+        let result = hex::encode(result);
+
+        assert_eq!(
+            &result,
+            "d6ec528980c130aad1d1acd28b9dd8dbdeae0d79eded1fca72c2af9f37c2246f"
+        );
+    }
+
+    #[test]
+    fn hash_bytes_gr_test() {
+        let result = hash_bytes_gr([0; 32], [0; 32]);
         let result = hex::encode(result);
 
         assert_eq!(

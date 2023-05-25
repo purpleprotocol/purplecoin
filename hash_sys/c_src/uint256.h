@@ -22,8 +22,8 @@ class base_blob
 {
 protected:
     static constexpr int WIDTH = BITS / 8;
-    uint8_t data[WIDTH];
 public:
+    uint8_t data[WIDTH];
     base_blob()
     {
         memset(data, 0, sizeof(data));
