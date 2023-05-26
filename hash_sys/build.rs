@@ -9,6 +9,7 @@ use std::path::PathBuf;
 fn main() {
     let mut c_build = cc::Build::new();
 
+    // C build
     c_build.include("c_src/crypto/byteswap");
     c_build.include("c_src/crypto/endian");
     c_build.include("c_src/crypto/common");
@@ -149,9 +150,6 @@ fn main() {
     cpp_build.include("c_src/gr");
     cpp_build.file("c_src/crypto/hmac_sha512.cpp");
     cpp_build.file("c_src/crypto/ripemd160.cpp");
-    //cpp_build.file("c_src/crypto/md_helper.c");
-    
-    //cpp_build.file("c_src/cryptonote/oaes_lib.c");
     cpp_build.file("c_src/uint256.cpp");
     cpp_build.file("c_src/utilstrencodings.cpp");
     cpp_build.file("c_src/hash_selection.cpp");
@@ -269,6 +267,5 @@ fn main() {
     cpp_build.compile("hash_sys");
 
     println!("cargo:rustc-link-search=native={}", out_path.display());
-    //println!("cargo:rustc-link-lib=static=c_hash_sys");
     println!("cargo:rustc-link-lib=static=hash_sys");
 }
