@@ -7,9 +7,10 @@
 use std::path::PathBuf;
 
 fn main() {
-    let mut c_build = cc::Build::new();
+    println!("cargo:rerun-if-changed=c_src");
 
     // C build
+    let mut c_build = cc::Build::new();
     c_build.include("c_src/crypto/byteswap");
     c_build.include("c_src/crypto/endian");
     c_build.include("c_src/crypto/common");
@@ -90,12 +91,10 @@ fn main() {
     c_build.file("c_src/cryptonote/oaes_lib.c");
     c_build.file("c_src/cryptonote/slow-hash.c");
     c_build.file("c_src/fugue.c");
-
     c_build.compile("c_hash_sys");
 
-    let mut cpp_build = cc::Build::new();
-
     // C++ build
+    let mut cpp_build = cc::Build::new();
     cpp_build.include("c_src/crypto/byteswap");
     cpp_build.include("c_src/crypto/endian");
     cpp_build.include("c_src/crypto/common");
@@ -157,6 +156,7 @@ fn main() {
 
     let out_path: PathBuf = std::env::var("OUT_DIR").unwrap().parse().unwrap();
 
+    // Link objects from C lib
     let mut c = out_path.clone();
     c.push("c_src");
     c.push("crypto");

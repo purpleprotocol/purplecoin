@@ -12,20 +12,14 @@
 #include "uint256.h"
 
 void gr_hash(const char* input, const char* key, char* output) {
-    assert(strlen(input) == 32);
-    assert(strlen(output) == 32);
-    assert(strlen(key) == 32);
-
-    std::string in(key);
-    std::vector<unsigned char> outputkey(in.length());
+    std::vector<char> in(key, key+32);
+    std::vector<unsigned char> outputkey(32);
     std::transform(in.begin(), in.end(), outputkey.begin(),
         [](char c)
         {
         return static_cast<unsigned char>(c);
         });
-
     uint256 res = HashGR(input, input + 32, *new uint256(outputkey));
-
     for (int i = 0; i < 32; i++) {
         output[i] = res.data[i];
     }
