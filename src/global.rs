@@ -43,7 +43,7 @@ lazy_static! {
 }
 
 /// Initialize globals
-pub fn init() { }
+pub fn init() {}
 
 pub fn set_balance(wallet: &str, balance: i128) {
     WALLET_BLANCES.lock().insert(wallet.to_owned(), balance);

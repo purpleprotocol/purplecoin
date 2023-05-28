@@ -615,7 +615,7 @@ impl PowBlockHeader {
         let encoded = crate::codec::encode_to_vec(self).unwrap();
         let hash = match self.map_height_to_algo() {
             PowAlgorithm::RandomHash(algo) => algo.hash(&encoded),
-            PowAlgorithm::GR => Hash256(hash_arb_bytes_gr(&encoded, self.prev_hash.0))
+            PowAlgorithm::GR => Hash256(hash_arb_bytes_gr(&encoded, self.prev_hash.0)),
         };
         self.hash = Some(hash);
     }

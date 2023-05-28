@@ -4,9 +4,9 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use blake3::Hasher;
 use core::ffi::c_char;
 use hash_sys::*;
-use blake3::Hasher;
 
 #[inline]
 pub fn hash_bytes_fugue256(mut bytes: &[u8]) -> [u8; 32] {
@@ -28,7 +28,7 @@ pub fn hash_bytes_gr(bytes: &[u8; 32], key: [u8; 32]) -> [u8; 32] {
 }
 
 #[inline]
-/// As GR receives an input size of 32 bytes we transform an arbitrary 
+/// As GR receives an input size of 32 bytes we transform an arbitrary
 /// sized slice  by hashing it with blake3 prior.
 pub fn hash_arb_bytes_gr(bytes: &[u8], key: [u8; 32]) -> [u8; 32] {
     let mut hasher = blake3::Hasher::new();

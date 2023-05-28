@@ -6,8 +6,8 @@
 
 #![allow(deprecated)]
 
-use crate::primitives::{Hash256, PowBlockHeader};
 use crate::consensus::Difficulty;
+use crate::primitives::{Hash256, PowBlockHeader};
 use blake2::{Blake2b512, Blake2s256, Digest};
 use crossbeam_channel::{unbounded, Receiver, Sender, TryRecvError};
 use jh_x86_64::{Digest as JhDigest, Jh256};
@@ -136,7 +136,7 @@ impl PowAlgorithm {
     pub fn hash(&self, bytes: &[u8]) -> Hash256 {
         match self {
             Self::RandomHash(algo) => algo.hash(bytes),
-            Self::GR => unreachable!()
+            Self::GR => unreachable!(),
         }
     }
 
@@ -160,9 +160,7 @@ impl fmt::Debug for PowAlgorithm {
         match self {
             Self::RandomHash(algo) => f.debug_tuple("RandomHash").field(algo).finish(),
 
-            Self::GR => f
-                .debug_tuple("GR")
-                .finish(),
+            Self::GR => f.debug_tuple("GR").finish(),
         }
     }
 }
@@ -222,7 +220,12 @@ impl Miner {
                                     PowAlgorithm::GR => {
                                         let key = header.prev_hash.0;
                                         let header_bytes = header.to_bytes(); // TODO: Cache this
-                                        let out = crate::consensus::PowOutput::new(crate::primitives::hash_arb_bytes_gr(&header_bytes, key));
+                                        let out = crate::consensus::PowOutput::new(
+                                            crate::primitives::hash_arb_bytes_gr(
+                                                &header_bytes,
+                                                key,
+                                            ),
+                                        );
                                         let idx = match header.round() {
                                             1 => 0,
                                             2 => 12,

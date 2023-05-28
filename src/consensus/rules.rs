@@ -5,8 +5,8 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use static_assertions::*;
-use std::ops::RangeInclusive;
 use std::cmp::{self, Ordering};
+use std::ops::RangeInclusive;
 
 /// Money type
 pub type Money = i128;
@@ -185,8 +185,8 @@ impl PartialOrd for Difficulty {
 
 impl Ord for Difficulty {
     fn cmp(&self, other: &Self) -> Ordering {
-        let o1: PowOutput = self.clone().into();
-        let o2: PowOutput = other.clone().into();
+        let o1: PowOutput = (*self).into();
+        let o2: PowOutput = (*other).into();
 
         for (a, b) in o1.0.iter().zip(o2.0.iter()) {
             if a > b {
