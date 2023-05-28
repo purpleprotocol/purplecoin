@@ -613,7 +613,11 @@ impl PowBlockHeader {
     /// Compute hash
     pub fn compute_hash(&mut self) {
         let encoded = crate::codec::encode_to_vec(self).unwrap();
-        self.hash = Some(self.map_height_to_algo().hash(&encoded));
+        let hash = match self.map_height_to_algo() {
+            PowAlgorithm::RandomHash(algo) => algo.hash(&encoded),
+            PowAlgorithm::GR => Hash256(hash_arb_bytes_gr(&encoded, self.prev_hash.0))
+        };
+        self.hash = Some(hash);
     }
 }
 

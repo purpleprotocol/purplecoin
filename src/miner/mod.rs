@@ -136,10 +136,7 @@ impl PowAlgorithm {
     pub fn hash(&self, bytes: &[u8]) -> Hash256 {
         match self {
             Self::RandomHash(algo) => algo.hash(bytes),
-            Self::GR => {
-                let mut hasher = Hasher::new(ctx.clone());
-                hasher.hash(bytes).into()
-            }
+            Self::GR => unreachable!()
         }
     }
 
@@ -165,7 +162,6 @@ impl fmt::Debug for PowAlgorithm {
 
             Self::GR => f
                 .debug_tuple("GR")
-                .field(&hex::encode(ctx.key()))
                 .finish(),
         }
     }
@@ -224,8 +220,9 @@ impl Miner {
                             MinerState::Running(ref mut header) => {
                                 match header.map_height_to_algo() {
                                     PowAlgorithm::GR => {
-                                        let mut hasher = Hasher::new(ctx);
-                                        let out = hasher.hash(&header.to_bytes());
+                                        let key = header.prev_hash.0;
+                                        let header_bytes = header.to_bytes(); // TODO: Cache this
+                                        let out = crate::consensus::PowOutput::new(crate::primitives::hash_arb_bytes_gr(&header_bytes, key));
                                         let idx = match header.round() {
                                             1 => 0,
                                             2 => 12,
