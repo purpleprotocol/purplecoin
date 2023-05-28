@@ -269,8 +269,8 @@ impl PowBlockHeader {
         let nonce = 0;
         let key = config.get_sector_key(sector_id);
         let mut bits = [MIN_DIFF_RANDOM_HASH; 14];
-        bits[0] = MIN_DIFF_RANDOMX;
-        bits[1] = MIN_DIFF_RANDOMX;
+        bits[0] = MIN_DIFF_GR;
+        bits[1] = MIN_DIFF_GR;
         let bt_mean = [30; 14];
         let diff_heights = [0; 14];
         let chain_ids = map_sector_id_to_chain_ids(sector_id).unwrap();
@@ -330,7 +330,7 @@ impl PowBlockHeader {
     /// attacks by powerful adversaries.
     pub fn map_height_to_algo(&self) -> PowAlgorithm {
         match self.height % 4 {
-            0 | 1 => PowAlgorithm::RandomX(crate::global::get_randomx_ctx(&self.randomx_key())),
+            0 | 1 => PowAlgorithm::GR,
             2 => PowAlgorithm::RandomHash(HashAlgorithm::deterministic_random(
                 self.prev_hash.as_bytes(),
             )),
@@ -339,11 +339,6 @@ impl PowBlockHeader {
             )),
             _ => unreachable!(),
         }
-    }
-
-    /// Returns the current randomx key
-    pub fn randomx_key(&self) -> String {
-        map_height_to_randomx_key(self.height)
     }
 
     /// Returns the block round.
@@ -488,12 +483,12 @@ impl PowBlockHeader {
                 let oracle_bits = calc_difficulty(prev_bits, prev_mean as u64);
 
                 let min_diff = match diff_idx {
-                    0 | 12 => rust_randomx::Difficulty::new(MIN_DIFF_RANDOMX),
-                    _ => rust_randomx::Difficulty::new(MIN_DIFF_RANDOM_HASH),
+                    0 | 12 => Difficulty::new(MIN_DIFF_GR),
+                    _ => Difficulty::new(MIN_DIFF_RANDOM_HASH),
                 };
 
                 // Enforce minimum network difficulty
-                let oracle_bits = cmp::min(rust_randomx::Difficulty::new(oracle_bits), min_diff);
+                let oracle_bits = cmp::min(Difficulty::new(oracle_bits), min_diff);
 
                 if oracle_bits.to_u32() != bits {
                     return Err(BlockVerifyErr::InvalidDiff);
@@ -582,13 +577,13 @@ impl PowBlockHeader {
         match prev_diff_height {
             5 => {
                 let min_diff = match diff_idx {
-                    0 | 12 => rust_randomx::Difficulty::new(MIN_DIFF_RANDOMX),
-                    _ => rust_randomx::Difficulty::new(MIN_DIFF_RANDOM_HASH),
+                    0 | 12 => Difficulty::new(MIN_DIFF_GR),
+                    _ => Difficulty::new(MIN_DIFF_RANDOM_HASH),
                 };
                 let new_bits = calc_difficulty(prev_bits, prev_mean as u64);
-                debug_assert!(rust_randomx::Difficulty::new(prev_bits) <= min_diff);
+                debug_assert!(Difficulty::new(prev_bits) <= min_diff);
 
-                *bits = cmp::min(rust_randomx::Difficulty::new(new_bits), min_diff).to_u32();
+                *bits = cmp::min(Difficulty::new(new_bits), min_diff).to_u32();
                 *diff_height = 0;
                 *mean = blocktime;
             }

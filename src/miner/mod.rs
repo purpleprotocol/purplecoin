@@ -7,11 +7,11 @@
 #![allow(deprecated)]
 
 use crate::primitives::{Hash256, PowBlockHeader};
+use crate::consensus::Difficulty;
 use blake2::{Blake2b512, Blake2s256, Digest};
 use crossbeam_channel::{unbounded, Receiver, Sender, TryRecvError};
 use jh_x86_64::{Digest as JhDigest, Jh256};
 use parking_lot::Mutex;
-use rust_randomx::{Context, Difficulty, Hasher};
 use sha2::{Sha256, Sha512, Sha512_256};
 use sha3::{Keccak256, Keccak512, Sha3_256, Sha3_512};
 use std::fmt;
@@ -128,15 +128,15 @@ pub enum PowAlgorithm {
     /// ASIC friendly algorithm. One is chosen at random per epoch
     RandomHash(HashAlgorithm),
 
-    /// RandomX proof of work - CPU friendly
-    RandomX(Arc<Context>),
+    /// GR proof of work - CPU friendly
+    GR,
 }
 
 impl PowAlgorithm {
     pub fn hash(&self, bytes: &[u8]) -> Hash256 {
         match self {
             Self::RandomHash(algo) => algo.hash(bytes),
-            Self::RandomX(ctx) => {
+            Self::GR => {
                 let mut hasher = Hasher::new(ctx.clone());
                 hasher.hash(bytes).into()
             }
@@ -145,14 +145,14 @@ impl PowAlgorithm {
 
     pub fn diff_idx_r1(&self) -> usize {
         match self {
-            Self::RandomX(_) => 0,
+            Self::GR => 0,
             Self::RandomHash(algo) => algo.diff_idx_r1(),
         }
     }
 
     pub fn diff_idx_r2(&self) -> usize {
         match self {
-            Self::RandomX(_) => 1,
+            Self::GR => 1,
             Self::RandomHash(algo) => algo.diff_idx_r2(),
         }
     }
@@ -163,8 +163,8 @@ impl fmt::Debug for PowAlgorithm {
         match self {
             Self::RandomHash(algo) => f.debug_tuple("RandomHash").field(algo).finish(),
 
-            Self::RandomX(ctx) => f
-                .debug_tuple("RandomX")
+            Self::GR => f
+                .debug_tuple("GR")
                 .field(&hex::encode(ctx.key()))
                 .finish(),
         }
@@ -223,7 +223,7 @@ impl Miner {
 
                             MinerState::Running(ref mut header) => {
                                 match header.map_height_to_algo() {
-                                    PowAlgorithm::RandomX(ctx) => {
+                                    PowAlgorithm::GR => {
                                         let mut hasher = Hasher::new(ctx);
                                         let out = hasher.hash(&header.to_bytes());
                                         let idx = match header.round() {
