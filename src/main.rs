@@ -41,7 +41,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 static EXIT_SIGNAL: AtomicBool = AtomicBool::new(true);
 
 fn main() -> anyhow::Result<()> {
-    purplecoin::global::init(4, SETTINGS.node.randomx_fast_mode);
+    purplecoin::global::init();
     run_init()
 }
 

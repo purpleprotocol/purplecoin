@@ -367,15 +367,15 @@ impl Hash256 {
     }
 
     pub fn meets_difficulty(&self, bits: u32) -> bool {
-        let diff = rust_randomx::Difficulty::new(bits);
-        let out = rust_randomx::Output::new(self.0);
+        let diff = crate::consensus::Difficulty::new(bits);
+        let out = crate::consensus::PowOutput::new(self.0);
 
         out.meets_difficulty(diff)
     }
 }
 
-impl From<rust_randomx::Output> for Hash256 {
-    fn from(t: rust_randomx::Output) -> Self {
+impl From<crate::consensus::PowOutput> for Hash256 {
+    fn from(t: crate::consensus::PowOutput) -> Self {
         Self(t.inner())
     }
 }

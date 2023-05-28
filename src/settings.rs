@@ -236,10 +236,6 @@ pub struct Node {
     #[serde(alias = "networkthreads")]
     pub network_threads: u16,
 
-    /// Turn on RandomX fast mode. Uses 1024 mb of shared memory per instance.
-    #[serde(alias = "randomxfastmode")]
-    pub randomx_fast_mode: bool,
-
     /// Running in archival mode saves all block headers, transaction and UTXOs.
     #[serde(alias = "archivalmode")]
     pub archival_mode: bool,
@@ -313,7 +309,6 @@ impl Default for Node {
             network_threads: 0,
             archival_mode: true, // Leave this on for now
             prune_headers: false,
-            randomx_fast_mode: false,
             prune_transactions: false,
             prune_utxos: false,
             data_dir: path.into_os_string().into_string().unwrap(),
