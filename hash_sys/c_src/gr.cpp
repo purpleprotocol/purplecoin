@@ -12,9 +12,8 @@
 #include "uint256.h"
 
 void gr_hash(const char* input, const char* key, char* output) {
-    std::vector<char> in(key, key+32);
     std::vector<unsigned char> outputkey(32);
-    std::transform(in.begin(), in.end(), outputkey.begin(),
+    std::transform(key, key+32, outputkey.begin(),
         [](char c)
         {
         return static_cast<unsigned char>(c);
