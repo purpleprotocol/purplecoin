@@ -34,6 +34,7 @@ pub fn hash_bytes_gr(bytes: &[u8; 32], key: [u8; 32]) -> [u8; 32] {
 pub fn hash_arb_bytes_gr(bytes: &[u8], key: [u8; 32]) -> [u8; 32] {
     let mut hasher = Blake2bVar::new(32).unwrap();
     let mut buf = [0u8; 32];
+    hasher.update(bytes);
     hasher.finalize_variable(&mut buf).unwrap();
     hash_bytes_gr(&buf, key)
 }
@@ -72,7 +73,7 @@ mod tests {
 
         assert_eq!(
             &result,
-            "7fb7777419f291a7dfccf8461cba49428a0ed6383216e618163fd98c21d33605"
+            "98bfff347e50a5d105893ea0961d32148a7c572bf0d663dc980849fe95f2e2c5"
         );
     }
 }
