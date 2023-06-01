@@ -288,7 +288,7 @@ impl PowBlockHeader {
             )
             .unwrap();
         let block_root = mt.root();
-        let prev_hash = Hash256::hash_from_slice("The Guardian 22/08/2022 UK inflation will hit 18% in early 2023, says leading bank Citi\n\nABSE", key);
+        let prev_hash = Hash256::hash_from_slice("The Guardian 22/08/2022 UK inflation will hit 18% in early 2023, says leading bank Citi\n\nABSE\n\nV IX MMXXII", key);
 
         let mut genesis = Self {
             version: 1,
@@ -875,7 +875,7 @@ impl BlockHeader {
             .unwrap();
 
         let tx_root = mt.root();
-        let prev_hash = Hash256::hash_from_slice("The Guardian 22/08/2022 UK inflation will hit 18% in early 2023, says leading bank Citi\n\nABSE", key);
+        let prev_hash = Hash256::hash_from_slice("The Guardian 22/08/2022 UK inflation will hit 18% in early 2023, says leading bank Citi\n\nABSE\n\nV IX MMXXII", key);
         let bloom_seed_hash =
             Hash256::hash_from_slice(prev_hash.0, &format!(bloom_hash_key!(), chain_id));
         let bloom_seed = &bloom_seed_hash.0;
