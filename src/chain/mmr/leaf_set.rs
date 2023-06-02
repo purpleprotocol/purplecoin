@@ -15,7 +15,7 @@
 //! Compact (roaring) bitmap representing the set of leaf positions
 //! that exist and are not currently pruned in the MMR.
 
-use std::sync::Arc;
+use triomphe::Arc;
 
 use crate::chain::backend::disk::*;
 use crate::chain::backend::*;

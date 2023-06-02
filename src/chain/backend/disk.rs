@@ -13,7 +13,7 @@ use dashmap::{DashMap as HashMap, DashSet as HashSet};
 use rocksdb::Error as RocksDBErr;
 use rocksdb::{MultiThreaded, TransactionDB, WriteBatchWithTransaction};
 use std::sync::atomic::AtomicU64;
-use std::sync::Arc;
+use triomphe::Arc;
 
 pub type DB = TransactionDB<MultiThreaded>;
 pub type WriteBatch = WriteBatchWithTransaction<true>;

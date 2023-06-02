@@ -19,7 +19,7 @@ use rocksdb::{ColumnFamilyDescriptor, LogLevel, Options, TransactionDBOptions};
 use std::mem;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::Arc;
+use triomphe::Arc;
 
 /// Trait for state backend as used by the PoW chain module
 pub trait PowChainBackend<'a>: Sized + Clone {

@@ -8,7 +8,7 @@ use parking_lot::RwLock;
 use std::cmp::Eq;
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::sync::Arc;
+use triomphe::Arc;
 use xxhash_rust::xxh3::xxh3_64;
 
 type Store<K, V> = RwLock<HashMap<K, V>>;
