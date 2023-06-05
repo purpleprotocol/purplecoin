@@ -24,6 +24,7 @@ use tarpc::server::{self, incoming::Incoming, Channel};
 use tokio::runtime::Builder;
 use tokio::time::sleep;
 use tracing_subscriber::prelude::*;
+use triomphe::Arc;
 
 use warp::Filter;
 
@@ -41,7 +42,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 static EXIT_SIGNAL: AtomicBool = AtomicBool::new(true);
 
 fn main() -> anyhow::Result<()> {
-    purplecoin::global::init(4, SETTINGS.node.randomx_fast_mode);
+    purplecoin::global::init();
     run_init()
 }
 
@@ -63,8 +64,7 @@ fn run_init() -> anyhow::Result<()> {
 fn start_runtime() -> anyhow::Result<()> {
     let db = purplecoin::chain::backend::create_rocksdb_backend();
     let config = ChainConfig::new(&SETTINGS.node.network_name);
-    let disk_backend =
-        DiskBackend::new(db, std::sync::Arc::new(config.clone()), None, None).unwrap();
+    let disk_backend = DiskBackend::new(db, Arc::new(config.clone()), None, None).unwrap();
     let _chain = Chain::new(disk_backend, &config);
     let worker_threads = if SETTINGS.node.network_threads == 0 {
         num_cpus::get()

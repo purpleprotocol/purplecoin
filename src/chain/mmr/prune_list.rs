@@ -21,7 +21,7 @@
 //! must be shifted the appropriate amount when reading from the hash and data
 //! files.
 
-use std::sync::Arc;
+use triomphe::Arc;
 
 use crate::chain::backend::disk::*;
 use crate::chain::backend::*;

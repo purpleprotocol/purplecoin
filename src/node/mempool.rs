@@ -11,7 +11,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::marker::PhantomPinned;
 use std::pin::Pin;
 use std::ptr::NonNull;
-use std::sync::Arc;
+use triomphe::Arc;
 
 pub type TransactionList = BTreeSet<NonNull<TransactionWithFee>>;
 pub type PinnedMempool = Arc<RwLock<Pin<Box<Mempool>>>>;

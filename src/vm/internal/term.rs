@@ -154,19 +154,19 @@ impl VmTerm {
                 bytes
             }
             Self::Unsigned8Array(val) => val.clone(),
-            Self::Unsigned16Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
-            Self::Unsigned32Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
-            Self::Unsigned64Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
-            Self::Unsigned128Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
-            Self::UnsignedBigArray(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
-            Self::Signed8Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
-            Self::Signed16Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
-            Self::Signed32Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
-            Self::Signed64Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
-            Self::Signed128Array(val) => val.iter().map(|v| v.to_le_bytes()).flatten().collect(),
+            Self::Unsigned16Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
+            Self::Unsigned32Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
+            Self::Unsigned64Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
+            Self::Unsigned128Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
+            Self::UnsignedBigArray(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
+            Self::Signed8Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
+            Self::Signed16Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
+            Self::Signed32Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
+            Self::Signed64Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
+            Self::Signed128Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
             Self::SignedBigArray(val) => val
                 .iter()
-                .map(|v| {
+                .flat_map(|v| {
                     let sign = v.signum().to_f32() as i8;
                     let v = v.abs();
 
@@ -177,11 +177,10 @@ impl VmTerm {
 
                     bytes
                 })
-                .flatten()
                 .collect(),
-            Self::Hash160Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
-            Self::Hash256Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
-            Self::Hash512Array(val) => val.iter().map(|v| v.to_vec()).flatten().collect(),
+            Self::Hash160Array(val) => val.iter().flat_map(|v| v.to_vec()).collect(),
+            Self::Hash256Array(val) => val.iter().flat_map(|v| v.to_vec()).collect(),
+            Self::Hash512Array(val) => val.iter().flat_map(|v| v.to_vec()).collect(),
         }
     }
 

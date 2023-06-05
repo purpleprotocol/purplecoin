@@ -5,7 +5,7 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use static_assertions::*;
-use std::cmp;
+use std::cmp::{self, Ordering};
 use std::ops::RangeInclusive;
 
 /// Money type
@@ -57,12 +57,6 @@ pub const MAX_BLOCK_TIME: i64 = 60;
 /// All unspent outputs we don't care about are pruned after COINBASE_EPOCH_LEN blocks past the current height
 pub const COINBASE_EPOCH_LEN: u64 = 32;
 
-/// RandomX key prefix
-pub const RANDOMX_KEY_PREFIX: &str = "purplecoinrandomxhasher";
-
-/// RandomX keys change every n blocks, regardless of PoW algorithm used
-pub const RANDOMX_KEY_CHANGE_INTERVAL: u64 = 2048;
-
 /// How long to spend mining for additional runnerups after receiving a runnerup block
 pub const FIRST_ROUND_ADDITIONAL_TIME: i64 = 3;
 
@@ -71,8 +65,8 @@ pub const FIRST_ROUND_ADDITIONAL_TIME: i64 = 3;
 /// mine in the second round
 pub const SECOND_ROUND_TIMEOUT: i64 = 90;
 
-/// Minimum RandomX difficulty
-pub const MIN_DIFF_RANDOMX: u32 = 0x010fffff;
+/// Minimum GR difficulty
+pub const MIN_DIFF_GR: u32 = 0x010fffff;
 
 /// Minimum Random hash PoW difficulty
 pub const MIN_DIFF_RANDOM_HASH: u32 = 0x020fffff;
@@ -103,14 +97,9 @@ pub fn map_height_to_block_reward(height: u64) -> Money {
     INITIAL_BLOCK_REWARD >> h
 }
 
-/// Get RandomX key at height
-pub fn map_height_to_randomx_key(height: u64) -> String {
-    format!("{}", height / RANDOMX_KEY_CHANGE_INTERVAL)
-}
-
 /// Calculate new bits based on blocktime and old bits
 pub fn calc_difficulty(bits: u32, blocktime: u64) -> u32 {
-    let mut diff = rust_randomx::Difficulty::new(bits);
+    let mut diff = Difficulty::new(bits);
     let diff_change = (BLOCK_TIME_SECONDS as f32 / blocktime as f32).clamp(0.5f32, 2f32);
     diff.scale(diff_change).to_u32()
 }
@@ -142,10 +131,130 @@ const_assert!(SHARDS_PER_SECTOR > 1);
 const_assert!(256 % SHARDS_PER_SECTOR == 0);
 const_assert!(ACCUMULATOR_MULTIPLIER > 0);
 const_assert_eq!(HALVING_INTERVAL % 4, 0);
-const_assert_eq!(RANDOMX_KEY_CHANGE_INTERVAL % 4, 0);
 const_assert_eq!(SECOND_ROUND_TIMEOUT, BLOCK_TIME_SECONDS as i64 * 3);
 const_assert_eq!(BLOCK_TIMESTAMP_MAX, BLOCK_TIME_SECONDS * 2);
 const_assert_eq!(BLOCK_TIMESTAMP_MIN, BLOCK_TIME_SECONDS * 2);
+
+const MAX_ZEROS: u8 = 252;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Difficulty(u32);
+
+impl Difficulty {
+    pub fn to_u32(&self) -> u32 {
+        self.0
+    }
+    pub fn new(d: u32) -> Self {
+        Difficulty(d)
+    }
+    pub fn zeros(&self) -> usize {
+        (self.0 >> 24) as usize
+    }
+    pub fn postfix(&self) -> u32 {
+        self.0 & 0x00ffffff
+    }
+    pub fn power(&self) -> u128 {
+        (2f32.powf(self.zeros() as f32 * 8f32) * (0xffffff as f32 / self.postfix() as f32)) as u128
+    }
+
+    pub fn scale(&self, f: f32) -> Self {
+        let mply = (((self.postfix() as u64) << 16) as f32 / f) as u64;
+        let offset = (mply.leading_zeros() as usize) / 8;
+        let new_postfix = &mply.to_be_bytes()[offset..offset + 3];
+        let offset = offset - 3;
+        let def = if offset > 0 { MAX_ZEROS } else { 0 };
+        Difficulty(u32::from_le_bytes([
+            new_postfix[2],
+            new_postfix[1],
+            new_postfix[0],
+            cmp::min(
+                (self.zeros() as u8)
+                    .checked_add(offset as u8)
+                    .unwrap_or(def),
+                MAX_ZEROS,
+            ),
+        ]))
+    }
+}
+
+impl PartialOrd for Difficulty {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Difficulty {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let o1: PowOutput = (*self).into();
+        let o2: PowOutput = (*other).into();
+
+        for (a, b) in o1.0.iter().zip(o2.0.iter()) {
+            if a > b {
+                return Ordering::Greater;
+            }
+            if a < b {
+                return Ordering::Less;
+            }
+        }
+
+        Ordering::Equal
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PowOutput([u8; 32]);
+
+impl PowOutput {
+    pub fn new(out: [u8; 32]) -> Self {
+        Self(out)
+    }
+}
+
+impl From<Difficulty> for PowOutput {
+    fn from(d: Difficulty) -> Self {
+        let mut output = [0u8; 32];
+        let zeros = d.zeros();
+        let postfix = d.postfix();
+        output[zeros..zeros + 3].copy_from_slice(&postfix.to_be_bytes()[1..4]);
+        Self(output)
+    }
+}
+
+impl AsRef<[u8]> for PowOutput {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl PowOutput {
+    pub fn meets_difficulty(&self, d: Difficulty) -> bool {
+        for (a, b) in self.0.iter().zip(PowOutput::from(d).0.iter()) {
+            if a > b {
+                return false;
+            }
+            if a < b {
+                return true;
+            }
+        }
+        true
+    }
+
+    pub fn leading_zeros(&self) -> u32 {
+        let mut zeros = 0;
+        for limb in self.0.iter() {
+            let limb_zeros = limb.leading_zeros();
+            zeros += limb_zeros;
+            if limb_zeros != 8 {
+                break;
+            }
+        }
+        zeros
+    }
+
+    pub fn inner(&self) -> [u8; 32] {
+        self.0
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -156,16 +265,6 @@ mod tests {
         assert!(!money_check(-1));
         assert!(money_check(0));
         assert!(money_check(1));
-    }
-
-    #[test]
-    fn it_maps_height_to_randomx_key() {
-        assert_eq!(map_height_to_randomx_key(0), "0");
-        assert_eq!(
-            map_height_to_randomx_key(RANDOMX_KEY_CHANGE_INTERVAL - 1),
-            "0"
-        );
-        assert_eq!(map_height_to_randomx_key(RANDOMX_KEY_CHANGE_INTERVAL), "1");
     }
 
     #[test]

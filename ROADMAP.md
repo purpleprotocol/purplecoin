@@ -12,7 +12,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [x] Benchmark accumulator code in order to determine optimum number of sectors and shards
   - [x] Implement difficulty calculation
   - [x] Green PoW implementation
-  - [ ] Update RandomX to GhostRider
+  - [x] Update RandomX to GhostRider
   - [x] Sequence PoW algorithms
   - [ ] Choose minimum mainnet difficulty
   - [x] Determine ASIC friendly hash functions
@@ -63,9 +63,9 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x2c` Signed64Var - Pushes a `Signed64` onto the stack
     - [x] OP `0x2d` Signed128Var - Pushes a `Signed128` onto the stack
     - [ ] OP `0x2e` SignedBigVar - Pushes a `SignedBig` onto the stack
-    - [ ] OP `0x31` Hash160ArrayVar - Pushes a `Hash160Array` onto the stack
-    - [ ] OP `0x32` Hash256ArrayVar - Pushes a `Hash256Array` onto the stack
-    - [ ] OP `0x33` Hash512ArrayVar - Pushes a `Hash512Array` onto the stack
+    - [x] OP `0x31` Hash160ArrayVar - Pushes a `Hash160Array` onto the stack
+    - [x] OP `0x32` Hash256ArrayVar - Pushes a `Hash256Array` onto the stack
+    - [x] OP `0x33` Hash512ArrayVar - Pushes a `Hash512Array` onto the stack
     - [x] OP `0x34` Unsigned8ArrayVar - Pushes a `Unsigned8Array` onto the stack
     - [x] OP `0x35` Unsigned16ArrayVar - Pushes a `Unsigned16Array` onto the stack
     - [x] OP `0x36` Unsigned32ArrayVar - Pushes a `Unsigned32Array` onto the stack
@@ -131,8 +131,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x80` IsUTF8 - Pushes `1` on top of the stack if the given `Unsigned8Array` is a valid UTF8 byte sequence
     - [x] OP `0x82` Add1 - Adds `1` to the topmost item on the stack
     - [x] OP `0x83` Sub1 - Subtracts `1` from the topmost item on the stack
-    - [ ] OP `0x84` Min - Returns the minimum of the two topmost items on the stack
-    - [ ] OP `0x85` Max - Returns the maximum of the two topmost items on the stack
+    - [x] OP `0x84` Min - Returns the minimum of the two topmost items on the stack
+    - [x] OP `0x85` Max - Returns the maximum of the two topmost items on the stack
     - [ ] OP `0x86` Within - Pushes `1` on top of the stack if the topmost item on the stack is between the second and the third.
     - [ ] OP `0x87` BoolAnd - And control operator
     - [ ] OP `0x88` BoolOr - Or control operator
