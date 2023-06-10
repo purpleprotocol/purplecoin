@@ -23,7 +23,8 @@ use std::str;
 use zeroize::Zeroize;
 
 pub const ADDRESS_BYTES: usize = 20;
-pub const COLOURED_ADDRESS_BYTES: usize = 40;
+pub const SCRIPT_HASH_BYTES: usize = 20;
+pub const COLOURED_ADDRESS_BYTES: usize = ADDRESS_BYTES + SCRIPT_HASH_BYTES;
 
 const HASH_KEY_PREFIX: &str = "purplecoin.hash.";
 
@@ -37,22 +38,45 @@ lazy_static! {
 }
 
 #[derive(Clone, PartialEq, Eq, HashTrait, Encode, Decode)]
-pub struct ColouredAddress(pub [u8; COLOURED_ADDRESS_BYTES]);
+pub struct ColouredAddress {
+    pub address: [u8; ADDRESS_BYTES],
+    pub colour_hash: [u8; SCRIPT_HASH_BYTES],
+}
 
 impl ColouredAddress {
     pub fn zero() -> Self {
-        Self([0; COLOURED_ADDRESS_BYTES])
+        Self {
+            address: [0; ADDRESS_BYTES],
+            colour_hash: [0; SCRIPT_HASH_BYTES],
+        }
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        crate::codec::encode_to_vec(self).unwrap()
     }
 
     pub fn to_bech32(&self, hrp: &str) -> String {
-        bech32::encode(hrp, self.0.to_base32(), Variant::Bech32m).unwrap()
+        let mut buf: Vec<u8> = Vec::with_capacity(COLOURED_ADDRESS_BYTES);
+        buf.extend_from_slice(&self.address);
+        buf.extend_from_slice(&self.colour_hash);
+
+        bech32::encode(hrp, buf.to_base32(), Variant::Bech32m).unwrap()
     }
 
     pub fn from_bech32(encoded: &str) -> Result<Self, &'static str> {
         let (_hrp, data, _variant) = bech32::decode(encoded).map_err(|_| "invalid address")?;
         let data: Vec<u8> = Vec::<u8>::from_base32(&data).map_err(|_| "invalid address")?;
-        let mut out = Self([0; COLOURED_ADDRESS_BYTES]);
-        out.0.copy_from_slice(&data);
+
+        if data.len() != COLOURED_ADDRESS_BYTES {
+            return Err("invalid address length");
+        }
+
+        let mut out = Self {
+            address: [0; ADDRESS_BYTES],
+            colour_hash: [0; SCRIPT_HASH_BYTES],
+        };
+        out.address.copy_from_slice(&data[..ADDRESS_BYTES]);
+        out.colour_hash.copy_from_slice(&data[ADDRESS_BYTES..]);
         Ok(out)
     }
 
@@ -96,6 +120,10 @@ pub struct Address(pub [u8; ADDRESS_BYTES]);
 impl Address {
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        crate::codec::encode_to_vec(self).unwrap()
     }
 
     pub fn zero() -> Self {
@@ -193,7 +221,6 @@ impl PublicKey {
 
     #[inline]
     pub fn to_coloured_address(&self, colour_hash: &Hash160) -> ColouredAddress {
-        let mut out_bytes = [0; COLOURED_ADDRESS_BYTES];
         let mut hash1 = [0; 32];
         let pub_bytes = self.0.to_bytes();
         let mut hasher = blake3::Hasher::new_derive_key(&HASH_KEY256);
@@ -205,9 +232,11 @@ impl PublicKey {
         let mut out = hasher.finalize_xof();
         let mut hash_bytes = [0; 20];
         out.fill(&mut hash_bytes);
-        out_bytes.copy_from_slice(&[hash_bytes.as_slice(), colour_hash.as_bytes()].concat());
 
-        ColouredAddress(out_bytes)
+        ColouredAddress {
+            address: hash_bytes,
+            colour_hash: colour_hash.0,
+        }
     }
 }
 
@@ -605,6 +634,70 @@ pub trait PMMRIndexHashable {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn serialised_address_is_20_bytes() {
+        let zero = Address::zero();
+        let bytes = zero.to_bytes();
+        assert_eq!(bytes.len(), 20);
+    }
+
+    #[test]
+    fn serialised_coloured_address_is_40_bytes() {
+        let zero = ColouredAddress::zero();
+        let bytes = zero.to_bytes();
+        assert_eq!(bytes.len(), 40);
+    }
+
+    #[test]
+    fn codec_coloured_bech32() {
+        let zero = ColouredAddress::zero();
+        let encoded = zero.to_bech32("pu");
+        assert_eq!(ColouredAddress::from_bech32(&encoded).unwrap(), zero);
+    }
+
+    #[test]
+    fn codec_bech32() {
+        let zero = Address::zero();
+        let encoded = zero.to_bech32("pu");
+        assert_eq!(Address::from_bech32(&encoded).unwrap(), zero);
+    }
+
+    #[test]
+    fn coloured_address_zero_encoding() {
+        let zero = ColouredAddress::zero();
+        let encoded = zero.to_bech32("pu");
+        assert_eq!(
+            encoded,
+            "pu1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqkwu6w6"
+        );
+    }
+
+    #[test]
+    fn address_zero_encoding() {
+        let zero = Address::zero();
+        let encoded = zero.to_bech32("pu");
+        assert_eq!(encoded, "pu1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr45620");
+    }
+
+    #[test]
+    fn generate_address() {
+        let pubk = PublicKey::zero();
+        let address = pubk.to_address();
+        let encoded = address.to_bech32("pu");
+        assert_eq!(encoded, "pu16yxqz45dsd83vmqys4t68kfwylk6mkgc8zzh93");
+    }
+
+    #[test]
+    fn generate_coloured_address() {
+        let pubk = PublicKey::zero();
+        let address = pubk.to_coloured_address(&Hash160::zero());
+        let encoded = address.to_bech32("pu");
+        assert_eq!(
+            encoded,
+            "pu16yxqz45dsd83vmqys4t68kfwylk6mkgcqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqshx4a9"
+        );
+    }
 
     #[test]
     fn bloom_filter_encode_decode() {
