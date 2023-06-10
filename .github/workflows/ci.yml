@@ -54,7 +54,6 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
-      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
     defaults:
         run:
           shell: msys2 {0}
@@ -73,9 +72,7 @@ jobs:
         uses: egor-tensin/setup-cygwin@v4
         with:
           platform: x64
-          packages: cmake m4
-      - name: Add mingw64 to path
-        run: echo "##[add-path]C:\msys64\mingw64\bin"
+          packages: cmake gcc-g++ gmp m4
       - name: disable git crlf conversion
         run: git config --global core.autocrlf false
       - name: Checkout repository
