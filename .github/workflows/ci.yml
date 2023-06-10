@@ -67,6 +67,7 @@ jobs:
             diffutils 
             make 
             mingw-w64-x86_64-gcc
+            m4
       - name: disable git crlf conversion
         run: git config --global core.autocrlf false
       - name: Checkout repository
