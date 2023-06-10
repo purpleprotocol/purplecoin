@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
         toolchain: ["nightly"]
 
     runs-on: ${{ matrix.os }}
@@ -25,6 +25,43 @@ jobs:
     steps:
       - name: disable git crlf conversion
         run: git config --global core.autocrlf false
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          profile: minimal
+          default: true
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+  testwindows:
+    name: Test Windows
+
+    strategy:
+      matrix:
+        os: [windows-latest]
+        toolchain: ["nightly-x86_64-pc-windows-gnu"]
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      CARGO_INCREMENTAL: 0
+      RUST_BACKTRACE: 1
+
+    steps:
+      - name: disable git crlf conversion
+        run: git config --global core.autocrlf false
+      - name: Set up MinGW
+        uses: egor-tensin/setup-mingw@v2
+        with:
+          platform: x64
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
