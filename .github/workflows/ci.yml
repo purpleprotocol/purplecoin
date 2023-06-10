@@ -54,8 +54,16 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
-
+    defaults:
+        run:
+          shell: msys2 {0}
     steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            curl
+            git
       - name: disable git crlf conversion
         run: git config --global core.autocrlf false
       - name: Pacman mirrors
