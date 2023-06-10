@@ -23,7 +23,8 @@ use std::str;
 use zeroize::Zeroize;
 
 pub const ADDRESS_BYTES: usize = 20;
-pub const COLOURED_ADDRESS_BYTES: usize = 40;
+pub const SCRIPT_HASH_BYTES: usize = 20;
+pub const COLOURED_ADDRESS_BYTES: usize = ADDRESS_BYTES + SCRIPT_HASH_BYTES;
 
 const HASH_KEY_PREFIX: &str = "purplecoin.hash.";
 
@@ -37,22 +38,41 @@ lazy_static! {
 }
 
 #[derive(Clone, PartialEq, Eq, HashTrait, Encode, Decode)]
-pub struct ColouredAddress(pub [u8; COLOURED_ADDRESS_BYTES]);
+pub struct ColouredAddress {
+    pub address: [u8; ADDRESS_BYTES],
+    pub colour_hash: [u8; SCRIPT_HASH_BYTES],
+}
 
 impl ColouredAddress {
     pub fn zero() -> Self {
-        Self([0; COLOURED_ADDRESS_BYTES])
+        Self {
+            address: [0; ADDRESS_BYTES],
+            colour_hash: [0; SCRIPT_HASH_BYTES],
+        }
     }
 
     pub fn to_bech32(&self, hrp: &str) -> String {
-        bech32::encode(hrp, self.0.to_base32(), Variant::Bech32m).unwrap()
+        let mut buf: Vec<u8> = Vec::with_capacity(COLOURED_ADDRESS_BYTES);
+        buf.extend_from_slice(&self.address);
+        buf.extend_from_slice(&self.colour_hash);
+
+        bech32::encode(hrp, buf.to_base32(), Variant::Bech32m).unwrap()
     }
 
     pub fn from_bech32(encoded: &str) -> Result<Self, &'static str> {
         let (_hrp, data, _variant) = bech32::decode(encoded).map_err(|_| "invalid address")?;
         let data: Vec<u8> = Vec::<u8>::from_base32(&data).map_err(|_| "invalid address")?;
-        let mut out = Self([0; COLOURED_ADDRESS_BYTES]);
-        out.0.copy_from_slice(&data);
+
+        if data.len() != COLOURED_ADDRESS_BYTES {
+            return Err("invalid address length");
+        }
+
+        let mut out = Self {
+            address: [0; ADDRESS_BYTES],
+            colour_hash: [0; SCRIPT_HASH_BYTES],
+        };
+        out.address.copy_from_slice(&data[..ADDRESS_BYTES]);
+        out.colour_hash.copy_from_slice(&data[ADDRESS_BYTES..]);
         Ok(out)
     }
 
@@ -193,7 +213,6 @@ impl PublicKey {
 
     #[inline]
     pub fn to_coloured_address(&self, colour_hash: &Hash160) -> ColouredAddress {
-        let mut out_bytes = [0; COLOURED_ADDRESS_BYTES];
         let mut hash1 = [0; 32];
         let pub_bytes = self.0.to_bytes();
         let mut hasher = blake3::Hasher::new_derive_key(&HASH_KEY256);
@@ -205,9 +224,11 @@ impl PublicKey {
         let mut out = hasher.finalize_xof();
         let mut hash_bytes = [0; 20];
         out.fill(&mut hash_bytes);
-        out_bytes.copy_from_slice(&[hash_bytes.as_slice(), colour_hash.as_bytes()].concat());
 
-        ColouredAddress(out_bytes)
+        ColouredAddress {
+            address: hash_bytes,
+            colour_hash: colour_hash.0,
+        }
     }
 }
 
