@@ -62,7 +62,7 @@ jobs:
         uses: egor-tensin/setup-mingw@v2
         with:
           platform: x64
-       - name: Install m4
+      - name: Install m4
         run: |
           (New-Object System.Net.WebClient).DownloadFile("http://downloads.sourceforge.net/gnuwin32/m4-1.4.14-1-bin.zip","m4-1.4.14-1-bin.zip");
           Expand-Archive .\m4-1.4.14-1-bin.zip .;
