@@ -64,12 +64,11 @@ jobs:
           install: >-
             curl
             git
+            diffutils 
+            make 
+            mingw-w64-x86_64-gcc
       - name: disable git crlf conversion
         run: git config --global core.autocrlf false
-      - name: Pacman mirrors
-        run: pacman -S pacman-mirrors
-      - name: Pacman mingw
-        run: pacman -S diffutils make mingw-w64-x86_64-gcc
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
