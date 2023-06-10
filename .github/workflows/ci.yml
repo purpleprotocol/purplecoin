@@ -54,6 +54,7 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
     defaults:
         run:
           shell: msys2 {0}
