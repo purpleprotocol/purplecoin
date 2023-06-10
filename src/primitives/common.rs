@@ -51,6 +51,10 @@ impl ColouredAddress {
         }
     }
 
+    pub fn to_bytes(&self) -> Vec<u8> {
+        crate::codec::encode_to_vec(self).unwrap()
+    }
+
     pub fn to_bech32(&self, hrp: &str) -> String {
         let mut buf: Vec<u8> = Vec::with_capacity(COLOURED_ADDRESS_BYTES);
         buf.extend_from_slice(&self.address);
@@ -116,6 +120,10 @@ pub struct Address(pub [u8; ADDRESS_BYTES]);
 impl Address {
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        crate::codec::encode_to_vec(self).unwrap()
     }
 
     pub fn zero() -> Self {
@@ -626,6 +634,70 @@ pub trait PMMRIndexHashable {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn serialised_address_is_20_bytes() {
+        let zero = Address::zero();
+        let bytes = zero.to_bytes();
+        assert_eq!(bytes.len(), 20);
+    }
+
+    #[test]
+    fn serialised_coloured_address_is_40_bytes() {
+        let zero = ColouredAddress::zero();
+        let bytes = zero.to_bytes();
+        assert_eq!(bytes.len(), 40);
+    }
+
+    #[test]
+    fn codec_coloured_bech32() {
+        let zero = ColouredAddress::zero();
+        let encoded = zero.to_bech32("pu");
+        assert_eq!(ColouredAddress::from_bech32(&encoded).unwrap(), zero);
+    }
+
+    #[test]
+    fn codec_bech32() {
+        let zero = Address::zero();
+        let encoded = zero.to_bech32("pu");
+        assert_eq!(Address::from_bech32(&encoded).unwrap(), zero);
+    }
+
+    #[test]
+    fn coloured_address_zero_encoding() {
+        let zero = ColouredAddress::zero();
+        let encoded = zero.to_bech32("pu");
+        assert_eq!(
+            encoded,
+            "pu1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqkwu6w6"
+        );
+    }
+
+    #[test]
+    fn address_zero_encoding() {
+        let zero = Address::zero();
+        let encoded = zero.to_bech32("pu");
+        assert_eq!(encoded, "pu1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr45620");
+    }
+
+    #[test]
+    fn generate_address() {
+        let pubk = PublicKey::zero();
+        let address = pubk.to_address();
+        let encoded = address.to_bech32("pu");
+        assert_eq!(encoded, "pu16yxqz45dsd83vmqys4t68kfwylk6mkgc8zzh93");
+    }
+
+    #[test]
+    fn generate_coloured_address() {
+        let pubk = PublicKey::zero();
+        let address = pubk.to_coloured_address(&Hash160::zero());
+        let encoded = address.to_bech32("pu");
+        assert_eq!(
+            encoded,
+            "pu16yxqz45dsd83vmqys4t68kfwylk6mkgcqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqshx4a9"
+        );
+    }
 
     #[test]
     fn bloom_filter_encode_decode() {
