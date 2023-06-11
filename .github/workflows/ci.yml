@@ -74,7 +74,7 @@ jobs:
       - run: MSYS2_PATH_TYPE=inherit echo "export PATH=\$PATH:/c/ghcup/env" >> ~/.bash_profile
       - name: Export paths
         run: |
-          echo "export PATH=/root/.cargo/bin:$PATH" >> ~/.bash_profile;
+          echo "export PATH=/usr/.cargo/bin:$PATH" >> ~/.bash_profile;
       - name: Echo path
         run: |
           echo $PATH;
