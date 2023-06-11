@@ -74,7 +74,7 @@ jobs:
         run: |
           wget http://ftp.gnu.org/gnu/m4/m4-1.4.14.tar.gz;
           tar xzvf m4-1.4.14.tar.gz;
-          cd m4-1.4.14 && ./configure && make && sudo make install;
+          cd m4-1.4.14 && ./configure && make && make install;
       - name: disable git crlf conversion
         run: git config --global core.autocrlf false
       - name: Checkout repository
