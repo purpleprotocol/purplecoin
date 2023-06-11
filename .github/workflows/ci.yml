@@ -69,11 +69,12 @@ jobs:
             make 
             mingw-w64-x86_64-toolchain
             cmake
+            wget
       - name: Install m4
         run: |
-          Invoke-WebRequest -UserAgent "Wget" -Uri http://downloads.sourceforge.net/gnuwin32/m4-1.4.14-1-bin.zip -OutFile m4-1.4.14-1-bin.zip;
-          Expand-Archive .\m4-1.4.14-1-bin.zip .;
-          echo "$((Get-Item .).FullName)/m4-1.4.14-1-bin/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          wget http://ftp.gnu.org/gnu/m4/m4-1.4.14.tar.gz;
+          tar xzvf m4-1.4.14.tar.gz;
+          cd m4-1.4.14 && ./configure && make && sudo make install;
       - name: disable git crlf conversion
         run: git config --global core.autocrlf false
       - name: Checkout repository
