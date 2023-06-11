@@ -54,7 +54,6 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
-      # CC: clang
     defaults:
         run:
           shell: msys2 {0}
@@ -69,14 +68,8 @@ jobs:
             base-devel
             make 
             mingw-w64-x86_64-toolchain
-      # mingw-w64-clang-x86_64-toolchain
             m4
             cmake
-      # - name: Set up Cygwin
-      #   uses: egor-tensin/setup-cygwin@v4
-      #   with:
-      #     platform: x64
-      #     packages: cmake gcc-g++ gmp m4
       - name: disable git crlf conversion
         run: git config --global core.autocrlf false
       - name: Checkout repository
