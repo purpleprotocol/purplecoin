@@ -71,7 +71,8 @@ jobs:
             cmake
             wget
       - name: Add ghcup to PATH on windows
-         run: echo "/c/ghcup/bin" >> $GITHUB_PATH
+          run: |
+            echo "/c/ghcup/bin" >> $GITHUB_PATH;
       - name: Install m4
         run: |
           wget http://ftp.gnu.org/gnu/m4/m4-1.4.14.tar.gz;
