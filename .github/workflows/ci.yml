@@ -54,7 +54,6 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
-      PATH: $PATH:/usr/local/m4/bin
     defaults:
         run:
           shell: msys2 {0}
@@ -76,6 +75,7 @@ jobs:
           wget http://ftp.gnu.org/gnu/m4/m4-1.4.14.tar.gz;
           tar xzvf m4-1.4.14.tar.gz;
           cd m4-1.4.14 && ./configure --prefix=/usr/local/m4 && make && make install;
+          export PATH=$PATH:/usr/local/m4/bin;
       - name: disable git crlf conversion
         run: git config --global core.autocrlf false
       - name: Checkout repository
