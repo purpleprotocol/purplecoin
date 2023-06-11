@@ -79,7 +79,7 @@ jobs:
           cd m4-1.4.14 && ./configure --prefix=/usr/local/m4 && make && make install;
           echo "/usr/local/m4/bin" >> $GITHUB_PATH;
       - name: Echo path
-        run: echo $PATH;
+        run: echo $PATH
       - name: disable git crlf conversion
         run: git config --global core.autocrlf false
       - name: Checkout repository
