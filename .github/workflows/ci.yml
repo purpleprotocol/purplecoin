@@ -75,6 +75,9 @@ jobs:
           wget http://ftp.gnu.org/gnu/m4/m4-1.4.14.tar.gz;
           tar xzvf m4-1.4.14.tar.gz;
           cd m4-1.4.14 && ./configure --prefix=/usr/local/m4 && make && make install;
+          export PATH=$PATH:/usr/local/m4/bin;
+      - name: Set m4 path
+        run: echo "PATH=$PATH:/usr/local/m4/bin" >> $GITHUB_ENV
       - name: disable git crlf conversion
         run: git config --global core.autocrlf false
       - name: Checkout repository
@@ -90,7 +93,9 @@ jobs:
           default: true
 
       - name: Test
-        run: PATH=$PATH:/usr/local/m4/bin cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
   buildbenches:
     name: Build benches
 
