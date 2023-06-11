@@ -54,7 +54,6 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
-      CXX: /c/tools/cygwin/bin/gcc
     defaults:
         run:
           shell: msys2 {0}
