@@ -71,14 +71,15 @@ jobs:
             cmake
             wget
       - run: MSYS2_PATH_TYPE=inherit echo "export PATH=\$PATH:/c/ghcup/env" >> ~/.bash_profile
-      - name: Install m4
+      - name: Set up Cygwin
+        uses: egor-tensin/setup-cygwin@v4
+        with:
+          platform: x64
+          packages: cmake m4
+      - name: Export paths
         run: |
-          wget http://ftp.gnu.org/gnu/m4/m4-1.4.14.tar.gz;
-          tar xzvf m4-1.4.14.tar.gz;
-          cd m4-1.4.14 && ./configure --prefix=/usr/local/m4 && make && make install;
-          echo "export PATH=$PATH:/usr/local/m4/bin" >> ~/.bash_profile;
-      - name: Echo path
-        run: echo $PATH
+          # echo "export PATH=$PATH:/usr/local/m4/bin" >> ~/.bash_profile;
+          echo $PATH;
       - name: disable git crlf conversion
         run: git config --global core.autocrlf false
       - name: Checkout repository
