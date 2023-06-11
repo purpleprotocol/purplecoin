@@ -54,6 +54,7 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
+      CXX: /c/cygwin64/bin/g++
     defaults:
         run:
           shell: msys2 {0}
@@ -75,6 +76,7 @@ jobs:
         uses: egor-tensin/setup-cygwin@v4
         with:
           platform: x64
+          packages: gcc-g++
       - run: MSYS2_PATH_TYPE=inherit echo "export PATH=\$PATH:/c/ghcup/env" >> ~/.bash_profile
       - name: Export paths
         run: |
