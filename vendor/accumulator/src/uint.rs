@@ -552,9 +552,10 @@ impl U256 {
         let c = unsafe { gmp::mpz_remove(mut_ptr(&outmpz), mut_ptr(&s), mut_ptr(&f)) };
         out.size = i64::from(outmpz.size);
         #[cfg(windows)]
-        (out.low_u256(), c as u64)
+        let r = (out.low_u256(), c as u64);
         #[cfg(not(windows))]
-        (out.low_u256(), c)
+        let r = (out.low_u256(), c);
+        r
     }
 }
 
