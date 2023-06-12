@@ -71,11 +71,6 @@ jobs:
             cmake
             wget
             m4
-      - name: Set up Cygwin
-        uses: egor-tensin/setup-cygwin@v4
-        with:
-          platform: x86_64
-          packages: gcc-g++
       - run: MSYS2_PATH_TYPE=inherit echo "export PATH=\$PATH:/c/ghcup/env" >> ~/.bash_profile
       - name: Export paths
         run: |
