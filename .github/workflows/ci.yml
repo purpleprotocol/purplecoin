@@ -54,8 +54,6 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
-      CC: clang
-      CXX: clang++
     defaults:
         run:
           shell: msys2 {0}
