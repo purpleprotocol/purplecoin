@@ -171,21 +171,12 @@ impl SmallFloat {
 
     #[inline]
     fn update_d(&self) {
-        // Since this is borrowed, the limbs won't move around, and we can set
-        // the d field.
-        //
-        // However, if there already exists a reference created with Deref, we
-        // must not set the d field as that reference contains its d field
-        // without the UnsafeCell wrapping. So we first check whether the d
-        // field is already set correctly. If not, then there is no existing
-        // reference created with Deref yet, so we can set the d field.
-
-        let d = NonNull::<[MaybeUninit<limb_t>]>::from(&self.limbs[..]).cast();
+        // Since this is borrowed, the limb won't move around, and we
+        // can set the d field.
+        let d = NonNull::<[MaybeUninit<limb_t>]>::from(&self.limbs[..]);
         // Safety: self is not Sync, so we can write to d without causing a data race.
         unsafe {
-            if *self.inner.d.get() != d {
-                *self.inner.d.get() = d;
-            }
+            *self.inner.d.get() = d.cast();
         }
     }
 }

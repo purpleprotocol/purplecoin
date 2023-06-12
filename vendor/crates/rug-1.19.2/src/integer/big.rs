@@ -226,38 +226,6 @@ impl Integer {
     /// ```
     pub const ZERO: Integer = Integer::new();
 
-    /// One.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use rug::Integer;
-    /// assert_eq!(*Integer::ONE, 1);
-    /// ```
-    pub const ONE: &Integer = {
-        const LIMBS: [limb_t; 1] = [1];
-        const MPZ: mpz_t = unsafe { gmp::MPZ_ROINIT_N(LIMBS.as_ptr().cast_mut(), 1) };
-        // Safety: MPZ will remain valid, and will not be changed.
-        const BORROW: BorrowInteger = unsafe { BorrowInteger::from_raw(MPZ) };
-        BorrowInteger::const_deref(&BORROW)
-    };
-
-    /// Negative one (&minus;1).
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use rug::Integer;
-    /// assert_eq!(*Integer::NEG_ONE, -1);
-    /// ```
-    pub const NEG_ONE: &Integer = {
-        const LIMBS: [limb_t; 1] = [1];
-        const MPZ: mpz_t = unsafe { gmp::MPZ_ROINIT_N(LIMBS.as_ptr().cast_mut(), -1) };
-        // Safety: MPZ will remain valid, and will not be changed.
-        const BORROW: BorrowInteger = unsafe { BorrowInteger::from_raw(MPZ) };
-        BorrowInteger::const_deref(&BORROW)
-    };
-
     /// Constructs a new arbitrary-precision [`Integer`] with value 0.
     ///
     /// The created [`Integer`] will have no allocated memory yet.

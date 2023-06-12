@@ -15107,7 +15107,7 @@ then :
 
 else $as_nop
 
-printf "%s\n" "#define size_t unsigned long long" >>confdefs.h
+printf "%s\n" "#define size_t unsigned int" >>confdefs.h
 
 fi
 

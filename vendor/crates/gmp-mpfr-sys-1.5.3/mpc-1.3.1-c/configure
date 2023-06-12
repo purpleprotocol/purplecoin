@@ -13162,7 +13162,7 @@ if test "x$ac_cv_type_size_t" = xyes; then :
 else
 
 cat >>confdefs.h <<_ACEOF
-#define size_t unsigned long long
+#define size_t unsigned int
 _ACEOF
 
 fi

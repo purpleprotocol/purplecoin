@@ -182,17 +182,10 @@ impl SmallComplex {
     // re.d points to last_limbs and im.d points to first_limbs.
     #[inline]
     fn update_d(&self) {
-        // Since this is borrowed, the limbs won't move around, and we can set
-        // the d fields.
-        //
-        // However, if there already exists a reference created with Deref, we
-        // must not set the d fields as that reference contains its d fields
-        // without the UnsafeCell wrapping. So we first check whether the d
-        // fields are already set correctly. If not, then there is no existing
-        // reference created with Deref yet, so we can set the d fields.
-
-        let first = NonNull::<[MaybeUninit<limb_t>]>::from(&self.first_limbs[..]).cast();
-        let last = NonNull::<[MaybeUninit<limb_t>]>::from(&self.last_limbs[..]).cast();
+        // Since this is borrowed, the limbs won't move around, and we
+        // can set the d fields.
+        let first = NonNull::<[MaybeUninit<limb_t>]>::from(&self.first_limbs[..]);
+        let last = NonNull::<[MaybeUninit<limb_t>]>::from(&self.last_limbs[..]);
         let (re_d, im_d) = if self.re_is_first() {
             (first, last)
         } else {
@@ -200,12 +193,8 @@ impl SmallComplex {
         };
         // Safety: self is not Sync, so we can write to d without causing a data race.
         unsafe {
-            if *self.inner.re.d.get() != re_d {
-                *self.inner.re.d.get() = re_d;
-            }
-            if *self.inner.im.d.get() != im_d {
-                *self.inner.im.d.get() = im_d;
-            }
+            *self.inner.re.d.get() = re_d.cast();
+            *self.inner.im.d.get() = im_d.cast();
         }
     }
 }
