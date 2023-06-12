@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest] #, windows-latest]
+        os: [ubuntu-latest, macos-latest]
         toolchain: ["nightly"]
 
     runs-on: ${{ matrix.os }}
@@ -23,6 +23,8 @@ jobs:
       RUST_BACKTRACE: 1
 
     steps:
+      - name: disable git crlf conversion
+        run: git config --global core.autocrlf false
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -39,6 +41,53 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
+  testwindows:
+    name: Test
+
+    strategy:
+      matrix:
+        os: [windows-latest]
+        toolchain: ["nightly-x86_64-pc-windows-gnu"]
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      CARGO_INCREMENTAL: 0
+      RUST_BACKTRACE: 1
+    defaults:
+        run:
+          shell: msys2 {0}
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            curl
+            git
+            diffutils 
+            base-devel
+            make 
+            mingw-w64-x86_64-clang
+            cmake
+            wget
+            m4
+      - run: MSYS2_PATH_TYPE=inherit echo "export PATH=\$PATH:/c/ghcup/env" >> ~/.bash_profile
+      - name: Export paths
+        run: |
+          echo "export PATH=/c/Users/runneradmin/.cargo/bin:$PATH" >> ~/.bash_profile;
+      - name: Echo path
+        run: |
+          echo $PATH;
+      - name: disable git crlf conversion
+        run: git config --global core.autocrlf false
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install Rust toolchain
+        run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain ${{ matrix.toolchain }} -y
+      - name: Test
+        run: cargo test
   buildbenches:
     name: Build benches
 

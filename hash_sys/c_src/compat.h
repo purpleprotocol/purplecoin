@@ -17,7 +17,11 @@
 #define IS_TRIVIALLY_CONSTRUCTIBLE std::is_trivially_constructible
 #endif
 
-#ifdef WIN32
+#if (defined _WIN32 || defined __CYGWIN__) && ! defined WIN32
+#define WIN32
+#endif
+
+#ifdef WIN32 
 #ifdef _WIN32_WINNT
 #undef _WIN32_WINNT
 #endif
