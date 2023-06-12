@@ -128,6 +128,9 @@ macro_rules! u_types {
 
         pub fn is_divisible_u(&self, u: u64) -> bool {
           let s = self.as_mpz();
+          #[cfg(windows)]
+          let divisible = unsafe {gmp::mpz_divisible_ui_p(mut_ptr(&s), u as u32)};
+          #[cfg(not(windows))]
           let divisible = unsafe {gmp::mpz_divisible_ui_p(mut_ptr(&s), u)};
           divisible != 0
         }
@@ -548,6 +551,9 @@ impl U256 {
         let f = f.as_mpz();
         let c = unsafe { gmp::mpz_remove(mut_ptr(&outmpz), mut_ptr(&s), mut_ptr(&f)) };
         out.size = i64::from(outmpz.size);
+        #[cfg(windows)]
+        (out.low_u256(), c as u64)
+        #[cfg(not(windows))]
         (out.low_u256(), c)
     }
 }
