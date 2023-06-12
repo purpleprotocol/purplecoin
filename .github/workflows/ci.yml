@@ -21,6 +21,8 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
+      CC: x86_64-w64-mingw32-gcc
+      CXX: x86_64-w64-mingw32-g++
 
     steps:
       - name: disable git crlf conversion
