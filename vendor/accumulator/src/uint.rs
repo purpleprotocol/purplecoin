@@ -509,16 +509,16 @@ impl ops::Rem<&U256> for U512 {
         };
         #[cfg(not(host_family = "windows"))]
         unsafe {
-          gmp::mpn_tdiv_qr(
-              y.data(),
-              rem.data(),
-              0,
-              self.data(),
-              self.size,
-              x.data(),
-              x.size,
-          )
-      };
+            gmp::mpn_tdiv_qr(
+                y.data(),
+                rem.data(),
+                0,
+                self.data(),
+                self.size,
+                x.data(),
+                x.size,
+            )
+        };
         rem.normalize_size();
         rem
     }
