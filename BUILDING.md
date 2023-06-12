@@ -10,7 +10,7 @@ sudo apt-get install -y make g++ m4 cmake clang libclang-dev openssl zlib1g-dev 
 
 Install the Rust toolchain:
 ```
-curl https://sh.rustup.rs -sSf | sh -s -- -y
+curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
 ```
 
 Then run:
@@ -26,7 +26,7 @@ brew install llvm m4
 
 Install the Rust toolchain:
 ```
-curl https://sh.rustup.rs -sSf | sh -s -- -y
+curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly -y
 ```
 
 Then run:
