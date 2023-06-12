@@ -40,7 +40,7 @@ Building on Windows doesn't work on msvc and requires msys2.
 
 Building should be done in the msys2 shell. Install the required packages by running the following inside the msys2 shell:
 ```
-pacman -S curl diffutils base-devel make mingw-w64-x86_64-clang cmake wget m4
+pacman -S curl diffutils base-devel make mingw-w64-x86_64-clang cmake m4
 ```
 
 Install the correct Rust toolchain:
