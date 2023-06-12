@@ -83,7 +83,7 @@ libp2p = { version = "0.51.3", features = [
 ]}
 either = "1.8.1"
 bloomfilter = "1.0.9"
-croaring = "0.6.1"
+croaring = "0.8.1"
 dashmap = "5.3.4"
 itertools = "0.10.5"
 pretty_env_logger = "0.4.0"
