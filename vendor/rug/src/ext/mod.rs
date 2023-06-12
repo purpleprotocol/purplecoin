@@ -16,7 +16,6 @@
 
 // unit argument useful for type-level Option types OptInteger,
 // OptRational, OptFloat, OptComplex
-#![allow(clippy::unit_arg)]
 
 #[cfg(feature = "complex")]
 pub mod xmpc;

@@ -1,0 +1,66 @@
+# Copyright © 2016–2023 Trevor Spiteri
+
+# Copying and distribution of this file, with or without modification, are
+# permitted in any medium without royalty provided the copyright notice and this
+# notice are preserved. This file is offered as-is, without any warranty.
+
+[package]
+name = "rug"
+version = "1.19.2"
+edition = "2021"
+rust-version = "1.65"
+description = "Arbitrary-precision integers, rational, floating-point and complex numbers based on GMP, MPFR and MPC"
+documentation = "https://docs.rs/rug"
+repository = "https://gitlab.com/tspiteri/rug"
+readme = "README.md"
+keywords = ["bignum", "gmp", "math", "numerics"]
+categories = ["api-bindings", "mathematics"]
+license = "LGPL-3.0+"
+
+[features]
+default = ["integer", "rational", "float", "complex", "rand"]
+integer = ["gmp-mpfr-sys"]
+rational = ["integer"]
+float = ["gmp-mpfr-sys/mpfr"]
+complex = ["float", "gmp-mpfr-sys/mpc"]
+rand = ["integer"]
+fail-on-warnings = []
+num-traits = ["num-integer", "num-traits-crate"]
+
+[dependencies.az]
+version = "1.1"
+
+[dependencies.libc]
+version = "0.2.44"
+default-features = false
+
+[dependencies.gmp-mpfr-sys]
+path = "../gmp-mpfr-sys"
+default-features = false
+optional = true
+
+[dependencies.serde]
+version = "1.0.25"
+optional = true
+
+[dependencies.num-traits-crate]
+package = "num-traits"
+version = "0.2.13"
+default-features = false
+features = ["i128", "std"]
+optional = true
+
+[dependencies.num-integer]
+version = "0.1.45"
+default-features = false
+features = ["i128"]
+optional = true
+
+[dev-dependencies]
+serde_test = "1"
+serde_json = "1"
+bincode = "1"
+byteorder = "1"
+
+[package.metadata.docs.rs]
+features = ["num-traits", "serde"]

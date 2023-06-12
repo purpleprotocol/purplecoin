@@ -2556,12 +2556,10 @@ macro_rules! cast_ptr {
         let ptr = crate::macros::CastPtr($src);
         if false {
             #[allow(unused_unsafe)]
-            // clippy false positive. We are transmuting pointees, not pointers.
-            #[allow(clippy::transmute_ptr_to_ptr)]
-            // clippy false positive. We are forgetting to avoid dropping, which we cannot do.
-            #[allow(clippy::forget_copy)]
             unsafe {
-                core::mem::forget(core::mem::transmute::<_, $T>(ptr.static_check_size()));
+                let _ = core::mem::ManuallyDrop::new(core::mem::transmute::<_, $T>(
+                    ptr.static_check_size(),
+                ));
             }
         }
         ptr.get::<$T>()
@@ -2574,8 +2572,6 @@ macro_rules! cast_ptr_mut {
         let ptr = crate::macros::CastPtrMut($src);
         if false {
             #[allow(unused_unsafe)]
-            // clippy false positive. We are transmuting pointees, not pointers.
-            #[allow(clippy::transmute_ptr_to_ptr)]
             unsafe {
                 let _ = core::mem::transmute::<_, $T>(ptr.static_check_size());
             }

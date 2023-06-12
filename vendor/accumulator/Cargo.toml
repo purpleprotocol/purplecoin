@@ -20,8 +20,8 @@ arrayref = "0.3.5"
 blake2-rfc = "0.2.18"
 curve25519-dalek = "1.1.3"
 lazy_static = "1.3.0"
-rug = "1.19.2"
-gmp-mpfr-sys = "1.5.3"
+rug = { path = "../rug" }
+gmp-mpfr-sys = { path = "../gmp-mpfr-sys" }
 rayon = "1.5.3"
 blake3 = "1.3.1"
 lru = "0.8.1"
