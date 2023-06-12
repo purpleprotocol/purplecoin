@@ -323,6 +323,19 @@ macro_rules! u_types {
             return self;
           }
           let (y, mut rem) = (Self::zero(), Self::zero());
+          #[cfg(host_family = "windows")]
+          unsafe {
+            gmp::mpn_tdiv_qr(
+              y.data(),
+              rem.data(),
+              0,
+              self.data(),
+              self.size as i32,
+              x.data(),
+              x.size as i32,
+            )
+          };
+          #[cfg(not(host_family = "windows"))]
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -353,6 +366,19 @@ macro_rules! u_types {
             return;
           }
           let y = Self::zero();
+          #[cfg(host_family = "windows")]
+          unsafe {
+            gmp::mpn_tdiv_qr(
+              y.data(),
+              self.data(),
+              0,
+              self.data(),
+              self.size as i32,
+              x.data(),
+              x.size as i32,
+            )
+          };
+          #[cfg(not(host_family = "windows"))]
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -382,6 +408,21 @@ macro_rules! u_types {
             return self;
           }
           let (mut y, rem) = (Self::zero(), Self::zero());
+
+          #[cfg(host_family = "windows")]
+          unsafe {
+            gmp::mpn_tdiv_qr(
+              y.data(),
+              rem.data(),
+              0,
+              self.data(),
+              self.size as i32,
+              x.data(),
+              x.size as i32,
+            )
+          };
+
+          #[cfg(not(host_family = "windows"))]
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -393,6 +434,7 @@ macro_rules! u_types {
               x.size,
             )
           };
+
           y.normalize_size();
           y
         }
@@ -452,17 +494,31 @@ impl ops::Rem<&U256> for U512 {
             return self.low_u256();
         }
         let (y, mut rem) = (Self::zero(), U256::zero());
+
+        #[cfg(host_family = "windows")]
         unsafe {
             gmp::mpn_tdiv_qr(
                 y.data(),
                 rem.data(),
                 0,
                 self.data(),
-                self.size,
+                self.size as i32,
                 x.data(),
-                x.size,
+                x.size as i32,
             )
         };
+        #[cfg(not(host_family = "windows"))]
+        unsafe {
+          gmp::mpn_tdiv_qr(
+              y.data(),
+              rem.data(),
+              0,
+              self.data(),
+              self.size,
+              x.data(),
+              x.size,
+          )
+      };
         rem.normalize_size();
         rem
     }
