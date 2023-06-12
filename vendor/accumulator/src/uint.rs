@@ -103,6 +103,9 @@ macro_rules! u_types {
         }
 
         pub fn is_perfect_square(&self) -> bool {
+          #[cfg(windows)]
+          let issqr = unsafe { gmp::mpn_perfect_square_p(self.data(), self.size as i32) };
+          #[cfg(not(windows))]
           let issqr = unsafe { gmp::mpn_perfect_square_p(self.data(), self.size) };
           issqr != 0
         }
@@ -131,6 +134,9 @@ macro_rules! u_types {
 
         /// Panics if `buf` is not large enough.
         pub fn write_binary(&self, buf: &mut [u8]) -> usize {
+          #[cfg(windows)]
+          unsafe { gmp::mpn_get_str(mut_ptr(&buf[0]), 2, self.data(), self.size as i32) }
+          #[cfg(not(windows))]
           unsafe { gmp::mpn_get_str(mut_ptr(&buf[0]), 2, self.data(), self.size) }
         }
 
@@ -323,7 +329,7 @@ macro_rules! u_types {
             return self;
           }
           let (y, mut rem) = (Self::zero(), Self::zero());
-          #[cfg(host_family = "windows")]
+          #[cfg(windows)]
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -335,7 +341,7 @@ macro_rules! u_types {
               x.size as i32,
             )
           };
-          #[cfg(not(host_family = "windows"))]
+          #[cfg(not(windows))]
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -366,7 +372,7 @@ macro_rules! u_types {
             return;
           }
           let y = Self::zero();
-          #[cfg(host_family = "windows")]
+          #[cfg(windows)]
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -378,7 +384,7 @@ macro_rules! u_types {
               x.size as i32,
             )
           };
-          #[cfg(not(host_family = "windows"))]
+          #[cfg(not(windows))]
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -409,7 +415,7 @@ macro_rules! u_types {
           }
           let (mut y, rem) = (Self::zero(), Self::zero());
 
-          #[cfg(host_family = "windows")]
+          #[cfg(windows)]
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -422,7 +428,7 @@ macro_rules! u_types {
             )
           };
 
-          #[cfg(not(host_family = "windows"))]
+          #[cfg(not(windows))]
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -495,7 +501,7 @@ impl ops::Rem<&U256> for U512 {
         }
         let (y, mut rem) = (Self::zero(), U256::zero());
 
-        #[cfg(host_family = "windows")]
+        #[cfg(windows)]
         unsafe {
             gmp::mpn_tdiv_qr(
                 y.data(),
@@ -507,7 +513,7 @@ impl ops::Rem<&U256> for U512 {
                 x.size as i32,
             )
         };
-        #[cfg(not(host_family = "windows"))]
+        #[cfg(not(windows))]
         unsafe {
             gmp::mpn_tdiv_qr(
                 y.data(),
