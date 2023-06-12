@@ -24,7 +24,9 @@ pub use mempool::*;
 use parking_lot::RwLock;
 pub use rpc::*;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Mutex};
+use triomphe::Arc;
+use crate::settings::SETTINGS;
 
 use self::request_peer::PeerInfoRequest;
 
@@ -50,7 +52,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
         let local_peer_id = PeerId::from(local_pbk.clone());
 
         // Sector swarm
-        let sector_behaviour = SectorBehaviour::new(&local_pbk);
+        let sector_behaviour = SectorBehaviour::new(&local_pk, &local_pbk);
         let swarm_transport = tcp::tokio::Transport::new(tcp::Config::default())
             .upgrade(upgrade::Version::V1)
             .authenticate(noise::Config::new(&local_pk).unwrap())
@@ -61,8 +63,9 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
                 .build();
 
         // TODO: Add listener address to settings
+        let addrs = format!("/ip4/0.0.0.0/tcp/{}", SETTINGS.network.listen_port_testnet);
         sector_swarm
-            .listen_on("/ip4/0.0.0.0/tcp/8080".parse().unwrap())
+            .listen_on(addrs.parse().unwrap())
             .unwrap();
 
         // Exchange swarm
@@ -110,7 +113,30 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
         }
     }
 
-    pub async fn run(mut self) {
+    pub fn bootstrap(&mut self) {
+        let peer_id = match &SETTINGS.network.bootstrap_node_peer_id {
+            Some(peer_id) => peer_id,
+            None => {
+                error!("No bootstrap node peer id provided");
+                return;
+            }
+        };
+
+        let addr = match &SETTINGS.network.bootstrap_node_address {
+            Some(addr) => addr,
+            None => {
+                error!("No bootstrap node address provided");
+                return;
+            }
+        };
+        self.sector_swarm.behaviour_mut().kademlia.add_address(
+            &peer_id.parse().unwrap(),
+            addr.parse().unwrap()
+        );
+    }
+
+    pub async fn run(&mut self) {
+        info!("Peer id: {}", self.peer_info.id);
         loop {
             tokio::select! {
                 sector_event = self.sector_swarm.select_next_some() => match sector_event {
@@ -119,6 +145,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
                     }
                     SwarmEvent::Behaviour(SectorEvent::Identify(event)) =>  match event {
                         identify::Event::Received { peer_id, info, .. } => {
+                            info!("Received identify info from {}:{}", peer_id, info.protocol_version);
                             let sector_behaviour = self.sector_swarm.behaviour_mut();
                             for addr in info.listen_addrs {
                                 sector_behaviour.kademlia.add_address(&peer_id, addr);
@@ -130,7 +157,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
                             }
                         }
                         _ => (),
-                    }
+                    },
                     SwarmEvent::Behaviour(SectorEvent::PeerRequest(event)) => match event {
                         request_response::Event::Message { peer, message } => {
                             match message {

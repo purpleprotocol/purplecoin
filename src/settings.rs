@@ -199,6 +199,18 @@ pub struct Network {
     /// DNS seeds for testnet.
     #[serde(alias = "seedstestnet")]
     pub seeds_testnet: Vec<String>,
+
+    // Is bootstrap node
+    #[serde(alias = "isbootstrapnode")]
+    pub is_bootstrap_node: bool,
+
+    /// Bootstrap node peer id
+    #[serde(alias = "bootstrapnodepeerid")]
+    pub bootstrap_node_peer_id: Option<String>,
+
+    /// Bootstrap node addrs
+    #[serde(alias = "bootstrapnodeaddress")]
+    pub bootstrap_node_address: Option<String>,
 }
 
 impl Default for Network {
@@ -214,6 +226,9 @@ impl Default for Network {
             rpc_password: "purplecoin".to_owned(),
             seeds_mainnet: vec!["bootstrap.mainnet.purplecoin.io".to_owned()],
             seeds_testnet: vec!["bootstrap.testnet.purplecoin.io".to_owned()],
+            is_bootstrap_node: true,
+            bootstrap_node_peer_id: None,
+            bootstrap_node_address: None,
         }
     }
 }

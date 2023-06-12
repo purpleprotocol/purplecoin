@@ -65,7 +65,7 @@ fn start_runtime() -> anyhow::Result<()> {
     let db = purplecoin::chain::backend::create_rocksdb_backend();
     let config = ChainConfig::new(&SETTINGS.node.network_name);
     let disk_backend = DiskBackend::new(db, Arc::new(config.clone()), None, None).unwrap();
-    let _chain = Chain::new(disk_backend, &config);
+    let chain = Chain::new(disk_backend, &config);
     let worker_threads = if SETTINGS.node.network_threads == 0 {
         num_cpus::get()
     } else {
@@ -114,6 +114,7 @@ fn start_runtime() -> anyhow::Result<()> {
             #[cfg(feature = "rpc")]
             run_rpc(),
             run_periodics(),
+            run_node(chain, &config),
         )?;
 
         Ok(())
@@ -150,6 +151,21 @@ fn start_gui() -> iced::Result {
         env!("CARGO_PKG_VERSION")
     );
     GUI::run(gui_settings)
+}
+
+async fn run_node<'a, T>(chain: Chain<'a, T>, config: &ChainConfig) -> anyhow::Result<()>
+where
+    T: PowChainBackend<'a> + ShardBackend<'a>
+{
+    let mut node = Node::new(chain, Arc::new(config.clone()));
+
+    if !SETTINGS.network.is_bootstrap_node {
+        node.bootstrap();
+    }
+
+    loop {
+        node.run().await;
+    }
 }
 
 #[cfg(feature = "rpc")]

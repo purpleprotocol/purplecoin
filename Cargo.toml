@@ -82,7 +82,8 @@ libp2p = { version = "0.51.3", features = [
     "tcp",
     "tokio",
     "noise",
-    "request-response"
+    "request-response",
+    "gossipsub"
 ]}
 async-trait = "0.1"
 either = "1.8.1"
