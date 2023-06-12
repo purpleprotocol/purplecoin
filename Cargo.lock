@@ -2438,9 +2438,9 @@ dependencies = [
 
 [[package]]
 name = "gmp-mpfr-sys"
-version = "1.5.2"
+version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b560063e2ffa8ce9c2ef9bf487f2944a97deca5b8de0b5bcd0ae6437ef8b75f"
+checksum = "13eabc29d16e4a621b495e3919c71ebb7caaed24380955671e7d417370fea95d"
 dependencies = [
  "libc",
  "windows-sys 0.42.0",
@@ -5178,7 +5178,6 @@ dependencies = [
  "dirs",
  "either",
  "futures",
- "gmp-mpfr-sys",
  "hash-sys",
  "headers",
  "hex",
