@@ -307,6 +307,10 @@ impl Hash160 {
         Self([0; 20])
     }
 
+    pub fn to_hex(&self) -> String {
+        hex::encode(self.0)
+    }
+
     pub fn to_address(&self) -> Address {
         Address(self.0)
     }
@@ -345,9 +349,7 @@ impl Hash160 {
 
 impl fmt::Debug for Hash160 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Hash160")
-            .field(&hex::encode(self.0))
-            .finish()
+        f.debug_tuple("Hash160").field(&self.to_hex()).finish()
     }
 }
 
@@ -375,6 +377,10 @@ impl Hash256 {
 
     pub fn zero() -> Self {
         Self([0; 32])
+    }
+
+    pub fn to_hex(&self) -> String {
+        hex::encode(self.0)
     }
 
     #[inline]
@@ -417,9 +423,7 @@ impl AsRef<[u8]> for Hash256 {
 
 impl fmt::Debug for Hash256 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Hash256")
-            .field(&hex::encode(self.0))
-            .finish()
+        f.debug_tuple("Hash256").field(&self.to_hex()).finish()
     }
 }
 
@@ -507,6 +511,10 @@ impl Hash512 {
         Self([0; 64])
     }
 
+    pub fn to_hex(&self) -> String {
+        hex::encode(self.0)
+    }
+
     pub fn hash_from_slice<T: AsRef<[u8]>>(slice: T, key: &str) -> Self {
         let mut out_hash = Hash512([0; 64]);
         let key = &[
@@ -527,9 +535,7 @@ impl Hash512 {
 
 impl fmt::Debug for Hash512 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Hash512")
-            .field(&hex::encode(self.0))
-            .finish()
+        f.debug_tuple("Hash512").field(&self.to_hex()).finish()
     }
 }
 
@@ -634,6 +640,30 @@ pub trait PMMRIndexHashable {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hash160_test_vector() {
+        let hash = Hash160::hash_from_slice("", "");
+        let hex = hash.to_hex();
+        assert_eq!(hex, "c3ab971c69aa6c9e02fbefae6356a31254f90d43");
+    }
+
+    #[test]
+    fn hash256_test_vector() {
+        let hash = Hash256::hash_from_slice("", "");
+        let hex = hash.to_hex();
+        assert_eq!(
+            hex,
+            "f0c625025fdaa10b68e03e441d8c22b6043bf444b1272021cc75060b88dab2f9"
+        );
+    }
+
+    #[test]
+    fn hash512_test_vector() {
+        let hash = Hash512::hash_from_slice("", "");
+        let hex = hash.to_hex();
+        assert_eq!(hex, "a48b8855c4e328eb8bd48b63b3646c11a25dc7b0550681ee096dbcf26c66f8a40c3d5e74f05f94927be16dbebc9c0cfbd39dc9331cf2074bf8276e516e29b06f");
+    }
 
     #[test]
     fn serialised_address_is_20_bytes() {
