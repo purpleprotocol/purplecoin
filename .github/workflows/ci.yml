@@ -54,8 +54,8 @@ jobs:
     env:
       CARGO_INCREMENTAL: 0
       RUST_BACKTRACE: 1
-      CC: x86_64-w64-mingw32-gcc
-      CXX: x86_64-w64-mingw32-g++
+      CC: clang
+      CXX: clang++
     defaults:
         run:
           shell: msys2 {0}
@@ -69,7 +69,7 @@ jobs:
             diffutils 
             base-devel
             make 
-            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-clang
             cmake
             wget
             m4
