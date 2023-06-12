@@ -115,8 +115,6 @@ features = ["xxh3", "const_xxh3"]
 
 [dependencies.rocksdb]
 version = "0.21.0"
-default-features = false
-features = ["lz4", "snappy", "zlib", "bzip2"]
 
 [dev-dependencies]
 serial_test = "*"
