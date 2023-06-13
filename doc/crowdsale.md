@@ -7,7 +7,7 @@ This document contains important information regarding the Purplecoin Crowdsale.
 * Sale rate: 1 ETH = 21000 XPU for first third of coins sold, 1 ETH = 14000 XPU for the next third, and 1 ETH = 7000 XPU for the last third. We frequently update the rate according to market fluctuations and according to current demand. Each purchase is settled at the current rate.
 * All unsold XPU will be burnt.
 * Individual cap: Max 500,000 XPU per person.
-* Minimum buy: 0.01 ETH.
+* Minimum buy: 0.05 ETH.
 * Coins will not be liquid until the sale ends.
 * Only coins sold in the crowdsale will be emitted in the smart contract. Developers will not be able to sell or access coins before the mainnet launch.
 * Coins are transferred to the main chain by burning them on Ethereum and including the receiving Purplecoin address in the transaction.
