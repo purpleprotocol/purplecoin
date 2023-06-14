@@ -1,5 +1,5 @@
 ## Build instructions
-This document describes how to build Purplecoin on different platforms. Purplecoin is build daily against nightly Rust so installing the latest nightly version should always work.
+This document describes how to build Purplecoin on different platforms. Purplecoin is built daily against nightly Rust so installing the latest nightly version should always work.
 
 ### Linux Debian
 Asuming Ubuntu/Debian, run the following:
