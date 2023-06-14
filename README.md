@@ -5,11 +5,8 @@ Official implementation of Purplecoin, the first stateless sharded cryptocurrenc
 
 **WARNING** The source code is still under heavy development. Use at your own risk.
 
-## Running tests
-Type the following to run the test suite:
-```
-cargo +nightly test
-```
+## Building
+Check out the [build instructions](https://github.com/purpleprotocol/purplecoin/blob/main/BUILDING.md) for each platform.
 
 ## Features
 * **Scalable**: Purplecoin is made up of 256 shards, each representing a different blockchain that processes transactions concurrently. The average transaction size is `450 bytes`, with a maximum block size of `380kb`, and a production rate of 256 blocks per 30 seconds we can achieve **~12000 transactions per second** on a blockchain system that has roughly the same safety guarantees as Bitcoin. Shards are processed in groups, called "shard sectors" in order to stabilise the required hashrate to successfuly attack the system.
@@ -60,15 +57,6 @@ cargo +nightly test
 
 ### Disadvantages when compared to Ethereum v2.0
 * While the Green PoW mining model used in Purplecoin is 50% energy efficient, Proof of Stake is 98% energy efficient
-
-### Cryptography
-Purplecoin uses Schnorr implemented over Ristretto (sr25519) as its signature algorithm and blake3 as the choice of hash function.
-
-### Green PoW
-Purplecoin uses the Green PoW model which lowers the energy consumption of mining to up to 50%.
-
-### ASIC resistance
-Purplecoin uses 2 Proof of Work algorithms in tandem: RandomX and a choice out of several hash functions. One is suited to CPU mining and the other for ASIC miners. Algorithms are switched every Green PoW epoch.
 
 ## Donations
 While the development of Purplecoin initially happened in the sphere of Purple Technologies, it is not backed in any way by it or any other company. Purple Technologies is a for-profit company while Purplecoin is a decentralized project. Therefore, the decisions and development happens at the community level. As such, the project also relies on the community at a funding level. 
