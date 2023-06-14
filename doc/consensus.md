@@ -1,4 +1,27 @@
-## Sector chain
+### Sharded Nakamoto Consensus 
+Purplecoin's consensus algorithm works like a kind of Sharded Nakamoto Consensus. 
+
+Instead of storing a single blockchain of transactions, we would instead store `n` blockchains with the same consensus rules, each with its own UTXO set and Proof of Work.
+
+In this way, the total balance can be represented as the sum of unspent outputs across all shards. Each shard is an independent blockchain with independent consensus. In this way, transactions are processed concurrently. 
+
+For example let's assume Alice wants to send Bob 10 XPU. Alice has two unspent outputs: 7 XPU on shard A and 5 XPU on shard B. She would then create two independent transactions on shard A and B which would create one output of 7 XPU on shard A that Bob can spend and two outputs on shard B: one for 3 XPU which Bob can spend and a 2 XPU change output which Alice can spend.
+
+### Scalability benefits of Sharded Nakamoto Consensus
+In Sharded Nakamoto Consensus, the total transaction throughput of the system is equal to the throughput of a single chain times the number of shards.
+
+For example, let's suppose that a single shard can process 12 transactions per second, roughly the throughput of the Ethereum blockchain. In the case of Purplecoin, we have 256 equivalent chains that process transactions concurrently, yielding a total of 12 * 256 = 3072 TPS. While of course in our case some transactions might span multiple shards thus creating overhead when compared to a single chain, it would be very rare that a transaction spans all of the shards.
+
+### Downsides of Sharded Nakamoto Consensus
+The design of this system, however, implies certain downsides compared to traditional blockchain systems:
+* The sharded architecture makes atomic transfers across shards impossible. In the case atomicity is required, a transfer on a single shard should be performed.
+* Shards are independent blockchains, requiring a full-node to process multiple blockchains at the same time. Of course, a full-node can actually be a cluster of nodes, each processing and storing one or several of the shards.
+* Multi-shard transfers might be partially reversed in case of a fork.
+
+## Sectors
+Shards are grouped into sectors in the consensus model of Purplecoin.
+
+### Sector chain
 A shard sector is composed of different shards, which can be processed independently as long as the corresponding Sector chain responsible for the sector is also processed.
 
 The Sector chain does not contain any transaction body, but rather the root hash of blocks. Miners append blocks to the Sector chain and the shards in the sector.
