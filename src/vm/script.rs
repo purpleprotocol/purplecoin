@@ -91,22 +91,24 @@ impl Default for VmFlags {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Script {
-    /// Script version
-    pub version: u8,
-
     /// Main script
     pub script: Vec<ScriptEntry>,
     
     /// Other functions in the script
     pub functions: Vec<Vec<ScriptEntry>>,
+
+    /// For each argument, a boolean denoting whether the argument is malleable or not.
+    /// 
+    /// A malleable argument is not signed by the spender.
+    pub malleable_args: Vec<bool>,
 }
 
 impl Default for Script {
     fn default() -> Self {
         Self {
-            version: 1,
             script: vec![],
             functions: vec![],
+            malleable_args: vec![],
         }
     }
 }
@@ -136,6 +138,18 @@ macro_rules! check_top_stack_val {
     };
 }
 
+macro_rules! check_bit {
+    ($val:expr, $pos:expr) => {
+        $val & (1 << $pos) == 1
+    }
+}
+
+macro_rules! set_bit {
+    ($val:expr, $pos:expr, $to_set:expr) => ({
+        (($val & (1 << $pos)) | ($to_set << $pos))
+    })
+}
+
 macro_rules! var_load {
     ($frame:expr, $script:expr, $sum:ident, $type:ty, $step:expr) => {
         $frame.i_ptr += 1;
@@ -162,7 +176,6 @@ macro_rules! var_load {
 impl Script {
     pub fn new_coinbase() -> Script {
         Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x05), // 5 arguments are pushed onto the stack: out_amount, out_address, out_script_hash, coinbase_height, extra_nonce
                 ScriptEntry::Opcode(OP::PushCoinbaseOut),
@@ -173,7 +186,6 @@ impl Script {
 
     pub fn new_coinbase_without_spending_address() -> Script {
         Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: out_amount, out_script_hash, coinbase_height, extra_nonce
                 ScriptEntry::Opcode(OP::PushCoinbaseOutNoSpendAddress),
@@ -184,7 +196,6 @@ impl Script {
 
     pub fn new_simple_spend() -> Script {
         Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOutVerify),
@@ -203,24 +214,9 @@ impl Script {
         key: &str,
         flags: VmFlags,
     ) -> VmResult {
-        if self.version > 1 {
-            return Ok(ExecutionResult::Ok).into();
-        }
-
         if args.len() > STACK_SIZE {
             return Err((
                 ExecutionResult::TooManyArgs,
-                StackTrace {
-                    trace: vec![(0_usize, None, self.script[0].clone()).into()],
-                    top_frame_stack: vec![],
-                },
-            ))
-            .into();
-        }
-
-        if self.version == 0 {
-            return Err((
-                ExecutionResult::BadVersion,
                 StackTrace {
                     trace: vec![(0_usize, None, self.script[0].clone()).into()],
                     top_frame_stack: vec![],
@@ -3185,7 +3181,6 @@ impl Encode for Script {
         &self,
         encoder: &mut E,
     ) -> core::result::Result<(), bincode::error::EncodeError> {
-        bincode::Encode::encode(&self.version, encoder)?;
         bincode::Encode::encode(&self.script.len(), encoder)?;
 
         for e in self.script.iter() {
@@ -3208,7 +3203,6 @@ impl Decode for Script {
     fn decode<D: bincode::de::Decoder>(
         decoder: &mut D,
     ) -> core::result::Result<Self, bincode::error::DecodeError> {
-        let version: u8 = bincode::Decode::decode(decoder)?;
         let len: u16 = bincode::Decode::decode(decoder)?;
         let len = len as usize;
         let mut script_parser = ScriptParser::new(len);
@@ -3222,7 +3216,6 @@ impl Decode for Script {
         }
 
         Ok(Self {
-            version,
             script: script_parser.out(),
             ..Script::default()
         })
@@ -3527,10 +3520,7 @@ pub enum ExecutionResult {
 
     /// VM Term overflow
     TermOverflow,
-
-    /// Bad script version
-    BadVersion,
-
+    
     /// Too many arguments given
     TooManyArgs,
 
@@ -3669,11 +3659,10 @@ mod tests {
     #[test]
     fn it_parses_script_with_only_main() {
         let script: Vec<u8> = vec![
-            0x01, // Version
-            0x12, // Script length
+            0x13, // Script length
             0x00,
-            0x00, // Script flags
             0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+            0x00, // Script flags
             0x23, // OP_Unsigned8Var,
             0x00, // Push 0 to the stack
             0x57, // OP_Loop
@@ -3694,8 +3683,7 @@ mod tests {
             0xb7, // OP_Verify
         ];
     
-        let oracle_script = Script {
-            version: 1,
+        let mut oracle_script = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -3719,6 +3707,7 @@ mod tests {
             ],
             ..Script::default()
         };
+        oracle_script.malleable_args = vec![false, false, false];
 
         let decoded: Script = crate::codec::decode(&script).unwrap();
 
@@ -3729,6 +3718,17 @@ mod tests {
     // fn it_parses_script_with_multiple_functions() {
     //     unimplemented!();
     // }
+
+    #[test]
+    fn set_bit() {
+        assert_eq!(set_bit!(0_u8, 0_u8, 1_u8), 0b00000001);
+    }
+
+    #[test]
+    fn check_bit() {
+        assert!(check_bit!(0b00000001, 0));
+        assert!(!check_bit!(0b00000000, 0));
+    }
 
     #[test]
     fn it_simple_spends() {
@@ -3796,7 +3796,6 @@ mod tests {
     fn it_breaks_loop_if_values_equal() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -3843,7 +3842,6 @@ mod tests {
     fn it_breaks_loop_if_values_not_equal() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -3891,7 +3889,6 @@ mod tests {
     fn it_breaks_loop_if_equal_to_1() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -3937,7 +3934,6 @@ mod tests {
     fn it_breaks_loop_if_not_equal_to_1() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -3983,7 +3979,6 @@ mod tests {
     fn it_breaks_loop_if_values_equal_test_2() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4031,7 +4026,6 @@ mod tests {
     fn it_breaks_loop_if_less_or_equal() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4079,7 +4073,6 @@ mod tests {
     fn it_breaks_loop_if_less_or_equal_test_2() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4128,7 +4121,6 @@ mod tests {
     fn it_breaks_loop_if_greater_or_equal() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4176,7 +4168,6 @@ mod tests {
     fn it_breaks_loop_if_greater_or_equal_test_2() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4225,7 +4216,6 @@ mod tests {
     fn it_breaks_loop_if_less() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4273,7 +4263,6 @@ mod tests {
     fn it_breaks_loop_if_less_test_2() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4322,7 +4311,6 @@ mod tests {
     fn it_breaks_loop_if_greater() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4370,7 +4358,6 @@ mod tests {
     fn it_breaks_loop_if_greater_test_2() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4419,7 +4406,6 @@ mod tests {
     fn it_continues_loop_if_less_or_equal() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4467,7 +4453,6 @@ mod tests {
     fn it_continues_loop_if_less_or_equal_test_2() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4516,7 +4501,6 @@ mod tests {
     fn it_continues_loop_if_greater_or_equal() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4564,7 +4548,6 @@ mod tests {
     fn it_continues_loop_if_greater_or_equal_test_2() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4613,7 +4596,6 @@ mod tests {
     fn it_continues_loop_if_less() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4661,7 +4643,6 @@ mod tests {
     fn it_continues_loop_if_greater() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4709,7 +4690,6 @@ mod tests {
     fn it_continues_loop_if_equals_1() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4755,7 +4735,6 @@ mod tests {
     fn it_continues_loop_if_not_equals_1() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4801,7 +4780,6 @@ mod tests {
     fn it_continues_loop_if_equals() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4849,7 +4827,6 @@ mod tests {
     fn it_continues_loop_if_not_equals() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4897,7 +4874,6 @@ mod tests {
     fn it_runs_out_of_gas() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5057,7 +5033,6 @@ mod tests {
     #[test]
     fn it_encodes_to_single_byte() {
         let script = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned32Var),
@@ -5081,7 +5056,6 @@ mod tests {
     #[test]
     fn it_encodes_to_single_byte_2() {
         let script = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned32Var),
@@ -5105,7 +5079,6 @@ mod tests {
     #[test]
     fn it_encodes_and_decodes() {
         let script = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned32Var),
@@ -5143,7 +5116,6 @@ mod tests {
     #[test]
     fn it_encodes_and_decodes_2() {
         let script = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned32ArrayVar),
@@ -5184,7 +5156,6 @@ mod tests {
     fn it_roll_pop_out() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5234,7 +5205,6 @@ mod tests {
     fn it_roll_pick_out() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5289,7 +5259,6 @@ mod tests {
     fn it_depth() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5337,7 +5306,6 @@ mod tests {
     fn it_if_dup() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5392,7 +5360,6 @@ mod tests {
     fn it_dup() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5436,7 +5403,6 @@ mod tests {
     fn it_nip() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5481,7 +5447,6 @@ mod tests {
     fn it_rot() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5542,7 +5507,6 @@ mod tests {
     fn it_rot2() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5603,7 +5567,6 @@ mod tests {
     fn it_over() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5657,7 +5620,6 @@ mod tests {
     fn it_swap() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5704,7 +5666,6 @@ mod tests {
     fn it_swap2() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5759,7 +5720,6 @@ mod tests {
     fn it_tuck() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5808,7 +5768,6 @@ mod tests {
     fn it_drop2() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5854,7 +5813,6 @@ mod tests {
     fn it_dup2() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5906,7 +5864,6 @@ mod tests {
     fn it_dup3() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5967,7 +5924,6 @@ mod tests {
     fn it_adds_size() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -6005,7 +5961,6 @@ mod tests {
     fn it_fails_drop_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6037,7 +5992,6 @@ mod tests {
     fn it_fails_dup_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6069,7 +6023,6 @@ mod tests {
     fn it_fails_nip_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6103,7 +6056,6 @@ mod tests {
     fn it_fails_rot_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6139,7 +6091,6 @@ mod tests {
     fn it_fails_rot_2_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6181,7 +6132,6 @@ mod tests {
     fn it_fails_over_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6215,7 +6165,6 @@ mod tests {
     fn it_fails_roll_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6258,7 +6207,6 @@ mod tests {
     fn it_fails_swap_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6292,7 +6240,6 @@ mod tests {
     fn it_fails_tuck_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6326,7 +6273,6 @@ mod tests {
     fn it_fails_drop_2_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6360,7 +6306,6 @@ mod tests {
     fn it_fails_dup_2_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6394,7 +6339,6 @@ mod tests {
     fn it_fails_dup_3_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6430,7 +6374,6 @@ mod tests {
     fn it_fails_over_2_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6468,7 +6411,6 @@ mod tests {
     fn it_fails_swap_2_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6506,7 +6448,6 @@ mod tests {
     fn it_fails_to_push_size_when_stack_length_is_lower() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6538,7 +6479,6 @@ mod tests {
     fn it_loads_hash_160var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Hash160Var),
@@ -6624,7 +6564,6 @@ mod tests {
     fn it_loads_hash_256var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Hash256Var),
@@ -6736,7 +6675,6 @@ mod tests {
     fn it_loads_hash_512var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Hash512Var),
@@ -6916,7 +6854,6 @@ mod tests {
     fn it_loads_unsigned_8var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -6962,7 +6899,6 @@ mod tests {
     fn it_loads_unsigned_16var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned16Var),
@@ -7011,7 +6947,6 @@ mod tests {
     fn it_loads_unsigned_32var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned32Var),
@@ -7066,7 +7001,6 @@ mod tests {
     fn it_loads_unsigned_64var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned64Var),
@@ -7133,7 +7067,6 @@ mod tests {
     fn it_loads_unsigned_128var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned128Var),
@@ -7205,7 +7138,6 @@ mod tests {
     fn it_loads_signed_16var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed16Var),
@@ -7254,7 +7186,6 @@ mod tests {
     fn it_loads_signed_32var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed32Var),
@@ -7309,7 +7240,6 @@ mod tests {
     fn it_loads_signed_64var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed64Var),
@@ -7376,7 +7306,6 @@ mod tests {
     fn it_loads_signed_128var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed128Var),
@@ -7448,7 +7377,6 @@ mod tests {
     fn it_loads_hash_160_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Hash160ArrayVar),
@@ -7564,7 +7492,6 @@ mod tests {
     fn it_loads_hash_256_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Hash256ArrayVar),
@@ -7719,7 +7646,6 @@ mod tests {
     fn it_loads_hash_512_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Hash512ArrayVar),
@@ -7976,7 +7902,6 @@ mod tests {
     fn it_loads_unsigned_8_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -8030,7 +7955,6 @@ mod tests {
     fn it_loads_unsigned_16_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned16ArrayVar),
@@ -8094,7 +8018,6 @@ mod tests {
     fn it_loads_unsigned_32_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned32ArrayVar),
@@ -8180,7 +8103,6 @@ mod tests {
     fn it_loads_unsigned_64_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned64ArrayVar),
@@ -8316,7 +8238,6 @@ mod tests {
     fn it_loads_unsigned_128_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned128ArrayVar),
@@ -8447,7 +8368,6 @@ mod tests {
     fn it_loads_signed_8_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed8ArrayVar),
@@ -8501,7 +8421,6 @@ mod tests {
     fn it_loads_signed_16_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed16ArrayVar),
@@ -8565,7 +8484,6 @@ mod tests {
     fn it_loads_signed_32_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed32ArrayVar),
@@ -8651,7 +8569,6 @@ mod tests {
     fn it_loads_signed_64_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed64ArrayVar),
@@ -8787,7 +8704,6 @@ mod tests {
     fn it_loads_signed_128_array_var() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed128ArrayVar),
@@ -8918,7 +8834,6 @@ mod tests {
     fn it_pushes_array_len() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -8974,7 +8889,6 @@ mod tests {
     fn it_gets_type() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomHash160Var),
@@ -9076,7 +8990,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomHash160Var),
@@ -9119,7 +9032,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomHash256Var),
@@ -9162,7 +9074,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomHash512Var),
@@ -9215,7 +9126,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomUnsigned8Var),
@@ -9258,7 +9168,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomUnsigned16Var),
@@ -9301,7 +9210,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomUnsigned32Var),
@@ -9344,7 +9252,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomUnsigned64Var),
@@ -9387,7 +9294,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomUnsigned128Var),
@@ -9430,7 +9336,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomSigned8Var),
@@ -9473,7 +9378,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomSigned16Var),
@@ -9516,7 +9420,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomSigned32Var),
@@ -9559,7 +9462,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomSigned64Var),
@@ -9602,7 +9504,6 @@ mod tests {
 
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomSigned128Var),
@@ -9642,7 +9543,6 @@ mod tests {
     fn it_pushes_1_if_lt_and_0_if_not() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9708,7 +9608,6 @@ mod tests {
     fn it_pushes_1_if_gt_and_0_if_not() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9774,7 +9673,6 @@ mod tests {
     fn it_pushes_1_if_leq_and_0_if_not() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9840,7 +9738,6 @@ mod tests {
     fn it_pushes_1_if_geq_and_0_if_not() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9906,7 +9803,6 @@ mod tests {
     fn it_hashes_with_ripemd() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9954,7 +9850,6 @@ mod tests {
     fn it_hashes_with_sha256() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10002,7 +9897,6 @@ mod tests {
     fn it_hashes_with_sha512() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10050,7 +9944,6 @@ mod tests {
     fn it_hashes_with_blake2b() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10110,7 +10003,6 @@ mod tests {
     fn it_hashes_with_blake3_256() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10158,7 +10050,6 @@ mod tests {
     fn it_hashes_with_blake3_512() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10206,7 +10097,6 @@ mod tests {
     fn it_hashes_with_blake3_256internal() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10254,7 +10144,6 @@ mod tests {
     fn it_hashes_with_blake3_512_internal() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10303,7 +10192,6 @@ mod tests {
     fn it_hashes_with_blake2s_256() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10352,7 +10240,6 @@ mod tests {
     fn it_adds_two_numbers() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10391,7 +10278,6 @@ mod tests {
     fn it_panics_if_add_not_same_type() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10416,7 +10302,6 @@ mod tests {
     fn it_adds_to_array() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10445,7 +10330,6 @@ mod tests {
     fn it_subs_two_numbers() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10484,7 +10368,6 @@ mod tests {
     fn it_subs_from_array() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10509,7 +10392,6 @@ mod tests {
     fn it_subs_array_from_array() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10537,7 +10419,6 @@ mod tests {
     fn it_subs_array_from_array_overflow() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10565,7 +10446,6 @@ mod tests {
     fn it_multiples_array_with_number() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10590,7 +10470,6 @@ mod tests {
     fn it_multiples_array_with_array() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10618,7 +10497,6 @@ mod tests {
     fn it_multiplies_array_with_array_overflow() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10646,7 +10524,6 @@ mod tests {
     fn it_cannot_multiply_two_arrays_with_different_length() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10673,7 +10550,6 @@ mod tests {
     fn it_multiplies_two_numbers() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10712,7 +10588,6 @@ mod tests {
     fn it_divides_two_numbers() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10751,7 +10626,6 @@ mod tests {
     fn it_divides_array_with_number() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10772,7 +10646,6 @@ mod tests {
         assert_script_ok(ss, script_output, key);
 
         let ss_2 = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed8Var),
@@ -10798,7 +10671,6 @@ mod tests {
     fn it_divides_array_with_another_array() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10840,7 +10712,6 @@ mod tests {
     fn it_divides_array_with_another_array_overflow() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10868,7 +10739,6 @@ mod tests {
     fn it_returns_min() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10926,7 +10796,6 @@ mod tests {
     fn it_returns_max() {
         let key = "test_key";
         let ss = Script {
-            version: 1,
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
