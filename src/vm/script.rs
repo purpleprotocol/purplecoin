@@ -34,53 +34,6 @@ pub const MAX_OUT_STACK: usize = 300;
 /// Return only the last n frames or top stack frame items
 pub const TRACE_SIZE: usize = 10;
 
-macro_rules! check_top_stack_val {
-    ($exp:expr, $frame:expr, $frame_stack:expr, $structt:expr, $flags:expr) => {
-        if $exp == &1 {
-            return Ok(ExecutionResult::Ok).into();
-        } else {
-            let mut stack_trace = StackTrace::default();
-
-            if $flags.build_stacktrace {
-                stack_trace.trace.push(
-                    (
-                        $frame.i_ptr,
-                        $frame.func_idx,
-                        $structt.script[$frame.i_ptr].clone(),
-                    )
-                        .into(),
-                );
-                stack_trace.top_frame_stack.extend_from_slice(&$frame.stack);
-                stack_trace.extend_from_frame_stack(&$frame_stack, &$structt);
-            }
-
-            return Err((ExecutionResult::Invalid, stack_trace)).into();
-        }
-    };
-}
-
-macro_rules! var_load {
-    ($frame:expr, $script:expr, $sum:ident, $type:ty, $step:expr) => {
-        $frame.i_ptr += 1;
-        if let ScriptEntry::Byte(byte) = $script.script[$frame.i_ptr] {
-            $sum += (byte as $type);
-        } else {
-            unreachable!()
-        }
-    };
-
-    ($frame:expr, $script:expr, $sum:ident, $type:ty, $step:expr, $($tail:expr), +) => {
-        var_load!($frame, $script, $sum, $type, $($tail), +);
-
-        $frame.i_ptr += 1;
-        if let ScriptEntry::Byte(byte) = $script.script[$frame.i_ptr] {
-            $sum += (byte as $type) << $step;
-        } else {
-            unreachable!()
-        }
-    };
-}
-
 #[derive(PartialEq, Debug, Clone)]
 pub enum ScriptEntry {
     Opcode(OP),
@@ -89,15 +42,25 @@ pub enum ScriptEntry {
 
 #[derive(Debug, Clone)]
 pub struct Frame<'a> {
+    /// Stack storing the terms on the current frame
     pub stack: Vec<VmTerm>,
+
+    /// Instruction pointer
     pub i_ptr: usize,
-    pub func_idx: usize,
+
+    /// Func index. This is `None` if the current function is the main function 
+    pub func_idx: Option<usize>,
+
+    /// Some((start_ip, end_ip)) if the current frame is a loop start_ip is the 
+    /// instruction pointer at the beginning of the loop and end_ip at the end. 
     pub is_loop: Option<(usize, usize)>,
+
+    /// Script executor
     pub executor: ScriptExecutor<'a>,
 }
 
 impl<'a> Frame<'a> {
-    pub fn new(func_idx: usize) -> Self {
+    pub fn new(func_idx: Option<usize>) -> Self {
         Self {
             stack: Vec::with_capacity(STACK_SIZE),
             i_ptr: 0,
@@ -128,9 +91,73 @@ impl Default for VmFlags {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Script {
+    /// Script version
     pub version: u8,
+
+    /// Main script
     pub script: Vec<ScriptEntry>,
+    
+    /// Other functions in the script
+    pub functions: Vec<Vec<ScriptEntry>>,
 }
+
+impl Default for Script {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            script: vec![],
+            functions: vec![],
+        }
+    }
+}
+
+macro_rules! check_top_stack_val {
+    ($exp:expr, $frame:expr, $frame_stack:expr, $structt:expr, $flags:expr) => {
+        if $exp == &1 {
+            return Ok(ExecutionResult::Ok).into();
+        } else {
+            let mut stack_trace = StackTrace::default();
+
+            if $flags.build_stacktrace {
+                stack_trace.trace.push(
+                    (
+                        $frame.i_ptr,
+                        $frame.func_idx,
+                        $structt.script[$frame.i_ptr].clone(),
+                    )
+                        .into(),
+                );
+                stack_trace.top_frame_stack.extend_from_slice(&$frame.stack);
+                stack_trace.extend_from_frame_stack(&$frame_stack, &$structt);
+            }
+
+            return Err((ExecutionResult::Invalid, stack_trace)).into();
+        }
+    };
+}
+
+macro_rules! var_load {
+    ($frame:expr, $script:expr, $sum:ident, $type:ty, $step:expr) => {
+        $frame.i_ptr += 1;
+        if let ScriptEntry::Byte(byte) = $script[$frame.i_ptr] {
+            $sum += (byte as $type);
+        } else {
+            unreachable!()
+        }
+    };
+
+    ($frame:expr, $script:expr, $sum:ident, $type:ty, $step:expr, $($tail:expr), +) => {
+        var_load!($frame, $script, $sum, $type, $($tail), +);
+
+        $frame.i_ptr += 1;
+        if let ScriptEntry::Byte(byte) = $script[$frame.i_ptr] {
+            $sum += (byte as $type) << $step;
+        } else {
+            unreachable!()
+        }
+    };
+}
+
 
 impl Script {
     pub fn new_coinbase() -> Script {
@@ -140,6 +167,7 @@ impl Script {
                 ScriptEntry::Byte(0x05), // 5 arguments are pushed onto the stack: out_amount, out_address, out_script_hash, coinbase_height, extra_nonce
                 ScriptEntry::Opcode(OP::PushCoinbaseOut),
             ],
+            ..Script::default()
         }
     }
 
@@ -150,6 +178,7 @@ impl Script {
                 ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: out_amount, out_script_hash, coinbase_height, extra_nonce
                 ScriptEntry::Opcode(OP::PushCoinbaseOutNoSpendAddress),
             ],
+            ..Script::default()
         }
     }
 
@@ -160,6 +189,7 @@ impl Script {
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOutVerify),
             ],
+            ..Script::default()
         }
     }
 
@@ -181,7 +211,7 @@ impl Script {
             return Err((
                 ExecutionResult::TooManyArgs,
                 StackTrace {
-                    trace: vec![(0_usize, 0_usize, self.script[0].clone()).into()],
+                    trace: vec![(0_usize, None, self.script[0].clone()).into()],
                     top_frame_stack: vec![],
                 },
             ))
@@ -192,26 +222,12 @@ impl Script {
             return Err((
                 ExecutionResult::BadVersion,
                 StackTrace {
-                    trace: vec![(0_usize, 0_usize, self.script[0].clone()).into()],
+                    trace: vec![(0_usize, None, self.script[0].clone()).into()],
                     top_frame_stack: vec![],
                 },
             ))
             .into();
         }
-
-        let funcs = match self.parse_funcs() {
-            Ok(funcs) => funcs,
-            Err(r) => {
-                return Err((
-                    r,
-                    StackTrace {
-                        trace: vec![(0_usize, 0_usize, self.script[0].clone()).into()],
-                        top_frame_stack: vec![],
-                    },
-                ))
-                .into()
-            }
-        };
 
         // Seed RNG
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
@@ -220,7 +236,7 @@ impl Script {
         let mut memory_size = 0;
         let mut exec_count = 0;
         let mut frame_stack: Vec<Frame> = Vec::with_capacity(MAX_FRAMES);
-        let mut frame = Frame::new(0);
+        let mut frame = Frame::new(None);
         let mut script_outputs = vec![];
 
         for a in args.iter().rev().cloned() {
@@ -244,12 +260,15 @@ impl Script {
             let fs_len = frame_stack.len();
 
             if let Some(frame) = frame_stack.last_mut() {
-                let f = &funcs[frame.func_idx];
+                let f = match frame.func_idx {
+                    Some(func_idx) => &self.functions[func_idx],
+                    None => &self.script,
+                };
 
-                if frame.i_ptr >= f.script.len() {
+                if frame.i_ptr >= f.len() {
                     pop_frame = true
                 } else {
-                    let i = &f.script[frame.i_ptr];
+                    let i = &f[frame.i_ptr];
 
                     // Execute opcode
                     frame.executor.push_op(
@@ -425,7 +444,7 @@ impl Script {
 
                             for i in 0..20 {
                                 frame.i_ptr += 1;
-                                if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                     arr[i] = *byte;
                                 } else {
                                     unreachable!()
@@ -443,7 +462,7 @@ impl Script {
 
                             for i in 0..32 {
                                 frame.i_ptr += 1;
-                                if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                     arr[i] = *byte;
                                 } else {
                                     unreachable!()
@@ -461,7 +480,7 @@ impl Script {
 
                             for i in 0..64 {
                                 frame.i_ptr += 1;
-                                if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                     arr[i] = *byte;
                                 } else {
                                     unreachable!()
@@ -477,7 +496,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8Var) => {
                             frame.i_ptr += 1;
 
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 frame.stack.push(VmTerm::Unsigned8(*byte));
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
@@ -537,7 +556,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed8Var) => {
                             frame.i_ptr += 1;
 
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 let byte = unsafe { mem::transmute::<u8, i8>(*byte) };
                                 frame.stack.push(VmTerm::Signed8(byte));
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
@@ -603,13 +622,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -621,7 +640,7 @@ impl Script {
 
                                 for i in 0..20 {
                                     frame.i_ptr += 1;
-                                    if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                    if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                         hash_arr[i] = *byte;
                                     } else {
                                         unreachable!()
@@ -642,13 +661,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -660,7 +679,7 @@ impl Script {
 
                                 for i in 0..32 {
                                     frame.i_ptr += 1;
-                                    if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                    if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                         hash_arr[i] = *byte;
                                     } else {
                                         unreachable!()
@@ -681,13 +700,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -699,7 +718,7 @@ impl Script {
 
                                 for i in 0..64 {
                                     frame.i_ptr += 1;
-                                    if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                    if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                         hash_arr[i] = *byte;
                                     } else {
                                         unreachable!()
@@ -720,13 +739,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -735,7 +754,7 @@ impl Script {
                             let mut arr: Vec<u8> = Vec::new();
                             for _ in 0..len {
                                 frame.i_ptr += 1;
-                                if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                     arr.push(*byte);
                                 } else {
                                     unreachable!()
@@ -753,13 +772,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -785,13 +804,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -817,13 +836,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -851,13 +870,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -886,13 +905,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -901,7 +920,7 @@ impl Script {
                             let mut arr: Vec<i8> = Vec::new();
                             for _ in 0..len {
                                 frame.i_ptr += 1;
-                                if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                     let byte = unsafe { mem::transmute::<u8, i8>(*byte) };
                                     arr.push(byte);
                                 } else {
@@ -920,13 +939,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -953,13 +972,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -986,13 +1005,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -1019,13 +1038,13 @@ impl Script {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += *byte as u16;
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f.script[frame.i_ptr] {
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 len += (*byte as u16) << 8;
                             } else {
                                 unreachable!()
@@ -1263,34 +1282,6 @@ impl Script {
     pub fn to_script_hash(&self, key: &str) -> Hash160 {
         Hash160::hash_from_slice(crate::codec::encode_to_vec(&self).unwrap(), key)
     }
-
-    #[inline]
-    pub fn parse_funcs(&self) -> Result<Vec<Script>, ExecutionResult> {
-        let mut out = vec![];
-
-        match self.script[0] {
-            ScriptEntry::Opcode(OP::Func) => {
-                unimplemented!()
-            }
-
-            ScriptEntry::Byte(args_len) if args_len > 0 => {
-                let mut out_script = Script {
-                    version: 1,
-                    script: vec![],
-                };
-
-                for op in self.script.iter() {
-                    out_script.script.push(op.clone());
-                }
-
-                out.push(out_script);
-            }
-
-            _ => return Err(ExecutionResult::BadFormat),
-        }
-
-        Ok(out)
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -1310,7 +1301,7 @@ impl<'a> ScriptExecutor<'a> {
         &mut self,
         op: &ScriptEntry,
         i_ptr: usize,
-        func_idx: usize,
+        func_idx: Option<usize>,
         inputs_hash: &Hash160,
         memory_size: &mut usize,
         exec_stack: &mut Vec<VmTerm>,
@@ -3233,6 +3224,7 @@ impl Decode for Script {
         Ok(Self {
             version,
             script: script_parser.out(),
+            ..Script::default()
         })
     }
 }
@@ -3240,6 +3232,22 @@ impl Decode for Script {
 struct ScriptParser {
     state: ScriptParserState,
     out: Vec<ScriptEntry>,
+}
+
+macro_rules! impl_parser_expecting_bytes {
+    ($self:expr, $op:expr, $len:expr) => ({
+        $self.out.push(ScriptEntry::Opcode($op));
+        $self.state = ScriptParserState::ExpectingBytes($len);
+        Ok(())
+    })
+}
+
+macro_rules! impl_parser_expecting_len {
+    ($self:expr, $op:expr) => ({
+        $self.out.push(ScriptEntry::Opcode($op));
+        $self.state = ScriptParserState::ExpectingLen($op, 0, 0);
+        Ok(())
+    })
 }
 
 impl ScriptParser {
@@ -3253,12 +3261,7 @@ impl ScriptParser {
     pub fn push_byte(&mut self, byte: u8) -> Result<(), &'static str> {
         match self.state {
             ScriptParserState::ExpectingFuncOrArgsLen => match OP::from_u8(byte) {
-                Some(OP::Func) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Func));
-                    self.state = ScriptParserState::ExpectingBytes(1);
-                    Ok(())
-                }
-
+                Some(OP::Func) => impl_parser_expecting_bytes!(self, OP::Func, 1),
                 _ => {
                     self.out.push(ScriptEntry::Byte(byte));
                     self.state = ScriptParserState::ExpectingOP;
@@ -3267,156 +3270,37 @@ impl ScriptParser {
             },
 
             ScriptParserState::ExpectingOP => match OP::from_u8(byte) {
-                Some(OP::Hash160Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Hash160Var));
-                    self.state = ScriptParserState::ExpectingBytes(20);
-                    Ok(())
-                }
-                Some(OP::Hash256Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Hash256Var));
-                    self.state = ScriptParserState::ExpectingBytes(32);
-                    Ok(())
-                }
-                Some(OP::Hash512Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Hash512Var));
-                    self.state = ScriptParserState::ExpectingBytes(64);
-                    Ok(())
-                }
-                Some(OP::Unsigned8Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Unsigned8Var));
-                    self.state = ScriptParserState::ExpectingBytes(1);
-                    Ok(())
-                }
-                Some(OP::Unsigned16Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Unsigned16Var));
-                    self.state = ScriptParserState::ExpectingBytes(2);
-                    Ok(())
-                }
-                Some(OP::Unsigned32Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Unsigned32Var));
-                    self.state = ScriptParserState::ExpectingBytes(4);
-                    Ok(())
-                }
-                Some(OP::Unsigned64Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Unsigned64Var));
-                    self.state = ScriptParserState::ExpectingBytes(8);
-                    Ok(())
-                }
-                Some(OP::Unsigned128Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Unsigned128Var));
-                    self.state = ScriptParserState::ExpectingBytes(16);
-                    Ok(())
-                }
-                Some(OP::UnsignedBigVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::UnsignedBigVar));
-                    self.state = ScriptParserState::ExpectingBytes(32);
-                    Ok(())
-                }
-                Some(OP::Signed8Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Signed8Var));
-                    self.state = ScriptParserState::ExpectingBytes(1);
-                    Ok(())
-                }
-                Some(OP::Signed16Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Signed16Var));
-                    self.state = ScriptParserState::ExpectingBytes(2);
-                    Ok(())
-                }
-                Some(OP::Signed32Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Signed32Var));
-                    self.state = ScriptParserState::ExpectingBytes(4);
-                    Ok(())
-                }
-                Some(OP::Signed64Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Signed64Var));
-                    self.state = ScriptParserState::ExpectingBytes(8);
-                    Ok(())
-                }
-                Some(OP::Signed128Var) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Signed128Var));
-                    self.state = ScriptParserState::ExpectingBytes(16);
-                    Ok(())
-                }
-                Some(OP::SignedBigVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::SignedBigVar));
-                    self.state = ScriptParserState::ExpectingBytes(32);
-                    Ok(())
-                }
-                Some(OP::Hash160ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Hash160ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Hash160ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::Hash256ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Hash256ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Hash256ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::Hash512ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Hash512ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Hash512ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::Unsigned8ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Unsigned8ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Unsigned8ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::Unsigned16ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Unsigned16ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Unsigned16ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::Unsigned32ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Unsigned32ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Unsigned32ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::Unsigned64ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Unsigned64ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Unsigned64ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::Unsigned128ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Unsigned128ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Unsigned128ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::UnsignedBigArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::UnsignedBigArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::UnsignedBigArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::Signed8ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Signed8ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Signed8ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::Signed16ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Signed16ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Signed16ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::Signed32ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Signed32ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Signed32ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::Signed64ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Signed64ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Signed64ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::Signed128ArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Signed128ArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::Signed128ArrayVar, 0, 0);
-                    Ok(())
-                }
-                Some(OP::SignedBigArrayVar) => {
-                    self.out.push(ScriptEntry::Opcode(OP::SignedBigArrayVar));
-                    self.state = ScriptParserState::ExpectingLen(OP::SignedBigArrayVar, 0, 0);
-                    Ok(())
-                }
+                Some(OP::Unsigned8Var) => impl_parser_expecting_bytes!(self, OP::Unsigned8Var, 1),
+                Some(OP::Signed8Var) => impl_parser_expecting_bytes!(self, OP::Unsigned8Var, 1),
+                Some(OP::Unsigned16Var) => impl_parser_expecting_bytes!(self, OP::Unsigned16Var, 2),
+                Some(OP::Signed16Var) => impl_parser_expecting_bytes!(self, OP::Unsigned16Var, 2),
+                Some(OP::Unsigned32Var) => impl_parser_expecting_bytes!(self, OP::Unsigned32Var, 4),
+                Some(OP::Signed32Var) => impl_parser_expecting_bytes!(self, OP::Unsigned32Var, 4),
+                Some(OP::Unsigned64Var) => impl_parser_expecting_bytes!(self, OP::Unsigned64Var, 8),
+                Some(OP::Signed64Var) => impl_parser_expecting_bytes!(self, OP::Unsigned64Var, 8),
+                Some(OP::Unsigned128Var) => impl_parser_expecting_bytes!(self, OP::Unsigned128Var, 16),
+                Some(OP::Signed128Var) => impl_parser_expecting_bytes!(self, OP::Unsigned128Var, 16),
+                Some(OP::UnsignedBigVar) => impl_parser_expecting_bytes!(self, OP::UnsignedBigVar, 32),
+                Some(OP::SignedBigVar) => impl_parser_expecting_bytes!(self, OP::SignedBigVar, 32),
+                Some(OP::Hash160Var) => impl_parser_expecting_bytes!(self, OP::Hash160Var, 20),
+                Some(OP::Hash256Var) => impl_parser_expecting_bytes!(self, OP::Hash256Var, 32),
+                Some(OP::Hash512Var) => impl_parser_expecting_bytes!(self, OP::Hash512Var, 64),
+                Some(OP::Pick) => impl_parser_expecting_bytes!(self, OP::Pick, 1),
+                Some(OP::Hash160ArrayVar) => impl_parser_expecting_len!(self, OP::Hash160ArrayVar),
+                Some(OP::Hash256ArrayVar) => impl_parser_expecting_len!(self, OP::Hash256ArrayVar),
+                Some(OP::Hash512ArrayVar) => impl_parser_expecting_len!(self, OP::Hash512ArrayVar),
+                Some(OP::Unsigned8ArrayVar) => impl_parser_expecting_len!(self, OP::Unsigned8ArrayVar),
+                Some(OP::Signed8ArrayVar) => impl_parser_expecting_len!(self, OP::Signed8ArrayVar),
+                Some(OP::Unsigned16ArrayVar) => impl_parser_expecting_len!(self, OP::Unsigned16ArrayVar),
+                Some(OP::Signed16ArrayVar) => impl_parser_expecting_len!(self, OP::Signed16ArrayVar),
+                Some(OP::Unsigned32ArrayVar) => impl_parser_expecting_len!(self, OP::Unsigned32ArrayVar),
+                Some(OP::Signed32ArrayVar) => impl_parser_expecting_len!(self, OP::Signed32ArrayVar),
+                Some(OP::Unsigned64ArrayVar) => impl_parser_expecting_len!(self, OP::Unsigned64ArrayVar),
+                Some(OP::Signed64ArrayVar) => impl_parser_expecting_len!(self, OP::Signed64ArrayVar),
+                Some(OP::Unsigned128ArrayVar) => impl_parser_expecting_len!(self, OP::Unsigned128ArrayVar),
+                Some(OP::Signed128ArrayVar) => impl_parser_expecting_len!(self, OP::Signed128ArrayVar),
+                Some(OP::UnsignedBigArrayVar) => impl_parser_expecting_len!(self, OP::UnsignedBigArrayVar),
+                Some(OP::SignedBigArrayVar) => impl_parser_expecting_len!(self, OP::SignedBigArrayVar),
                 Some(op) => {
                     self.out.push(ScriptEntry::Opcode(op));
                     Ok(())
@@ -3517,14 +3401,14 @@ impl StackTrace {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TraceItem {
-    pub(crate) func_idx: usize,
+    pub(crate) func_idx: Option<usize>,
     pub(crate) i_ptr: usize,
     pub(crate) entry: ScriptEntry,
 }
 
-impl From<(usize, usize, ScriptEntry, &[VmTerm])> for StackTrace {
+impl From<(usize, Option<usize>, ScriptEntry, &[VmTerm])> for StackTrace {
     fn from(
-        (i_ptr, func_idx, entry, top_frame_stack): (usize, usize, ScriptEntry, &[VmTerm]),
+        (i_ptr, func_idx, entry, top_frame_stack): (usize, Option<usize>, ScriptEntry, &[VmTerm]),
     ) -> Self {
         let ti = TraceItem {
             i_ptr,
@@ -3544,20 +3428,20 @@ impl From<(usize, usize, ScriptEntry, &[VmTerm])> for StackTrace {
     }
 }
 
-impl From<(usize, usize, OP, &[VmTerm])> for StackTrace {
-    fn from((i_ptr, func_idx, entry, top_frame_stack): (usize, usize, OP, &[VmTerm])) -> Self {
+impl From<(usize, Option<usize>, OP, &[VmTerm])> for StackTrace {
+    fn from((i_ptr, func_idx, entry, top_frame_stack): (usize, Option<usize>, OP, &[VmTerm])) -> Self {
         (i_ptr, func_idx, ScriptEntry::Opcode(entry), top_frame_stack).into()
     }
 }
 
-impl From<(usize, usize, OP)> for TraceItem {
-    fn from((i_ptr, func_idx, entry): (usize, usize, OP)) -> Self {
+impl From<(usize, Option<usize>, OP)> for TraceItem {
+    fn from((i_ptr, func_idx, entry): (usize, Option<usize>, OP)) -> Self {
         (i_ptr, func_idx, ScriptEntry::Opcode(entry)).into()
     }
 }
 
-impl From<(usize, usize, ScriptEntry)> for TraceItem {
-    fn from((i_ptr, func_idx, entry): (usize, usize, ScriptEntry)) -> Self {
+impl From<(usize, Option<usize>, ScriptEntry)> for TraceItem {
+    fn from((i_ptr, func_idx, entry): (usize, Option<usize>, ScriptEntry)) -> Self {
         Self {
             i_ptr,
             func_idx,
@@ -3783,6 +3667,70 @@ mod tests {
     }
 
     #[test]
+    fn it_parses_script_with_only_main() {
+        let script: Vec<u8> = vec![
+            0x01, // Version
+            0x12, // Script length
+            0x00,
+            0x00, // Script flags
+            0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+            0x23, // OP_Unsigned8Var,
+            0x00, // Push 0 to the stack
+            0x57, // OP_Loop
+            0x70, // OP_Pick,
+            0x03, // Pick at index 3
+            0x70, // OP_Pick,
+            0x03, // Pick at index 3
+            0x70, // OP_Pick,
+            0x03, // Pick at index 3
+            0xcf, // OP_PushOut,
+            0x82, // OP_Add1,
+            0x70, // OP_Pick,
+            0x00, // Pick at index 0
+            0x23, // OP_Unsigned8Var,
+            0x03, // Push 3 to the stack
+            0x5b, // OP_BreakIfEq
+            0xb6, // OP_End
+            0xb7, // OP_Verify
+        ];
+    
+        let oracle_script = Script {
+            version: 1,
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::BreakIfEq),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let decoded: Script = crate::codec::decode(&script).unwrap();
+
+        assert_eq!(decoded, oracle_script);
+    }
+
+    // #[test]
+    // fn it_parses_script_with_multiple_functions() {
+    //     unimplemented!();
+    // }
+
+    #[test]
     fn it_simple_spends() {
         let key = "test_key";
         let ss = Script::new_simple_spend();
@@ -3870,6 +3818,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
         let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
@@ -3916,6 +3865,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, key);
@@ -3961,6 +3911,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -4006,6 +3957,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, key);
@@ -4053,6 +4005,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
@@ -4100,6 +4053,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
@@ -4148,6 +4102,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
@@ -4195,6 +4150,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
@@ -4243,6 +4199,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
@@ -4290,6 +4247,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
@@ -4338,6 +4296,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
@@ -4385,6 +4344,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
@@ -4433,6 +4393,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
@@ -4480,6 +4441,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
@@ -4528,6 +4490,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
@@ -4575,6 +4538,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
@@ -4623,6 +4587,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
@@ -4670,6 +4635,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
@@ -4717,6 +4683,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
@@ -4762,6 +4729,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, key);
@@ -4807,6 +4775,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
@@ -4854,6 +4823,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, key);
@@ -4901,6 +4871,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
@@ -4941,6 +4912,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
         let sh = ss.to_script_hash(key);
         let mut idx_map = HashMap::new();
@@ -5097,6 +5069,7 @@ mod tests {
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0x00),
             ],
+            ..Script::default()
         };
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
         assert_eq!(
@@ -5120,6 +5093,7 @@ mod tests {
                 ScriptEntry::Byte(0xff),
                 ScriptEntry::Byte(0xff),
             ],
+            ..Script::default()
         };
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
         assert_eq!(
@@ -5143,6 +5117,7 @@ mod tests {
                 ScriptEntry::Byte(0xff),
                 ScriptEntry::Byte(0xff),
             ],
+            ..Script::default()
         };
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
         let decoded: Script = crate::codec::decode(&encoded).unwrap();
@@ -5198,6 +5173,7 @@ mod tests {
                 ScriptEntry::Byte(0xf0),
                 ScriptEntry::Byte(0xf0),
             ],
+            ..Script::default()
         };
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
         let decoded: Script = crate::codec::decode(&encoded).unwrap();
@@ -5227,6 +5203,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5281,6 +5258,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5328,6 +5306,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5380,6 +5359,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5425,6 +5405,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5473,6 +5454,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(4), VmTerm::Unsigned8(1)];
@@ -5526,6 +5508,7 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5586,6 +5569,7 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5639,6 +5623,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5688,6 +5673,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5740,6 +5726,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5789,6 +5776,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5839,6 +5827,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(5)];
@@ -5883,6 +5872,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5939,6 +5929,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -5987,6 +5978,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned64(1), VmTerm::Unsigned8(0)];
@@ -6020,6 +6012,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Drop),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6051,6 +6044,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Dup),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6084,6 +6078,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Nip),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6119,6 +6114,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Rot),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6160,6 +6156,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Rot2),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6193,6 +6190,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Over),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6235,6 +6233,7 @@ mod tests {
                 ScriptEntry::Byte(0x05),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6268,6 +6267,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Swap),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6301,6 +6301,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Tuck),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6334,6 +6335,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Drop2),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6367,6 +6369,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Dup2),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6402,6 +6405,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Dup3),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6439,6 +6443,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Over2),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6476,6 +6481,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Swap2),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6507,6 +6513,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::Size),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
@@ -6581,6 +6588,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -6690,6 +6698,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -6865,6 +6874,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -6921,6 +6931,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -6969,6 +6980,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -7023,6 +7035,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -7089,6 +7102,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -7161,6 +7175,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -7208,6 +7223,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -7262,6 +7278,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -7328,6 +7345,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -7400,6 +7418,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -7503,6 +7522,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -7654,6 +7674,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -7904,6 +7925,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -7978,6 +8000,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -8041,6 +8064,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -8124,6 +8148,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -8249,6 +8274,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -8384,6 +8410,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -8444,6 +8471,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -8507,6 +8535,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -8590,6 +8619,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -8715,6 +8745,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -8850,6 +8881,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -8914,6 +8946,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> =
@@ -8999,6 +9032,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9052,6 +9086,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9094,6 +9129,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9136,6 +9172,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let p1 = rng.gen::<[u8; 32]>();
@@ -9188,6 +9225,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9230,6 +9268,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9272,6 +9311,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9314,6 +9354,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9356,6 +9397,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9398,6 +9440,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9440,6 +9483,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9482,6 +9526,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9524,6 +9569,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9566,6 +9612,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9629,6 +9676,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9694,6 +9742,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9759,6 +9808,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9824,6 +9874,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let script_output: Vec<VmTerm> = vec![
@@ -9869,6 +9920,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
@@ -9916,6 +9968,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
@@ -9963,6 +10016,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
@@ -10018,6 +10072,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
@@ -10069,6 +10124,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
@@ -10116,6 +10172,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
@@ -10163,6 +10220,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
@@ -10210,6 +10268,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
@@ -10258,6 +10317,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
@@ -10316,6 +10376,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let mut script_output: Vec<VmTerm> = vec![
@@ -10341,6 +10402,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![
             VmTerm::Unsigned8(0x03),
@@ -10372,6 +10434,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
         let mut script_output: Vec<VmTerm> =
             vec![VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03, 0x04])];
@@ -10406,6 +10469,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let mut script_output: Vec<VmTerm> = vec![
@@ -10435,6 +10499,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x01, 0x02])];
         assert_script_ok(ss, script_output, key);
@@ -10462,6 +10527,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x08, 0x11])];
         assert_script_ok(ss, script_output, key);
@@ -10489,6 +10555,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x08, 0x11])];
         assert_script_fail(ss, script_output, key);
@@ -10513,6 +10580,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x04, 0x6])];
         assert_script_ok(ss, script_output, key);
@@ -10540,6 +10608,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x04, 0x09])];
         assert_script_ok(ss, script_output, key);
@@ -10567,6 +10636,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![])];
         assert_script_fail(ss, script_output, key);
@@ -10593,6 +10663,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![];
         assert_script_fail(ss, script_output, key);
@@ -10626,6 +10697,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let mut script_output: Vec<VmTerm> = vec![
@@ -10664,6 +10736,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let mut script_output: Vec<VmTerm> = vec![
@@ -10693,6 +10766,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x02, 0x4])];
         assert_script_ok(ss, script_output, key);
@@ -10713,6 +10787,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let mut script_output_2: Vec<VmTerm> = vec![VmTerm::Signed8Array(vec![0x00, -1])];
@@ -10751,6 +10826,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let mut script_output: Vec<VmTerm> = vec![
@@ -10781,6 +10857,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let mut script_output: Vec<VmTerm> = vec![];
@@ -10831,6 +10908,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let mut script_output: Vec<VmTerm> = vec![
@@ -10889,6 +10967,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            ..Script::default()
         };
 
         let mut script_output: Vec<VmTerm> = vec![
