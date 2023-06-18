@@ -16,7 +16,6 @@ use std::collections::HashMap;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Transaction {
-    pub version: u8,
     pub chain_id: u8,
     pub ins: Vec<Input>,
     pub hash: Option<Hash256>,
@@ -165,7 +164,6 @@ impl Encode for Transaction {
         &self,
         encoder: &mut E,
     ) -> core::result::Result<(), bincode::error::EncodeError> {
-        bincode::Encode::encode(&self.version, encoder)?;
         bincode::Encode::encode(&self.chain_id, encoder)?;
         bincode::Encode::encode(&self.ins, encoder)?;
         Ok(())
@@ -177,7 +175,6 @@ impl Decode for Transaction {
         decoder: &mut D,
     ) -> core::result::Result<Self, bincode::error::DecodeError> {
         Ok(Self {
-            version: bincode::Decode::decode(decoder)?,
             chain_id: bincode::Decode::decode(decoder)?,
             ins: bincode::Decode::decode(decoder)?,
             hash: None,

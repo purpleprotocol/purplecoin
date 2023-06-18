@@ -120,7 +120,6 @@ mod tests {
         input.compute_hash(key);
 
         let mut tx = Transaction {
-            version: 1,
             chain_id,
             ins: vec![input],
             hash: None,

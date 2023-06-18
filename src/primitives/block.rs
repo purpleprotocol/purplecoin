@@ -860,7 +860,6 @@ impl BlockHeader {
         }
 
         let mut tx = Transaction {
-            version: 1,
             chain_id,
             ins: inputs,
             hash: None,
@@ -1041,7 +1040,6 @@ impl Block {
         );
 
         let mut tx = Transaction {
-            version: 1,
             chain_id: prev.chain_id,
             ins: vec![input],
             hash: None,
