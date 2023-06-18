@@ -155,6 +155,12 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x99` TrapIfNeqType - Pops the first item on the stack and traps if its type not equal to the given type id
     - [ ] OP `0x9a` ToHex - Converts the topmost item on the stack to hexadecimal
     - [ ] OP `0x9b` FromHex - Parses the topmost item on the stack from hexadecimal
+    - [ ] OP `0xa0` VerifyEd25519 - Takes the given public key and signature, and pushes them along with the current output's binary format to the Ed25519 signature verification stack and stops script execution.
+    - [ ] OP `0xa1` VerifyEd25519Inline - Takes the given public key, signature, and message and verifies with Ed25519. Pushes `1` on top of the stack if verification is successful.
+    - [ ] OP `0xa2` VerifyEcdsa - Takes the given public key, signature, and the binary format of the current output, verifies and stops script execution. Can be used for compatibility with Bitcoin/Ethereum or any other blockchain using ECDSA.
+    - [ ] OP `0xa3` VerifyEcdsaInline - Takes the given public key, signature, and message and verifies with ecdsa. Pushes `1` on top of the stack if verification is successful.
+    - [ ] OP `0xa4` VerifyBIP340 - Takes the given public key and signature, and pushes them along with the current output's binary format to the BIP340 signature verification stack and stops script execution. For direct compatibility with Bitcoin Taproot.
+    - [ ] OP `0xa5` VerifyBIP340Inline - Takes the given public key, signature, and message and verifies according to BIP340. Pushes `1` on top of the stack if verification is successful. For direct compatibility with Bitcoin Taproot.
     - [ ] OP `0xae` CallBody - Interprets the top `Unsigned8Array` on the stack as a Func body and executes it
     - [ ] OP `0xaf` Call - Calls the function with the given index. `0` is not a valid argument as that represents the main function
     - [ ] OP `0xb0` Concat - Concats the two topmost items on the stack

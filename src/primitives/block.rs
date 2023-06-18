@@ -291,7 +291,7 @@ impl PowBlockHeader {
         let prev_hash = Hash256::hash_from_slice("The Guardian 22/08/2022 UK inflation will hit 18% in early 2023, says leading bank Citi\n\nABSE\n\nV IX MMXXII", key);
 
         let mut genesis = Self {
-            version: 1,
+            version: 0,
             sector_id,
             prev_hash,
             block_root,
@@ -624,9 +624,6 @@ impl PowBlockHeader {
 #[derive(PartialEq, Eq, Debug, Clone)]
 /// Shard block header
 pub struct BlockHeader {
-    /// Block version
-    pub version: u16,
-
     /// Chain id
     pub chain_id: u8,
 
@@ -726,7 +723,6 @@ impl BlockHeader {
 
         unimplemented!();
         // Ok(Self {
-        //     version: prev.version,
         //     chain_id: prev.chain_id,
         //     height: prev.height + 1,
         //     prev_hash: prev.hash().unwrap().clone(),
@@ -900,7 +896,6 @@ impl BlockHeader {
         let block_bloom = BloomFilterHash256 { inner: block_bloom };
 
         let mut genesis = Self {
-            version: 1,
             chain_id,
             prev_hash,
             tx_root,
@@ -1315,8 +1310,6 @@ impl Encode for BlockHeader {
         &self,
         encoder: &mut E,
     ) -> core::result::Result<(), bincode::error::EncodeError> {
-        let version = self.version.to_le_bytes();
-        bincode::Encode::encode(&version, encoder)?;
         bincode::Encode::encode(&self.chain_id, encoder)?;
         bincode::Encode::encode(&self.height, encoder)?;
         bincode::Encode::encode(&self.prev_hash, encoder)?;
@@ -1337,12 +1330,10 @@ impl Decode for BlockHeader {
     fn decode<D: bincode::de::Decoder>(
         decoder: &mut D,
     ) -> core::result::Result<Self, bincode::error::DecodeError> {
-        let version = crate::codec::decode_fixed_u16(decoder)?;
         let chain_id = bincode::Decode::decode(decoder)?;
         let height = bincode::Decode::decode(decoder)?;
         let prev_hash = bincode::Decode::decode(decoder)?;
         Ok(Self {
-            version,
             chain_id,
             height,
             prev_hash,
@@ -1435,14 +1426,6 @@ mod tests {
         let mut genesis = genesis.as_ref().clone();
         genesis.hash = None;
         assert_eq!(decoded, genesis);
-    }
-
-    #[test]
-    fn it_encodes_fixed_size_header_version() {
-        let config = ChainConfig::new("mainnet");
-        let genesis = BlockHeader::genesis_cached(255, &config);
-        let encoded = crate::codec::encode_to_vec(genesis.as_ref()).unwrap();
-        assert_eq!(&encoded[..3], &[0x01, 0x00, 0xff]);
     }
 
     #[test]
