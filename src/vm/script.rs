@@ -128,6 +128,7 @@ macro_rules! check_top_stack_val {
     };
 }
 
+#[allow(clippy::all)]
 macro_rules! check_bit {
     ($val:expr, $pos:expr) => {
         $val & (1 << $pos) == 1
@@ -3201,7 +3202,6 @@ impl Encode for Script {
             let mut bitmap: u8 = 0x00;
             for (i, val) in chunk.iter().enumerate() {
                 let v = if *val { 1 } else { 0 };
-
                 bitmap = set_bit!(bitmap, i as u8, v);
             }
             bincode::Encode::encode(&bitmap, encoder)?;

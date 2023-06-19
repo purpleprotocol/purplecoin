@@ -1419,8 +1419,29 @@ pub enum BlockVerifyErr {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck::*;
     use std::collections::{HashMap, HashSet};
     use std::path::PathBuf;
+
+    quickcheck! {
+        fn accumulator_encode_decode_prop(xs: Vec<Vec<u8>>) -> bool {
+            let accumulator = Accumulator::<Rsa2048, Vec<u8>>::empty();
+            let (witness_deleted, proof_deleted) = accumulator.delete_with_proof(&[]).unwrap();
+            let (accumulator, proof_added) = witness_deleted.add_with_proof(&xs);
+            assert_eq!(accumulator, Accumulator::from_bytes(&accumulator.to_bytes()).unwrap());
+            true
+        }
+
+        fn poc_encode_decode_prop(xs: Vec<Vec<u8>>) -> bool {
+            let accumulator = Accumulator::<Rsa2048, Vec<u8>>::empty();
+            let (witness_deleted, proof_deleted) = accumulator.delete_with_proof(&[]).unwrap();
+            let (accumulator, proof_added) = witness_deleted.add_with_proof(&xs);
+            let poc = ProofOfCorrectness::new(proof_added, proof_deleted);
+            let decoded_poc = ProofOfCorrectness::from_bytes(&poc.to_bytes()).unwrap();
+            assert_eq!(poc, decoded_poc);
+            true
+        }
+    }
 
     #[test]
     fn block_header_encode_decode() {
