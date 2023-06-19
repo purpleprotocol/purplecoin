@@ -36,7 +36,6 @@ fn bench_coinbase(c: &mut Criterion) {
         colour_script_args: None,
         script: Script::new_coinbase(),
         script_args,
-        nsequence: 0xffffffff,
         hash: None,
     };
     input.compute_hash(key);
@@ -126,7 +125,6 @@ fn bench_coinbase(c: &mut Criterion) {
 fn bench_vm_abuse(c: &mut Criterion) {
     let key = "test_key";
     let ss = Script {
-        version: 1,
         script: vec![
             ScriptEntry::Byte(0x03),
             ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -141,6 +139,7 @@ fn bench_vm_abuse(c: &mut Criterion) {
             ScriptEntry::Opcode(OP::End),
             ScriptEntry::Opcode(OP::Verify),
         ],
+        ..Script::default()
     };
     let sh = ss.to_script_hash(key);
     let args = vec![
@@ -150,7 +149,6 @@ fn bench_vm_abuse(c: &mut Criterion) {
     ];
     let ins = vec![Input {
         out: None,
-        nsequence: 0xffffffff,
         colour_script_args: None,
         spending_pkey: None,
         spend_proof: None,
@@ -201,7 +199,6 @@ fn bench_vm_abuse(c: &mut Criterion) {
 fn bench_vm_load_var(c: &mut Criterion) {
     let key = "test_key";
     let ss = Script {
-        version: 1,
         script: vec![
             ScriptEntry::Byte(0x03),
             ScriptEntry::Opcode(OP::Unsigned128Var),
@@ -243,6 +240,7 @@ fn bench_vm_load_var(c: &mut Criterion) {
             ScriptEntry::Opcode(OP::PushOut),
             ScriptEntry::Opcode(OP::Verify),
         ],
+        ..Script::default()
     };
     let script_output: Vec<VmTerm> = vec![
         VmTerm::Unsigned128(0x12907856341290785634129078563412),
@@ -256,7 +254,6 @@ fn bench_vm_load_var(c: &mut Criterion) {
     ];
     let mut ins = vec![Input {
         out: None,
-        nsequence: 0xffffffff,
         colour_script_args: None,
         spending_pkey: None,
         spend_proof: None,

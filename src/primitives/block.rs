@@ -621,7 +621,7 @@ impl PowBlockHeader {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Eq, Debug, Clone)]
 /// Shard block header
 pub struct BlockHeader {
     /// Chain id
@@ -657,6 +657,17 @@ pub struct BlockHeader {
 
     /// Cached block hash
     pub hash: Option<Hash256>,
+}
+
+impl PartialEq for BlockHeader {
+    fn eq(&self, other: &Self) -> bool {
+        self.chain_id == other.chain_id
+            && self.height == other.height
+            && self.tx_root == other.tx_root
+            && self.accumulators == other.accumulators
+            && self.poc == other.poc
+            && self.block_bloom == other.block_bloom
+    }
 }
 
 impl BlockHeader {
@@ -786,7 +797,6 @@ impl BlockHeader {
                     colour_script_args: None,
                     script: Script::new_coinbase(),
                     script_args,
-                    nsequence: 0xffffffff,
                     hash: None,
                 };
                 input.compute_hash(key);
@@ -1015,7 +1025,6 @@ impl Block {
                 VmTerm::Unsigned64(coinbase_height),
                 VmTerm::Unsigned32(extra_nonce),
             ],
-            nsequence: 0xffffffff,
             hash: None,
         };
         input.compute_hash(key);
@@ -1138,10 +1147,6 @@ impl BlockData {
                     coinbase_count += 1;
 
                     if coinbase_count != 1 {
-                        return Err(BlockVerifyErr::InvalidCoinbase);
-                    }
-
-                    if input.nsequence != 0xffffffff {
                         return Err(BlockVerifyErr::InvalidCoinbase);
                     }
 
@@ -1424,7 +1429,6 @@ mod tests {
         let encoded = crate::codec::encode_to_vec(genesis.as_ref()).unwrap();
         let decoded: BlockHeader = crate::codec::decode(&encoded).unwrap();
         let mut genesis = genesis.as_ref().clone();
-        genesis.hash = None;
         assert_eq!(decoded, genesis);
     }
 
@@ -1520,7 +1524,6 @@ mod tests {
             colour_script_args: None,
             script: Script::new_coinbase(),
             script_args,
-            nsequence: 0xffffffff,
             hash: None,
         };
         input.compute_hash(key);

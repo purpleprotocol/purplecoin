@@ -53,9 +53,6 @@ pub struct Input {
     /// This is mutually exclusive with colour_proof
     pub colour_proof_without_address: Option<Vec<Hash160>>,
 
-    /// Sequence number. An input is considered final if this is equal to 0xffffffff
-    pub nsequence: u32,
-
     /// Input hash. Not serialized
     pub hash: Option<Hash256>,
 }
@@ -246,7 +243,6 @@ impl Encode for Input {
             InputFlags::IsCoinbase => {
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(&self.nsequence.to_le_bytes(), encoder)?;
             }
 
             InputFlags::IsColouredCoinbase => {
@@ -254,7 +250,6 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(self.colour_script.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(self.colour_script_args.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.nsequence.to_le_bytes(), encoder)?;
             }
 
             InputFlags::IsColouredCoinbaseWithColourProof => {
@@ -263,7 +258,6 @@ impl Encode for Input {
                 bincode::Encode::encode(self.colour_script.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(self.colour_script_args.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(self.colour_proof.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.nsequence.to_le_bytes(), encoder)?;
             }
 
             InputFlags::IsColouredCoinbaseWithColourProofWithoutAddress => {
@@ -275,7 +269,6 @@ impl Encode for Input {
                     self.colour_proof_without_address.as_ref().unwrap(),
                     encoder,
                 )?;
-                bincode::Encode::encode(&self.nsequence.to_le_bytes(), encoder)?;
             }
 
             InputFlags::Plain => {
@@ -284,7 +277,6 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(&self.nsequence.to_le_bytes(), encoder)?;
             }
 
             InputFlags::HasSpendProof => {
@@ -294,7 +286,6 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.nsequence.to_le_bytes(), encoder)?;
             }
 
             InputFlags::HasSpendProofWithoutSpendKey => {
@@ -379,13 +370,10 @@ impl Decode for Input {
             InputFlags::IsCoinbase => {
                 let script = bincode::Decode::decode(decoder)?;
                 let script_args = bincode::Decode::decode(decoder)?;
-                let nsequence: [u8; 4] = bincode::Decode::decode(decoder)?;
-                let nsequence = u32::from_le_bytes(nsequence);
 
                 Ok(Self {
                     script,
                     script_args,
-                    nsequence,
                     colour_script: None,
                     colour_script_args: None,
                     spending_pkey: None,
@@ -422,13 +410,10 @@ impl Decode for Input {
                 };
                 let script = bincode::Decode::decode(decoder)?;
                 let script_args = bincode::Decode::decode(decoder)?;
-                let nsequence: [u8; 4] = bincode::Decode::decode(decoder)?;
-                let nsequence = u32::from_le_bytes(nsequence);
 
                 Ok(Self {
                     script,
                     script_args,
-                    nsequence,
                     colour_script: None,
                     colour_script_args: None,
                     spending_pkey,
@@ -591,7 +576,6 @@ mod tests {
                 VmTerm::Unsigned64(1654654645645),
                 VmTerm::Unsigned32(543543),
             ],
-            nsequence: 0xffffffff,
             hash: None,
         };
 
@@ -629,7 +613,6 @@ mod tests {
                 VmTerm::Unsigned64(155645654645),
                 VmTerm::Unsigned32(543543),
             ],
-            nsequence: 0xffffffff,
             hash: None,
         };
 

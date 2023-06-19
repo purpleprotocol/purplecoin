@@ -48,11 +48,11 @@ pub struct Frame<'a> {
     /// Instruction pointer
     pub i_ptr: usize,
 
-    /// Func index. This is `None` if the current function is the main function 
+    /// Func index. This is `None` if the current function is the main function
     pub func_idx: Option<usize>,
 
-    /// Some((start_ip, end_ip)) if the current frame is a loop start_ip is the 
-    /// instruction pointer at the beginning of the loop and end_ip at the end. 
+    /// Some((start_ip, end_ip)) if the current frame is a loop start_ip is the
+    /// instruction pointer at the beginning of the loop and end_ip at the end.
     pub is_loop: Option<(usize, usize)>,
 
     /// Script executor
@@ -89,28 +89,18 @@ impl Default for VmFlags {
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Default)]
 pub struct Script {
     /// Main script
     pub script: Vec<ScriptEntry>,
-    
+
     /// Other functions in the script
     pub functions: Vec<Vec<ScriptEntry>>,
 
     /// For each argument, a boolean denoting whether the argument is malleable or not.
-    /// 
+    ///
     /// A malleable argument is not signed by the spender.
     pub malleable_args: Vec<bool>,
-}
-
-impl Default for Script {
-    fn default() -> Self {
-        Self {
-            script: vec![],
-            functions: vec![],
-            malleable_args: vec![],
-        }
-    }
 }
 
 macro_rules! check_top_stack_val {
@@ -141,13 +131,13 @@ macro_rules! check_top_stack_val {
 macro_rules! check_bit {
     ($val:expr, $pos:expr) => {
         $val & (1 << $pos) == 1
-    }
+    };
 }
 
 macro_rules! set_bit {
-    ($val:expr, $pos:expr, $to_set:expr) => ({
+    ($val:expr, $pos:expr, $to_set:expr) => {{
         (($val & (1 << $pos)) | ($to_set << $pos))
-    })
+    }};
 }
 
 macro_rules! var_load {
@@ -172,7 +162,6 @@ macro_rules! var_load {
     };
 }
 
-
 impl Script {
     pub fn new_coinbase() -> Script {
         Script {
@@ -180,6 +169,7 @@ impl Script {
                 ScriptEntry::Byte(0x05), // 5 arguments are pushed onto the stack: out_amount, out_address, out_script_hash, coinbase_height, extra_nonce
                 ScriptEntry::Opcode(OP::PushCoinbaseOut),
             ],
+            malleable_args: vec![false, false, false, false, false],
             ..Script::default()
         }
     }
@@ -190,6 +180,7 @@ impl Script {
                 ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: out_amount, out_script_hash, coinbase_height, extra_nonce
                 ScriptEntry::Opcode(OP::PushCoinbaseOutNoSpendAddress),
             ],
+            malleable_args: vec![false, false, false, false],
             ..Script::default()
         }
     }
@@ -200,7 +191,21 @@ impl Script {
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOutVerify),
             ],
+            malleable_args: vec![false, false, false],
             ..Script::default()
+        }
+    }
+
+    /// Utility to populate `malleable_args` field in tests.
+    pub fn populate_malleable_args_field(&mut self) {
+        if self.malleable_args.is_empty() {
+            assert!(!self.script.is_empty());
+            if let ScriptEntry::Byte(byte) = self.script[0] {
+                let num = byte as usize;
+                self.malleable_args = (0..num).map(|_| false).collect();
+            } else {
+                unreachable!();
+            }
         }
     }
 
@@ -3181,9 +3186,29 @@ impl Encode for Script {
         &self,
         encoder: &mut E,
     ) -> core::result::Result<(), bincode::error::EncodeError> {
-        bincode::Encode::encode(&self.script.len(), encoder)?;
+        if let ScriptEntry::Byte(len) = &self.script[0] {
+            debug_assert_eq!(*len as usize, self.malleable_args.len());
+            // Encode script length + bitmaps length
+            bincode::Encode::encode(&(self.script.len() + (*len >> 3) as usize + 1), encoder)?;
+            // Encode args length
+            bincode::Encode::encode(len, encoder)?;
+        } else {
+            unreachable!();
+        }
 
-        for e in self.script.iter() {
+        // Encode bitmaps
+        for chunk in self.malleable_args.chunks(8) {
+            let mut bitmap: u8 = 0x00;
+            for (i, val) in chunk.iter().enumerate() {
+                let v = if *val { 1 } else { 0 };
+
+                bitmap = set_bit!(bitmap, i as u8, v);
+            }
+            bincode::Encode::encode(&bitmap, encoder)?;
+        }
+
+        // Encode script
+        for e in self.script[1..].iter() {
             match e {
                 ScriptEntry::Opcode(op) => {
                     bincode::Encode::encode(&op.to_u8().unwrap(), encoder)?;
@@ -3215,8 +3240,11 @@ impl Decode for Script {
                 .map_err(|err| bincode::error::DecodeError::OtherString(err.to_owned()))?;
         }
 
+        let (script, malleable_args) = script_parser.out();
+
         Ok(Self {
-            script: script_parser.out(),
+            malleable_args,
+            script,
             ..Script::default()
         })
     }
@@ -3225,42 +3253,84 @@ impl Decode for Script {
 struct ScriptParser {
     state: ScriptParserState,
     out: Vec<ScriptEntry>,
+    malleable_args: Vec<bool>,
 }
 
 macro_rules! impl_parser_expecting_bytes {
-    ($self:expr, $op:expr, $len:expr) => ({
+    ($self:expr, $op:expr, $len:expr) => {{
         $self.out.push(ScriptEntry::Opcode($op));
         $self.state = ScriptParserState::ExpectingBytes($len);
         Ok(())
-    })
+    }};
 }
 
 macro_rules! impl_parser_expecting_len {
-    ($self:expr, $op:expr) => ({
+    ($self:expr, $op:expr) => {{
         $self.out.push(ScriptEntry::Opcode($op));
         $self.state = ScriptParserState::ExpectingLen($op, 0, 0);
         Ok(())
-    })
+    }};
 }
 
 impl ScriptParser {
     pub fn new(len: usize) -> Self {
         Self {
-            state: ScriptParserState::ExpectingFuncOrArgsLen,
+            state: ScriptParserState::ExpectingArgsLen,
             out: Vec::with_capacity(len),
+            malleable_args: vec![],
         }
     }
 
     pub fn push_byte(&mut self, byte: u8) -> Result<(), &'static str> {
-        match self.state {
-            ScriptParserState::ExpectingFuncOrArgsLen => match OP::from_u8(byte) {
-                Some(OP::Func) => impl_parser_expecting_bytes!(self, OP::Func, 1),
-                _ => {
-                    self.out.push(ScriptEntry::Byte(byte));
+        match &mut self.state {
+            ScriptParserState::ExpectingArgsLen => {
+                self.out.push(ScriptEntry::Byte(byte));
+                if byte == 0x00 {
                     self.state = ScriptParserState::ExpectingOP;
                     Ok(())
+                } else {
+                    let bitmaps = (byte >> 3) + 1;
+                    self.state = ScriptParserState::ExpectingScriptFlags(
+                        bitmaps,
+                        byte,
+                        Vec::with_capacity(bitmaps as usize),
+                    );
+                    Ok(())
                 }
-            },
+            }
+
+            ScriptParserState::ExpectingScriptFlags(
+                ref mut bitmaps,
+                total,
+                ref mut malleable_args,
+            ) if bitmaps > &mut 1 => {
+                malleable_args.push(check_bit!(byte, 0));
+                malleable_args.push(check_bit!(byte, 1));
+                malleable_args.push(check_bit!(byte, 2));
+                malleable_args.push(check_bit!(byte, 3));
+                malleable_args.push(check_bit!(byte, 4));
+                malleable_args.push(check_bit!(byte, 5));
+                malleable_args.push(check_bit!(byte, 6));
+                malleable_args.push(check_bit!(byte, 7));
+                *bitmaps -= 1;
+                Ok(())
+            }
+
+            ScriptParserState::ExpectingScriptFlags(bitmaps, total, ref mut malleable_args)
+                if bitmaps == &1 =>
+            {
+                let m = *total % 8;
+                for i in 0..m {
+                    malleable_args.push(check_bit!(byte, i));
+                }
+                self.malleable_args = malleable_args.clone();
+                self.state = ScriptParserState::ExpectingOP;
+                Ok(())
+            }
+
+            ScriptParserState::ExpectingScriptFlags(_, _, _) => {
+                unreachable!()
+            }
 
             ScriptParserState::ExpectingOP => match OP::from_u8(byte) {
                 Some(OP::Unsigned8Var) => impl_parser_expecting_bytes!(self, OP::Unsigned8Var, 1),
@@ -3271,9 +3341,15 @@ impl ScriptParser {
                 Some(OP::Signed32Var) => impl_parser_expecting_bytes!(self, OP::Unsigned32Var, 4),
                 Some(OP::Unsigned64Var) => impl_parser_expecting_bytes!(self, OP::Unsigned64Var, 8),
                 Some(OP::Signed64Var) => impl_parser_expecting_bytes!(self, OP::Unsigned64Var, 8),
-                Some(OP::Unsigned128Var) => impl_parser_expecting_bytes!(self, OP::Unsigned128Var, 16),
-                Some(OP::Signed128Var) => impl_parser_expecting_bytes!(self, OP::Unsigned128Var, 16),
-                Some(OP::UnsignedBigVar) => impl_parser_expecting_bytes!(self, OP::UnsignedBigVar, 32),
+                Some(OP::Unsigned128Var) => {
+                    impl_parser_expecting_bytes!(self, OP::Unsigned128Var, 16)
+                }
+                Some(OP::Signed128Var) => {
+                    impl_parser_expecting_bytes!(self, OP::Unsigned128Var, 16)
+                }
+                Some(OP::UnsignedBigVar) => {
+                    impl_parser_expecting_bytes!(self, OP::UnsignedBigVar, 32)
+                }
                 Some(OP::SignedBigVar) => impl_parser_expecting_bytes!(self, OP::SignedBigVar, 32),
                 Some(OP::Hash160Var) => impl_parser_expecting_bytes!(self, OP::Hash160Var, 20),
                 Some(OP::Hash256Var) => impl_parser_expecting_bytes!(self, OP::Hash256Var, 32),
@@ -3282,18 +3358,40 @@ impl ScriptParser {
                 Some(OP::Hash160ArrayVar) => impl_parser_expecting_len!(self, OP::Hash160ArrayVar),
                 Some(OP::Hash256ArrayVar) => impl_parser_expecting_len!(self, OP::Hash256ArrayVar),
                 Some(OP::Hash512ArrayVar) => impl_parser_expecting_len!(self, OP::Hash512ArrayVar),
-                Some(OP::Unsigned8ArrayVar) => impl_parser_expecting_len!(self, OP::Unsigned8ArrayVar),
+                Some(OP::Unsigned8ArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::Unsigned8ArrayVar)
+                }
                 Some(OP::Signed8ArrayVar) => impl_parser_expecting_len!(self, OP::Signed8ArrayVar),
-                Some(OP::Unsigned16ArrayVar) => impl_parser_expecting_len!(self, OP::Unsigned16ArrayVar),
-                Some(OP::Signed16ArrayVar) => impl_parser_expecting_len!(self, OP::Signed16ArrayVar),
-                Some(OP::Unsigned32ArrayVar) => impl_parser_expecting_len!(self, OP::Unsigned32ArrayVar),
-                Some(OP::Signed32ArrayVar) => impl_parser_expecting_len!(self, OP::Signed32ArrayVar),
-                Some(OP::Unsigned64ArrayVar) => impl_parser_expecting_len!(self, OP::Unsigned64ArrayVar),
-                Some(OP::Signed64ArrayVar) => impl_parser_expecting_len!(self, OP::Signed64ArrayVar),
-                Some(OP::Unsigned128ArrayVar) => impl_parser_expecting_len!(self, OP::Unsigned128ArrayVar),
-                Some(OP::Signed128ArrayVar) => impl_parser_expecting_len!(self, OP::Signed128ArrayVar),
-                Some(OP::UnsignedBigArrayVar) => impl_parser_expecting_len!(self, OP::UnsignedBigArrayVar),
-                Some(OP::SignedBigArrayVar) => impl_parser_expecting_len!(self, OP::SignedBigArrayVar),
+                Some(OP::Unsigned16ArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::Unsigned16ArrayVar)
+                }
+                Some(OP::Signed16ArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::Signed16ArrayVar)
+                }
+                Some(OP::Unsigned32ArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::Unsigned32ArrayVar)
+                }
+                Some(OP::Signed32ArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::Signed32ArrayVar)
+                }
+                Some(OP::Unsigned64ArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::Unsigned64ArrayVar)
+                }
+                Some(OP::Signed64ArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::Signed64ArrayVar)
+                }
+                Some(OP::Unsigned128ArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::Unsigned128ArrayVar)
+                }
+                Some(OP::Signed128ArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::Signed128ArrayVar)
+                }
+                Some(OP::UnsignedBigArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::UnsignedBigArrayVar)
+                }
+                Some(OP::SignedBigArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::SignedBigArrayVar)
+                }
                 Some(op) => {
                     self.out.push(ScriptEntry::Opcode(op));
                     Ok(())
@@ -3369,8 +3467,8 @@ impl ScriptParser {
         }
     }
 
-    pub fn out(self) -> Vec<ScriptEntry> {
-        self.out
+    pub fn out(self) -> (Vec<ScriptEntry>, Vec<bool>) {
+        (self.out, self.malleable_args)
     }
 }
 
@@ -3422,7 +3520,9 @@ impl From<(usize, Option<usize>, ScriptEntry, &[VmTerm])> for StackTrace {
 }
 
 impl From<(usize, Option<usize>, OP, &[VmTerm])> for StackTrace {
-    fn from((i_ptr, func_idx, entry, top_frame_stack): (usize, Option<usize>, OP, &[VmTerm])) -> Self {
+    fn from(
+        (i_ptr, func_idx, entry, top_frame_stack): (usize, Option<usize>, OP, &[VmTerm]),
+    ) -> Self {
         (i_ptr, func_idx, ScriptEntry::Opcode(entry), top_frame_stack).into()
     }
 }
@@ -3478,7 +3578,8 @@ impl From<Result<ExecutionResult, (ExecutionResult, StackTrace)>> for VmResult {
 }
 
 enum ScriptParserState {
-    ExpectingFuncOrArgsLen,
+    ExpectingArgsLen,
+    ExpectingScriptFlags(u8, u8, Vec<bool>),
     ExpectingOP,
     ExpectingBytes(usize),
     ExpectingLen(OP, u16, usize),
@@ -3545,8 +3646,9 @@ mod tests {
         out: Vec<Output>,
     }
 
-    fn assert_script_ok(script: Script, outputs: Vec<VmTerm>, key: &str) {
-        let base: TestBaseArgs = get_test_base_args(&script, 30, outputs, 0, key);
+    fn assert_script_ok(mut script: Script, outputs: Vec<VmTerm>, key: &str) {
+        script.populate_malleable_args_field();
+        let base: TestBaseArgs = get_test_base_args(&mut script, 30, outputs, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         assert_eq!(
@@ -3564,8 +3666,9 @@ mod tests {
         assert_eq!(outs, base.out);
     }
 
-    fn assert_script_fail(script: Script, outputs: Vec<VmTerm>, key: &str) {
-        let base: TestBaseArgs = get_test_base_args(&script, 30, outputs, 0, key);
+    fn assert_script_fail(mut script: Script, outputs: Vec<VmTerm>, key: &str) {
+        script.populate_malleable_args_field();
+        let base: TestBaseArgs = get_test_base_args(&mut script, 30, outputs, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         assert_eq!(
@@ -3583,12 +3686,13 @@ mod tests {
     }
 
     fn get_test_base_args(
-        ss: &Script,
+        ss: &mut Script,
         out_amount: Money,
         out_script: Vec<VmTerm>,
         push_out_cycles: usize,
         key: &str,
     ) -> TestBaseArgs {
+        ss.populate_malleable_args_field();
         let sh = ss.to_script_hash(key);
         let args = vec![
             VmTerm::Signed128(30),
@@ -3597,7 +3701,6 @@ mod tests {
         ];
         let mut ins = vec![Input {
             out: None,
-            nsequence: 0xffffffff,
             colour_script_args: None,
             spending_pkey: None,
             spend_proof: None,
@@ -3659,8 +3762,7 @@ mod tests {
     #[test]
     fn it_parses_script_with_only_main() {
         let script: Vec<u8> = vec![
-            0x13, // Script length
-            0x00,
+            0x14, // Script length
             0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
             0x00, // Script flags
             0x23, // OP_Unsigned8Var,
@@ -3682,8 +3784,8 @@ mod tests {
             0xb6, // OP_End
             0xb7, // OP_Verify
         ];
-    
-        let mut oracle_script = Script {
+
+        let oracle_script = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -3705,9 +3807,9 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            malleable_args: vec![false, false, false],
             ..Script::default()
         };
-        oracle_script.malleable_args = vec![false, false, false];
 
         let decoded: Script = crate::codec::decode(&script).unwrap();
 
@@ -3743,7 +3845,6 @@ mod tests {
         ];
         let mut ins = vec![Input {
             out: None,
-            nsequence: 0xffffffff,
             colour_script_args: None,
             spending_pkey: None,
             spend_proof: None,
@@ -3795,7 +3896,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_values_equal() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -3819,7 +3920,7 @@ mod tests {
             ],
             ..Script::default()
         };
-        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -3841,7 +3942,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_values_not_equal() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -3866,7 +3967,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -3888,7 +3989,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_equal_to_1() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -3911,7 +4012,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -3933,7 +4034,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_not_equal_to_1() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -3956,7 +4057,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -3978,7 +4079,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_values_equal_test_2() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4003,7 +4104,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4025,7 +4126,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_less_or_equal() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4050,7 +4151,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4072,7 +4173,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_less_or_equal_test_2() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4098,7 +4199,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4120,7 +4221,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_greater_or_equal() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4145,7 +4246,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4167,7 +4268,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_greater_or_equal_test_2() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4193,7 +4294,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4215,7 +4316,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_less() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4240,7 +4341,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4262,7 +4363,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_less_test_2() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4288,7 +4389,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4310,7 +4411,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_greater() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4335,7 +4436,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4357,7 +4458,7 @@ mod tests {
     #[test]
     fn it_breaks_loop_if_greater_test_2() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4383,7 +4484,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4405,7 +4506,7 @@ mod tests {
     #[test]
     fn it_continues_loop_if_less_or_equal() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4430,7 +4531,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4452,7 +4553,7 @@ mod tests {
     #[test]
     fn it_continues_loop_if_less_or_equal_test_2() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4478,7 +4579,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4500,7 +4601,7 @@ mod tests {
     #[test]
     fn it_continues_loop_if_greater_or_equal() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4525,7 +4626,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4547,7 +4648,7 @@ mod tests {
     #[test]
     fn it_continues_loop_if_greater_or_equal_test_2() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4573,7 +4674,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4595,7 +4696,7 @@ mod tests {
     #[test]
     fn it_continues_loop_if_less() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4620,7 +4721,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4642,7 +4743,7 @@ mod tests {
     #[test]
     fn it_continues_loop_if_greater() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4667,7 +4768,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4689,7 +4790,7 @@ mod tests {
     #[test]
     fn it_continues_loop_if_equals_1() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4712,7 +4813,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4734,7 +4835,7 @@ mod tests {
     #[test]
     fn it_continues_loop_if_not_equals_1() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4757,7 +4858,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 90, vec![], 2, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4779,7 +4880,7 @@ mod tests {
     #[test]
     fn it_continues_loop_if_equals() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4804,7 +4905,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 60, vec![], 1, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4826,7 +4927,7 @@ mod tests {
     #[test]
     fn it_continues_loop_if_not_equals() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -4851,7 +4952,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 120, vec![], 3, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -4888,6 +4989,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
+            malleable_args: vec![false, false, false],
             ..Script::default()
         };
         let sh = ss.to_script_hash(key);
@@ -4899,7 +5001,6 @@ mod tests {
         ];
         let ins = vec![Input {
             out: None,
-            nsequence: 0xffffffff,
             colour_script_args: None,
             spending_pkey: None,
             spend_proof: None,
@@ -4955,7 +5056,6 @@ mod tests {
             spending_pkey: None,
             witness: None,
             script: ss.clone(),
-            nsequence: 0xffffffff,
             script_args: args.clone(),
             hash: None,
         }]
@@ -5002,7 +5102,6 @@ mod tests {
             colour_script: None,
             spending_pkey: None,
             witness: None,
-            nsequence: 0xffffffff,
             script: ss.clone(),
             script_args: args.clone(),
             hash: None,
@@ -5044,12 +5143,13 @@ mod tests {
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0x00),
             ],
+            malleable_args: vec![false],
             ..Script::default()
         };
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
         assert_eq!(
             encoded,
-            vec![0x09, 0x01, 0x25, 0x00, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00]
+            vec![0x0a, 0x01, 0x00, 0x25, 0x00, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00]
         );
     }
 
@@ -5067,12 +5167,13 @@ mod tests {
                 ScriptEntry::Byte(0xff),
                 ScriptEntry::Byte(0xff),
             ],
+            malleable_args: vec![false],
             ..Script::default()
         };
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
         assert_eq!(
             encoded,
-            vec![0x09, 0x01, 0x25, 0xff, 0xff, 0xff, 0xff, 0x24, 0xff, 0xff]
+            vec![0x0a, 0x01, 0x00, 0x25, 0xff, 0xff, 0xff, 0xff, 0x24, 0xff, 0xff]
         );
     }
 
@@ -5090,6 +5191,7 @@ mod tests {
                 ScriptEntry::Byte(0xff),
                 ScriptEntry::Byte(0xff),
             ],
+            malleable_args: vec![false],
             ..Script::default()
         };
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
@@ -5145,6 +5247,7 @@ mod tests {
                 ScriptEntry::Byte(0xf0),
                 ScriptEntry::Byte(0xf0),
             ],
+            malleable_args: vec![false],
             ..Script::default()
         };
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
@@ -5155,7 +5258,7 @@ mod tests {
     #[test]
     fn it_roll_pop_out() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5182,7 +5285,7 @@ mod tests {
             VmTerm::Unsigned8(1),
             VmTerm::Unsigned8(2),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5204,7 +5307,7 @@ mod tests {
     #[test]
     fn it_roll_pick_out() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5236,7 +5339,7 @@ mod tests {
             VmTerm::Unsigned8(1),
             VmTerm::Unsigned8(0),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5258,7 +5361,7 @@ mod tests {
     #[test]
     fn it_depth() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5283,7 +5386,7 @@ mod tests {
             VmTerm::Unsigned16(6),
             VmTerm::Unsigned16(5),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5305,7 +5408,7 @@ mod tests {
     #[test]
     fn it_if_dup() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5337,7 +5440,7 @@ mod tests {
             VmTerm::Unsigned8(1),
             VmTerm::Unsigned8(0),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5359,7 +5462,7 @@ mod tests {
     #[test]
     fn it_dup() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5380,7 +5483,7 @@ mod tests {
             VmTerm::Unsigned8(1),
             VmTerm::Unsigned8(1),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5402,7 +5505,7 @@ mod tests {
     #[test]
     fn it_nip() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5424,7 +5527,7 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(4), VmTerm::Unsigned8(1)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5446,7 +5549,7 @@ mod tests {
     #[test]
     fn it_rot() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5484,7 +5587,7 @@ mod tests {
             VmTerm::Unsigned8(1),
             VmTerm::Unsigned8(0),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5506,7 +5609,7 @@ mod tests {
     #[test]
     fn it_rot2() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5544,7 +5647,7 @@ mod tests {
             VmTerm::Unsigned8(3),
             VmTerm::Unsigned8(2),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5566,7 +5669,7 @@ mod tests {
     #[test]
     fn it_over() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5597,7 +5700,7 @@ mod tests {
             VmTerm::Unsigned8(2),
             VmTerm::Unsigned8(1),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5619,7 +5722,7 @@ mod tests {
     #[test]
     fn it_swap() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5643,7 +5746,7 @@ mod tests {
             VmTerm::Unsigned8(3),
             VmTerm::Unsigned8(1),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5665,7 +5768,7 @@ mod tests {
     #[test]
     fn it_swap2() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5697,7 +5800,7 @@ mod tests {
             VmTerm::Unsigned8(4),
             VmTerm::Unsigned8(1),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5719,7 +5822,7 @@ mod tests {
     #[test]
     fn it_tuck() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5745,7 +5848,7 @@ mod tests {
             VmTerm::Unsigned8(3),
             VmTerm::Unsigned8(1),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5767,7 +5870,7 @@ mod tests {
     #[test]
     fn it_drop2() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5790,7 +5893,7 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(5)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5812,7 +5915,7 @@ mod tests {
     #[test]
     fn it_dup2() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5841,7 +5944,7 @@ mod tests {
             VmTerm::Unsigned8(2),
             VmTerm::Unsigned8(1),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5863,7 +5966,7 @@ mod tests {
     #[test]
     fn it_dup3() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5900,7 +6003,7 @@ mod tests {
             VmTerm::Unsigned8(2),
             VmTerm::Unsigned8(1),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5923,7 +6026,7 @@ mod tests {
     #[test]
     fn it_adds_size() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -5938,7 +6041,7 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned64(1), VmTerm::Unsigned8(0)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5960,7 +6063,7 @@ mod tests {
     #[test]
     fn it_fails_drop_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -5970,7 +6073,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -5991,7 +6094,7 @@ mod tests {
     #[test]
     fn it_fails_dup_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6001,7 +6104,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6022,7 +6125,7 @@ mod tests {
     #[test]
     fn it_fails_nip_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6034,7 +6137,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6055,7 +6158,7 @@ mod tests {
     #[test]
     fn it_fails_rot_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6069,7 +6172,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6090,7 +6193,7 @@ mod tests {
     #[test]
     fn it_fails_rot_2_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6110,7 +6213,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6131,7 +6234,7 @@ mod tests {
     #[test]
     fn it_fails_over_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6143,7 +6246,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6164,7 +6267,7 @@ mod tests {
     #[test]
     fn it_fails_roll_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6185,7 +6288,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6206,7 +6309,7 @@ mod tests {
     #[test]
     fn it_fails_swap_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6218,7 +6321,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6239,7 +6342,7 @@ mod tests {
     #[test]
     fn it_fails_tuck_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6251,7 +6354,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6272,7 +6375,7 @@ mod tests {
     #[test]
     fn it_fails_drop_2_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6284,7 +6387,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6305,7 +6408,7 @@ mod tests {
     #[test]
     fn it_fails_dup_2_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6317,7 +6420,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6338,7 +6441,7 @@ mod tests {
     #[test]
     fn it_fails_dup_3_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6352,7 +6455,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6373,7 +6476,7 @@ mod tests {
     #[test]
     fn it_fails_over_2_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6389,7 +6492,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6410,7 +6513,7 @@ mod tests {
     #[test]
     fn it_fails_swap_2_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6426,7 +6529,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6447,7 +6550,7 @@ mod tests {
     #[test]
     fn it_fails_to_push_size_when_stack_length_is_lower() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOut),
@@ -6457,7 +6560,7 @@ mod tests {
             ..Script::default()
         };
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, vec![], 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6478,7 +6581,7 @@ mod tests {
     #[test]
     fn it_loads_hash_160var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Hash160Var),
@@ -6541,7 +6644,7 @@ mod tests {
                 0x69, 0x09, 0x22, 0x35, 0x78, 0x57,
             ]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6563,7 +6666,7 @@ mod tests {
     #[test]
     fn it_loads_hash_256var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Hash256Var),
@@ -6652,7 +6755,7 @@ mod tests {
                 0x35, 0x12, 0x18, 0x34,
             ]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6674,7 +6777,7 @@ mod tests {
     #[test]
     fn it_loads_hash_512var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Hash512Var),
@@ -6831,7 +6934,7 @@ mod tests {
                 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34,
             ]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6853,7 +6956,7 @@ mod tests {
     #[test]
     fn it_loads_unsigned_8var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -6876,7 +6979,7 @@ mod tests {
             VmTerm::Unsigned8(0x23),
             VmTerm::Unsigned8(0x01),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6898,7 +7001,7 @@ mod tests {
     #[test]
     fn it_loads_unsigned_16var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned16Var),
@@ -6924,7 +7027,7 @@ mod tests {
             VmTerm::Unsigned16(0x2301),
             VmTerm::Unsigned16(0x0123),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -6946,7 +7049,7 @@ mod tests {
     #[test]
     fn it_loads_unsigned_32var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned32Var),
@@ -6978,7 +7081,7 @@ mod tests {
             VmTerm::Unsigned32(0x00002301),
             VmTerm::Unsigned32(0x00000123),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -7000,7 +7103,7 @@ mod tests {
     #[test]
     fn it_loads_unsigned_64var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned64Var),
@@ -7044,7 +7147,7 @@ mod tests {
             VmTerm::Unsigned64(0x0123000000002301),
             VmTerm::Unsigned64(0x0123000000000123),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -7066,7 +7169,7 @@ mod tests {
     #[test]
     fn it_loads_unsigned_128var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned128Var),
@@ -7115,7 +7218,7 @@ mod tests {
             VmTerm::Unsigned128(0x22000000000000000123000000002301),
             VmTerm::Unsigned128(0x11000000000000000123000000000123),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -7137,7 +7240,7 @@ mod tests {
     #[test]
     fn it_loads_signed_16var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed16Var),
@@ -7163,7 +7266,7 @@ mod tests {
             VmTerm::Signed16(0x2301),
             VmTerm::Signed16(0x0123),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -7185,7 +7288,7 @@ mod tests {
     #[test]
     fn it_loads_signed_32var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed32Var),
@@ -7217,7 +7320,7 @@ mod tests {
             VmTerm::Signed32(0x00002301),
             VmTerm::Signed32(0x00000123),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -7239,7 +7342,7 @@ mod tests {
     #[test]
     fn it_loads_signed_64var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed64Var),
@@ -7283,7 +7386,7 @@ mod tests {
             VmTerm::Signed64(0x0123000000002301),
             VmTerm::Signed64(0x0123000000000123),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -7305,7 +7408,7 @@ mod tests {
     #[test]
     fn it_loads_signed_128var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed128Var),
@@ -7354,7 +7457,7 @@ mod tests {
             VmTerm::Signed128(0x22000000000000000123000000002301),
             VmTerm::Signed128(0x11000000000000000123000000000123),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -7376,7 +7479,7 @@ mod tests {
     #[test]
     fn it_loads_hash_160_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Hash160ArrayVar),
@@ -7469,7 +7572,7 @@ mod tests {
                 0x69, 0x09, 0x22, 0x35, 0x78, 0x57,
             ]]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -7491,7 +7594,7 @@ mod tests {
     #[test]
     fn it_loads_hash_256_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Hash256ArrayVar),
@@ -7623,7 +7726,7 @@ mod tests {
                 0x35, 0x12, 0x18, 0x34,
             ]]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -7645,7 +7748,7 @@ mod tests {
     #[test]
     fn it_loads_hash_512_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Hash512ArrayVar),
@@ -7879,7 +7982,7 @@ mod tests {
                 0x78, 0x53, 0x23, 0x47, 0x35, 0x12, 0x18, 0x34,
             ]]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -7901,7 +8004,7 @@ mod tests {
     #[test]
     fn it_loads_unsigned_8_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -7932,7 +8035,7 @@ mod tests {
             VmTerm::Unsigned8Array(vec![0x3f, 0x79, 0x25, 0xae, 0x77, 0xa1]),
             VmTerm::Unsigned8Array(vec![0x75, 0xaf, 0xf6, 0xa5]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -7954,7 +8057,7 @@ mod tests {
     #[test]
     fn it_loads_unsigned_16_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned16ArrayVar),
@@ -7995,7 +8098,7 @@ mod tests {
             VmTerm::Unsigned16Array(vec![0x3ffe, 0x7926, 0x2510, 0xaebc, 0x7727, 0xa123]),
             VmTerm::Unsigned16Array(vec![0x7536, 0x7516, 0xaf41, 0xa5f6]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -8017,7 +8120,7 @@ mod tests {
     #[test]
     fn it_loads_unsigned_32_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned32ArrayVar),
@@ -8080,7 +8183,7 @@ mod tests {
             ]),
             VmTerm::Unsigned32Array(vec![0x01fe7814, 0x75167536, 0xa5f6af41, 0x75167536]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -8102,7 +8205,7 @@ mod tests {
     #[test]
     fn it_loads_unsigned_64_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned64ArrayVar),
@@ -8215,7 +8318,7 @@ mod tests {
                 0x7516753675167536,
             ]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -8237,7 +8340,7 @@ mod tests {
     #[test]
     fn it_loads_unsigned_128_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned128ArrayVar),
@@ -8345,7 +8448,7 @@ mod tests {
                 0x7516753675167536a5f6af41a5f6af41,
             ]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -8367,7 +8470,7 @@ mod tests {
     #[test]
     fn it_loads_signed_8_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed8ArrayVar),
@@ -8398,7 +8501,7 @@ mod tests {
             VmTerm::Signed8Array(vec![0x3f, 0x79, 0x25, 0x12, 0x77, 0x11]),
             VmTerm::Signed8Array(vec![0x75, 0x12, 0x34, 0x54]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -8420,7 +8523,7 @@ mod tests {
     #[test]
     fn it_loads_signed_16_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed16ArrayVar),
@@ -8461,7 +8564,7 @@ mod tests {
             VmTerm::Signed16Array(vec![0x3ffe, 0x7926, 0x2510, 0x2ebc, 0x7727, 0x1123]),
             VmTerm::Signed16Array(vec![0x7536, 0x7516, 0x1f41, 0x15f6]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -8483,7 +8586,7 @@ mod tests {
     #[test]
     fn it_loads_signed_32_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed32ArrayVar),
@@ -8546,7 +8649,7 @@ mod tests {
             ]),
             VmTerm::Signed32Array(vec![0x01fe7814, 0x75167536, 0x15f6af41, 0x75167536]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -8568,7 +8671,7 @@ mod tests {
     #[test]
     fn it_loads_signed_64_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed64ArrayVar),
@@ -8681,7 +8784,7 @@ mod tests {
                 0x7516753675167536,
             ]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -8703,7 +8806,7 @@ mod tests {
     #[test]
     fn it_loads_signed_128_array_var() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Signed128ArrayVar),
@@ -8811,7 +8914,7 @@ mod tests {
                 0x7516753675167536a5f6af41a5f6af41,
             ]),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -8833,7 +8936,7 @@ mod tests {
     #[test]
     fn it_pushes_array_len() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -8866,7 +8969,7 @@ mod tests {
 
         let script_output: Vec<VmTerm> =
             vec![VmTerm::Unsigned16(0x0004), VmTerm::Unsigned16(0x0006)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -8888,7 +8991,7 @@ mod tests {
     #[test]
     fn it_gets_type() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomHash160Var),
@@ -8964,7 +9067,7 @@ mod tests {
             VmTerm::Unsigned8(0x0c),
             VmTerm::Unsigned8(0x0d),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -8989,7 +9092,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomHash160Var),
@@ -9006,7 +9109,7 @@ mod tests {
             VmTerm::Hash160(rng.gen::<[u8; 20]>()),
             VmTerm::Hash160(rng.gen::<[u8; 20]>()),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9031,7 +9134,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomHash256Var),
@@ -9048,7 +9151,7 @@ mod tests {
             VmTerm::Hash256(rng.gen::<[u8; 32]>()),
             VmTerm::Hash256(rng.gen::<[u8; 32]>()),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9073,7 +9176,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomHash512Var),
@@ -9100,7 +9203,7 @@ mod tests {
         res2[32..64].copy_from_slice(&p4);
 
         let script_output: Vec<VmTerm> = vec![VmTerm::Hash512(res1), VmTerm::Hash512(res2)];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9125,7 +9228,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomUnsigned8Var),
@@ -9142,7 +9245,7 @@ mod tests {
             VmTerm::Unsigned8(rng.gen::<u8>()),
             VmTerm::Unsigned8(rng.gen::<u8>()),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9167,7 +9270,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomUnsigned16Var),
@@ -9184,7 +9287,7 @@ mod tests {
             VmTerm::Unsigned16(rng.gen::<u16>()),
             VmTerm::Unsigned16(rng.gen::<u16>()),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9209,7 +9312,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomUnsigned32Var),
@@ -9226,7 +9329,7 @@ mod tests {
             VmTerm::Unsigned32(rng.gen::<u32>()),
             VmTerm::Unsigned32(rng.gen::<u32>()),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9251,7 +9354,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomUnsigned64Var),
@@ -9268,7 +9371,7 @@ mod tests {
             VmTerm::Unsigned64(rng.gen::<u64>()),
             VmTerm::Unsigned64(rng.gen::<u64>()),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9293,7 +9396,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomUnsigned128Var),
@@ -9310,7 +9413,7 @@ mod tests {
             VmTerm::Unsigned128(rng.gen::<u128>()),
             VmTerm::Unsigned128(rng.gen::<u128>()),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9335,7 +9438,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomSigned8Var),
@@ -9352,7 +9455,7 @@ mod tests {
             VmTerm::Signed8(rng.gen::<i8>()),
             VmTerm::Signed8(rng.gen::<i8>()),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9377,7 +9480,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomSigned16Var),
@@ -9394,7 +9497,7 @@ mod tests {
             VmTerm::Signed16(rng.gen::<i16>()),
             VmTerm::Signed16(rng.gen::<i16>()),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9419,7 +9522,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomSigned32Var),
@@ -9436,7 +9539,7 @@ mod tests {
             VmTerm::Signed32(rng.gen::<i32>()),
             VmTerm::Signed32(rng.gen::<i32>()),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9461,7 +9564,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomSigned64Var),
@@ -9478,7 +9581,7 @@ mod tests {
             VmTerm::Signed64(rng.gen::<i64>()),
             VmTerm::Signed64(rng.gen::<i64>()),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9503,7 +9606,7 @@ mod tests {
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
 
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::RandomSigned128Var),
@@ -9520,7 +9623,7 @@ mod tests {
             VmTerm::Signed128(rng.gen::<i128>()),
             VmTerm::Signed128(rng.gen::<i128>()),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9542,7 +9645,7 @@ mod tests {
     #[test]
     fn it_pushes_1_if_lt_and_0_if_not() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9585,7 +9688,7 @@ mod tests {
             VmTerm::Unsigned8(0x00),
             VmTerm::Unsigned8(0x00),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9607,7 +9710,7 @@ mod tests {
     #[test]
     fn it_pushes_1_if_gt_and_0_if_not() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9650,7 +9753,7 @@ mod tests {
             VmTerm::Unsigned8(0x00),
             VmTerm::Unsigned8(0x00),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9672,7 +9775,7 @@ mod tests {
     #[test]
     fn it_pushes_1_if_leq_and_0_if_not() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9715,7 +9818,7 @@ mod tests {
             VmTerm::Unsigned8(0x00),
             VmTerm::Unsigned8(0x00),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9737,7 +9840,7 @@ mod tests {
     #[test]
     fn it_pushes_1_if_geq_and_0_if_not() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9780,7 +9883,7 @@ mod tests {
             VmTerm::Unsigned8(0x00),
             VmTerm::Unsigned8(0x00),
         ];
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9802,7 +9905,7 @@ mod tests {
     #[test]
     fn it_hashes_with_ripemd() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9827,7 +9930,7 @@ mod tests {
             script_output.push(hashed_term);
         }
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9849,7 +9952,7 @@ mod tests {
     #[test]
     fn it_hashes_with_sha256() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9874,7 +9977,7 @@ mod tests {
             script_output.push(hashed_term);
         }
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9896,7 +9999,7 @@ mod tests {
     #[test]
     fn it_hashes_with_sha512() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9921,7 +10024,7 @@ mod tests {
             script_output.push(hashed_term);
         }
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -9943,7 +10046,7 @@ mod tests {
     #[test]
     fn it_hashes_with_blake2b() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -9980,7 +10083,7 @@ mod tests {
             script_output.push(hashed_term_512);
         }
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -10002,7 +10105,7 @@ mod tests {
     #[test]
     fn it_hashes_with_blake3_256() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10027,7 +10130,7 @@ mod tests {
             script_output.push(hashed_term);
         }
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -10049,7 +10152,7 @@ mod tests {
     #[test]
     fn it_hashes_with_blake3_512() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10074,7 +10177,7 @@ mod tests {
             script_output.push(hashed_term);
         }
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -10096,7 +10199,7 @@ mod tests {
     #[test]
     fn it_hashes_with_blake3_256internal() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10121,7 +10224,7 @@ mod tests {
             script_output.push(hashed_term);
         }
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -10143,7 +10246,7 @@ mod tests {
     #[test]
     fn it_hashes_with_blake3_512_internal() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10169,7 +10272,7 @@ mod tests {
             script_output.push(hashed_term);
         }
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -10191,7 +10294,7 @@ mod tests {
     #[test]
     fn it_hashes_with_blake2s_256() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10217,7 +10320,7 @@ mod tests {
             script_output.push(hashed_term);
         }
 
-        let base: TestBaseArgs = get_test_base_args(&ss, 30, script_output, 0, key);
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
 
@@ -10239,7 +10342,7 @@ mod tests {
     #[test]
     fn it_adds_two_numbers() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10277,7 +10380,7 @@ mod tests {
     #[test]
     fn it_panics_if_add_not_same_type() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10301,7 +10404,7 @@ mod tests {
     #[test]
     fn it_adds_to_array() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10329,7 +10432,7 @@ mod tests {
     #[test]
     fn it_subs_two_numbers() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10367,7 +10470,7 @@ mod tests {
     #[test]
     fn it_subs_from_array() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10391,7 +10494,7 @@ mod tests {
     #[test]
     fn it_subs_array_from_array() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10418,7 +10521,7 @@ mod tests {
     #[test]
     fn it_subs_array_from_array_overflow() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10445,7 +10548,7 @@ mod tests {
     #[test]
     fn it_multiples_array_with_number() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10469,7 +10572,7 @@ mod tests {
     #[test]
     fn it_multiples_array_with_array() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10496,7 +10599,7 @@ mod tests {
     #[test]
     fn it_multiplies_array_with_array_overflow() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10523,7 +10626,7 @@ mod tests {
     #[test]
     fn it_cannot_multiply_two_arrays_with_different_length() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10549,7 +10652,7 @@ mod tests {
     #[test]
     fn it_multiplies_two_numbers() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10587,7 +10690,7 @@ mod tests {
     #[test]
     fn it_divides_two_numbers() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10625,7 +10728,7 @@ mod tests {
     #[test]
     fn it_divides_array_with_number() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10670,7 +10773,7 @@ mod tests {
     #[test]
     fn it_divides_array_with_another_array() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10711,7 +10814,7 @@ mod tests {
     #[test]
     fn it_divides_array_with_another_array_overflow() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -10738,7 +10841,7 @@ mod tests {
     #[test]
     fn it_returns_min() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
@@ -10795,7 +10898,7 @@ mod tests {
     #[test]
     fn it_returns_max() {
         let key = "test_key";
-        let ss = Script {
+        let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
