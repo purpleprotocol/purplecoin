@@ -128,9 +128,9 @@ macro_rules! check_top_stack_val {
     };
 }
 
-#[allow(clippy::all)]
 macro_rules! check_bit {
     ($val:expr, $pos:expr) => {
+        #[allow(clippy::all)]
         $val & (1 << $pos) == 1
     };
 }
