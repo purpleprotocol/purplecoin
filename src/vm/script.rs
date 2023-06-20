@@ -3824,6 +3824,94 @@ mod tests {
         assert_eq!(decoded, oracle_script);
     }
 
+    #[test]
+    fn it_fails_to_parse_script_with_duplicate_end_opcodes() {
+        let script: Vec<u8> = vec![
+            0x15, // Script length
+            0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+            0x00, // Script flags
+            0x23, // OP_Unsigned8Var,
+            0x00, // Push 0 to the stack
+            0x57, // OP_Loop
+            0x70, // OP_Pick,
+            0x03, // Pick at index 3
+            0x70, // OP_Pick,
+            0x03, // Pick at index 3
+            0x70, // OP_Pick,
+            0x03, // Pick at index 3
+            0xcf, // OP_PushOut,
+            0x82, // OP_Add1,
+            0x70, // OP_Pick,
+            0x00, // Pick at index 0
+            0x23, // OP_Unsigned8Var,
+            0x03, // Push 3 to the stack
+            0x5b, // OP_BreakIfEq
+            0xb6, // OP_End
+            0xb6, // OP_End
+            0xb7, // OP_Verify
+        ];
+
+        assert!(crate::codec::decode::<Vec<u8>>(&script).is_err());
+    }
+
+    #[test]
+    fn it_fails_to_parse_script_with_invalid_end_opcodes() {
+        let script: Vec<u8> = vec![
+            0x13, // Script length
+            0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+            0x00, // Script flags
+            0x23, // OP_Unsigned8Var,
+            0x00, // Push 0 to the stack
+            0x70, // OP_Pick,
+            0x03, // Pick at index 3
+            0x70, // OP_Pick,
+            0x03, // Pick at index 3
+            0x70, // OP_Pick,
+            0x03, // Pick at index 3
+            0xcf, // OP_PushOut,
+            0x82, // OP_Add1,
+            0x70, // OP_Pick,
+            0x00, // Pick at index 0
+            0x23, // OP_Unsigned8Var,
+            0x03, // Push 3 to the stack
+            0x5b, // OP_BreakIfEq
+            0xb6, // OP_End
+            0xb7, // OP_Verify
+        ];
+
+        assert!(crate::codec::decode::<Vec<u8>>(&script).is_err());
+    }
+
+    #[test]
+    fn it_fails_to_parse_script_with_invalid_more_script_flags_than_necessary() {
+        let script: Vec<u8> = vec![
+            0x15, // Script length
+            0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+            0x00, // Script flags
+            0x00, // Script flags
+            0x23, // OP_Unsigned8Var,
+            0x00, // Push 0 to the stack
+            0x57, // OP_Loop
+            0x70, // OP_Pick,
+            0x03, // Pick at index 3
+            0x70, // OP_Pick,
+            0x03, // Pick at index 3
+            0x70, // OP_Pick,
+            0x03, // Pick at index 3
+            0xcf, // OP_PushOut,
+            0x82, // OP_Add1,
+            0x70, // OP_Pick,
+            0x00, // Pick at index 0
+            0x23, // OP_Unsigned8Var,
+            0x03, // Push 3 to the stack
+            0x5b, // OP_BreakIfEq
+            0xb6, // OP_End
+            0xb7, // OP_Verify
+        ];
+
+        assert!(crate::codec::decode::<Vec<u8>>(&script).is_err());
+    }
+
     // #[test]
     // fn it_parses_script_with_multiple_functions() {
     //     unimplemented!();
