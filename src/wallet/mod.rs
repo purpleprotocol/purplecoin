@@ -371,10 +371,7 @@ impl HDWallet {
     pub fn is_coinbase(&self, address: &Address) -> bool {
         match self.internal_meta.get(address) {
             None => false,
-            Some(meta) => match meta.get("COINBASE") {
-                Some(_) => true,
-                None => false,
-            },
+            Some(meta) => meta.get("COINBASE").is_some(),
         }
     }
 

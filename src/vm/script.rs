@@ -130,9 +130,7 @@ macro_rules! check_top_stack_val {
 
 macro_rules! check_bit {
     ($val:expr, $pos:expr) => {
-        #[allow(clippy::all)]
-        $val & (1 << $pos)
-            == 1
+        $val & (1 << $pos) == 1
     };
 }
 

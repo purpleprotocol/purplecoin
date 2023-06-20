@@ -432,7 +432,7 @@ where
         if let Event::Keyboard(keyboard::Event::KeyPressed { key_code, .. }) = event {
             let mut status = event::Status::Ignored;
 
-            if let keyboard::KeyCode::Tab = key_code {
+            if matches!(key_code, keyboard::KeyCode::Tab) {
                 if self.state.keyboard_modifiers.shift() {
                     self.state.focus = self.state.focus.previous(self.state.show_seconds);
                 } else {
@@ -1028,9 +1028,9 @@ where
 
 /// Draws the analog clock.
 #[allow(clippy::too_many_lines)]
-fn draw_clock<'a, Message, B>(
+fn draw_clock<Message, B>(
     renderer: &mut Renderer<B>,
-    time_picker: &TimePickerOverlay<'a, Message, B>,
+    time_picker: &TimePickerOverlay<'_, Message, B>,
     layout: iced_native::Layout<'_>,
     cursor_position: Point,
     style: &HashMap<StyleState, Style>,
@@ -1327,9 +1327,9 @@ fn draw_clock<'a, Message, B>(
 
 /// Draws the digital clock.
 #[allow(clippy::too_many_lines)]
-fn draw_digital_clock<'a, Message, B>(
+fn draw_digital_clock<Message, B>(
     renderer: &mut Renderer<B>,
-    time_picker: &TimePickerOverlay<'a, Message, B>,
+    time_picker: &TimePickerOverlay<'_, Message, B>,
     layout: iced_native::Layout<'_>,
     cursor_position: Point,
     style: &HashMap<StyleState, Style>,

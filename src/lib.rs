@@ -62,6 +62,8 @@
 
 #![allow(dead_code, unused)]
 #![feature(trivial_bounds, slice_swap_unchecked, stmt_expr_attributes)]
+#![warn(clippy::cargo)]
+#![allow(clippy::bad_bit_mask)]
 
 pub mod chain;
 pub mod codec;

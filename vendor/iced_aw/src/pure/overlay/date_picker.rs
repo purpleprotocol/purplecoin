@@ -434,10 +434,10 @@ where
                     ),
             );
 
-        let days = Container::<(), Renderer>::new((0..7).into_iter().fold(
+        let days = Container::<(), Renderer>::new((0..7).fold(
             Column::new().height(Length::Fill),
             |column, _y| {
-                column.push((0..7).into_iter().fold(
+                column.push((0..7).fold(
                     Row::new().height(Length::Fill).padding(DAY_CELL_PADDING),
                     |row, _x| {
                         row.push(
@@ -866,7 +866,7 @@ impl Default for State {
 }
 
 /// An enumeration of all focusable elements of the [`DatePickerOverlay`](DatePickerOverlay).
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Focus {
     /// Nothing is in focus.
     None,
@@ -1177,7 +1177,7 @@ fn day_table<Renderer>(
             }
 
             renderer.fill_text(iced_native::text::Text {
-                content: &format!("{:02}", number), // Todo: is there some way of static format as this has a fixed size?
+                content: &format!("{number:02}"), // Todo: is there some way of static format as this has a fixed size?
                 bounds: Rectangle {
                     x: bounds.center_x(),
                     y: bounds.center_y(),
