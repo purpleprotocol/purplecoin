@@ -352,12 +352,12 @@ impl<G: UnknownOrderGroup, T: Hash + Clone> ProofOfCorrectness<G, T> {
                 let witness = Witness::from_bytes(&rest[6..6 + len1])?;
                 let proof1 = Poe::from_bytes(&rest[6 + len1..6 + len1 + len2])?;
                 let proof2 = Poe::from_bytes(&rest[6 + len1 + len2..6 + len1 + len2 + len3])?;
-                let proof_deleted = MembershipProof {
+                let proof_added = MembershipProof {
                     witness: witness.clone(),
                     proof: proof1,
                 };
 
-                let proof_added = MembershipProof {
+                let proof_deleted = MembershipProof {
                     witness,
                     proof: proof2,
                 };
