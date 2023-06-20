@@ -28,7 +28,7 @@ ENV PATH="/root/.cargo/bin:$PATH"
 WORKDIR /usr/src/purplecoin
 
 COPY . .
-RUN cargo +nightly build --release --no-default-features --features "rpc wallet disk miner blake3sum"
+RUN cargo build --release --no-default-features --features "rpc wallet disk miner blake3sum"
 
 FROM debian
 
