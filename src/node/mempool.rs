@@ -67,9 +67,9 @@ impl Mempool {
 mod tests {
     use super::*;
     use crate::chain::ChainConfig;
+    use crate::primitives::*;
     use crate::vm::internal::VmTerm;
     use crate::vm::*;
-    use crate::primitives::*;
     use rand::prelude::*;
 
     #[test]

@@ -3586,10 +3586,25 @@ impl From<Result<ExecutionResult, (ExecutionResult, StackTrace)>> for VmResult {
 }
 
 enum ScriptParserState {
+    /// Expecting main function arguments length
     ExpectingArgsLen,
+
+    /// Expecting script flags. The state tuple is (remaining_bitmaps, args_len, bitmaps_vec)
     ExpectingScriptFlags(u8, u8, Vec<bool>),
+
+    /// Expecting any OP
     ExpectingOP,
-    ExpectingBytes(usize),
+
+    /// Expecting any OP except OP_Func or OP_End
+    ExpectingOPButNotFuncOrEnd,
+
+    /// Expecting any OP while also tracking the Control Flow
+    ExpectingOPCF(Vec<OP>),
+
+    /// Expecting n bytes. The state tuple is (num_bytes, cf_stack, funcs_allowed)
+    ExpectingBytes(usize, Option<Vec<()>>, bool),
+
+    /// Expecting length for for OP
     ExpectingLen(OP, u16, usize),
 }
 
@@ -3883,7 +3898,7 @@ mod tests {
     }
 
     #[test]
-    fn it_fails_to_parse_script_with_invalid_more_script_flags_than_necessary() {
+    fn it_fails_to_parse_script_with_more_script_flags_than_necessary() {
         let script: Vec<u8> = vec![
             0x15, // Script length
             0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
