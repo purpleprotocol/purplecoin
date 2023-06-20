@@ -11,16 +11,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The Grin leaf_set implementation.
+//! The Grin `leaf_set` implementation.
 //! Compact (roaring) bitmap representing the set of leaf positions
 //! that exist and are not currently pruned in the MMR.
 
 use triomphe::Arc;
 
-use crate::chain::backend::disk::*;
-use crate::chain::backend::*;
+use crate::chain::backend::disk::DB;
+use crate::chain::backend::{read_bitmap, write_bitmap, PowChainBackend, ShardBackend};
 use crate::chain::mmr::prune_list::PruneList;
-use crate::chain::mmr::util::*;
+use crate::chain::mmr::util::is_leaf;
 use croaring::Bitmap;
 
 /// Compact (roaring) bitmap representing the set of positions of
@@ -56,7 +56,7 @@ impl<'a> LeafSet<'a> {
     }
 
     /// Calculate the set of unpruned leaves
-    /// up to and including the cutoff_pos.
+    /// up to and including the `cutoff_pos`.
     /// Only applicable for the output MMR.
     fn unpruned_pre_cutoff(&self, cutoff_pos: u64, prune_list: &PruneList) -> Bitmap {
         (1..=cutoff_pos)
@@ -66,8 +66,8 @@ impl<'a> LeafSet<'a> {
     }
 
     /// Calculate the set of pruned positions
-    /// up to and including the cutoff_pos.
-    /// Uses both the leaf_set and the prune_list to determine prunedness.
+    /// up to and including the `cutoff_pos`.
+    /// Uses both the `leaf_set` and the `prune_list` to determine prunedness.
     pub fn removed_pre_cutoff(
         &self,
         cutoff_pos: u64,
@@ -91,9 +91,9 @@ impl<'a> LeafSet<'a> {
             .and(&self.unpruned_pre_cutoff(cutoff_pos, prune_list))
     }
 
-    /// Rewinds the leaf_set back to a previous state.
+    /// Rewinds the `leaf_set` back to a previous state.
     /// Removes all pos after the cutoff.
-    /// Adds back all pos in rewind_rm_pos.
+    /// Adds back all pos in `rewind_rm_pos`.
     pub fn rewind(&mut self, cutoff_pos: u64, rewind_rm_pos: &Bitmap) {
         // First remove pos from leaf_set that were
         // added after the point we are rewinding to.
@@ -105,17 +105,17 @@ impl<'a> LeafSet<'a> {
         self.bitmap.or_inplace(rewind_rm_pos);
     }
 
-    /// Append a new position to the leaf_set.
+    /// Append a new position to the `leaf_set`.
     pub fn add(&mut self, pos0: u64) {
         self.bitmap.add(1 + pos0 as u32);
     }
 
-    /// Remove the provided position from the leaf_set.
+    /// Remove the provided position from the `leaf_set`.
     pub fn remove(&mut self, pos0: u64) {
         self.bitmap.remove(1 + pos0 as u32);
     }
 
-    /// Flush the leaf_set to file.
+    /// Flush the `leaf_set` to file.
     pub fn flush(&mut self) -> Result<(), String> {
         // First run the optimization step on the bitmap.
         self.bitmap.run_optimize();
@@ -134,23 +134,23 @@ impl<'a> LeafSet<'a> {
         self.bitmap = self.bitmap_bak.clone();
     }
 
-    /// Whether the leaf_set includes the provided position.
+    /// Whether the `leaf_set` includes the provided position.
     pub fn includes(&self, pos0: u64) -> bool {
         self.bitmap.contains(1 + pos0 as u32)
     }
 
-    /// Number of positions stored in the leaf_set.
+    /// Number of positions stored in the `leaf_set`.
     pub fn len(&self) -> usize {
         self.bitmap.cardinality() as usize
     }
 
-    /// Is the leaf_set empty.
+    /// Is the `leaf_set` empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    /// Iterator over positionns in the leaf_set (all leaf positions).
+    /// Iterator over positionns in the `leaf_set` (all leaf positions).
     pub fn iter(&self) -> impl Iterator<Item = u64> + '_ {
-        self.bitmap.iter().map(|x| x as u64)
+        self.bitmap.iter().map(|x| u64::from(x))
     }
 }

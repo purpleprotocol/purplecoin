@@ -5,10 +5,10 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use crate::chain::backend::disk::DiskBackend;
-use crate::chain::*;
-use crate::node::behaviour::*;
+use crate::chain::{Chain, ChainConfig, PowChainBackend, Shard, ShardBackend};
+use crate::node::behaviour::{ClusterBehaviour, ExchangeBehaviour, SectorBehaviour};
 use crate::node::peer_info::PeerInfo;
-use futures::*;
+use futures::StreamExt;
 use libp2p::{
     core::upgrade,
     identity, ping,

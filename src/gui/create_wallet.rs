@@ -138,7 +138,7 @@ impl Screen for CreateWalletScreen {
     type Message = Message;
 
     fn title(&self) -> String {
-        String::from("")
+        String::new()
     }
 
     fn content(&mut self) -> Element<'_, Self::Message> {

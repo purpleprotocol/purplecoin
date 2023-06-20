@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::primitives::*;
+use crate::primitives::{Hash256, PMMRIndexHashable};
 use bincode::Encode;
 use std::{ops::Range, u64};
 
@@ -104,6 +104,7 @@ pub fn bintree_leftmost(pos0: u64) -> u64 {
 }
 
 /// All pos in the subtree beneath the provided root, including root itself.
+#[allow(clippy::all)]
 pub fn bintree_range(pos0: u64) -> Range<u64> {
     let height = bintree_postorder_height(pos0);
     let leftmost = pos0 + 2 - (2 << height);
@@ -132,7 +133,7 @@ pub fn peaks(size: u64) -> Vec<u64> {
 }
 
 /// sizes of peaks and height of next node in mmr of given size
-/// similar to peak_map_height but replacing bitmap by vector of sizes
+/// similar to `peak_map_height` but replacing bitmap by vector of sizes
 /// Example: on input 5 returns ([3,1], 1) as mmr state before adding 5 was
 ///    2
 ///   / \
@@ -202,5 +203,5 @@ pub fn round_up_to_leaf_pos(pos0: u64) -> u64 {
 
 /// Returns the 0-based pmmr index of 0-based leaf index n
 pub fn insertion_to_pmmr_index(nleaf0: u64) -> u64 {
-    2 * nleaf0 - nleaf0.count_ones() as u64
+    2 * nleaf0 - u64::from(nleaf0.count_ones())
 }

@@ -31,6 +31,7 @@ pub enum HashAlgorithm {
 
 impl HashAlgorithm {
     /// Hash bytes using algorithm
+    #[must_use]
     pub fn hash(&self, bytes: &[u8]) -> Hash256 {
         let mut out = Hash256([0; 32]);
 
@@ -82,6 +83,7 @@ impl HashAlgorithm {
         }
     }
 
+    #[must_use]
     pub fn deterministic_random(bytes: &[u8]) -> Self {
         let hash = blake3::hash(bytes);
         let key = &hash.as_bytes()[..8];
@@ -101,6 +103,7 @@ impl HashAlgorithm {
         }
     }
 
+    #[must_use]
     pub fn diff_idx_r1(&self) -> usize {
         match self {
             Self::Blake2s256 => 2,
@@ -112,6 +115,7 @@ impl HashAlgorithm {
         }
     }
 
+    #[must_use]
     pub fn diff_idx_r2(&self) -> usize {
         match self {
             Self::Blake2s256 => 3,
@@ -133,6 +137,7 @@ pub enum PowAlgorithm {
 }
 
 impl PowAlgorithm {
+    #[must_use]
     pub fn hash(&self, bytes: &[u8]) -> Hash256 {
         match self {
             Self::RandomHash(algo) => algo.hash(bytes),
@@ -140,6 +145,7 @@ impl PowAlgorithm {
         }
     }
 
+    #[must_use]
     pub fn diff_idx_r1(&self) -> usize {
         match self {
             Self::GR => 0,
@@ -147,6 +153,7 @@ impl PowAlgorithm {
         }
     }
 
+    #[must_use]
     pub fn diff_idx_r2(&self) -> usize {
         match self {
             Self::GR => 1,
@@ -173,6 +180,7 @@ pub struct Miner {
 }
 
 impl Miner {
+    #[must_use]
     pub fn new() -> Self {
         let num_threads = 1;
         let mut threads = Vec::with_capacity(num_threads);
@@ -296,6 +304,7 @@ impl Miner {
         }
     }
 
+    #[must_use]
     pub fn status(&self) -> MinerStatus {
         match &*self.miner_states[0].lock() {
             MinerState::Running(_) => MinerStatus::Running,
@@ -311,6 +320,7 @@ impl Miner {
         }
     }
 
+    #[must_use]
     pub fn block_wait_result(&self) -> Option<PowBlockHeader> {
         loop {
             match self.try_recv_result() {
@@ -322,6 +332,7 @@ impl Miner {
         }
     }
 
+    #[must_use]
     pub fn try_recv_result(&self) -> Option<PowBlockHeader> {
         for i in 0..1 {
             match self.ctrl_recv[i].try_recv() {

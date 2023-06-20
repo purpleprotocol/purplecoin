@@ -4,12 +4,14 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+#[allow(clippy::all)]
 use blake2::digest::{Update, VariableOutput};
 use blake2::Blake2bVar;
 use core::ffi::c_char;
-use hash_sys::*;
+use hash_sys::{fugue_hash, gr_hash};
 
 #[inline]
+#[must_use]
 pub fn hash_bytes_fugue256(mut bytes: &[u8]) -> [u8; 32] {
     let mut out: [u8; 32] = [0; 32];
     let data_ptr: *const c_char = &bytes as *const _ as *const c_char;
@@ -19,6 +21,7 @@ pub fn hash_bytes_fugue256(mut bytes: &[u8]) -> [u8; 32] {
 }
 
 #[inline]
+#[must_use]
 pub fn hash_bytes_gr(bytes: &[u8; 32], key: [u8; 32]) -> [u8; 32] {
     let mut out: [u8; 32] = [0; 32];
     let data_ptr: *const c_char = bytes as *const _ as *const c_char;
@@ -31,6 +34,7 @@ pub fn hash_bytes_gr(bytes: &[u8; 32], key: [u8; 32]) -> [u8; 32] {
 #[inline]
 /// As GR receives an input size of 32 bytes we transform an arbitrary
 /// sized slice by hashing it with blake2b prior.
+#[must_use]
 pub fn hash_arb_bytes_gr(bytes: &[u8], key: [u8; 32]) -> [u8; 32] {
     let mut hasher = Blake2bVar::new(32).unwrap();
     let mut buf = [0u8; 32];

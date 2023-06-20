@@ -19,6 +19,7 @@ pub struct MemoryStore<K: AsRef<[u8]> + Hash + PartialEq + Eq, V: Clone> {
 }
 
 impl<K: AsRef<[u8]> + Hash + PartialEq + Eq, V: Clone> MemoryStore<K, V> {
+    #[must_use]
     pub fn new() -> Self {
         let mut shards = Vec::new();
 

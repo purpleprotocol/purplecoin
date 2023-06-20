@@ -5,12 +5,19 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use crate::chain::ChainConfig;
-use crate::consensus::*;
+use crate::consensus::{
+    calc_difficulty, map_height_to_block_reward, map_sector_id_to_chain_ids, Difficulty, Money,
+    ACCUMULATOR_MULTIPLIER, COIN, MIN_DIFF_GR, MIN_DIFF_RANDOM_HASH, SECOND_ROUND_TIMEOUT, SECTORS,
+    SHARDS_PER_SECTOR,
+};
 use crate::miner::{HashAlgorithm, PowAlgorithm};
-use crate::primitives::*;
+use crate::primitives::{
+    hash_arb_bytes_gr, Address, AggregatedSignature, BloomFilterHash256, Hash256, Hash256Algo,
+    Input, InputFlags, Output, PublicKey, Transaction, TxVerifyErr,
+};
 use crate::settings::SETTINGS;
 use crate::vm::internal::VmTerm;
-use crate::vm::*;
+use crate::vm::{Script, VmFlags};
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::{Accumulator, ProofOfCorrectness, Witness};
 use arrayvec::ArrayVec;
@@ -75,10 +82,12 @@ macro_rules! bloom_hash_key {
     };
 }
 
+#[must_use]
 pub fn pub_addresses_file_mainnet() -> &'static str {
     addresses_file_mainnet!()
 }
 
+#[must_use]
 pub fn pub_addresses_file_testnet() -> &'static str {
     addresses_file_testnet!()
 }
@@ -103,12 +112,12 @@ pub const ADDRESSES_RAW_TESTNET: &str = include_str!(concat!(
 ));
 
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
-/// Header for the PoW chain, which acts as the source of truth for shard sectors.
+/// Header for the `PoW` chain, which acts as the source of truth for shard sectors.
 ///
 /// A shard sector is composed of different shards, which can be processed independently as
-/// long as the corresponding PoW chain responsible for the sector is also processed.
+/// long as the corresponding `PoW` chain responsible for the sector is also processed.
 ///
-/// The PoW chain does not contain any transaction body, but rather the root hash of batches
+/// The `PoW` chain does not contain any transaction body, but rather the root hash of batches
 /// of blocks being appended to shard sectors.
 pub struct PowBlockHeader {
     /// Block version
@@ -173,7 +182,7 @@ impl PowBlockHeader {
         key: &str,
     ) -> Result<Self, BlockVerifyErr> {
         let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
-            MerkleTree::from_data::<Hash256, _>(blocks.iter().map(|b| b.hash().unwrap()).cloned())
+            MerkleTree::from_data::<Hash256, _>(blocks.iter().map(|b| b.hash().unwrap()).copied())
                 .unwrap();
         let block_root = mt.root();
         let timestamp = Utc::now().timestamp();
@@ -265,6 +274,7 @@ impl PowBlockHeader {
     }
 
     /// Creates the genesis block for the given chain config
+    #[must_use]
     pub fn genesis(sector_id: u8, config: &ChainConfig) -> Self {
         let nonce = 0;
         let key = config.get_sector_key(sector_id);
@@ -328,6 +338,7 @@ impl PowBlockHeader {
     /// ASICs secure against hash marketplace attacks while a
     /// CPU optimised algorithm protects against double-spend
     /// attacks by powerful adversaries.
+    #[must_use]
     pub fn map_height_to_algo(&self) -> PowAlgorithm {
         match self.height % 4 {
             0 | 1 => PowAlgorithm::GR,
@@ -345,6 +356,7 @@ impl PowBlockHeader {
     ///
     /// * Returns `1` if `self.height % 4 == 0 | 2`
     /// * Returns `2` if `self.height % 4 == 1 | 3`
+    #[must_use]
     pub fn round(&self) -> u8 {
         match self.height % 4 {
             0 | 2 => 1,
@@ -354,6 +366,7 @@ impl PowBlockHeader {
     }
 
     /// Returns the block's difficulty index
+    #[must_use]
     pub fn diff_idx(&self) -> usize {
         let algo = self.map_height_to_algo();
 
@@ -365,11 +378,13 @@ impl PowBlockHeader {
     }
 
     /// Returns block nonce
+    #[must_use]
     pub fn nonce(&self) -> u32 {
         self.nonce
     }
 
     /// Returns bits
+    #[must_use]
     pub fn bits(&self, idx: usize) -> u32 {
         self.bits[idx]
     }
@@ -453,9 +468,9 @@ impl PowBlockHeader {
         Ok(())
     }
 
-    /// Validate difficulties and PoW
+    /// Validate difficulties and `PoW`
     ///
-    /// In test mode PoWs have to be checked separately
+    /// In test mode `PoWs` have to be checked separately
     fn validate_diff_fields(
         &self,
         prev: &PowBlockHeader,
@@ -476,11 +491,11 @@ impl PowBlockHeader {
                     return Err(BlockVerifyErr::InvalidDiffHeight);
                 }
 
-                if mean as i64 != blocktime {
+                if i64::from(mean) != blocktime {
                     return Err(BlockVerifyErr::InvalidDiffMean);
                 }
 
-                let oracle_bits = calc_difficulty(prev_bits, prev_mean as u64);
+                let oracle_bits = calc_difficulty(prev_bits, u64::from(prev_mean));
 
                 let min_diff = match diff_idx {
                     0 | 12 => Difficulty::new(MIN_DIFF_GR),
@@ -562,7 +577,7 @@ impl PowBlockHeader {
         Ok(())
     }
 
-    /// Calculate new bits, bt_mean and diff_heights values based on the new timestamp
+    /// Calculate new bits, `bt_mean` and `diff_heights` values based on the new timestamp
     fn calc_new_bits(&mut self, prev: &Self, diff_idx: usize, bt: i64) {
         debug_assert!(bt >= 0);
         let blocktime = cmp::min(bt, crate::consensus::MAX_BLOCK_TIME) as u8;
@@ -580,7 +595,7 @@ impl PowBlockHeader {
                     0 | 12 => Difficulty::new(MIN_DIFF_GR),
                     _ => Difficulty::new(MIN_DIFF_RANDOM_HASH),
                 };
-                let new_bits = calc_difficulty(prev_bits, prev_mean as u64);
+                let new_bits = calc_difficulty(prev_bits, u64::from(prev_mean));
                 debug_assert!(Difficulty::new(prev_bits) <= min_diff);
 
                 *bits = cmp::min(Difficulty::new(new_bits), min_diff).to_u32();
@@ -601,11 +616,13 @@ impl PowBlockHeader {
     }
 
     /// Serialize to bytes
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
     }
 
     /// Returns hash. Must be computed first
+    #[must_use]
     pub fn hash(&self) -> Option<&Hash256> {
         self.hash.as_ref()
     }
@@ -806,6 +823,7 @@ impl BlockHeader {
     }
 
     /// Creates the genesis block for the given chain id and chain config
+    #[must_use]
     pub fn genesis(chain_id: u8, config: &ChainConfig) -> BlockHeader {
         let inputs = Self::read_genesis_inputs(chain_id, config);
         let key = config.get_chain_key(chain_id);
@@ -813,7 +831,7 @@ impl BlockHeader {
         let mut idx_map = HashMap::new();
 
         // Compute outputs
-        for input in inputs.iter() {
+        for input in &inputs {
             let in_clone = input.clone();
             input.script.execute(
                 &input.script_args,
@@ -860,7 +878,7 @@ impl BlockHeader {
         let mut accumulators = ArrayVec::new();
         let mut proofs = ArrayVec::new();
 
-        for (acc, poc) in accumulators_and_proofs.iter() {
+        for (acc, poc) in &accumulators_and_proofs {
             accumulators.push(acc.clone());
             proofs.push(poc.clone());
         }
@@ -899,7 +917,7 @@ impl BlockHeader {
             bloom_seed,
         );
 
-        for h in bloom_hashes.iter() {
+        for h in &bloom_hashes {
             block_bloom.set(h);
         }
 
@@ -921,21 +939,25 @@ impl BlockHeader {
     }
 
     /// Returns cached version of the genesis block if available. Computes it if it doesn't exist.
+    #[must_use]
     pub fn genesis_cached(chain_id: u8, chain_config: &ChainConfig) -> Arc<BlockHeader> {
         crate::global::get_cached_genesis(chain_id, chain_config)
     }
 
     /// Serialize to bytes
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
     }
 
     /// Returns hash. Must be computed first
+    #[must_use]
     pub fn hash(&self) -> Option<&Hash256> {
         self.hash.as_ref()
     }
 
     /// Returns the chain id of the block
+    #[must_use]
     pub fn chain_id(&self) -> u8 {
         self.chain_id
     }
@@ -1109,6 +1131,7 @@ impl BlockData {
     /// Creates new block data from txs, public keys and signature with a coinbase transaction to address
     ///
     /// **Does not check the validity of transactions, public keys or signature**
+    #[must_use]
     pub fn new(
         mut txs: Vec<Transaction>,
         public_keys: Vec<PublicKey>,
@@ -1419,6 +1442,8 @@ pub enum BlockVerifyErr {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::consensus::*;
+    use crate::primitives::*;
     use quickcheck::*;
     use std::collections::{HashMap, HashSet};
     use std::path::PathBuf;

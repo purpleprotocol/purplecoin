@@ -62,7 +62,7 @@ impl<T: Encode + Decode> fmt::Debug for EncryptedEntry<T> {
 }
 
 impl<T: Encode + Decode> EncryptedEntry<T> {
-    /// Creates an encrypted entry from data with key using XChacha20Poly1305
+    /// Creates an encrypted entry from data with key using `XChacha20Poly1305`
     pub fn xchacha20poly1305(key: &[u8], data: T) -> Result<Self, &'static str> {
         let config = bincode::config::standard()
             .with_little_endian()
@@ -124,6 +124,7 @@ pub struct XPub {
 }
 
 impl XPub {
+    #[must_use]
     pub fn derive_next(&self) -> Self {
         let address = self.to_address();
         let mut fingerprint = [0; 4];
@@ -136,7 +137,7 @@ impl XPub {
         let child_number = self.child_number + 1;
 
         XPub {
-            version: 0x0488B21E,
+            version: 0x0488_B21E,
             chain_code: self.chain_code,
             fingerprint,
             child_number,
@@ -149,6 +150,7 @@ impl XPub {
         }
     }
 
+    #[must_use]
     pub fn to_address(&self) -> Address {
         self.pub_key.to_address()
     }
@@ -168,6 +170,7 @@ impl fmt::Debug for XPub {
 }
 
 impl XPriv {
+    #[must_use]
     pub fn derive_next(&self) -> Self {
         let mut hasher = blake3::Hasher::new();
         hasher.update(&self.secret_key);
@@ -182,7 +185,7 @@ impl XPriv {
         let child_number = self.child_number + 1;
 
         XPriv {
-            version: 0x0488ADE4,
+            version: 0x0488_ADE4,
             chain_code: self.chain_code,
             fingerprint,
             child_number,
@@ -213,6 +216,7 @@ pub struct XKeypair {
 }
 
 impl XKeypair {
+    #[must_use]
     pub fn new_master(
         secret: &[u8],
         chain_code: &[u8],
@@ -227,7 +231,7 @@ impl XKeypair {
 
         let xkeypair = XKeypair {
             pub_key: XPub {
-                version: 0x0488B21E,
+                version: 0x0488_B21E,
                 chain_code: chain_code_fixed,
                 fingerprint,
                 child_number,
@@ -235,7 +239,7 @@ impl XKeypair {
                 pub_key: PublicKey::from_bytes(&keypair.public.to_bytes()).unwrap(),
             },
             secret_key: XPriv {
-                version: 0x0488ADE4,
+                version: 0x0488_ADE4,
                 chain_code: chain_code_fixed,
                 fingerprint,
                 child_number,
@@ -250,6 +254,7 @@ impl XKeypair {
         xkeypair
     }
 
+    #[must_use]
     pub fn derive_next(&self) -> Self {
         XKeypair {
             pub_key: self.pub_key.derive_next(),
@@ -257,10 +262,12 @@ impl XKeypair {
         }
     }
 
+    #[must_use]
     pub fn pub_key(&self) -> &XPub {
         &self.pub_key
     }
 
+    #[must_use]
     pub fn secret_key(&self) -> &XPriv {
         &self.secret_key
     }
@@ -324,12 +331,12 @@ impl HDWallet {
     pub fn assign_coinbase(&mut self, coinbase: Address) -> Result<(), &'static str> {
         match self.internal_meta.get_mut(&coinbase) {
             Some(ref mut coinbase_meta) => {
-                coinbase_meta.insert("COINBASE".to_owned(), "".to_owned());
+                coinbase_meta.insert("COINBASE".to_owned(), String::new());
             }
 
             None => {
                 let mut meta = HashMap::with_capacity(1);
-                meta.insert("COINBASE".to_owned(), "".to_owned());
+                meta.insert("COINBASE".to_owned(), String::new());
                 self.internal_meta.insert(coinbase.clone(), meta);
             }
         }
@@ -339,7 +346,7 @@ impl HDWallet {
     }
 
     pub fn next_coinbase(&mut self) -> Address {
-        for pk in self.internal_public_keys.iter() {
+        for pk in &self.internal_public_keys {
             let addr = pk.to_address();
 
             if !self.is_coinbase(&addr) && self.tx_count(&addr) == 0 {
@@ -358,6 +365,7 @@ impl HDWallet {
         self.next_coinbase()
     }
 
+    #[must_use]
     pub fn tx_count(&self, address: &Address) -> u64 {
         match self.internal_meta.get(address) {
             None => 0,
@@ -368,6 +376,7 @@ impl HDWallet {
         }
     }
 
+    #[must_use]
     pub fn is_coinbase(&self, address: &Address) -> bool {
         match self.internal_meta.get(address) {
             None => false,
@@ -655,14 +664,14 @@ pub fn generate_hdwallet(
         chain_code,
         [0, 0, 0, 0],
         0x00,
-        0x000000,
+        0x0000_0000,
     );
     let mut master_keypair_external = XKeypair::new_master(
         master_external_priv_key,
         chain_code,
         [0, 0, 0, 0],
         0x00,
-        0x000000,
+        0x0000_0000,
     );
 
     // Pre-generate keypairs
@@ -777,7 +786,7 @@ pub fn load_wallets() {
             .unwrap_or_else(|err| panic!("could not load wallet {wallet_name}! reason: {err}"));
 
         let mut amount: i128 = 0;
-        for o in wallet.outputs.iter() {
+        for o in &wallet.outputs {
             let a = o.amount;
             amount += a;
         }

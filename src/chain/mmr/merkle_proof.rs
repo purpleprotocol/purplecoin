@@ -14,8 +14,8 @@
 
 //! Merkle Proofs
 
-use crate::chain::mmr::util::*;
-use crate::primitives::*;
+use crate::chain::mmr::util::{family, is_left_sibling, peaks};
+use crate::primitives::{Hash256, PMMRIndexHashable};
 use bincode::{Decode, Encode};
 
 /// Merkle proof errors.

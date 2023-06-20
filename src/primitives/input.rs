@@ -6,7 +6,7 @@
 
 use crate::chain::Shard;
 use crate::chain::ShardBackend;
-use crate::consensus::*;
+use crate::consensus::Money;
 use crate::primitives::{Hash160, Hash256, Output, PublicKey, TxVerifyErr};
 use crate::vm::internal::VmTerm;
 use crate::vm::Script;
@@ -59,11 +59,13 @@ pub struct Input {
 
 impl Input {
     /// Serialize to bytes
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
     }
 
     /// Serializes to bytes for signing. Will not encode any script args or the out witness
+    #[must_use]
     pub fn to_bytes_for_signing(&self) -> Vec<u8> {
         let mut copied = self.clone();
 
@@ -85,18 +87,22 @@ impl Input {
         self.hash = Some(Hash256::hash_from_slice(bytes, key))
     }
 
+    #[must_use]
     pub fn hash(&self) -> Option<&Hash256> {
         self.hash.as_ref()
     }
 
+    #[must_use]
     pub fn out(&self) -> Option<&Output> {
         self.out.as_ref()
     }
 
+    #[must_use]
     pub fn is_coinbase(&self) -> bool {
         self.out.is_none()
     }
 
+    #[must_use]
     pub fn is_coloured(&self) -> bool {
         self.colour_script.is_some()
     }

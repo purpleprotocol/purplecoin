@@ -60,6 +60,7 @@ pub struct Frame<'a> {
 }
 
 impl<'a> Frame<'a> {
+    #[must_use]
     pub fn new(func_idx: Option<usize>) -> Self {
         Self {
             stack: Vec::with_capacity(STACK_SIZE),
@@ -163,6 +164,7 @@ macro_rules! var_load {
 }
 
 impl Script {
+    #[must_use]
     pub fn new_coinbase() -> Script {
         Script {
             script: vec![
@@ -174,6 +176,7 @@ impl Script {
         }
     }
 
+    #[must_use]
     pub fn new_coinbase_without_spending_address() -> Script {
         Script {
             script: vec![
@@ -185,6 +188,7 @@ impl Script {
         }
     }
 
+    #[must_use]
     pub fn new_simple_spend() -> Script {
         Script {
             script: vec![
@@ -310,7 +314,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             nf.executor.state = ScriptExecutorState::ExpectingInitialOP;
 
-                            for t in nf.stack.iter() {
+                            for t in &nf.stack {
                                 memory_size += t.size();
                             }
 
@@ -624,13 +628,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -663,13 +667,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -702,13 +706,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -741,13 +745,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -774,13 +778,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -806,13 +810,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -838,13 +842,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -872,13 +876,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -907,13 +911,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -941,13 +945,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -974,13 +978,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -1007,13 +1011,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -1040,13 +1044,13 @@ impl Script {
 
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += *byte as u16;
+                                len += u16::from(*byte);
                             } else {
                                 unreachable!()
                             }
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                len += (*byte as u16) << 8;
+                                len += u16::from(*byte) << 8;
                             } else {
                                 unreachable!()
                             }
@@ -1280,6 +1284,7 @@ impl Script {
         }
     }
 
+    #[must_use]
     pub fn to_script_hash(&self, key: &str) -> Hash160 {
         Hash160::hash_from_slice(crate::codec::encode_to_vec(&self).unwrap(), key)
     }
@@ -1291,6 +1296,7 @@ pub struct ScriptExecutor<'a> {
 }
 
 impl<'a> ScriptExecutor<'a> {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             state: ScriptExecutorState::ExpectingArgsLen,
@@ -3133,6 +3139,7 @@ impl<'a> ScriptExecutor<'a> {
     }
 
     #[inline]
+    #[must_use]
     pub fn done(&self) -> Option<Result<ExecutionResult, (ExecutionResult, StackTrace)>> {
         match &self.state {
             ScriptExecutorState::OkVerify => Some(Ok(ExecutionResult::OkVerify)),
@@ -3200,7 +3207,7 @@ impl Encode for Script {
         for chunk in self.malleable_args.chunks(8) {
             let mut bitmap: u8 = 0x00;
             for (i, val) in chunk.iter().enumerate() {
-                let v = if *val { 1 } else { 0 };
+                let v = u8::from(*val);
                 bitmap = set_bit!(bitmap, i as u8, v);
             }
             bincode::Encode::encode(&bitmap, encoder)?;
@@ -3242,8 +3249,8 @@ impl Decode for Script {
         let (script, malleable_args) = script_parser.out();
 
         Ok(Self {
-            malleable_args,
             script,
+            malleable_args,
             ..Script::default()
         })
     }
@@ -3411,7 +3418,7 @@ impl ScriptParser {
 
             ScriptParserState::ExpectingLen(op, ref mut sum, ref mut i) => {
                 self.out.push(ScriptEntry::Byte(byte));
-                let b = byte as u16;
+                let b = u16::from(byte);
                 if *i == 0 {
                     *sum += b;
                 } else {
@@ -3501,8 +3508,8 @@ impl From<(usize, Option<usize>, ScriptEntry, &[VmTerm])> for StackTrace {
         (i_ptr, func_idx, entry, top_frame_stack): (usize, Option<usize>, ScriptEntry, &[VmTerm]),
     ) -> Self {
         let ti = TraceItem {
-            i_ptr,
             func_idx,
+            i_ptr,
             entry,
         };
 
@@ -3535,8 +3542,8 @@ impl From<(usize, Option<usize>, OP)> for TraceItem {
 impl From<(usize, Option<usize>, ScriptEntry)> for TraceItem {
     fn from((i_ptr, func_idx, entry): (usize, Option<usize>, ScriptEntry)) -> Self {
         Self {
-            i_ptr,
             func_idx,
+            i_ptr,
             entry,
         }
     }
@@ -3557,10 +3564,12 @@ impl PartialEq for VmResult {
 pub struct VmResult(Result<ExecutionResult, (ExecutionResult, StackTrace)>);
 
 impl VmResult {
+    #[must_use]
     pub fn is_ok(&self) -> bool {
         self.0.is_ok()
     }
 
+    #[must_use]
     pub fn is_err(&self) -> bool {
         self.0.is_err()
     }

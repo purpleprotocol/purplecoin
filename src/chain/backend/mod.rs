@@ -6,8 +6,10 @@
 
 use crate::chain::backend::disk::DB;
 use crate::chain::{ChainConfig, SectorConfig, ShardConfig};
-use crate::consensus::*;
-use crate::primitives::*;
+use crate::consensus::SECTORS;
+use crate::primitives::{
+    Block, BlockData, BlockHeader, BlockVerifyErr, Hash256, Output, PowBlock, PowBlockHeader,
+};
 use accumulator::group::Rsa2048;
 use accumulator::Witness;
 use bincode::error::EncodeError as BincodeEncodeErr;
@@ -21,7 +23,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use triomphe::Arc;
 
-/// Trait for state backend as used by the PoW chain module
+/// Trait for state backend as used by the `PoW` chain module
 pub trait PowChainBackend<'a>: Sized + Clone {
     /// Returns a block with the given hash in the canonical chain
     ///
@@ -464,6 +466,7 @@ impl From<BincodeEncodeErr> for ShardBackendErr {
     }
 }
 
+#[must_use]
 pub fn create_rocksdb_backend<'a>() -> Arc<DB> {
     #[cfg(not(test))]
     let mut path = PathBuf::from_str(&crate::settings::SETTINGS.node.data_dir).unwrap();

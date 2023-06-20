@@ -7,7 +7,7 @@
 use bech32::{self, FromBase32, ToBase32, Variant};
 use bincode::{Decode, Encode};
 use bloomfilter::Bloom;
-use lazy_static::*;
+use lazy_static::lazy_static;
 use merkletree::hash::{Algorithm, Hashable};
 use merkletree::merkle::Element;
 use rand::Rng;
@@ -44,6 +44,7 @@ pub struct ColouredAddress {
 }
 
 impl ColouredAddress {
+    #[must_use]
     pub fn zero() -> Self {
         Self {
             address: [0; ADDRESS_BYTES],
@@ -51,10 +52,12 @@ impl ColouredAddress {
         }
     }
 
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
     }
 
+    #[must_use]
     pub fn to_bech32(&self, hrp: &str) -> String {
         let mut buf: Vec<u8> = Vec::with_capacity(COLOURED_ADDRESS_BYTES);
         buf.extend_from_slice(&self.address);
@@ -81,6 +84,7 @@ impl ColouredAddress {
     }
 
     /// Validate against public key
+    #[must_use]
     pub fn validate(&self, public_key: &PublicKey, colour_hash: &Hash160) -> bool {
         self == &public_key.to_coloured_address(colour_hash)
     }
@@ -118,18 +122,22 @@ impl fmt::Debug for ColouredAddress {
 pub struct Address(pub [u8; ADDRESS_BYTES]);
 
 impl Address {
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         Self([0; ADDRESS_BYTES])
     }
 
+    #[must_use]
     pub fn to_bech32(&self, hrp: &str) -> String {
         bech32::encode(hrp, self.0.to_base32(), Variant::Bech32m).unwrap()
     }
@@ -143,6 +151,7 @@ impl Address {
     }
 
     /// Validate against public key
+    #[must_use]
     pub fn validate(&self, public_key: &PublicKey) -> bool {
         self == &public_key.to_address()
     }
@@ -198,12 +207,14 @@ impl PublicKey {
         ))
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         let bytes = vec![0; 32];
         Self::from_bytes(&bytes).unwrap()
     }
 
     #[inline]
+    #[must_use]
     pub fn to_address(&self) -> Address {
         let mut address = Address([0; ADDRESS_BYTES]);
         let mut hash1 = [0; 32];
@@ -220,6 +231,7 @@ impl PublicKey {
     }
 
     #[inline]
+    #[must_use]
     pub fn to_coloured_address(&self, colour_hash: &Hash160) -> ColouredAddress {
         let mut hash1 = [0; 32];
         let pub_bytes = self.0.to_bytes();
@@ -299,18 +311,22 @@ impl fmt::Debug for Signature {
 pub struct Hash160(pub [u8; 20]);
 
 impl Hash160 {
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         Self([0; 20])
     }
 
+    #[must_use]
     pub fn to_hex(&self) -> String {
         hex::encode(self.0)
     }
 
+    #[must_use]
     pub fn to_address(&self) -> Address {
         Address(self.0)
     }
@@ -371,14 +387,17 @@ impl fmt::Debug for Hash160 {
 pub struct Hash256(pub [u8; 32]);
 
 impl Hash256 {
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         Self([0; 32])
     }
 
+    #[must_use]
     pub fn to_hex(&self) -> String {
         hex::encode(self.0)
     }
@@ -401,6 +420,7 @@ impl Hash256 {
         out_hash
     }
 
+    #[must_use]
     pub fn meets_difficulty(&self, bits: u32) -> bool {
         let diff = crate::consensus::Difficulty::new(bits);
         let out = crate::consensus::PowOutput::new(self.0);
@@ -433,9 +453,7 @@ impl Element for Hash256 {
     }
 
     fn from_slice(bytes: &[u8]) -> Self {
-        if bytes.len() != Self::byte_len() {
-            panic!("invalid slice len")
-        }
+        assert!(!(bytes.len() != Self::byte_len()), "invalid slice len");
 
         let mut out = [0; 32];
         out.copy_from_slice(bytes);
@@ -503,14 +521,17 @@ impl Algorithm<Hash256> for Hash256Algo {
 pub struct Hash512(pub [u8; 64]);
 
 impl Hash512 {
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         Self([0; 64])
     }
 
+    #[must_use]
     pub fn to_hex(&self) -> String {
         hex::encode(self.0)
     }
@@ -542,6 +563,7 @@ impl fmt::Debug for Hash512 {
 pub struct AggregatedSignature(PreparedBatch);
 
 impl AggregatedSignature {
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut result = Vec::with_capacity(self.0.byte_len());
         self.0.write_bytes(&mut result);
@@ -593,6 +615,7 @@ pub struct BloomFilterHash256 {
 }
 
 impl BloomFilterHash256 {
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut out = vec![];
         let bitmap = self.inner.bitmap();
