@@ -339,6 +339,10 @@ impl Script {
                             }
                         }
 
+                        ScriptExecutorState::ReturnFunc => {
+                            pop_frame = true;
+                        }
+
                         ScriptExecutorState::EndBlock => {
                             if let Some((start_i, _)) = frame.is_loop {
                                 frame.i_ptr = start_i;
@@ -442,6 +446,30 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 16;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Call) => {
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                let func_idx = *byte;
+                                let func = &self.functions[func_idx as usize];
+                                let mut nf = Frame::new(Some(func_idx as usize));
+                                let args_len = &func[0];
+
+                                if let ScriptEntry::Byte(args_len) = args_len {
+                                    if frame.stack.len() < *args_len as usize {
+                                        unimplemented!();
+                                    }
+
+                                    for _ in 0..*args_len {
+                                        nf.stack.push(frame.stack.pop().unwrap());
+                                    }
+                                }
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                new_frame = Some(nf);
+                            } else {
+                                unreachable!()
+                            }
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash160Var) => {
@@ -1625,6 +1653,21 @@ impl<'a> ScriptExecutor<'a> {
                                 (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                             );
                         }
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::Call) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Call);
+                }
+
+                ScriptEntry::Opcode(OP::ReturnFunc) => {
+                    if func_idx.is_some() {
+                        self.state = ScriptExecutorState::ReturnFunc;
+                    } else {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::BadFormat,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
                     }
                 }
 
@@ -3181,6 +3224,9 @@ enum ScriptExecutorState<'a> {
     /// Continue to the next iteration of the current loop
     ContinueLoop,
 
+    /// We hit an OP_ReturnFunc
+    ReturnFunc,
+
     /// Return success error code and push message and signature to the verification stack
     OkVerify,
 
@@ -4089,10 +4135,58 @@ mod tests {
         assert!(crate::codec::decode::<Script>(&script).is_err());
     }
 
-    // #[test]
-    // fn it_parses_script_with_multiple_functions() {
-    //     unimplemented!();
-    // }
+    #[test]
+    fn it_parses_script_with_multiple_functions() {
+        let script: Vec<u8> = vec![
+            0x13, // Script length
+            0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+            0x00, // Script flags
+            0x23, // OP_Unsigned8Var,
+            0x00, // Push 0 to the stack
+            0x57, // OP_Loop
+            0xaf, // OP_Call
+            0x00, // Call function with index 0
+            0x70, // OP_Pick,
+            0x00, // Pick at index 0
+            0x23, // OP_Unsigned8Var,
+            0x03, // Push 3 to the stack
+            0x5b, // OP_BreakIfEq
+            0xb6, // OP_End
+            0xb7, // OP_Verify
+            0x00, // OP_Func
+            0x01, // 1 argument pushed onto the stack
+            0x82, // OP_Add1,
+            0xb8, // OP_ReturnFunc,
+            0xb6, // OP_End
+        ];
+
+        let oracle_script = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Call),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::BreakIfEq),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            malleable_args: vec![false, false, false],
+            functions: vec![vec![
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::ReturnFunc),
+            ]],
+        };
+
+        let decoded: Script = crate::codec::decode(&script).unwrap();
+        assert_eq!(decoded, oracle_script);
+    }
 
     #[test]
     fn set_bit() {
@@ -4210,6 +4304,50 @@ mod tests {
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_calls_function() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Call),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::BreakIfEq),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            malleable_args: vec![false, false, false],
+            functions: vec![vec![
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::ReturnFunc),
+            ]],
+        };
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
     }
 
     #[test]
