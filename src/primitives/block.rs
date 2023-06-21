@@ -5,12 +5,19 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use crate::chain::ChainConfig;
-use crate::consensus::*;
+use crate::consensus::{
+    calc_difficulty, map_height_to_block_reward, map_sector_id_to_chain_ids, Difficulty, Money,
+    ACCUMULATOR_MULTIPLIER, COIN, MIN_DIFF_GR, MIN_DIFF_RANDOM_HASH, SECOND_ROUND_TIMEOUT, SECTORS,
+    SHARDS_PER_SECTOR,
+};
 use crate::miner::{HashAlgorithm, PowAlgorithm};
-use crate::primitives::*;
+use crate::primitives::{
+    hash_arb_bytes_gr, Address, AggregatedSignature, BloomFilterHash256, Hash256, Hash256Algo,
+    Input, InputFlags, Output, PublicKey, Transaction, TxVerifyErr,
+};
 use crate::settings::SETTINGS;
 use crate::vm::internal::VmTerm;
-use crate::vm::*;
+use crate::vm::{Script, VmFlags};
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::{Accumulator, ProofOfCorrectness, Witness};
 use arrayvec::ArrayVec;
@@ -75,10 +82,12 @@ macro_rules! bloom_hash_key {
     };
 }
 
+#[must_use]
 pub fn pub_addresses_file_mainnet() -> &'static str {
     addresses_file_mainnet!()
 }
 
+#[must_use]
 pub fn pub_addresses_file_testnet() -> &'static str {
     addresses_file_testnet!()
 }
@@ -103,12 +112,12 @@ pub const ADDRESSES_RAW_TESTNET: &str = include_str!(concat!(
 ));
 
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
-/// Header for the PoW chain, which acts as the source of truth for shard sectors.
+/// Header for the `PoW` chain, which acts as the source of truth for shard sectors.
 ///
 /// A shard sector is composed of different shards, which can be processed independently as
-/// long as the corresponding PoW chain responsible for the sector is also processed.
+/// long as the corresponding `PoW` chain responsible for the sector is also processed.
 ///
-/// The PoW chain does not contain any transaction body, but rather the root hash of batches
+/// The `PoW` chain does not contain any transaction body, but rather the root hash of batches
 /// of blocks being appended to shard sectors.
 pub struct PowBlockHeader {
     /// Block version
@@ -173,7 +182,7 @@ impl PowBlockHeader {
         key: &str,
     ) -> Result<Self, BlockVerifyErr> {
         let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
-            MerkleTree::from_data::<Hash256, _>(blocks.iter().map(|b| b.hash().unwrap()).cloned())
+            MerkleTree::from_data::<Hash256, _>(blocks.iter().map(|b| b.hash().unwrap()).copied())
                 .unwrap();
         let block_root = mt.root();
         let timestamp = Utc::now().timestamp();
@@ -265,6 +274,7 @@ impl PowBlockHeader {
     }
 
     /// Creates the genesis block for the given chain config
+    #[must_use]
     pub fn genesis(sector_id: u8, config: &ChainConfig) -> Self {
         let nonce = 0;
         let key = config.get_sector_key(sector_id);
@@ -291,7 +301,7 @@ impl PowBlockHeader {
         let prev_hash = Hash256::hash_from_slice("The Guardian 22/08/2022 UK inflation will hit 18% in early 2023, says leading bank Citi\n\nABSE\n\nV IX MMXXII", key);
 
         let mut genesis = Self {
-            version: 1,
+            version: 0,
             sector_id,
             prev_hash,
             block_root,
@@ -328,6 +338,7 @@ impl PowBlockHeader {
     /// ASICs secure against hash marketplace attacks while a
     /// CPU optimised algorithm protects against double-spend
     /// attacks by powerful adversaries.
+    #[must_use]
     pub fn map_height_to_algo(&self) -> PowAlgorithm {
         match self.height % 4 {
             0 | 1 => PowAlgorithm::GR,
@@ -345,6 +356,7 @@ impl PowBlockHeader {
     ///
     /// * Returns `1` if `self.height % 4 == 0 | 2`
     /// * Returns `2` if `self.height % 4 == 1 | 3`
+    #[must_use]
     pub fn round(&self) -> u8 {
         match self.height % 4 {
             0 | 2 => 1,
@@ -354,6 +366,7 @@ impl PowBlockHeader {
     }
 
     /// Returns the block's difficulty index
+    #[must_use]
     pub fn diff_idx(&self) -> usize {
         let algo = self.map_height_to_algo();
 
@@ -365,11 +378,13 @@ impl PowBlockHeader {
     }
 
     /// Returns block nonce
+    #[must_use]
     pub fn nonce(&self) -> u32 {
         self.nonce
     }
 
     /// Returns bits
+    #[must_use]
     pub fn bits(&self, idx: usize) -> u32 {
         self.bits[idx]
     }
@@ -453,9 +468,9 @@ impl PowBlockHeader {
         Ok(())
     }
 
-    /// Validate difficulties and PoW
+    /// Validate difficulties and `PoW`
     ///
-    /// In test mode PoWs have to be checked separately
+    /// In test mode `PoWs` have to be checked separately
     fn validate_diff_fields(
         &self,
         prev: &PowBlockHeader,
@@ -476,11 +491,11 @@ impl PowBlockHeader {
                     return Err(BlockVerifyErr::InvalidDiffHeight);
                 }
 
-                if mean as i64 != blocktime {
+                if i64::from(mean) != blocktime {
                     return Err(BlockVerifyErr::InvalidDiffMean);
                 }
 
-                let oracle_bits = calc_difficulty(prev_bits, prev_mean as u64);
+                let oracle_bits = calc_difficulty(prev_bits, u64::from(prev_mean));
 
                 let min_diff = match diff_idx {
                     0 | 12 => Difficulty::new(MIN_DIFF_GR),
@@ -562,7 +577,7 @@ impl PowBlockHeader {
         Ok(())
     }
 
-    /// Calculate new bits, bt_mean and diff_heights values based on the new timestamp
+    /// Calculate new bits, `bt_mean` and `diff_heights` values based on the new timestamp
     fn calc_new_bits(&mut self, prev: &Self, diff_idx: usize, bt: i64) {
         debug_assert!(bt >= 0);
         let blocktime = cmp::min(bt, crate::consensus::MAX_BLOCK_TIME) as u8;
@@ -580,7 +595,7 @@ impl PowBlockHeader {
                     0 | 12 => Difficulty::new(MIN_DIFF_GR),
                     _ => Difficulty::new(MIN_DIFF_RANDOM_HASH),
                 };
-                let new_bits = calc_difficulty(prev_bits, prev_mean as u64);
+                let new_bits = calc_difficulty(prev_bits, u64::from(prev_mean));
                 debug_assert!(Difficulty::new(prev_bits) <= min_diff);
 
                 *bits = cmp::min(Difficulty::new(new_bits), min_diff).to_u32();
@@ -601,11 +616,13 @@ impl PowBlockHeader {
     }
 
     /// Serialize to bytes
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
     }
 
     /// Returns hash. Must be computed first
+    #[must_use]
     pub fn hash(&self) -> Option<&Hash256> {
         self.hash.as_ref()
     }
@@ -621,12 +638,9 @@ impl PowBlockHeader {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Eq, Debug, Clone)]
 /// Shard block header
 pub struct BlockHeader {
-    /// Block version
-    pub version: u16,
-
     /// Chain id
     pub chain_id: u8,
 
@@ -660,6 +674,17 @@ pub struct BlockHeader {
 
     /// Cached block hash
     pub hash: Option<Hash256>,
+}
+
+impl PartialEq for BlockHeader {
+    fn eq(&self, other: &Self) -> bool {
+        self.chain_id == other.chain_id
+            && self.height == other.height
+            && self.tx_root == other.tx_root
+            && self.accumulators == other.accumulators
+            && self.poc == other.poc
+            && self.block_bloom == other.block_bloom
+    }
 }
 
 impl BlockHeader {
@@ -726,7 +751,6 @@ impl BlockHeader {
 
         unimplemented!();
         // Ok(Self {
-        //     version: prev.version,
         //     chain_id: prev.chain_id,
         //     height: prev.height + 1,
         //     prev_hash: prev.hash().unwrap().clone(),
@@ -790,7 +814,6 @@ impl BlockHeader {
                     colour_script_args: None,
                     script: Script::new_coinbase(),
                     script_args,
-                    nsequence: 0xffffffff,
                     hash: None,
                 };
                 input.compute_hash(key);
@@ -800,6 +823,7 @@ impl BlockHeader {
     }
 
     /// Creates the genesis block for the given chain id and chain config
+    #[must_use]
     pub fn genesis(chain_id: u8, config: &ChainConfig) -> BlockHeader {
         let inputs = Self::read_genesis_inputs(chain_id, config);
         let key = config.get_chain_key(chain_id);
@@ -807,7 +831,7 @@ impl BlockHeader {
         let mut idx_map = HashMap::new();
 
         // Compute outputs
-        for input in inputs.iter() {
+        for input in &inputs {
             let in_clone = input.clone();
             input.script.execute(
                 &input.script_args,
@@ -854,13 +878,12 @@ impl BlockHeader {
         let mut accumulators = ArrayVec::new();
         let mut proofs = ArrayVec::new();
 
-        for (acc, poc) in accumulators_and_proofs.iter() {
+        for (acc, poc) in &accumulators_and_proofs {
             accumulators.push(acc.clone());
             proofs.push(poc.clone());
         }
 
         let mut tx = Transaction {
-            version: 1,
             chain_id,
             ins: inputs,
             hash: None,
@@ -894,14 +917,13 @@ impl BlockHeader {
             bloom_seed,
         );
 
-        for h in bloom_hashes.iter() {
+        for h in &bloom_hashes {
             block_bloom.set(h);
         }
 
         let block_bloom = BloomFilterHash256 { inner: block_bloom };
 
         let mut genesis = Self {
-            version: 1,
             chain_id,
             prev_hash,
             tx_root,
@@ -917,21 +939,25 @@ impl BlockHeader {
     }
 
     /// Returns cached version of the genesis block if available. Computes it if it doesn't exist.
+    #[must_use]
     pub fn genesis_cached(chain_id: u8, chain_config: &ChainConfig) -> Arc<BlockHeader> {
         crate::global::get_cached_genesis(chain_id, chain_config)
     }
 
     /// Serialize to bytes
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
     }
 
     /// Returns hash. Must be computed first
+    #[must_use]
     pub fn hash(&self) -> Option<&Hash256> {
         self.hash.as_ref()
     }
 
     /// Returns the chain id of the block
+    #[must_use]
     pub fn chain_id(&self) -> u8 {
         self.chain_id
     }
@@ -1021,7 +1047,6 @@ impl Block {
                 VmTerm::Unsigned64(coinbase_height),
                 VmTerm::Unsigned32(extra_nonce),
             ],
-            nsequence: 0xffffffff,
             hash: None,
         };
         input.compute_hash(key);
@@ -1041,7 +1066,6 @@ impl Block {
         );
 
         let mut tx = Transaction {
-            version: 1,
             chain_id: prev.chain_id,
             ins: vec![input],
             hash: None,
@@ -1107,6 +1131,7 @@ impl BlockData {
     /// Creates new block data from txs, public keys and signature with a coinbase transaction to address
     ///
     /// **Does not check the validity of transactions, public keys or signature**
+    #[must_use]
     pub fn new(
         mut txs: Vec<Transaction>,
         public_keys: Vec<PublicKey>,
@@ -1145,10 +1170,6 @@ impl BlockData {
                     coinbase_count += 1;
 
                     if coinbase_count != 1 {
-                        return Err(BlockVerifyErr::InvalidCoinbase);
-                    }
-
-                    if input.nsequence != 0xffffffff {
                         return Err(BlockVerifyErr::InvalidCoinbase);
                     }
 
@@ -1317,8 +1338,6 @@ impl Encode for BlockHeader {
         &self,
         encoder: &mut E,
     ) -> core::result::Result<(), bincode::error::EncodeError> {
-        let version = self.version.to_le_bytes();
-        bincode::Encode::encode(&version, encoder)?;
         bincode::Encode::encode(&self.chain_id, encoder)?;
         bincode::Encode::encode(&self.height, encoder)?;
         bincode::Encode::encode(&self.prev_hash, encoder)?;
@@ -1339,12 +1358,10 @@ impl Decode for BlockHeader {
     fn decode<D: bincode::de::Decoder>(
         decoder: &mut D,
     ) -> core::result::Result<Self, bincode::error::DecodeError> {
-        let version = crate::codec::decode_fixed_u16(decoder)?;
         let chain_id = bincode::Decode::decode(decoder)?;
         let height = bincode::Decode::decode(decoder)?;
         let prev_hash = bincode::Decode::decode(decoder)?;
         Ok(Self {
-            version,
             chain_id,
             height,
             prev_hash,
@@ -1425,8 +1442,31 @@ pub enum BlockVerifyErr {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::consensus::*;
+    use crate::primitives::*;
+    use quickcheck::*;
     use std::collections::{HashMap, HashSet};
     use std::path::PathBuf;
+
+    quickcheck! {
+        fn accumulator_encode_decode_prop(xs: Vec<Vec<u8>>) -> bool {
+            let accumulator = Accumulator::<Rsa2048, Vec<u8>>::empty();
+            let (witness_deleted, proof_deleted) = accumulator.delete_with_proof(&[]).unwrap();
+            let (accumulator, proof_added) = witness_deleted.add_with_proof(&xs);
+            assert_eq!(accumulator, Accumulator::from_bytes(&accumulator.to_bytes()).unwrap());
+            true
+        }
+
+        fn poc_encode_decode_prop(xs: Vec<Vec<u8>>) -> bool {
+            let accumulator = Accumulator::<Rsa2048, Vec<u8>>::empty();
+            let (witness_deleted, proof_deleted) = accumulator.delete_with_proof(&[]).unwrap();
+            let (accumulator, proof_added) = witness_deleted.add_with_proof(&xs);
+            let poc = ProofOfCorrectness::new(proof_added, proof_deleted);
+            let decoded_poc = ProofOfCorrectness::from_bytes(&poc.to_bytes()).unwrap();
+            assert_eq!(poc, decoded_poc);
+            true
+        }
+    }
 
     #[test]
     fn block_header_encode_decode() {
@@ -1435,16 +1475,7 @@ mod tests {
         let encoded = crate::codec::encode_to_vec(genesis.as_ref()).unwrap();
         let decoded: BlockHeader = crate::codec::decode(&encoded).unwrap();
         let mut genesis = genesis.as_ref().clone();
-        genesis.hash = None;
         assert_eq!(decoded, genesis);
-    }
-
-    #[test]
-    fn it_encodes_fixed_size_header_version() {
-        let config = ChainConfig::new("mainnet");
-        let genesis = BlockHeader::genesis_cached(255, &config);
-        let encoded = crate::codec::encode_to_vec(genesis.as_ref()).unwrap();
-        assert_eq!(&encoded[..3], &[0x01, 0x00, 0xff]);
     }
 
     #[test]
@@ -1469,7 +1500,7 @@ mod tests {
         assert!(accumulator1.verify_membership_batch(&[], &proof_deleted));
         assert_eq!(proof_added.witness, proof_deleted.witness);
 
-        for e in elems.iter() {
+        for e in &elems {
             let witness = Witness(Accumulator::<Rsa2048, String>::empty());
             let witness = witness
                 .compute_subset_witness(&elems, &[e.clone()])
@@ -1487,7 +1518,7 @@ mod tests {
                 .is_err());
         }
 
-        for e in elemsminus1.iter() {
+        for e in &elemsminus1 {
             let witness = Witness(Accumulator::<Rsa2048, String>::empty());
             let witness3 = witness
                 .clone()
@@ -1539,7 +1570,6 @@ mod tests {
             colour_script_args: None,
             script: Script::new_coinbase(),
             script_args,
-            nsequence: 0xffffffff,
             hash: None,
         };
         input.compute_hash(key);
@@ -1556,7 +1586,7 @@ mod tests {
         let mut outs_vec: Vec<(Hash256, Witness<Rsa2048, Hash256>)> = vec![];
         let mut outs_vec2: Vec<(Hash256, Witness<Rsa2048, Hash256>)> = vec![];
 
-        for batch_size in batch_sizes.iter() {
+        for batch_size in &batch_sizes {
             let in_clone = input.clone();
             input.script.execute(
                 &input.script_args,
@@ -1591,7 +1621,7 @@ mod tests {
             let (accumulator2, pa) = witness_deleted.add_with_proof(&out_hashes);
             let mut witnesses = pa.witness.compute_individual_witnesses(&out_hashes);
             let half_len = out_hashes.len() >> 1;
-            for (e, witness) in witnesses.iter() {
+            for (e, witness) in &witnesses {
                 assert!(accumulator2
                     .prove_membership(&[(*e, witness.clone())])
                     .is_ok());
@@ -1639,28 +1669,28 @@ mod tests {
                 .unwrap();
 
             outs_vec = witness_all.clone().compute_individual_witnesses(&outs);
-            for (o, witness) in outs_vec.iter() {
+            for (o, witness) in &outs_vec {
                 assert!(accumulator2
                     .prove_membership(&[(*o, witness.clone())])
                     .is_ok());
             }
 
             let witnesses2 = witness_all2.clone().compute_individual_witnesses(&outs2);
-            for (o, witness) in witnesses2.iter() {
+            for (o, witness) in &witnesses2 {
                 assert!(accumulator2
                     .prove_membership(&[(*o, witness.clone())])
                     .is_ok());
             }
 
             let witnesses3 = witness_all3.clone().compute_individual_witnesses(&outs);
-            for (o, witness) in witnesses3.iter() {
+            for (o, witness) in &witnesses3 {
                 assert!(accumulator2
                     .prove_membership(&[(*o, witness.clone())])
                     .is_ok());
             }
 
             let witnesses4 = witness_all4.clone().compute_individual_witnesses(&outs2);
-            for (o, witness) in witnesses4.iter() {
+            for (o, witness) in &witnesses4 {
                 assert!(accumulator2
                     .prove_membership(&[(*o, witness.clone())])
                     .is_ok());

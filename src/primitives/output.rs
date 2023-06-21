@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::consensus::*;
+use crate::consensus::{money_check, Money};
 use crate::primitives::{Address, ColouredAddress, Hash160, Hash256, TxVerifyErr};
 use crate::vm::internal::VmTerm;
 use bincode::{Decode, Encode};
@@ -43,10 +43,12 @@ impl Hash for Output {
 }
 
 impl Output {
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
     }
 
+    #[must_use]
     pub fn amount(&self) -> Money {
         self.amount
     }
@@ -63,18 +65,22 @@ impl Output {
         Ok(())
     }
 
+    #[must_use]
     pub fn is_coloured(&self) -> bool {
         self.coloured_address.is_some()
     }
 
+    #[must_use]
     pub fn is_coinbase(&self) -> bool {
         self.coinbase_height.is_some()
     }
 
+    #[must_use]
     pub fn coinbase_height(&self) -> Option<u64> {
         self.coinbase_height
     }
 
+    #[must_use]
     pub fn hash(&self) -> Option<&Hash256> {
         self.hash.as_ref()
     }

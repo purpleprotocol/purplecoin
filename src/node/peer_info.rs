@@ -4,10 +4,10 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::consensus::*;
-use bincode::*;
+use crate::consensus::{Money, SECTORS};
+use bincode::{Decode, Encode};
 use libp2p::PeerId;
-use serde::*;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PeerInfo {

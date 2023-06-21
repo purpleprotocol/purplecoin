@@ -28,7 +28,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [ ] Implement suspendable transactions i.e. transactions that execute over several blocks.
   - [ ] Implement optimal atomic asset exchange script and use it as a default script
   * [ ] Implement VM opcodes
-    - [ ] OP `0x00` Func - Start a function definition
+    - [x] OP `0x00` Func - Start a function definition
     - [ ] OP `0x05` Suspend - Suspends execution of the VM and creates an opaque output with the hash of the current execution state i.e. stack frame + input_stack + output_stack. This output can be respent to resume execution by anyone who includes it in a new transaction along with another input to pay the transaction fees. The VM must be started with special flags to resume the execution of the opaque output which must receive as arguments in the new transaction the following things: the original spending script, and the VM state binary blob. 
     - [ ] OP `0x07` ChainId - Pushes the current `chain_id` onto the stack
     - [ ] OP `0x08` ChainHeight - Pushes the current `chain_height` onto the stack
@@ -128,6 +128,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x7c` Substr - Splits the given array at position n and pushes both arrays to the top of the stack
     - [ ] OP `0x7d` BitOR -  Pops the two topmost items on the stack, performs bit OR on the operands and then pushes the result on the stack
     - [ ] OP `0x7e` BitInvert - Inverts all bits of the topmost item on the stack
+    - [ ] OP `0x7f` DupAll - Duplicates the whole stack
     - [ ] OP `0x80` IsUTF8 - Pushes `1` on top of the stack if the given `Unsigned8Array` is a valid UTF8 byte sequence
     - [x] OP `0x82` Add1 - Adds `1` to the topmost item on the stack
     - [x] OP `0x83` Sub1 - Subtracts `1` from the topmost item on the stack
@@ -144,10 +145,24 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x8f` FlushToScriptOuts - Flushes the terms on the current frame to the script outputs stack
     - [x] OP `0x90` PopToScriptOuts - Pops the topmost item on the stack and pushes it to the script outputs stack
     - [x] OP `0x91` PickToScriptOuts - Duplicates the `n`th item on the stack and pushes it to the script outputs stack
+    - [ ] OP `0x92` TrapIf - Traps if
+    - [ ] OP `0x93` TrapIfEq - Traps if the two topmost items on the stack are equal
+    - [ ] OP `0x94` TrapIfNeq - Traps if the two topmost items onf the stack are not equal
+    - [ ] OP `0x95` TrapIfLeq - Traps if the first item on the stack is less than the second
+    - [ ] OP `0x96` TrapIfGeq - Traps if the second item on the stack is greater or equal than the second
+    - [ ] OP `0x97` TrapIfGt - Traps if the first item on the stack is greater than the second
+    - [ ] OP `0x98` TrapIfLt - Traps if the first item on the stack lesser than the second
+    - [ ] OP `0x99` TrapIfNeqType - Pops the first item on the stack and traps if its type not equal to the given type id
     - [ ] OP `0x9a` ToHex - Converts the topmost item on the stack to hexadecimal
     - [ ] OP `0x9b` FromHex - Parses the topmost item on the stack from hexadecimal
+    - [ ] OP `0xa0` VerifyEd25519 - Takes the given public key and signature, and pushes them along with the current output's binary format to the Ed25519 signature verification stack and stops script execution.
+    - [ ] OP `0xa1` VerifyEd25519Inline - Takes the given public key, signature, and message and verifies with Ed25519. Pushes `1` on top of the stack if verification is successful.
+    - [ ] OP `0xa2` VerifyEcdsa - Takes the given public key, signature, and the binary format of the current output, verifies and stops script execution. Can be used for compatibility with Bitcoin/Ethereum or any other blockchain using ECDSA.
+    - [ ] OP `0xa3` VerifyEcdsaInline - Takes the given public key, signature, and message and verifies with ecdsa. Pushes `1` on top of the stack if verification is successful.
+    - [ ] OP `0xa4` VerifyBIP340 - Takes the given public key and signature, and pushes them along with the current output's binary format to the BIP340 signature verification stack and stops script execution. For direct compatibility with Bitcoin Taproot.
+    - [ ] OP `0xa5` VerifyBIP340Inline - Takes the given public key, signature, and message and verifies according to BIP340. Pushes `1` on top of the stack if verification is successful. For direct compatibility with Bitcoin Taproot.
     - [ ] OP `0xae` CallBody - Interprets the top `Unsigned8Array` on the stack as a Func body and executes it
-    - [ ] OP `0xaf` Call - Calls the function with the given index. `0` is not a valid argument as that represents the main function
+    - [x] OP `0xaf` Call - Calls the function with the given index.
     - [ ] OP `0xb0` Concat - Concats the two topmost items on the stack
     - [ ] OP `0xb1` Eq - Pushes `1` on top of the stack if the two topmost items on the stack are equal
     - [ ] OP `0xb2` Neq - Pushes `1` on top of the stack if the two topmost items on the stack are not equal
@@ -156,7 +171,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xb5` Else - Else control operator
     - [x] OP `0xb6` End - Ends the current block
     - [x] OP `0xb7` Verify - Pushes the current output's binary format to the signature verification stack and stops script execution
-    - [ ] OP `0xb8` ReturnFunc - Returns from the current function and moves the terms on the current frame to the parent frame. Behaves the same as `Return` if called from the main function
+    - [x] OP `0xb8` ReturnFunc - Returns from the current function and moves the terms on the current frame to the parent frame. Behaves the same as `Return` if called from the main function
     - [ ] OP `0xb9` Return - Stops script execution and succeeds if the topmost item on the stack is `1`
     - [ ] OP `0xba` EqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are equal
     - [x] OP `0xbb` Lt - Pushes `1` on top of the stack if the topmost item on the stack is less than the second item on stack

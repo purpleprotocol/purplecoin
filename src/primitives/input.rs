@@ -6,7 +6,7 @@
 
 use crate::chain::Shard;
 use crate::chain::ShardBackend;
-use crate::consensus::*;
+use crate::consensus::Money;
 use crate::primitives::{Hash160, Hash256, Output, PublicKey, TxVerifyErr};
 use crate::vm::internal::VmTerm;
 use crate::vm::Script;
@@ -53,20 +53,19 @@ pub struct Input {
     /// This is mutually exclusive with colour_proof
     pub colour_proof_without_address: Option<Vec<Hash160>>,
 
-    /// Sequence number. An input is considered final if this is equal to 0xffffffff
-    pub nsequence: u32,
-
     /// Input hash. Not serialized
     pub hash: Option<Hash256>,
 }
 
 impl Input {
     /// Serialize to bytes
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
     }
 
     /// Serializes to bytes for signing. Will not encode any script args or the out witness
+    #[must_use]
     pub fn to_bytes_for_signing(&self) -> Vec<u8> {
         let mut copied = self.clone();
 
@@ -88,18 +87,22 @@ impl Input {
         self.hash = Some(Hash256::hash_from_slice(bytes, key))
     }
 
+    #[must_use]
     pub fn hash(&self) -> Option<&Hash256> {
         self.hash.as_ref()
     }
 
+    #[must_use]
     pub fn out(&self) -> Option<&Output> {
         self.out.as_ref()
     }
 
+    #[must_use]
     pub fn is_coinbase(&self) -> bool {
         self.out.is_none()
     }
 
+    #[must_use]
     pub fn is_coloured(&self) -> bool {
         self.colour_script.is_some()
     }
@@ -246,7 +249,6 @@ impl Encode for Input {
             InputFlags::IsCoinbase => {
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(&self.nsequence.to_le_bytes(), encoder)?;
             }
 
             InputFlags::IsColouredCoinbase => {
@@ -254,7 +256,6 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(self.colour_script.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(self.colour_script_args.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.nsequence.to_le_bytes(), encoder)?;
             }
 
             InputFlags::IsColouredCoinbaseWithColourProof => {
@@ -263,7 +264,6 @@ impl Encode for Input {
                 bincode::Encode::encode(self.colour_script.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(self.colour_script_args.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(self.colour_proof.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.nsequence.to_le_bytes(), encoder)?;
             }
 
             InputFlags::IsColouredCoinbaseWithColourProofWithoutAddress => {
@@ -275,7 +275,6 @@ impl Encode for Input {
                     self.colour_proof_without_address.as_ref().unwrap(),
                     encoder,
                 )?;
-                bincode::Encode::encode(&self.nsequence.to_le_bytes(), encoder)?;
             }
 
             InputFlags::Plain => {
@@ -284,7 +283,6 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(&self.nsequence.to_le_bytes(), encoder)?;
             }
 
             InputFlags::HasSpendProof => {
@@ -294,7 +292,6 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.nsequence.to_le_bytes(), encoder)?;
             }
 
             InputFlags::HasSpendProofWithoutSpendKey => {
@@ -379,13 +376,10 @@ impl Decode for Input {
             InputFlags::IsCoinbase => {
                 let script = bincode::Decode::decode(decoder)?;
                 let script_args = bincode::Decode::decode(decoder)?;
-                let nsequence: [u8; 4] = bincode::Decode::decode(decoder)?;
-                let nsequence = u32::from_le_bytes(nsequence);
 
                 Ok(Self {
                     script,
                     script_args,
-                    nsequence,
                     colour_script: None,
                     colour_script_args: None,
                     spending_pkey: None,
@@ -422,13 +416,10 @@ impl Decode for Input {
                 };
                 let script = bincode::Decode::decode(decoder)?;
                 let script_args = bincode::Decode::decode(decoder)?;
-                let nsequence: [u8; 4] = bincode::Decode::decode(decoder)?;
-                let nsequence = u32::from_le_bytes(nsequence);
 
                 Ok(Self {
                     script,
                     script_args,
-                    nsequence,
                     colour_script: None,
                     colour_script_args: None,
                     spending_pkey,
@@ -588,10 +579,9 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1654654645645),
-                VmTerm::Unsigned32(543543),
+                VmTerm::Unsigned64(1_654_654_645_645),
+                VmTerm::Unsigned32(543_543),
             ],
-            nsequence: 0xffffffff,
             hash: None,
         };
 
@@ -626,10 +616,9 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(155645654645),
-                VmTerm::Unsigned32(543543),
+                VmTerm::Unsigned64(155_645_654_645),
+                VmTerm::Unsigned32(543_543),
             ],
-            nsequence: 0xffffffff,
             hash: None,
         };
 

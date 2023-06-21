@@ -397,8 +397,8 @@ where
 }
 
 /// Do a horizontal split.
-fn horizontal_split<'a, Message, Renderer: iced_native::Renderer>(
-    split: &Split<'a, Message, Renderer>,
+fn horizontal_split<Message, Renderer: iced_native::Renderer>(
+    split: &Split<'_, Message, Renderer>,
     renderer: &Renderer,
     limits: &iced_native::layout::Limits,
     space: &iced_native::layout::Node,
@@ -464,8 +464,8 @@ fn horizontal_split<'a, Message, Renderer: iced_native::Renderer>(
 }
 
 /// Do a vertical split.
-fn vertical_split<'a, Message, Renderer: iced_native::Renderer>(
-    split: &Split<'a, Message, Renderer>,
+fn vertical_split<Message, Renderer: iced_native::Renderer>(
+    split: &Split<'_, Message, Renderer>,
     renderer: &Renderer,
     limits: &iced_native::layout::Limits,
     space: &iced_native::layout::Node,

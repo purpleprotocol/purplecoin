@@ -4,9 +4,12 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::chain::mmr::*;
-use crate::chain::*;
-use crate::primitives::*;
+use crate::chain::mmr::{MMRBackend, MMRBackendErr, MMR};
+use crate::chain::{
+    ChainConfig, PowChainBackend, PowChainBackendErr, SectorConfig, ShardBackend, ShardBackendErr,
+    ShardConfig,
+};
+use crate::primitives::{Block, BlockData, BlockHeader, Hash256, Output, PowBlock, PowBlockHeader};
 use accumulator::group::Rsa2048;
 use accumulator::Witness;
 

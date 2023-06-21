@@ -89,7 +89,7 @@ where
             font: iced_graphics::Font::default(),
             style,
             on_selected: Box::new(on_selected),
-            phantomdata: PhantomData::default(),
+            phantomdata: PhantomData,
         }))
         .padding(1);
 

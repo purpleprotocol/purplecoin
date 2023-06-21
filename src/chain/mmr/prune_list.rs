@@ -23,8 +23,8 @@
 
 use triomphe::Arc;
 
-use crate::chain::backend::disk::*;
-use crate::chain::backend::*;
+use crate::chain::backend::disk::DB;
+use crate::chain::backend::{read_bitmap, write_bitmap, PowChainBackend, ShardBackend};
 
 use std::path::{Path, PathBuf};
 use std::{
@@ -44,11 +44,11 @@ use std::cmp::min;
 /// a node's position, computes how much it should get shifted given the
 /// subtrees that have been pruned before.
 ///
-/// The PruneList is useful when implementing compact backends for a PMMR (for
+/// The `PruneList` is useful when implementing compact backends for a PMMR (for
 /// example a single large byte array or a file). As nodes get pruned and
 /// removed from the backend to free space, the backend will get more compact
 /// but positions of a node within the PMMR will not match positions in the
-/// backend storage anymore. The PruneList accounts for that mismatch and does
+/// backend storage anymore. The `PruneList` accounts for that mismatch and does
 /// the position translation.
 pub struct PruneList<'a> {
     key: &'a str,
@@ -73,7 +73,7 @@ impl<'a> PruneList<'a> {
         };
 
         for pos1 in bitmap.iter() {
-            prune_list.append(pos1 as u64 - 1)
+            prune_list.append(u64::from(pos1) - 1)
         }
 
         prune_list.bitmap.run_optimize();
@@ -85,7 +85,7 @@ impl<'a> PruneList<'a> {
         Self::new(db, Bitmap::create(), key)
     }
 
-    /// Open an existing prune_list or create a new one.
+    /// Open an existing `prune_list` or create a new one.
     /// Takes an optional bitmap of new pruned pos to be combined with existing pos.
     pub fn open(db: Arc<DB>, key: &'a str) -> Result<Self, String> {
         let bitmap = read_bitmap(db.clone(), key)?.unwrap_or(Bitmap::default());
@@ -116,7 +116,7 @@ impl<'a> PruneList<'a> {
         self.build_leaf_shift_cache();
     }
 
-    /// Save the prune_list to disk.
+    /// Save the `prune_list` to disk.
     pub fn flush(&mut self) -> Result<(), String> {
         // Run the optimization step on the bitmap.
         self.bitmap.run_optimize();
@@ -127,16 +127,16 @@ impl<'a> PruneList<'a> {
         Ok(())
     }
 
-    /// Return the total shift from all entries in the prune_list.
+    /// Return the total shift from all entries in the `prune_list`.
     /// This is the shift we need to account for when adding new entries to our PMMR.
     pub fn get_total_shift(&self) -> u64 {
-        self.get_shift(self.bitmap.maximum().unwrap_or(1) as u64 - 1)
+        self.get_shift(u64::from(self.bitmap.maximum().unwrap_or(1)) - 1)
     }
 
-    /// Return the total leaf_shift from all entries in the prune_list.
-    /// This is the leaf_shift we need to account for when adding new entries to our PMMR.
+    /// Return the total `leaf_shift` from all entries in the `prune_list`.
+    /// This is the `leaf_shift` we need to account for when adding new entries to our PMMR.
     pub fn get_total_leaf_shift(&self) -> u64 {
-        self.get_leaf_shift(self.bitmap.maximum().unwrap_or(1) as u64 - 1)
+        self.get_leaf_shift(u64::from(self.bitmap.maximum().unwrap_or(1)) - 1)
     }
 
     /// Computes by how many positions a node at pos should be shifted given the
@@ -154,7 +154,7 @@ impl<'a> PruneList<'a> {
     fn build_shift_cache(&mut self) {
         self.shift_cache.clear();
         for pos1 in self.bitmap.iter() {
-            let pos0 = pos1 as u64 - 1;
+            let pos0 = u64::from(pos1) - 1;
             let prev_shift = if pos0 == 0 {
                 0
             } else {
@@ -202,7 +202,7 @@ impl<'a> PruneList<'a> {
     fn build_leaf_shift_cache(&mut self) {
         self.leaf_shift_cache.clear();
         for pos1 in self.bitmap.iter() {
-            let pos0 = pos1 as u64 - 1;
+            let pos0 = u64::from(pos1) - 1;
             let prev_shift = if pos0 == 0 {
                 0
             } else {
@@ -270,7 +270,7 @@ impl<'a> PruneList<'a> {
     /// Assumes rollup of siblings and children has already been handled.
     fn append_single(&mut self, pos0: u64) {
         assert!(
-            pos0 >= self.bitmap.maximum().unwrap_or(0) as u64,
+            pos0 >= u64::from(self.bitmap.maximum().unwrap_or(0)),
             "prune list append only"
         );
 
@@ -288,7 +288,7 @@ impl<'a> PruneList<'a> {
     /// Once we find a subtree root that can not be rolled up any further
     /// we cleanup everything beneath it and replace it with a single appended node.
     pub fn append(&mut self, pos0: u64) {
-        let max = self.bitmap.maximum().unwrap_or(0) as u64;
+        let max = u64::from(self.bitmap.maximum().unwrap_or(0));
         assert!(
             pos0 >= max,
             "prune list append only - pos={pos0} bitmap.maximum={max}"
@@ -306,12 +306,12 @@ impl<'a> PruneList<'a> {
         }
     }
 
-    /// Number of entries in the prune_list.
+    /// Number of entries in the `prune_list`.
     pub fn len(&self) -> u64 {
         self.bitmap.cardinality()
     }
 
-    /// Is the prune_list empty?
+    /// Is the `prune_list` empty?
     pub fn is_empty(&self) -> bool {
         self.bitmap.is_empty()
     }
@@ -325,26 +325,26 @@ impl<'a> PruneList<'a> {
         }
         let rank = self.bitmap.rank(1 + pos0 as u32);
         if let Some(root) = self.bitmap.select(rank as u32) {
-            let range = bintree_range(root as u64 - 1);
+            let range = bintree_range(u64::from(root) - 1);
             range.contains(&pos0)
         } else {
             false
         }
     }
 
-    /// Convert the prune_list to a vec of pos.
+    /// Convert the `prune_list` to a vec of pos.
     pub fn to_vec(&self) -> Vec<u64> {
-        self.bitmap.iter().map(|x| x as u64).collect()
+        self.bitmap.iter().map(u64::from).collect()
     }
 
     /// Internal shift cache as slice.
-    /// only used in store/tests/prune_list.rs tests
+    /// only used in `store/tests/prune_list.rs` tests
     pub fn shift_cache(&self) -> &[u64] {
         self.shift_cache.as_slice()
     }
 
     /// Internal leaf shift cache as slice.
-    /// only used in store/tests/prune_list.rs tests
+    /// only used in `store/tests/prune_list.rs` tests
     pub fn leaf_shift_cache(&self) -> &[u64] {
         self.leaf_shift_cache.as_slice()
     }
@@ -356,7 +356,7 @@ impl<'a> PruneList<'a> {
 
     /// Iterator over the entries in the prune list (pruned roots).
     pub fn iter(&self) -> impl Iterator<Item = u64> + '_ {
-        self.bitmap.iter().map(|x| x as u64)
+        self.bitmap.iter().map(u64::from)
     }
 
     /// Iterator over the pruned "bintree range" for each pruned root.
@@ -367,14 +367,14 @@ impl<'a> PruneList<'a> {
         })
     }
 
-    /// Iterator over all pos that are *not* pruned based on current prune_list.
+    /// Iterator over all pos that are *not* pruned based on current `prune_list`.
     pub fn unpruned_iter(&self, cutoff_pos: u64) -> impl Iterator<Item = u64> + '_ {
         UnprunedIterator::new(self.pruned_bintree_range_iter())
             .take_while(move |x| *x <= cutoff_pos)
     }
 
-    /// Iterator over all leaf pos that are *not* pruned based on current prune_list.
-    /// Note this is not necessarily the same as the "leaf_set" as an output
+    /// Iterator over all leaf pos that are *not* pruned based on current `prune_list`.
+    /// Note this is not necessarily the same as the "`leaf_set`" as an output
     /// can be spent but not yet pruned.
     pub fn unpruned_leaf_iter(&self, cutoff_pos: u64) -> impl Iterator<Item = u64> + '_ {
         self.unpruned_iter(cutoff_pos).filter(|x| is_leaf(*x - 1))

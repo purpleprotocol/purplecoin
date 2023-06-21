@@ -4,9 +4,12 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::chain::mmr::*;
-use crate::chain::*;
-use crate::primitives::*;
+use crate::chain::mmr::{MMRBackend, MMRBackendErr, MMR};
+use crate::chain::{
+    BlockHeaderWithHash, ChainConfig, PowBlockHeaderWithHash, PowChainBackend, PowChainBackendErr,
+    SectorConfig, ShardBackend, ShardBackendErr, ShardConfig,
+};
+use crate::primitives::{Block, BlockData, BlockHeader, Hash256, Output, PowBlock, PowBlockHeader};
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::Witness;
 use dashmap::{DashMap as HashMap, DashSet as HashSet};
@@ -54,11 +57,13 @@ impl<'a> DiskBackend<'a> {
         })
     }
 
+    #[must_use]
     pub fn is_shard(&self) -> bool {
         debug_assert!(self.sector_config.is_none());
         self.shard_config.is_some()
     }
 
+    #[must_use]
     pub fn is_sector(&self) -> bool {
         debug_assert!(self.shard_config.is_none());
         self.sector_config.is_some()
@@ -202,14 +207,11 @@ impl<'a> ShardBackend<'a> for DiskBackend<'a> {
         let hkey = &["h".as_bytes(), &[block_header.chain_id]].concat();
         let bhkey = &[[block_header.chain_id].as_slice(), &hbytes].concat();
         let headers_cf = self.db.cf_handle(SHARD_HEADERS_CF).unwrap();
-        let cur_height = tx
-            .get_cf(&headers_cf, hkey)?
-            .map(|bytes| {
-                let mut v: [u8; 8] = [0; 8];
-                v.copy_from_slice(&bytes);
-                u64::from_le_bytes(v)
-            })
-            .unwrap_or(1);
+        let cur_height = tx.get_cf(&headers_cf, hkey)?.map_or(1, |bytes| {
+            let mut v: [u8; 8] = [0; 8];
+            v.copy_from_slice(&bytes);
+            u64::from_le_bytes(v)
+        });
 
         tx.put_cf(
             &headers_cf,
@@ -251,7 +253,7 @@ impl<'a> ShardBackend<'a> for DiskBackend<'a> {
             batch.put_cf(&transactions_cf, tx.hash().unwrap().0, &tx.to_bytes());
         }
 
-        for out in outputs.iter() {
+        for out in &outputs {
             batch.put_cf(
                 &outputs_cf,
                 out.0.hash().unwrap().0,

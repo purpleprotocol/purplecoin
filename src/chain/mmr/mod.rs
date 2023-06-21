@@ -5,7 +5,10 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use crate::chain::mmr::merkle_proof::MMRMerkleProof;
-use crate::chain::mmr::util::*;
+use crate::chain::mmr::util::{
+    bintree_postorder_height, family_branch, hash_children_with_pos, hash_leaf_with_pos, is_leaf,
+    peak_map_height, peaks,
+};
 use crate::primitives::Hash256;
 use bincode::Encode;
 use rocksdb::Error as RocksDBErr;
@@ -47,7 +50,7 @@ pub trait MMR<'a, T: Encode, B: MMRBackend<T> + 'a> {
         Ok(())
     }
 
-    /// Returns a reference to the underlying MMRBackend
+    /// Returns a reference to the underlying `MMRBackend`
     fn backend(&self) -> &B;
 
     /// Returns the key passed to the hash function used in constructing the MMR
@@ -65,7 +68,7 @@ pub trait MMRBackend<T: Encode> {
 
         // Write hashes
         let mut pos = self.unpruned_size()?;
-        for h in hashes.iter() {
+        for h in &hashes {
             self.write_hash_at_pos(*h, pos)?;
             pos += 1;
         }
@@ -147,7 +150,7 @@ pub trait MMRBackend<T: Encode> {
     /// Returns a vec of the peaks of this MMR.
     fn peaks(&self) -> Result<Vec<Hash256>, MMRBackendErr> {
         let mut res = vec![];
-        for pi0 in peaks(self.unpruned_size()?).into_iter() {
+        for pi0 in peaks(self.unpruned_size()?) {
             let p = self.get_peak(pi0)?;
             if let Some(p) = p {
                 res.push(p);
@@ -264,7 +267,7 @@ pub trait MMRBackend<T: Encode> {
 
         let mut path = vec![];
 
-        for x in family_branch.iter() {
+        for x in &family_branch {
             let x = self.get(x.1)?;
             if let Some(x) = x {
                 path.push(x);

@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::chain::*;
+use crate::chain::{BlockType, ChainConfig, PowChainBackend, PowChainBackendErr, ShardBackend};
 use std::marker::PhantomData;
 
 pub struct Sector<'a, B: PowChainBackend<'a>> {

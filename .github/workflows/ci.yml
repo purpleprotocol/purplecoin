@@ -87,7 +87,7 @@ jobs:
       - name: Install Rust toolchain
         run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain ${{ matrix.toolchain }} -y
       - name: Test
-        run: cargo test
+        run: cargo +${{ matrix.toolchain }} test
   buildbenches:
     name: Build benches
 

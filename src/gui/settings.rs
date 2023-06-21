@@ -91,7 +91,7 @@ impl Tab for SettingsTab {
         let content: Element<'_, SettingsMessage> = Container::new(
             Column::new()
                 .push(Text::new("TabBar position:").size(20))
-                .push(TabBarPosition::ALL.iter().cloned().fold(
+                .push(TabBarPosition::ALL.iter().copied().fold(
                     Column::new().padding(10).spacing(10),
                     |column, position| {
                         column.push(
@@ -106,7 +106,7 @@ impl Tab for SettingsTab {
                     },
                 ))
                 .push(Text::new("TabBar color:").size(20))
-                .push(Theme::ALL.iter().cloned().fold(
+                .push(Theme::ALL.iter().copied().fold(
                     Column::new().padding(10).spacing(10),
                     |column, theme| {
                         column.push(

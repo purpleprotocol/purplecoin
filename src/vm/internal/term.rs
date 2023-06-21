@@ -121,11 +121,13 @@ impl fmt::Debug for VmTerm {
 
 impl VmTerm {
     /// Converts the term to a byte vector.
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
     }
 
     /// Converts the term to a byte vector without encoding the type.
+    #[must_use]
     pub fn to_bytes_raw(&self) -> Vec<u8> {
         match self {
             Self::Hash160(val) => val.to_vec(),
@@ -136,7 +138,7 @@ impl VmTerm {
             Self::Unsigned32(val) => val.to_le_bytes().to_vec(),
             Self::Unsigned64(val) => val.to_le_bytes().to_vec(),
             Self::Unsigned128(val) => val.to_le_bytes().to_vec(),
-            Self::UnsignedBig(val) => val.to_le_bytes().to_vec(),
+            Self::UnsignedBig(val) => val.to_le_bytes(),
             Self::Signed8(val) => val.to_le_bytes().to_vec(),
             Self::Signed16(val) => val.to_le_bytes().to_vec(),
             Self::Signed32(val) => val.to_le_bytes().to_vec(),
@@ -158,7 +160,7 @@ impl VmTerm {
             Self::Unsigned32Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
             Self::Unsigned64Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
             Self::Unsigned128Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
-            Self::UnsignedBigArray(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
+            Self::UnsignedBigArray(val) => val.iter().flat_map(ibig::UBig::to_le_bytes).collect(),
             Self::Signed8Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
             Self::Signed16Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
             Self::Signed32Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
@@ -171,7 +173,7 @@ impl VmTerm {
                     let v = v.abs();
 
                     let num: UBig = v.try_into().unwrap();
-                    let mut bytes = num.to_le_bytes().to_vec();
+                    let mut bytes = num.to_le_bytes();
                     let sign_num = unsafe { mem::transmute::<i8, u8>(sign) };
                     bytes.push(sign_num);
 
@@ -865,6 +867,7 @@ impl VmTerm {
     }
 
     /// Returns the virtual heap size of the term in bytes
+    #[must_use]
     pub fn size(&self) -> usize {
         match self {
             Self::Hash160(_) => 20,
@@ -917,6 +920,7 @@ impl VmTerm {
     }
 
     /// Returns the type of the term
+    #[must_use]
     pub fn get_type(&self) -> u8 {
         match self {
             Self::Hash160(_) => 0x00_u8,
@@ -953,6 +957,7 @@ impl VmTerm {
     }
 
     /// Checks if the value of the term equals to 0
+    #[must_use]
     pub fn equals_0(&self) -> bool {
         match self {
             Self::Hash160(val) => *val == ZERO_HASH160,
@@ -989,6 +994,7 @@ impl VmTerm {
     }
 
     /// Checks if the value of the term equals to 1
+    #[must_use]
     pub fn equals_1(&self) -> bool {
         match self {
             Self::Hash160(val) => {
@@ -1049,6 +1055,7 @@ impl VmTerm {
     }
 
     /// Checks if the two terms are comparable
+    #[must_use]
     pub fn is_comparable(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Hash160(_), Self::Hash160(_)) => true,
@@ -1090,6 +1097,7 @@ impl VmTerm {
     }
 
     /// Checks if the term is an array type
+    #[must_use]
     pub fn is_array(&self) -> bool {
         match self {
             Self::Hash160(_) => false,
@@ -1125,7 +1133,8 @@ impl VmTerm {
         }
     }
 
-    /// Returns the length if the VmTerm is an array type, 0 otherwise
+    /// Returns the length if the `VmTerm` is an array type, 0 otherwise
+    #[must_use]
     pub fn len(&self) -> usize {
         match self {
             Self::Hash160Array(arr) => arr.len(),
@@ -1566,7 +1575,7 @@ mod tests {
 
     #[test]
     fn test_u32_encode_decode() {
-        let t = VmTerm::Unsigned32(1254324324);
+        let t = VmTerm::Unsigned32(1_254_324_324);
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded[..1], &[0x05]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
@@ -1574,7 +1583,7 @@ mod tests {
 
     #[test]
     fn test_u64_encode_decode() {
-        let t = VmTerm::Unsigned64(143254324324);
+        let t = VmTerm::Unsigned64(143_254_324_324);
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded[..1], &[0x06]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
@@ -1582,7 +1591,7 @@ mod tests {
 
     #[test]
     fn test_u128_encode_decode() {
-        let t = VmTerm::Unsigned128(143254354354324324);
+        let t = VmTerm::Unsigned128(143_254_354_354_324_324);
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded[..1], &[0x07]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
@@ -1631,7 +1640,7 @@ mod tests {
 
     #[test]
     fn test_i32_encode_decode_negative() {
-        let t = VmTerm::Signed32(-1432543423);
+        let t = VmTerm::Signed32(-1_432_543_423);
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded[..1], &[0x0b]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
@@ -1639,7 +1648,7 @@ mod tests {
 
     #[test]
     fn test_i32_encode_decode_positive() {
-        let t = VmTerm::Signed32(1254324324);
+        let t = VmTerm::Signed32(1_254_324_324);
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded[..1], &[0x0b]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
@@ -1647,7 +1656,7 @@ mod tests {
 
     #[test]
     fn test_i64_encode_decode_negative() {
-        let t = VmTerm::Signed64(-143254423423);
+        let t = VmTerm::Signed64(-143_254_423_423);
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded[..1], &[0x0c]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
@@ -1655,7 +1664,7 @@ mod tests {
 
     #[test]
     fn test_i64_encode_decode_positive() {
-        let t = VmTerm::Signed64(143254324324);
+        let t = VmTerm::Signed64(143_254_324_324);
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded[..1], &[0x0c]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
@@ -1663,7 +1672,7 @@ mod tests {
 
     #[test]
     fn test_i128_encode_decode_negative() {
-        let t = VmTerm::Signed128(-143254432432423423423);
+        let t = VmTerm::Signed128(-143_254_432_432_423_423_423);
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded[..1], &[0x0d]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
@@ -1671,7 +1680,7 @@ mod tests {
 
     #[test]
     fn test_i128_encode_decode_positive() {
-        let t = VmTerm::Signed128(143254324324);
+        let t = VmTerm::Signed128(143_254_324_324);
         let encoded = crate::codec::encode_to_vec(&t).unwrap();
         assert_eq!(&encoded[..1], &[0x0d]);
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
