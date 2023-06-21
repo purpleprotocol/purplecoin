@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn encode_decode_fixed_u32_24() {
-        let to_encode: [u32; 14] = [0x01000000; 14];
+        let to_encode: [u32; 14] = [0x0100_0000; 14];
         let wrapper = TestWrapper(to_encode);
         let encoded = encode_to_vec(&wrapper).unwrap();
         assert_eq!(

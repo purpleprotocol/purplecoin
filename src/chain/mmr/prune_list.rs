@@ -334,7 +334,7 @@ impl<'a> PruneList<'a> {
 
     /// Convert the `prune_list` to a vec of pos.
     pub fn to_vec(&self) -> Vec<u64> {
-        self.bitmap.iter().map(|x| u64::from(x)).collect()
+        self.bitmap.iter().map(u64::from).collect()
     }
 
     /// Internal shift cache as slice.
@@ -356,7 +356,7 @@ impl<'a> PruneList<'a> {
 
     /// Iterator over the entries in the prune list (pruned roots).
     pub fn iter(&self) -> impl Iterator<Item = u64> + '_ {
-        self.bitmap.iter().map(|x| u64::from(x))
+        self.bitmap.iter().map(u64::from)
     }
 
     /// Iterator over the pruned "bintree range" for each pruned root.

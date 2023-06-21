@@ -1500,7 +1500,7 @@ mod tests {
         assert!(accumulator1.verify_membership_batch(&[], &proof_deleted));
         assert_eq!(proof_added.witness, proof_deleted.witness);
 
-        for e in elems.iter() {
+        for e in &elems {
             let witness = Witness(Accumulator::<Rsa2048, String>::empty());
             let witness = witness
                 .compute_subset_witness(&elems, &[e.clone()])
@@ -1518,7 +1518,7 @@ mod tests {
                 .is_err());
         }
 
-        for e in elemsminus1.iter() {
+        for e in &elemsminus1 {
             let witness = Witness(Accumulator::<Rsa2048, String>::empty());
             let witness3 = witness
                 .clone()
@@ -1586,7 +1586,7 @@ mod tests {
         let mut outs_vec: Vec<(Hash256, Witness<Rsa2048, Hash256>)> = vec![];
         let mut outs_vec2: Vec<(Hash256, Witness<Rsa2048, Hash256>)> = vec![];
 
-        for batch_size in batch_sizes.iter() {
+        for batch_size in &batch_sizes {
             let in_clone = input.clone();
             input.script.execute(
                 &input.script_args,
@@ -1621,7 +1621,7 @@ mod tests {
             let (accumulator2, pa) = witness_deleted.add_with_proof(&out_hashes);
             let mut witnesses = pa.witness.compute_individual_witnesses(&out_hashes);
             let half_len = out_hashes.len() >> 1;
-            for (e, witness) in witnesses.iter() {
+            for (e, witness) in &witnesses {
                 assert!(accumulator2
                     .prove_membership(&[(*e, witness.clone())])
                     .is_ok());
@@ -1669,28 +1669,28 @@ mod tests {
                 .unwrap();
 
             outs_vec = witness_all.clone().compute_individual_witnesses(&outs);
-            for (o, witness) in outs_vec.iter() {
+            for (o, witness) in &outs_vec {
                 assert!(accumulator2
                     .prove_membership(&[(*o, witness.clone())])
                     .is_ok());
             }
 
             let witnesses2 = witness_all2.clone().compute_individual_witnesses(&outs2);
-            for (o, witness) in witnesses2.iter() {
+            for (o, witness) in &witnesses2 {
                 assert!(accumulator2
                     .prove_membership(&[(*o, witness.clone())])
                     .is_ok());
             }
 
             let witnesses3 = witness_all3.clone().compute_individual_witnesses(&outs);
-            for (o, witness) in witnesses3.iter() {
+            for (o, witness) in &witnesses3 {
                 assert!(accumulator2
                     .prove_membership(&[(*o, witness.clone())])
                     .is_ok());
             }
 
             let witnesses4 = witness_all4.clone().compute_individual_witnesses(&outs2);
-            for (o, witness) in witnesses4.iter() {
+            for (o, witness) in &witnesses4 {
                 assert!(accumulator2
                     .prove_membership(&[(*o, witness.clone())])
                     .is_ok());

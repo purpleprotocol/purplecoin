@@ -4,6 +4,8 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+#![allow(clippy::all, clippy::pedantic, clippy::restriction, clippy::nursery)]
+
 use crate::primitives::{Hash256, PMMRIndexHashable};
 use bincode::Encode;
 use std::{ops::Range, u64};
@@ -104,7 +106,6 @@ pub fn bintree_leftmost(pos0: u64) -> u64 {
 }
 
 /// All pos in the subtree beneath the provided root, including root itself.
-#[allow(clippy::all)]
 pub fn bintree_range(pos0: u64) -> Range<u64> {
     let height = bintree_postorder_height(pos0);
     let leftmost = pos0 + 2 - (2 << height);

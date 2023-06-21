@@ -579,8 +579,8 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1654654645645),
-                VmTerm::Unsigned32(543543),
+                VmTerm::Unsigned64(1_654_654_645_645),
+                VmTerm::Unsigned32(543_543),
             ],
             hash: None,
         };
@@ -616,8 +616,8 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(155645654645),
-                VmTerm::Unsigned32(543543),
+                VmTerm::Unsigned64(155_645_654_645),
+                VmTerm::Unsigned32(543_543),
             ],
             hash: None,
         };

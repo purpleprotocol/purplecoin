@@ -85,7 +85,7 @@ mod tests {
                 .unwrap();
         }
 
-        for tx in txs.iter() {
+        for tx in &txs {
             assert_eq!(mempool.tx_map.get(tx.hash().unwrap()).unwrap(), tx as &_);
         }
     }

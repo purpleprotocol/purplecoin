@@ -4,7 +4,8 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-#[allow(clippy::all)]
+#![allow(clippy::all, clippy::pedantic, clippy::restriction, clippy::nursery)]
+
 use blake2::digest::{Update, VariableOutput};
 use blake2::Blake2bVar;
 use core::ffi::c_char;

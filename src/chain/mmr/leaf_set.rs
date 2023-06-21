@@ -151,6 +151,6 @@ impl<'a> LeafSet<'a> {
 
     /// Iterator over positionns in the `leaf_set` (all leaf positions).
     pub fn iter(&self) -> impl Iterator<Item = u64> + '_ {
-        self.bitmap.iter().map(|x| u64::from(x))
+        self.bitmap.iter().map(u64::from)
     }
 }

@@ -3265,7 +3265,27 @@ struct ScriptParser {
 macro_rules! impl_parser_expecting_bytes {
     ($self:expr, $op:expr, $len:expr) => {{
         $self.out.push(ScriptEntry::Opcode($op));
-        $self.state = ScriptParserState::ExpectingBytes($len);
+
+        match &$self.state {
+            ScriptParserState::ExpectingOP => {
+                $self.state = ScriptParserState::ExpectingBytes($len, None, true);
+            }
+
+            ScriptParserState::ExpectingOPButNotFuncOrEnd => {
+                $self.state = ScriptParserState::ExpectingBytes($len, None, false);
+            }
+
+            ScriptParserState::ExpectingOPCF(cf_stack, blocks_allowed) => {
+                $self.state = ScriptParserState::ExpectingBytes(
+                    $len,
+                    Some(cf_stack.clone()),
+                    *blocks_allowed,
+                );
+            }
+
+            _ => unreachable!(),
+        }
+
         Ok(())
     }};
 }
@@ -3273,7 +3293,29 @@ macro_rules! impl_parser_expecting_bytes {
 macro_rules! impl_parser_expecting_len {
     ($self:expr, $op:expr) => {{
         $self.out.push(ScriptEntry::Opcode($op));
-        $self.state = ScriptParserState::ExpectingLen($op, 0, 0);
+
+        match &$self.state {
+            ScriptParserState::ExpectingOP => {
+                $self.state = ScriptParserState::ExpectingLen($op, 0, 0, None, true);
+            }
+
+            ScriptParserState::ExpectingOPButNotFuncOrEnd => {
+                $self.state = ScriptParserState::ExpectingLen($op, 0, 0, None, false);
+            }
+
+            ScriptParserState::ExpectingOPCF(cf_stack, blocks_allowed) => {
+                $self.state = ScriptParserState::ExpectingLen(
+                    $op,
+                    0,
+                    0,
+                    Some(cf_stack.clone()),
+                    *blocks_allowed,
+                );
+            }
+
+            _ => unreachable!(),
+        }
+
         Ok(())
     }};
 }
@@ -3292,7 +3334,7 @@ impl ScriptParser {
             ScriptParserState::ExpectingArgsLen => {
                 self.out.push(ScriptEntry::Byte(byte));
                 if byte == 0x00 {
-                    self.state = ScriptParserState::ExpectingOP;
+                    self.state = ScriptParserState::ExpectingOPButNotFuncOrEnd;
                     Ok(())
                 } else {
                     let bitmaps = (byte >> 3) + 1;
@@ -3330,7 +3372,7 @@ impl ScriptParser {
                     malleable_args.push(check_bit!(byte, i));
                 }
                 self.malleable_args = malleable_args.clone();
-                self.state = ScriptParserState::ExpectingOP;
+                self.state = ScriptParserState::ExpectingOPButNotFuncOrEnd;
                 Ok(())
             }
 
@@ -3338,7 +3380,9 @@ impl ScriptParser {
                 unreachable!()
             }
 
-            ScriptParserState::ExpectingOP => match OP::from_u8(byte) {
+            ScriptParserState::ExpectingOP
+            | ScriptParserState::ExpectingOPButNotFuncOrEnd
+            | ScriptParserState::ExpectingOPCF(_, _) => match OP::from_u8(byte) {
                 Some(OP::Unsigned8Var) => impl_parser_expecting_bytes!(self, OP::Unsigned8Var, 1),
                 Some(OP::Signed8Var) => impl_parser_expecting_bytes!(self, OP::Unsigned8Var, 1),
                 Some(OP::Unsigned16Var) => impl_parser_expecting_bytes!(self, OP::Unsigned16Var, 2),
@@ -3398,6 +3442,64 @@ impl ScriptParser {
                 Some(OP::SignedBigArrayVar) => {
                     impl_parser_expecting_len!(self, OP::SignedBigArrayVar)
                 }
+                Some(OP::Func | OP::End)
+                    if matches!(self.state, ScriptParserState::ExpectingOPButNotFuncOrEnd) =>
+                {
+                    Err("did not expect a func or end opcode")
+                }
+                Some(OP::Func | OP::End)
+                    if matches!(self.state, ScriptParserState::ExpectingOP) =>
+                {
+                    unimplemented!()
+                }
+                Some(OP::End) if !matches!(self.state, ScriptParserState::ExpectingOPCF(_, _)) => {
+                    Err("invalid script, did not expect an end opcode")
+                }
+                Some(OP::End) if matches!(self.state, ScriptParserState::ExpectingOPCF(_, _)) => {
+                    self.out.push(ScriptEntry::Opcode(OP::End));
+                    let mut empty_cf_stack = false;
+                    let mut ba = false;
+                    if let ScriptParserState::ExpectingOPCF(ref mut cf_stack, blocks_allowed) =
+                        self.state
+                    {
+                        cf_stack.pop();
+                        if cf_stack.is_empty() {
+                            empty_cf_stack = true;
+                            ba = blocks_allowed;
+                        }
+                    } else {
+                        unreachable!();
+                    }
+                    if empty_cf_stack {
+                        if ba {
+                            self.state = ScriptParserState::ExpectingOP;
+                        } else {
+                            self.state = ScriptParserState::ExpectingOPButNotFuncOrEnd;
+                        }
+                    }
+                    Ok(())
+                }
+                Some(OP::Loop) if matches!(self.state, ScriptParserState::ExpectingOP) => {
+                    self.out.push(ScriptEntry::Opcode(OP::Loop));
+                    self.state = ScriptParserState::ExpectingOPCF(vec![OP::Loop], true);
+                    Ok(())
+                }
+                Some(OP::Loop)
+                    if matches!(self.state, ScriptParserState::ExpectingOPButNotFuncOrEnd) =>
+                {
+                    self.out.push(ScriptEntry::Opcode(OP::Loop));
+                    self.state = ScriptParserState::ExpectingOPCF(vec![OP::Loop], false);
+                    Ok(())
+                }
+                Some(OP::Loop) if matches!(self.state, ScriptParserState::ExpectingOPCF(_, _)) => {
+                    self.out.push(ScriptEntry::Opcode(OP::Loop));
+                    if let ScriptParserState::ExpectingOPCF(ref mut cf_stack, _) = self.state {
+                        cf_stack.push(OP::Loop);
+                    } else {
+                        unreachable!();
+                    }
+                    Ok(())
+                }
                 Some(op) => {
                     self.out.push(ScriptEntry::Opcode(op));
                     Ok(())
@@ -3405,18 +3507,36 @@ impl ScriptParser {
                 None => Err("invalid op"),
             },
 
-            ScriptParserState::ExpectingBytes(ref mut i) => {
+            ScriptParserState::ExpectingBytes(ref mut i, cf_stack, blocks_allowed) => {
                 self.out.push(ScriptEntry::Byte(byte));
                 *i -= 1;
 
                 if *i == 0 {
-                    self.state = ScriptParserState::ExpectingOP;
+                    match cf_stack {
+                        Some(cf_stack) => {
+                            self.state =
+                                ScriptParserState::ExpectingOPCF(cf_stack.clone(), *blocks_allowed);
+                        }
+                        None => {
+                            if *blocks_allowed {
+                                self.state = ScriptParserState::ExpectingOP;
+                            } else {
+                                self.state = ScriptParserState::ExpectingOPButNotFuncOrEnd;
+                            }
+                        }
+                    }
                 }
 
                 Ok(())
             }
 
-            ScriptParserState::ExpectingLen(op, ref mut sum, ref mut i) => {
+            ScriptParserState::ExpectingLen(
+                op,
+                ref mut sum,
+                ref mut i,
+                cf_stack,
+                blocks_allowed,
+            ) => {
                 self.out.push(ScriptEntry::Byte(byte));
                 let b = u16::from(byte);
                 if *i == 0 {
@@ -3429,39 +3549,75 @@ impl ScriptParser {
                 if *i == 2 {
                     match op {
                         OP::Hash160ArrayVar => {
-                            self.state = ScriptParserState::ExpectingBytes((*sum * 20) as usize);
+                            self.state = ScriptParserState::ExpectingBytes(
+                                (*sum * 20) as usize,
+                                cf_stack.clone(),
+                                *blocks_allowed,
+                            );
                             Ok(())
                         }
                         OP::Hash256ArrayVar => {
-                            self.state = ScriptParserState::ExpectingBytes((*sum * 32) as usize);
+                            self.state = ScriptParserState::ExpectingBytes(
+                                (*sum * 32) as usize,
+                                cf_stack.clone(),
+                                *blocks_allowed,
+                            );
                             Ok(())
                         }
                         OP::Hash512ArrayVar => {
-                            self.state = ScriptParserState::ExpectingBytes((*sum * 64) as usize);
+                            self.state = ScriptParserState::ExpectingBytes(
+                                (*sum * 64) as usize,
+                                cf_stack.clone(),
+                                *blocks_allowed,
+                            );
                             Ok(())
                         }
                         OP::Unsigned8ArrayVar | OP::Signed8ArrayVar => {
-                            self.state = ScriptParserState::ExpectingBytes((*sum) as usize);
+                            self.state = ScriptParserState::ExpectingBytes(
+                                (*sum) as usize,
+                                cf_stack.clone(),
+                                *blocks_allowed,
+                            );
                             Ok(())
                         }
                         OP::Unsigned16ArrayVar | OP::Signed16ArrayVar => {
-                            self.state = ScriptParserState::ExpectingBytes((*sum * 2) as usize);
+                            self.state = ScriptParserState::ExpectingBytes(
+                                (*sum * 2) as usize,
+                                cf_stack.clone(),
+                                *blocks_allowed,
+                            );
                             Ok(())
                         }
                         OP::Unsigned32ArrayVar | OP::Signed32ArrayVar => {
-                            self.state = ScriptParserState::ExpectingBytes((*sum * 4) as usize);
+                            self.state = ScriptParserState::ExpectingBytes(
+                                (*sum * 4) as usize,
+                                cf_stack.clone(),
+                                *blocks_allowed,
+                            );
                             Ok(())
                         }
                         OP::Unsigned64ArrayVar | OP::Signed64ArrayVar => {
-                            self.state = ScriptParserState::ExpectingBytes((*sum * 8) as usize);
+                            self.state = ScriptParserState::ExpectingBytes(
+                                (*sum * 8) as usize,
+                                cf_stack.clone(),
+                                *blocks_allowed,
+                            );
                             Ok(())
                         }
                         OP::Unsigned128ArrayVar | OP::Signed128ArrayVar => {
-                            self.state = ScriptParserState::ExpectingBytes((*sum * 16) as usize);
+                            self.state = ScriptParserState::ExpectingBytes(
+                                (*sum * 16) as usize,
+                                cf_stack.clone(),
+                                *blocks_allowed,
+                            );
                             Ok(())
                         }
                         OP::UnsignedBigArrayVar | OP::SignedBigArrayVar => {
-                            self.state = ScriptParserState::ExpectingBytes((*sum * 32) as usize);
+                            self.state = ScriptParserState::ExpectingBytes(
+                                (*sum * 32) as usize,
+                                cf_stack.clone(),
+                                *blocks_allowed,
+                            );
                             Ok(())
                         }
                         _ => unreachable!(),
@@ -3599,13 +3755,13 @@ enum ScriptParserState {
     ExpectingOPButNotFuncOrEnd,
 
     /// Expecting any OP while also tracking the Control Flow
-    ExpectingOPCF(Vec<OP>),
+    ExpectingOPCF(Vec<OP>, bool),
 
     /// Expecting n bytes. The state tuple is (num_bytes, cf_stack, funcs_allowed)
-    ExpectingBytes(usize, Option<Vec<()>>, bool),
+    ExpectingBytes(usize, Option<Vec<OP>>, bool),
 
     /// Expecting length for for OP
-    ExpectingLen(OP, u16, usize),
+    ExpectingLen(OP, u16, usize, Option<Vec<OP>>, bool),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -3756,7 +3912,7 @@ mod tests {
                 let inputs_hashes = vec![acc.0, inputs_hash.0]
                     .iter()
                     .flatten()
-                    .cloned()
+                    .copied()
                     .collect::<Vec<_>>();
                 acc = Hash160::hash_from_slice(inputs_hashes.as_slice(), key);
                 acc
@@ -3785,12 +3941,15 @@ mod tests {
     #[test]
     fn it_parses_script_with_only_main() {
         let script: Vec<u8> = vec![
-            0x14, // Script length
+            0x17, // Script length
             0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
             0x00, // Script flags
             0x23, // OP_Unsigned8Var,
             0x00, // Push 0 to the stack
             0x57, // OP_Loop
+            0x57, // OP_Loop
+            0x58, // OP_Break
+            0xb6, // OP_End
             0x70, // OP_Pick,
             0x03, // Pick at index 3
             0x70, // OP_Pick,
@@ -3814,6 +3973,9 @@ mod tests {
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Loop),
+                ScriptEntry::Opcode(OP::Break),
+                ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x03),
                 ScriptEntry::Opcode(OP::Pick),
@@ -3866,7 +4028,7 @@ mod tests {
             0xb7, // OP_Verify
         ];
 
-        assert!(crate::codec::decode::<Vec<u8>>(&script).is_err());
+        assert!(crate::codec::decode::<Script>(&script).is_err());
     }
 
     #[test]
@@ -3894,7 +4056,7 @@ mod tests {
             0xb7, // OP_Verify
         ];
 
-        assert!(crate::codec::decode::<Vec<u8>>(&script).is_err());
+        assert!(crate::codec::decode::<Script>(&script).is_err());
     }
 
     #[test]
@@ -3924,7 +4086,7 @@ mod tests {
             0xb7, // OP_Verify
         ];
 
-        assert!(crate::codec::decode::<Vec<u8>>(&script).is_err());
+        assert!(crate::codec::decode::<Script>(&script).is_err());
     }
 
     // #[test]
@@ -3934,13 +4096,13 @@ mod tests {
 
     #[test]
     fn set_bit() {
-        assert_eq!(set_bit!(0_u8, 0_u8, 1_u8), 0b00000001);
+        assert_eq!(set_bit!(0_u8, 0_u8, 1_u8), 0b0000_0001);
     }
 
     #[test]
     fn check_bit() {
-        assert!(check_bit!(0b00000001, 0));
-        assert!(!check_bit!(0b00000000, 0));
+        assert!(check_bit!(0b0000_0001, 0));
+        assert!(!check_bit!(0b0000_0000, 0));
     }
 
     #[test]
@@ -7188,9 +7350,9 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned32(0x00000011),
-            VmTerm::Unsigned32(0x00002301),
-            VmTerm::Unsigned32(0x00000123),
+            VmTerm::Unsigned32(0x0000_0011),
+            VmTerm::Unsigned32(0x0000_2301),
+            VmTerm::Unsigned32(0x0000_0123),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -7254,9 +7416,9 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned64(0x0000000000000011),
-            VmTerm::Unsigned64(0x0123000000002301),
-            VmTerm::Unsigned64(0x0123000000000123),
+            VmTerm::Unsigned64(0x0000_0000_0000_0011),
+            VmTerm::Unsigned64(0x0123_0000_0000_2301),
+            VmTerm::Unsigned64(0x0123_0000_0000_0123),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -7326,8 +7488,8 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned128(0x22000000000000000123000000002301),
-            VmTerm::Unsigned128(0x11000000000000000123000000000123),
+            VmTerm::Unsigned128(0x2200_0000_0000_0000_0123_0000_0000_2301),
+            VmTerm::Unsigned128(0x1100_0000_0000_0000_0123_0000_0000_0123),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -7427,9 +7589,9 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Signed32(0x00000011),
-            VmTerm::Signed32(0x00002301),
-            VmTerm::Signed32(0x00000123),
+            VmTerm::Signed32(0x0000_0011),
+            VmTerm::Signed32(0x0000_2301),
+            VmTerm::Signed32(0x0000_0123),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -7493,9 +7655,9 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Signed64(0x0000000000000011),
-            VmTerm::Signed64(0x0123000000002301),
-            VmTerm::Signed64(0x0123000000000123),
+            VmTerm::Signed64(0x0000_0000_0000_0011),
+            VmTerm::Signed64(0x0123_0000_0000_2301),
+            VmTerm::Signed64(0x0123_0000_0000_0123),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -7565,8 +7727,8 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Signed128(0x22000000000000000123000000002301),
-            VmTerm::Signed128(0x11000000000000000123000000000123),
+            VmTerm::Signed128(0x2200_0000_0000_0000_0123_0000_0000_2301),
+            VmTerm::Signed128(0x1100_0000_0000_0000_0123_0000_0000_0123),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -8290,9 +8452,14 @@ mod tests {
 
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Unsigned32Array(vec![
-                0xa5f6af41, 0x75167536, 0x75167536, 0x75167536, 0x75167536, 0xa5f6af41,
+                0xa5f6_af41,
+                0x7516_7536,
+                0x7516_7536,
+                0x7516_7536,
+                0x7516_7536,
+                0xa5f6_af41,
             ]),
-            VmTerm::Unsigned32Array(vec![0x01fe7814, 0x75167536, 0xa5f6af41, 0x75167536]),
+            VmTerm::Unsigned32Array(vec![0x01fe_7814, 0x7516_7536, 0xa5f6_af41, 0x7516_7536]),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -8415,18 +8582,18 @@ mod tests {
 
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Unsigned64Array(vec![
-                0xa5f6af41a5f6af41,
-                0x7516753675167536,
-                0x7516753675167536,
-                0x7516753675167536,
-                0x7516753675167536,
-                0xa5f6af41a5f6af41,
+                0xa5f6_af41_a5f6_af41,
+                0x7516_7536_7516_7536,
+                0x7516_7536_7516_7536,
+                0x7516_7536_7516_7536,
+                0x7516_7536_7516_7536,
+                0xa5f6_af41_a5f6_af41,
             ]),
             VmTerm::Unsigned64Array(vec![
-                0x01fe781401fe7814,
-                0x7516753675167536,
-                0xa5f6af41a5f6af41,
-                0x7516753675167536,
+                0x01fe_7814_01fe_7814,
+                0x7516_7536_7516_7536,
+                0xa5f6_af41_a5f6_af41,
+                0x7516_7536_7516_7536,
             ]),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
@@ -8550,13 +8717,13 @@ mod tests {
 
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Unsigned128Array(vec![
-                0x7516753675167536a5f6af41a5f6af41,
-                0x75167536751675367516753675167536,
-                0xa5f6af41a5f6af417516753675167536,
+                0x7516_7536_7516_7536_a5f6_af41_a5f6_af41,
+                0x7516_7536_7516_7536_7516_7536_7516_7536,
+                0xa5f6_af41_a5f6_af41_7516_7536_7516_7536,
             ]),
             VmTerm::Unsigned128Array(vec![
-                0x751675367516753601fe781401fe7814,
-                0x7516753675167536a5f6af41a5f6af41,
+                0x7516_7536_7516_7536_01fe_7814_01fe_7814,
+                0x7516_7536_7516_7536_a5f6_af41_a5f6_af41,
             ]),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
@@ -8756,9 +8923,14 @@ mod tests {
 
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Signed32Array(vec![
-                0x15f6af41, 0x75167536, 0x75167536, 0x75167536, 0x75167536, 0x15f6af41,
+                0x15f6_af41,
+                0x7516_7536,
+                0x7516_7536,
+                0x7516_7536,
+                0x7516_7536,
+                0x15f6_af41,
             ]),
-            VmTerm::Signed32Array(vec![0x01fe7814, 0x75167536, 0x15f6af41, 0x75167536]),
+            VmTerm::Signed32Array(vec![0x01fe_7814, 0x7516_7536, 0x15f6_af41, 0x7516_7536]),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -8881,18 +9053,18 @@ mod tests {
 
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Signed64Array(vec![
-                0x15f6af41a5f6af41,
-                0x7516753675167536,
-                0x7516753675167536,
-                0x7516753675167536,
-                0x7516753675167536,
-                0x15f6af41a5f6af41,
+                0x15f6_af41_a5f6_af41,
+                0x7516_7536_7516_7536,
+                0x7516_7536_7516_7536,
+                0x7516_7536_7516_7536,
+                0x7516_7536_7516_7536,
+                0x15f6_af41_a5f6_af41,
             ]),
             VmTerm::Signed64Array(vec![
-                0x01fe781401fe7814,
-                0x7516753675167536,
-                0x15f6af41a5f6af41,
-                0x7516753675167536,
+                0x01fe_7814_01fe_7814,
+                0x7516_7536_7516_7536,
+                0x15f6_af41_a5f6_af41,
+                0x7516_7536_7516_7536,
             ]),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
@@ -9016,13 +9188,13 @@ mod tests {
 
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Signed128Array(vec![
-                0x7516753675167536a5f6af41a5f6af41,
-                0x75167536751675367516753675167536,
-                0x15f6af41a5f6af417516753675167536,
+                0x7516_7536_7516_7536_a5f6_af41_a5f6_af41,
+                0x7516_7536_7516_7536_7516_7536_7516_7536,
+                0x15f6_af41_a5f6_af41_7516_7536_7516_7536,
             ]),
             VmTerm::Signed128Array(vec![
-                0x751675367516753601fe781401fe7814,
-                0x7516753675167536a5f6af41a5f6af41,
+                0x7516_7536_7516_7536_01fe_7814_01fe_7814,
+                0x7516_7536_7516_7536_a5f6_af41_a5f6_af41,
             ]),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
@@ -10185,11 +10357,11 @@ mod tests {
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
 
         let mut script_output: Vec<VmTerm> = vec![];
-        for term in test_terms.iter() {
+        for term in &test_terms {
             let hashed_term_256 = bifs::blake2b_256(term);
             script_output.push(hashed_term_256);
         }
-        for term in test_terms.iter() {
+        for term in &test_terms {
             let hashed_term_512 = bifs::blake2b_512(term);
             script_output.push(hashed_term_512);
         }

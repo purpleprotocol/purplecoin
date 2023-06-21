@@ -157,6 +157,7 @@ impl Address {
     }
 
     #[cfg(test)]
+    #[must_use]
     pub fn random() -> Self {
         Self(rand::thread_rng().gen())
     }
@@ -453,7 +454,7 @@ impl Element for Hash256 {
     }
 
     fn from_slice(bytes: &[u8]) -> Self {
-        assert!(!(bytes.len() != Self::byte_len()), "invalid slice len");
+        assert!(bytes.len() == Self::byte_len(), "invalid slice len");
 
         let mut out = [0; 32];
         out.copy_from_slice(bytes);
