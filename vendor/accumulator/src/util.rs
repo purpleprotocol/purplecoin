@@ -114,11 +114,7 @@ mod tests {
     /// Merge-based computation of `Integer` array products. Faster than  the iterative
     /// `iter.product()` for really large integers.
     fn merge_product(xs: &[Integer]) -> Integer {
-        divide_and_conquer(
-            |a, b| -> Result<Integer, Never> { Ok(int(a * b)) },
-            &xs,
-        )
-        .unwrap()
+        divide_and_conquer(|a, b| -> Result<Integer, Never> { Ok(int(a * b)) }, &xs).unwrap()
     }
 
     #[test]
