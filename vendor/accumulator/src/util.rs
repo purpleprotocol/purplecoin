@@ -69,7 +69,7 @@ pub fn solve_linear_congruence(
     m: &Integer,
 ) -> Option<(Integer, Integer)> {
     // g = gcd(a, m) => da + em = g
-    let (g, d, _) = <(Integer, Integer, Integer)>::from(a.gcd_cofactors_ref(m));
+    let (g, d, _) = <(Integer, Integer, Integer)>::from(a.extended_gcd_ref(m));
 
     // q = floor_div(b, g)
     // r = b % g
@@ -116,7 +116,6 @@ mod tests {
     fn merge_product(xs: &[Integer]) -> Integer {
         divide_and_conquer(
             |a, b| -> Result<Integer, Never> { Ok(int(a * b)) },
-            int(1),
             &xs,
         )
         .unwrap()
