@@ -28,7 +28,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [ ] Implement suspendable transactions i.e. transactions that execute over several blocks.
   - [ ] Implement optimal atomic asset exchange script and use it as a default script
   * [ ] Implement VM opcodes
-    - [ ] OP `0x00` Func - Start a function definition
+    - [x] OP `0x00` Func - Start a function definition
     - [ ] OP `0x05` Suspend - Suspends execution of the VM and creates an opaque output with the hash of the current execution state i.e. stack frame + input_stack + output_stack. This output can be respent to resume execution by anyone who includes it in a new transaction along with another input to pay the transaction fees. The VM must be started with special flags to resume the execution of the opaque output which must receive as arguments in the new transaction the following things: the original spending script, and the VM state binary blob. 
     - [ ] OP `0x07` ChainId - Pushes the current `chain_id` onto the stack
     - [ ] OP `0x08` ChainHeight - Pushes the current `chain_height` onto the stack

@@ -3292,12 +3292,12 @@ impl Decode for Script {
                 .map_err(|err| bincode::error::DecodeError::OtherString(err.to_owned()))?;
         }
 
-        let (script, malleable_args) = script_parser.out();
+        let (script, malleable_args, functions) = script_parser.out();
 
         Ok(Self {
             script,
+            functions,
             malleable_args,
-            ..Script::default()
         })
     }
 }
@@ -3306,11 +3306,23 @@ struct ScriptParser {
     state: ScriptParserState,
     out: Vec<ScriptEntry>,
     malleable_args: Vec<bool>,
+    current_func: Option<Vec<ScriptEntry>>,
+    functions: Vec<Vec<ScriptEntry>>,
+}
+
+macro_rules! push_out {
+    ($self:expr, $entry:expr) => {{
+        if let Some(ref mut func) = &mut $self.current_func {
+            func.push($entry);
+        } else {
+            $self.out.push($entry);
+        }
+    }};
 }
 
 macro_rules! impl_parser_expecting_bytes {
     ($self:expr, $op:expr, $len:expr) => {{
-        $self.out.push(ScriptEntry::Opcode($op));
+        push_out!($self, ScriptEntry::Opcode($op));
 
         match &$self.state {
             ScriptParserState::ExpectingOP => {
@@ -3338,7 +3350,7 @@ macro_rules! impl_parser_expecting_bytes {
 
 macro_rules! impl_parser_expecting_len {
     ($self:expr, $op:expr) => {{
-        $self.out.push(ScriptEntry::Opcode($op));
+        push_out!($self, ScriptEntry::Opcode($op));
 
         match &$self.state {
             ScriptParserState::ExpectingOP => {
@@ -3372,6 +3384,16 @@ impl ScriptParser {
             state: ScriptParserState::ExpectingArgsLen,
             out: Vec::with_capacity(len),
             malleable_args: vec![],
+            current_func: None,
+            functions: vec![],
+        }
+    }
+
+    fn _out(&mut self) -> &mut Vec<ScriptEntry> {
+        if let Some(ref mut func) = &mut self.current_func {
+            func
+        } else {
+            &mut self.out
         }
     }
 
@@ -3391,6 +3413,12 @@ impl ScriptParser {
                     );
                     Ok(())
                 }
+            }
+
+            ScriptParserState::ExpectingFuncArgsLen => {
+                push_out!(self, ScriptEntry::Byte(byte));
+                self.state = ScriptParserState::ExpectingOP;
+                Ok(())
             }
 
             ScriptParserState::ExpectingScriptFlags(
@@ -3493,16 +3521,27 @@ impl ScriptParser {
                 {
                     Err("did not expect a func or end opcode")
                 }
-                Some(OP::Func | OP::End)
-                    if matches!(self.state, ScriptParserState::ExpectingOP) =>
-                {
-                    unimplemented!()
+                Some(OP::Func) if matches!(self.state, ScriptParserState::ExpectingOP) => {
+                    if self.current_func.is_some() {
+                        return Err("invalid function declaration, did not expect an OP_Func");
+                    }
+                    self.current_func = Some(vec![]);
+                    self.state = ScriptParserState::ExpectingFuncArgsLen;
+                    Ok(())
+                }
+                Some(OP::End) if matches!(self.state, ScriptParserState::ExpectingOP) => {
+                    if self.current_func.is_none() {
+                        return Err("invalid function declaration, did not expect an OP_End");
+                    }
+                    let func = self.current_func.take().unwrap();
+                    self.functions.push(func);
+                    Ok(())
                 }
                 Some(OP::End) if !matches!(self.state, ScriptParserState::ExpectingOPCF(_, _)) => {
                     Err("invalid script, did not expect an end opcode")
                 }
                 Some(OP::End) if matches!(self.state, ScriptParserState::ExpectingOPCF(_, _)) => {
-                    self.out.push(ScriptEntry::Opcode(OP::End));
+                    push_out!(self, ScriptEntry::Opcode(OP::End));
                     let mut empty_cf_stack = false;
                     let mut ba = false;
                     if let ScriptParserState::ExpectingOPCF(ref mut cf_stack, blocks_allowed) =
@@ -3526,19 +3565,19 @@ impl ScriptParser {
                     Ok(())
                 }
                 Some(OP::Loop) if matches!(self.state, ScriptParserState::ExpectingOP) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Loop));
+                    push_out!(self, ScriptEntry::Opcode(OP::Loop));
                     self.state = ScriptParserState::ExpectingOPCF(vec![OP::Loop], true);
                     Ok(())
                 }
                 Some(OP::Loop)
                     if matches!(self.state, ScriptParserState::ExpectingOPButNotFuncOrEnd) =>
                 {
-                    self.out.push(ScriptEntry::Opcode(OP::Loop));
+                    push_out!(self, ScriptEntry::Opcode(OP::Loop));
                     self.state = ScriptParserState::ExpectingOPCF(vec![OP::Loop], false);
                     Ok(())
                 }
                 Some(OP::Loop) if matches!(self.state, ScriptParserState::ExpectingOPCF(_, _)) => {
-                    self.out.push(ScriptEntry::Opcode(OP::Loop));
+                    push_out!(self, ScriptEntry::Opcode(OP::Loop));
                     if let ScriptParserState::ExpectingOPCF(ref mut cf_stack, _) = self.state {
                         cf_stack.push(OP::Loop);
                     } else {
@@ -3546,15 +3585,33 @@ impl ScriptParser {
                     }
                     Ok(())
                 }
+                Some(OP::Call) => {
+                    push_out!(self, ScriptEntry::Opcode(OP::Call));
+
+                    match &self.state {
+                        ScriptParserState::ExpectingOPButNotFuncOrEnd => {
+                            self.state = ScriptParserState::ExpectingBytes(1, None, true);
+                        }
+                        ScriptParserState::ExpectingOPCF(cf_stack, allows_funcs)
+                            if !*allows_funcs =>
+                        {
+                            self.state =
+                                ScriptParserState::ExpectingBytes(1, Some(cf_stack.clone()), true);
+                        }
+                        _ => {} // Do nothing
+                    }
+
+                    Ok(())
+                }
                 Some(op) => {
-                    self.out.push(ScriptEntry::Opcode(op));
+                    push_out!(self, ScriptEntry::Opcode(op));
                     Ok(())
                 }
                 None => Err("invalid op"),
             },
 
             ScriptParserState::ExpectingBytes(ref mut i, cf_stack, blocks_allowed) => {
-                self.out.push(ScriptEntry::Byte(byte));
+                push_out!(self, ScriptEntry::Byte(byte));
                 *i -= 1;
 
                 if *i == 0 {
@@ -3583,7 +3640,7 @@ impl ScriptParser {
                 cf_stack,
                 blocks_allowed,
             ) => {
-                self.out.push(ScriptEntry::Byte(byte));
+                push_out!(self, ScriptEntry::Byte(byte));
                 let b = u16::from(byte);
                 if *i == 0 {
                     *sum += b;
@@ -3675,8 +3732,8 @@ impl ScriptParser {
         }
     }
 
-    pub fn out(self) -> (Vec<ScriptEntry>, Vec<bool>) {
-        (self.out, self.malleable_args)
+    pub fn out(self) -> (Vec<ScriptEntry>, Vec<bool>, Vec<Vec<ScriptEntry>>) {
+        (self.out, self.malleable_args, self.functions)
     }
 }
 
@@ -3790,6 +3847,9 @@ impl From<Result<ExecutionResult, (ExecutionResult, StackTrace)>> for VmResult {
 enum ScriptParserState {
     /// Expecting main function arguments length
     ExpectingArgsLen,
+
+    /// Expecting function arguments length
+    ExpectingFuncArgsLen,
 
     /// Expecting script flags. The state tuple is (remaining_bitmaps, args_len, bitmaps_vec)
     ExpectingScriptFlags(u8, u8, Vec<bool>),
