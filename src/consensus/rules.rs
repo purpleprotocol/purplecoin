@@ -93,8 +93,8 @@ pub fn money_check(amount: Money) -> bool {
 #[must_use]
 pub fn map_height_to_block_reward(height: u64) -> Money {
     let h = cmp::min(
-        i128::from(height) / i128::from(HALVING_INTERVAL),
-        i128::from(MAX_HALVINGS),
+        Money::from(height) / Money::from(HALVING_INTERVAL),
+        Money::from(MAX_HALVINGS),
     );
     INITIAL_BLOCK_REWARD >> h
 }
