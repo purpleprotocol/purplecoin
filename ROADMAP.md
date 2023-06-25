@@ -145,14 +145,14 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x8f` FlushToScriptOuts - Flushes the terms on the current frame to the script outputs stack
     - [x] OP `0x90` PopToScriptOuts - Pops the topmost item on the stack and pushes it to the script outputs stack
     - [x] OP `0x91` PickToScriptOuts - Duplicates the `n`th item on the stack and pushes it to the script outputs stack
-    - [ ] OP `0x92` TrapIf - Traps if
-    - [ ] OP `0x93` TrapIfEq - Traps if the two topmost items on the stack are equal
-    - [ ] OP `0x94` TrapIfNeq - Traps if the two topmost items onf the stack are not equal
-    - [ ] OP `0x95` TrapIfLeq - Traps if the first item on the stack is less than the second
-    - [ ] OP `0x96` TrapIfGeq - Traps if the second item on the stack is greater or equal than the second
-    - [ ] OP `0x97` TrapIfGt - Traps if the first item on the stack is greater than the second
-    - [ ] OP `0x98` TrapIfLt - Traps if the first item on the stack lesser than the second
-    - [ ] OP `0x99` TrapIfNeqType - Pops the first item on the stack and traps if its type not equal to the given type id
+    - [x] OP `0x92` TrapIf - Traps if
+    - [x] OP `0x93` TrapIfEq - Traps if the two topmost items on the stack are equal
+    - [x] OP `0x94` TrapIfNeq - Traps if the two topmost items onf the stack are not equal
+    - [x] OP `0x95` TrapIfLeq - Traps if the first item on the stack is less than the second
+    - [x] OP `0x96` TrapIfGeq - Traps if the second item on the stack is greater or equal than the second
+    - [x] OP `0x97` TrapIfGt - Traps if the first item on the stack is greater than the second
+    - [x] OP `0x98` TrapIfLt - Traps if the first item on the stack lesser than the second
+    - [x] OP `0x99` TrapIfNeqType - Pops the first item on the stack and traps if its type not equal to the given type id
     - [ ] OP `0x9a` ToHex - Converts the topmost item on the stack to hexadecimal
     - [ ] OP `0x9b` FromHex - Parses the topmost item on the stack from hexadecimal
     - [ ] OP `0xa0` VerifyEd25519 - Takes the given public key and signature, and pushes them along with the current output's binary format to the Ed25519 signature verification stack and stops script execution.
