@@ -85,9 +85,9 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x51` Sub - Pops the two topmost items on the stack, performs subtraction and pushes the result on the stack
     - [x] OP `0x52` Mult - Pops the two topmost items on the stack, performs multiplication and pushes the result on the stack
     - [x] OP `0x53` Div - Pops the two topmost items on the stack, performs division and pushes the result on the stack
-    - [ ] OP `0x54` BitSHLeft - Pops the two topmost items on the stack, performs a left bit shift operation on the first operand and then pushes the result on the stack
-    - [ ] OP `0x55` BitSHRight - Pops the two topmost items on the stack, performs a right bit shift operation on the first operand and then pushes the result on the stack
-    - [ ] OP `0x56` BitXOR - Pops the two topmost items on the stack, performs bit exclusive OR on the operands and then pushes the result on the stack
+    - [x] OP `0x54` BitSHLeft - Pops the two topmost items on the stack, performs a left bit shift operation on the first operand and then pushes the result on the stack
+    - [x] OP `0x55` BitSHRight - Pops the two topmost items on the stack, performs a right bit shift operation on the first operand and then pushes the result on the stack
+    - [x] OP `0x56` BitXOR - Pops the two topmost items on the stack, performs bit exclusive OR on the operands and then pushes the result on the stack
     - [x] OP `0x57` Loop - Starts a loop block
     - [x] OP `0x58` Break - Breaks the current loop
     - [x] OP `0x59` BreakIf - Breaks the current loop if the topmost item on the stack is `1`
@@ -126,8 +126,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x7a` Swap2 - Swaps the topmost pairs of terms on top of the stack
     - [x] OP `0x7b` Size - Pushes the size in bytes of the topmost item on the stack
     - [ ] OP `0x7c` Substr - Splits the given array at position n and pushes both arrays to the top of the stack
-    - [ ] OP `0x7d` BitOR -  Pops the two topmost items on the stack, performs bit OR on the operands and then pushes the result on the stack
-    - [ ] OP `0x7e` BitInvert - Inverts all bits of the topmost item on the stack
+    - [x] OP `0x7d` BitOR -  Pops the two topmost items on the stack, performs bit OR on the operands and then pushes the result on the stack
+    - [x] OP `0x7e` BitInvert - Inverts all bits of the topmost item on the stack
     - [ ] OP `0x7f` DupAll - Duplicates the whole stack
     - [ ] OP `0x80` IsUTF8 - Pushes `1` on top of the stack if the given `Unsigned8Array` is a valid UTF8 byte sequence
     - [x] OP `0x82` Add1 - Adds `1` to the topmost item on the stack
