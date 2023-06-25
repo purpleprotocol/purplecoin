@@ -478,14 +478,16 @@ impl Script {
                                 let e = frame.stack.pop().unwrap();
                                 memory_size -= e.size();
 
+                                println!("{:?} {:?}", e.get_type(), *byte);
+
                                 if e.get_type() == *byte {
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                } else {
                                     frame.executor.state = ScriptExecutorState::Error(
                                         ExecutionResult::Panic,
                                         (frame.i_ptr, frame.func_idx, i.clone(), frame.stack.as_slice()).into(),
                                     );
-                                } else {
-                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                    frame.i_ptr += 1;
                                 }
                             } else {
                                 unreachable!()
@@ -4322,6 +4324,25 @@ mod tests {
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
+        );
+    }
+
+    fn assert_script_panic_fail(mut script: Script, outputs: Vec<VmTerm>, key: &str) {
+        script.populate_malleable_args_field();
+        let base: TestBaseArgs = get_test_base_args(&mut script, 30, outputs, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+        assert_eq!(
+            script.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Err((ExecutionResult::Panic, StackTrace::default())).into()
         );
     }
 
@@ -12265,6 +12286,448 @@ mod tests {
         let mut script_output: Vec<VmTerm> = vec![
             VmTerm::Unsigned8Array(vec![0x11, 0x11]),
             VmTerm::Unsigned16Array(vec![0x6811, 0x6811]),
+        ];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_traps() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Trap),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_panic_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_traps_if_value_equals_to_one() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::TrapIf),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_panic_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_doesnt_trap_if_value_doenst_equal_one() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::TrapIf),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_traps_if_values_equal() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::TrapIfEq),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_panic_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_doesnt_trap_if_values_are_not_equal() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::TrapIfEq),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_traps_if_values_are_not_equal() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::TrapIfNeq),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_panic_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_doesnt_trap_if_values_are_equal() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::TrapIfNeq),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_traps_if_top_item_is_less_or_equal_to_second() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::TrapIfLeq),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_panic_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_traps_if_top_item_is_less_or_equal_to_second_2() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::TrapIfLeq),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_panic_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_doesnt_trap_if_top_item_is_not_less_or_equal_to_second() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::TrapIfLeq),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_traps_if_top_item_is_greater_or_equal_to_second() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::TrapIfGeq),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_panic_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_traps_if_top_item_is_greater_or_equal_to_second_2() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::TrapIfGeq),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_panic_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_doesnt_trap_if_top_item_is_not_greater_or_equal_to_second() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::TrapIfGeq),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_traps_if_top_item_is_less_than_the_second() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::TrapIfLt),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_panic_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_doesnt_trap_if_top_item_is_not_less_than_the_second() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::TrapIfLt),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_doesnt_trap_if_top_item_is_not_less_than_the_second_2() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::TrapIfLt),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_traps_if_top_item_is_greater_than_the_second() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::TrapIfGt),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_panic_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_doesnt_trap_if_top_item_is_not_greater_than_the_second() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::TrapIfGt),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_doesnt_trap_if_top_item_is_not_greater_than_the_second_2() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::TrapIfGt),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_traps_if_top_item_type_is_not_same_as_given() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned32Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned16Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::TrapIfNeqType),
+                ScriptEntry::Byte(0xaa),
+                ScriptEntry::Opcode(OP::Unsigned32Var),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned32(0x04040404),
+            VmTerm::Unsigned32(0x01010101),
+        ];
+        assert_script_panic_fail(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_doesnt_trap_if_top_item_type_is_same_as_given() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned32Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned16Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::TrapIfNeqType),
+                ScriptEntry::Byte(0x04), // Type for Unsigned16Var
+                ScriptEntry::Opcode(OP::Unsigned32Var),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned32(0x04040404),
+            VmTerm::Unsigned32(0x01010101),
         ];
         assert_script_ok(ss, script_output, key);
     }
