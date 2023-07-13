@@ -28,6 +28,7 @@ lru = "0.8.1"
 jump-consistent-hash = "0.1.0"
 rand = "0.8.5"
 parking_lot = "0.12.1"
+bitvec = "1.0.1"
 
 [dependencies.xxhash-rust]
 version = "0.8.6"

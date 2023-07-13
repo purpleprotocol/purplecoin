@@ -2,6 +2,7 @@
 //! exports the generalized `hash` function. Also exported is `hash_to_prime`, which works by
 //! repeatedly `hash`ing a value together with an incrementing nonce until the output is prime.
 use crate::uint::u256;
+use bitvec::prelude::*;
 use lazy_static::*;
 use lru::LruCache;
 use parking_lot::Mutex;
@@ -121,9 +122,7 @@ pub fn hash<T: Hash + ?Sized>(t: &T) -> [u8; 32] {
 #[inline]
 pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
     let mut counter = 0_u64;
-    let mut counter2: u64 = 0_u64;
-    let mut checked = [false; 256];
-    let mut checked_count: usize = 1;
+    let mut checked = bitarr![0; 256];
     let mut first_pass = true;
     let mut first_hash = [0; 32];
     let mut shard: usize = 0;
@@ -167,19 +166,20 @@ pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
         // hash for 13 passes.
         //
         // This gives a ~14% performance gain on a 2019 Macbook Pro.
-        checked[hash[31] as usize] = true;
-        for _ in 0_u8..=13_u8 {
-            let hashed_with_counter = xxh3_128(&[&hash[..], &counter2.to_le_bytes()].concat());
+        unsafe {
+            checked.set_unchecked(hash[31] as usize, true);
+        }
+        for c in 0_u8..=13_u8 {
+            let hashed_with_counter = xxh3_128(&[&hash[..], &[c]].concat());
             let tail_bytes = hashed_with_counter.to_le_bytes();
-
             for i in 0..16 {
-                if checked[tail_bytes[i] as usize] {
+                if unsafe { *checked.get_unchecked(tail_bytes[i] as usize) } {
                     continue;
                 }
-
                 hash[31] = tail_bytes[i];
-                checked[tail_bytes[i] as usize] = true;
-                checked_count += 1;
+                unsafe {
+                    checked.set_unchecked(tail_bytes[i] as usize, true);
+                }
                 let candidate_prime = u256(hash);
                 if primality::is_prob_prime(&candidate_prime) {
                     let prime = Integer::from(candidate_prime);
@@ -190,15 +190,8 @@ pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
                     return prime;
                 }
             }
-
-            counter2 += 1;
-
-            if checked_count == 256 {
-                break;
-            }
         }
-        checked = [false; 256];
-        checked_count = 1;
+        checked.fill(false);
         counter += 1;
     }
 }

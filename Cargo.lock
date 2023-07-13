@@ -29,6 +29,7 @@ name = "accumulator"
 version = "0.2.1"
 dependencies = [
  "arrayref",
+ "bitvec",
  "blake2-rfc",
  "blake3",
  "curve25519-dalek 1.2.6",
