@@ -9,6 +9,7 @@ use crate::primitives::{Address, Hash160, Input, Output};
 use crate::vm::internal::VmTerm;
 use crate::vm::opcodes::OP;
 use bincode::{Decode, Encode};
+use bitvec::prelude::*;
 use ibig::{ibig, ubig};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::prelude::*;
@@ -101,7 +102,7 @@ pub struct Script {
     /// For each argument, a boolean denoting whether the argument is malleable or not.
     ///
     /// A malleable argument is not signed by the spender.
-    pub malleable_args: Vec<bool>,
+    pub malleable_args: BitVec,
 }
 
 macro_rules! check_top_stack_val {
@@ -163,6 +164,20 @@ macro_rules! var_load {
     };
 }
 
+macro_rules! bitvec_from_bools {
+    () => {{
+        BitVec::new()
+    }};
+
+    ($($a:expr),+ $(,)?) => {{
+        let mut buf = BitVec::new();
+        $(
+            buf.push($a);
+        )+
+        buf
+    }};
+}
+
 impl Script {
     #[must_use]
     pub fn new_coinbase() -> Script {
@@ -171,7 +186,7 @@ impl Script {
                 ScriptEntry::Byte(0x05), // 5 arguments are pushed onto the stack: out_amount, out_address, out_script_hash, coinbase_height, extra_nonce
                 ScriptEntry::Opcode(OP::PushCoinbaseOut),
             ],
-            malleable_args: vec![false, false, false, false, false],
+            malleable_args: bitvec_from_bools![false, false, false, false, false],
             ..Script::default()
         }
     }
@@ -183,7 +198,7 @@ impl Script {
                 ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: out_amount, out_script_hash, coinbase_height, extra_nonce
                 ScriptEntry::Opcode(OP::PushCoinbaseOutNoSpendAddress),
             ],
-            malleable_args: vec![false, false, false, false],
+            malleable_args: bitvec_from_bools![false, false, false, false],
             ..Script::default()
         }
     }
@@ -195,7 +210,7 @@ impl Script {
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::PushOutVerify),
             ],
-            malleable_args: vec![false, false, false],
+            malleable_args: bitvec_from_bools![false, false, false],
             ..Script::default()
         }
     }
@@ -3305,7 +3320,7 @@ impl Decode for Script {
 struct ScriptParser {
     state: ScriptParserState,
     out: Vec<ScriptEntry>,
-    malleable_args: Vec<bool>,
+    malleable_args: BitVec,
     current_func: Option<Vec<ScriptEntry>>,
     functions: Vec<Vec<ScriptEntry>>,
 }
@@ -3383,7 +3398,7 @@ impl ScriptParser {
         Self {
             state: ScriptParserState::ExpectingArgsLen,
             out: Vec::with_capacity(len),
-            malleable_args: vec![],
+            malleable_args: bitvec_from_bools![],
             current_func: None,
             functions: vec![],
         }
@@ -3409,7 +3424,7 @@ impl ScriptParser {
                     self.state = ScriptParserState::ExpectingScriptFlags(
                         bitmaps,
                         byte,
-                        Vec::with_capacity(bitmaps as usize),
+                        BitVec::with_capacity(bitmaps as usize),
                     );
                     Ok(())
                 }
@@ -3732,7 +3747,7 @@ impl ScriptParser {
         }
     }
 
-    pub fn out(self) -> (Vec<ScriptEntry>, Vec<bool>, Vec<Vec<ScriptEntry>>) {
+    pub fn out(self) -> (Vec<ScriptEntry>, BitVec, Vec<Vec<ScriptEntry>>) {
         (self.out, self.malleable_args, self.functions)
     }
 }
@@ -3852,7 +3867,7 @@ enum ScriptParserState {
     ExpectingFuncArgsLen,
 
     /// Expecting script flags. The state tuple is (remaining_bitmaps, args_len, bitmaps_vec)
-    ExpectingScriptFlags(u8, u8, Vec<bool>),
+    ExpectingScriptFlags(u8, u8, BitVec),
 
     /// Expecting any OP
     ExpectingOP,
@@ -4098,7 +4113,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
-            malleable_args: vec![false, false, false],
+            malleable_args: bitvec_from_bools![false, false, false],
             ..Script::default()
         };
 
@@ -4236,7 +4251,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
-            malleable_args: vec![false, false, false],
+            malleable_args: bitvec_from_bools![false, false, false],
             functions: vec![vec![
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Add1),
@@ -4385,7 +4400,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
-            malleable_args: vec![false, false, false],
+            malleable_args: bitvec_from_bools![false, false, false],
             functions: vec![vec![
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Add1),
@@ -5460,7 +5475,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End),
                 ScriptEntry::Opcode(OP::Verify),
             ],
-            malleable_args: vec![false, false, false],
+            malleable_args: bitvec_from_bools![false, false, false],
             ..Script::default()
         };
         let sh = ss.to_script_hash(key);
@@ -5614,7 +5629,7 @@ mod tests {
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0x00),
             ],
-            malleable_args: vec![false],
+            malleable_args: bitvec_from_bools![false],
             ..Script::default()
         };
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
@@ -5638,7 +5653,7 @@ mod tests {
                 ScriptEntry::Byte(0xff),
                 ScriptEntry::Byte(0xff),
             ],
-            malleable_args: vec![false],
+            malleable_args: bitvec_from_bools![false],
             ..Script::default()
         };
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
@@ -5662,7 +5677,7 @@ mod tests {
                 ScriptEntry::Byte(0xff),
                 ScriptEntry::Byte(0xff),
             ],
-            malleable_args: vec![false],
+            malleable_args: bitvec_from_bools![false],
             ..Script::default()
         };
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
@@ -5718,7 +5733,7 @@ mod tests {
                 ScriptEntry::Byte(0xf0),
                 ScriptEntry::Byte(0xf0),
             ],
-            malleable_args: vec![false],
+            malleable_args: bitvec_from_bools![false],
             ..Script::default()
         };
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
