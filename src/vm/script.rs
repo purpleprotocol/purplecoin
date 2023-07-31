@@ -3979,6 +3979,8 @@ impl ScriptParser {
                 Some(OP::SignedBigArrayVar) => {
                     impl_parser_expecting_len!(self, OP::SignedBigArrayVar)
                 }
+                Some(OP::Substr) => impl_parser_expecting_bytes!(self, OP::Substr, 2),
+                Some(OP::TrapIfNeqType) => impl_parser_expecting_bytes!(self, OP::TrapIfNeqType, 1),
                 Some(OP::Func | OP::End)
                     if matches!(self.state, ScriptParserState::ExpectingOPButNotFuncOrEnd) =>
                 {
