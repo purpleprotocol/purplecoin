@@ -61,7 +61,7 @@
 //! If you wish to support the development of Purplecoin, donations can be sent to the following BTC address: `bc1qp3lyr0dhly4k7ku2a6hhdrgwmurfsr9f5vz4xm`
 
 #![allow(dead_code, unused)]
-#![feature(trivial_bounds, slice_swap_unchecked, stmt_expr_attributes)]
+#![feature(trivial_bounds, slice_swap_unchecked, stmt_expr_attributes, slice_split_at_unchecked)]
 #![warn(clippy::cargo, clippy::pedantic)]
 #![allow(
     clippy::bad_bit_mask,

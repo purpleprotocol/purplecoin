@@ -478,8 +478,6 @@ impl Script {
                                 let e = frame.stack.pop().unwrap();
                                 memory_size -= e.size();
 
-                                println!("{:?} {:?}", e.get_type(), *byte);
-
                                 if e.get_type() == *byte {
                                     frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                     frame.i_ptr += 1;
@@ -1123,6 +1121,44 @@ impl Script {
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Substr) => {
+                            let mut len: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            let arr = frame.stack.pop().unwrap();
+                            let mid = len as usize;
+
+                            if mid > arr.len() {
+                                frame.executor.state = ScriptExecutorState::Error(
+                                    ExecutionResult::IndexOutOfBounds,
+                                    (frame.i_ptr, frame.func_idx, i.clone(), frame.stack.as_slice()).into(),
+                                );
+                            } else {
+                                let (left, right) = arr.split_at_unchecked(mid).unwrap();
+                                frame.stack.push(left);
+                                frame.stack.push(right);
+            
+                                // The items size is already added to the memory_size of the VM,
+                                // we just only have to add the HEAP_SIZE for the second vector
+                                memory_size += crate::vm::internal::EMPTY_VEC_HEAP_SIZE;
+            
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                frame.i_ptr += 1;
+                            }
                         }
 
                         // Extend stack trace
@@ -2405,6 +2441,20 @@ impl<'a> ScriptExecutor<'a> {
                     exec_stack.push(e);
                 }
 
+                ScriptEntry::Opcode(OP::Substr) => {
+                    let len = exec_stack.len();
+
+                    if len == 0 || !exec_stack[len - 1].is_array() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Substr);
+                }
+
                 ScriptEntry::Opcode(OP::BitOR) => {
                     if exec_stack.len() < 2 {
                         self.state = ScriptExecutorState::Error(
@@ -2451,6 +2501,28 @@ impl<'a> ScriptExecutor<'a> {
                             );
                         }
                     }
+                }
+
+                ScriptEntry::Opcode(OP::DupAll) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    if *memory_size > MEMORY_SIZE / 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OutOfMemory,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let copy = exec_stack.iter().cloned().collect::<Vec<VmTerm>>();
+                    exec_stack.extend_from_slice(&copy);
+                    *memory_size *= 2;
                 }
 
                 ScriptEntry::Opcode(OP::RandomHash160Var) => {
@@ -2734,6 +2806,40 @@ impl<'a> ScriptExecutor<'a> {
                     } else {
                         let e = exec_stack.pop().unwrap();
                         *memory_size -= e.size();
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::Within) => {
+                    let len = exec_stack.len();
+                    if len < 3 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+
+                    if !exec_stack[len - 1].is_comparable(&exec_stack[len - 2]) || !exec_stack[len - 1].is_comparable(&exec_stack[len - 3]) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let top = exec_stack.pop().unwrap();
+                    let left = exec_stack.pop().unwrap();
+                    let right = exec_stack.pop().unwrap();
+                    
+                    *memory_size -= top.size();
+                    *memory_size -= left.size();
+                    *memory_size -= right.size();
+                    
+                    if left <= top && top < right { // left-inclusive
+                        exec_stack.push(VmTerm::Unsigned8(1));
+                        *memory_size += 1;
+                    } else {
+                        exec_stack.push(VmTerm::Unsigned8(0));
+                        *memory_size += 1;
                     }
                 }
 
@@ -4308,7 +4414,7 @@ mod tests {
         assert_eq!(outs, base.out);
     }
 
-    fn assert_script_fail(mut script: Script, outputs: Vec<VmTerm>, key: &str) {
+    fn assert_script_fail(mut script: Script, outputs: Vec<VmTerm>, key: &str, exec_res: ExecutionResult) {
         script.populate_malleable_args_field();
         let base: TestBaseArgs = get_test_base_args(&mut script, 30, outputs, 0, key);
         let mut idx_map = HashMap::new();
@@ -4323,26 +4429,7 @@ mod tests {
                 key,
                 VmFlags::default()
             ),
-            Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
-        );
-    }
-
-    fn assert_script_panic_fail(mut script: Script, outputs: Vec<VmTerm>, key: &str) {
-        script.populate_malleable_args_field();
-        let base: TestBaseArgs = get_test_base_args(&mut script, 30, outputs, 0, key);
-        let mut idx_map = HashMap::new();
-        let mut outs = vec![];
-        assert_eq!(
-            script.execute(
-                &base.args,
-                &base.ins,
-                &mut outs,
-                &mut idx_map,
-                [0; 32],
-                key,
-                VmFlags::default()
-            ),
-            Err((ExecutionResult::Panic, StackTrace::default())).into()
+            Err((exec_res, StackTrace::default())).into()
         );
     }
 
@@ -6329,6 +6416,69 @@ mod tests {
             VmTerm::Unsigned8(1),
             VmTerm::Unsigned8(1),
             VmTerm::Unsigned8(1),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_dup_all() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned32Var),
+                ScriptEntry::Byte(0xaa),
+                ScriptEntry::Byte(0xbb),
+                ScriptEntry::Byte(0xcc),
+                ScriptEntry::Byte(0xdd),
+                ScriptEntry::Opcode(OP::DupAll),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Drop),
+                ScriptEntry::Opcode(OP::Drop2),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned32(0xddcc_bbaa),
+            VmTerm::Unsigned8(0x03),
+            VmTerm::Unsigned8(0x02),
+            VmTerm::Unsigned8(0x01),
+            VmTerm::Unsigned32(0xddcc_bbaa),
+            VmTerm::Unsigned8(0x03),
+            VmTerm::Unsigned8(0x02),
+            VmTerm::Unsigned8(0x01),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -11255,7 +11405,7 @@ mod tests {
             VmTerm::Signed8(-3),
             VmTerm::Signed8(0),
         ];
-        assert_script_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
     }
 
     #[test]
@@ -11399,7 +11549,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x08, 0x11])];
-        assert_script_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
     }
 
     #[test]
@@ -11477,7 +11627,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![])];
-        assert_script_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
     }
 
     #[test]
@@ -11503,7 +11653,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![];
-        assert_script_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
     }
 
     #[test]
@@ -11692,7 +11842,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> = vec![];
-        assert_script_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
     }
 
     #[test]
@@ -11808,6 +11958,93 @@ mod tests {
             VmTerm::Unsigned8(0x02),
         ];
         assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_checks_within() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Case 1: 2 <= 3 < 4 => true
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Within),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Case 2: 2 <= 2 < 4 => true
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Within),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Case 3: 2 <= 1 < 4 => false
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Within),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Case 4: 2 <= 4 < 4 => false
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Within),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Case 5: 2 <= 5 < 4 => false
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Opcode(OP::Within),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(0x01), // true
+            VmTerm::Unsigned8(0x01), // true
+            VmTerm::Unsigned8(0x00), // false
+            VmTerm::Unsigned8(0x00), // false
+            VmTerm::Unsigned8(0x00), // false
+        ];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_fails_within_check() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned16Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Within),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
     }
 
     #[test]
@@ -12303,7 +12540,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![];
-        assert_script_panic_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::Panic);
     }
 
     #[test]
@@ -12321,7 +12558,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![];
-        assert_script_panic_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::Panic);
     }
 
     #[test]
@@ -12359,7 +12596,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![];
-        assert_script_panic_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::Panic);
     }
 
     #[test]
@@ -12399,7 +12636,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![];
-        assert_script_panic_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::Panic);
     }
 
     #[test]
@@ -12439,7 +12676,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![];
-        assert_script_panic_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::Panic);
     }
 
     #[test]
@@ -12459,7 +12696,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![];
-        assert_script_panic_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::Panic);
     }
 
     #[test]
@@ -12499,7 +12736,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![];
-        assert_script_panic_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::Panic);
     }
 
     #[test]
@@ -12519,7 +12756,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![];
-        assert_script_panic_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::Panic);
     }
 
     #[test]
@@ -12559,7 +12796,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![];
-        assert_script_panic_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::Panic);
     }
 
     #[test]
@@ -12619,7 +12856,7 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![];
-        assert_script_panic_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::Panic);
     }
 
     #[test]
@@ -12694,7 +12931,7 @@ mod tests {
             VmTerm::Unsigned32(0x04040404),
             VmTerm::Unsigned32(0x01010101),
         ];
-        assert_script_panic_fail(ss, script_output, key);
+        assert_script_fail(ss, script_output, key, ExecutionResult::Panic);
     }
 
     #[test]
@@ -12730,5 +12967,95 @@ mod tests {
             VmTerm::Unsigned32(0x01010101),
         ];
         assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_substr() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x75),
+                ScriptEntry::Byte(0xaf),
+                ScriptEntry::Byte(0xf6),
+                ScriptEntry::Byte(0xa5),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Substr),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Substr),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Substr),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8Array(vec![0x75, 0xaf, 0xf6, 0xa5]), // Substr 0 -> 1st 0 elems, 2nd 4 elems (inverted logic)
+            VmTerm::Unsigned8Array(vec![]),
+            VmTerm::Unsigned8Array(vec![0xf6, 0xa5]), // Substr 2 -> 1st = 2 elems, 2nd = 2 elems (inverted logic)
+            VmTerm::Unsigned8Array(vec![0x75, 0xaf]),
+            VmTerm::Unsigned8Array(vec![]), // Substr 4 -> 1st 4 elems, 2nd 0 elems (inverted logic)
+            VmTerm::Unsigned8Array(vec![0x75, 0xaf, 0xf6, 0xa5]),
+        ];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_panics_substr_if_mid_greater_than_len() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x75),
+                ScriptEntry::Byte(0xaf),
+                ScriptEntry::Byte(0xf6),
+                ScriptEntry::Byte(0xa5),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Substr),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Substr),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Substr),
+                ScriptEntry::Byte(0x05), // Bound overflow
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8Array(vec![0x75, 0xaf, 0xf6, 0xa5]),
+            VmTerm::Unsigned8Array(vec![]),
+            VmTerm::Unsigned8Array(vec![0xf6, 0xa5]),
+            VmTerm::Unsigned8Array(vec![0x75, 0xaf]),
+        ];
+        assert_script_fail(ss, script_output, key, ExecutionResult::IndexOutOfBounds);
     }
 }
