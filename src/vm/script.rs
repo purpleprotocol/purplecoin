@@ -484,7 +484,13 @@ impl Script {
                                 } else {
                                     frame.executor.state = ScriptExecutorState::Error(
                                         ExecutionResult::Panic,
-                                        (frame.i_ptr, frame.func_idx, i.clone(), frame.stack.as_slice()).into(),
+                                        (
+                                            frame.i_ptr,
+                                            frame.func_idx,
+                                            i.clone(),
+                                            frame.stack.as_slice(),
+                                        )
+                                            .into(),
                                     );
                                 }
                             } else {
@@ -1145,17 +1151,23 @@ impl Script {
                             if mid > arr.len() {
                                 frame.executor.state = ScriptExecutorState::Error(
                                     ExecutionResult::IndexOutOfBounds,
-                                    (frame.i_ptr, frame.func_idx, i.clone(), frame.stack.as_slice()).into(),
+                                    (
+                                        frame.i_ptr,
+                                        frame.func_idx,
+                                        i.clone(),
+                                        frame.stack.as_slice(),
+                                    )
+                                        .into(),
                                 );
                             } else {
                                 let (left, right) = arr.split_at_unchecked(mid).unwrap();
                                 frame.stack.push(left);
                                 frame.stack.push(right);
-            
+
                                 // The items size is already added to the memory_size of the VM,
                                 // we just only have to add the HEAP_SIZE for the second vector
                                 memory_size += crate::vm::internal::EMPTY_VEC_HEAP_SIZE;
-            
+
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -2491,9 +2503,9 @@ impl<'a> ScriptExecutor<'a> {
                     }
 
                     let mut last = &mut exec_stack[len - 1];
-                    
+
                     match last.not() {
-                        Some(_) => { }
+                        Some(_) => {}
                         None => {
                             self.state = ScriptExecutorState::Error(
                                 ExecutionResult::InvalidArgs,
@@ -2520,7 +2532,7 @@ impl<'a> ScriptExecutor<'a> {
                         return;
                     }
 
-                    let copy = exec_stack.iter().cloned().collect::<Vec<VmTerm>>();
+                    let copy = exec_stack.to_vec();
                     exec_stack.extend_from_slice(&copy);
                     *memory_size *= 2;
                 }
@@ -2818,7 +2830,9 @@ impl<'a> ScriptExecutor<'a> {
                         );
                     }
 
-                    if !exec_stack[len - 1].is_comparable(&exec_stack[len - 2]) || !exec_stack[len - 1].is_comparable(&exec_stack[len - 3]) {
+                    if !exec_stack[len - 1].is_comparable(&exec_stack[len - 2])
+                        || !exec_stack[len - 1].is_comparable(&exec_stack[len - 3])
+                    {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
@@ -2829,12 +2843,13 @@ impl<'a> ScriptExecutor<'a> {
                     let top = exec_stack.pop().unwrap();
                     let left = exec_stack.pop().unwrap();
                     let right = exec_stack.pop().unwrap();
-                    
+
                     *memory_size -= top.size();
                     *memory_size -= left.size();
                     *memory_size -= right.size();
-                    
-                    if left <= top && top < right { // left-inclusive
+
+                    if left <= top && top < right {
+                        // left-inclusive
                         exec_stack.push(VmTerm::Unsigned8(1));
                         *memory_size += 1;
                     } else {
@@ -4416,7 +4431,12 @@ mod tests {
         assert_eq!(outs, base.out);
     }
 
-    fn assert_script_fail(mut script: Script, outputs: Vec<VmTerm>, key: &str, exec_res: ExecutionResult) {
+    fn assert_script_fail(
+        mut script: Script,
+        outputs: Vec<VmTerm>,
+        key: &str,
+        exec_res: ExecutionResult,
+    ) {
         script.populate_malleable_args_field();
         let base: TestBaseArgs = get_test_base_args(&mut script, 30, outputs, 0, key);
         let mut idx_map = HashMap::new();
@@ -12359,12 +12379,18 @@ mod tests {
             VmTerm::Unsigned16Array(vec![0x3c1d, 0x3c1d]),
             VmTerm::Unsigned32Array(vec![0x3c1d3c1d, 0x3c1d3c1d]),
             VmTerm::Unsigned64Array(vec![0x3c1d3c1d3c1d3c1d, 0x3c1d3c1d3c1d3c1d]),
-            VmTerm::Unsigned128Array(vec![0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d, 0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d]),
+            VmTerm::Unsigned128Array(vec![
+                0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d,
+                0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d,
+            ]),
             VmTerm::Signed8Array(vec![0x1d, 0x1d]),
             VmTerm::Signed16Array(vec![0x3c1d, 0x3c1d]),
             VmTerm::Signed32Array(vec![0x3c1d3c1d, 0x3c1d3c1d]),
             VmTerm::Signed64Array(vec![0x3c1d3c1d3c1d3c1d, 0x3c1d3c1d3c1d3c1d]),
-            VmTerm::Signed128Array(vec![0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d, 0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d]),
+            VmTerm::Signed128Array(vec![
+                0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d,
+                0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d,
+            ]),
         ];
         assert_script_ok(ss, script_output, key);
     }
@@ -12395,10 +12421,8 @@ mod tests {
             ..Script::default()
         };
 
-        let mut script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned8(0xf3),
-            VmTerm::Unsigned16(0xebf3),
-        ];
+        let mut script_output: Vec<VmTerm> =
+            vec![VmTerm::Unsigned8(0xf3), VmTerm::Unsigned16(0xebf3)];
         assert_script_ok(ss, script_output, key);
     }
 
@@ -12475,10 +12499,8 @@ mod tests {
             ..Script::default()
         };
 
-        let mut script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned8(0x11),
-            VmTerm::Unsigned16(0x6811),
-        ];
+        let mut script_output: Vec<VmTerm> =
+            vec![VmTerm::Unsigned8(0x11), VmTerm::Unsigned16(0x6811)];
         assert_script_ok(ss, script_output, key);
     }
 

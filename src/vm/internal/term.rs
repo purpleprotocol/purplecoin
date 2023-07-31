@@ -1160,95 +1160,110 @@ impl VmTerm {
     #[must_use]
     pub fn split_at_unchecked(&self, mid: usize) -> Option<(VmTerm, VmTerm)> {
         match self {
-            Self::Hash160Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Hash160Array(left.to_vec()), VmTerm::Hash160Array(right.to_vec())));
-                }
+            Self::Hash160Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Hash160Array(left.to_vec()),
+                    VmTerm::Hash160Array(right.to_vec()),
+                ))
             },
-            Self::Hash256Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Hash256Array(left.to_vec()), VmTerm::Hash256Array(right.to_vec())));
-                }
+            Self::Hash256Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Hash256Array(left.to_vec()),
+                    VmTerm::Hash256Array(right.to_vec()),
+                ))
             },
-            Self::Hash512Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Hash512Array(left.to_vec()), VmTerm::Hash512Array(right.to_vec())));
-                }
+            Self::Hash512Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Hash512Array(left.to_vec()),
+                    VmTerm::Hash512Array(right.to_vec()),
+                ))
             },
-            Self::Unsigned8Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Unsigned8Array(left.to_vec()), VmTerm::Unsigned8Array(right.to_vec())));
-                }
+            Self::Unsigned8Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Unsigned8Array(left.to_vec()),
+                    VmTerm::Unsigned8Array(right.to_vec()),
+                ))
             },
-            Self::Unsigned16Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Unsigned16Array(left.to_vec()), VmTerm::Unsigned16Array(right.to_vec())));
-                }
+            Self::Unsigned16Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Unsigned16Array(left.to_vec()),
+                    VmTerm::Unsigned16Array(right.to_vec()),
+                ))
             },
-            Self::Unsigned32Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Unsigned32Array(left.to_vec()), VmTerm::Unsigned32Array(right.to_vec())));
-                }
+            Self::Unsigned32Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Unsigned32Array(left.to_vec()),
+                    VmTerm::Unsigned32Array(right.to_vec()),
+                ))
             },
-            Self::Unsigned64Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Unsigned64Array(left.to_vec()), VmTerm::Unsigned64Array(right.to_vec())));
-                }
+            Self::Unsigned64Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Unsigned64Array(left.to_vec()),
+                    VmTerm::Unsigned64Array(right.to_vec()),
+                ))
             },
-            Self::Unsigned128Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Unsigned128Array(left.to_vec()), VmTerm::Unsigned128Array(right.to_vec())));
-                }
+            Self::Unsigned128Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Unsigned128Array(left.to_vec()),
+                    VmTerm::Unsigned128Array(right.to_vec()),
+                ))
             },
-            Self::UnsignedBigArray(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::UnsignedBigArray(left.to_vec()), VmTerm::UnsignedBigArray(right.to_vec())));
-                }
+            Self::UnsignedBigArray(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::UnsignedBigArray(left.to_vec()),
+                    VmTerm::UnsignedBigArray(right.to_vec()),
+                ))
             },
-            Self::Signed8Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Signed8Array(left.to_vec()), VmTerm::Signed8Array(right.to_vec())));
-                }
+            Self::Signed8Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Signed8Array(left.to_vec()),
+                    VmTerm::Signed8Array(right.to_vec()),
+                ))
             },
-            Self::Signed16Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Signed16Array(left.to_vec()), VmTerm::Signed16Array(right.to_vec())));
-                }
+            Self::Signed16Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Signed16Array(left.to_vec()),
+                    VmTerm::Signed16Array(right.to_vec()),
+                ))
             },
-            Self::Signed32Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Signed32Array(left.to_vec()), VmTerm::Signed32Array(right.to_vec())));
-                }
+            Self::Signed32Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Signed32Array(left.to_vec()),
+                    VmTerm::Signed32Array(right.to_vec()),
+                ))
             },
-            Self::Signed64Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Signed64Array(left.to_vec()), VmTerm::Signed64Array(right.to_vec())));
-                }
+            Self::Signed64Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Signed64Array(left.to_vec()),
+                    VmTerm::Signed64Array(right.to_vec()),
+                ))
             },
-            Self::Signed128Array(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::Signed128Array(left.to_vec()), VmTerm::Signed128Array(right.to_vec())));
-                }
+            Self::Signed128Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Signed128Array(left.to_vec()),
+                    VmTerm::Signed128Array(right.to_vec()),
+                ))
             },
-            Self::SignedBigArray(arr) => {
-                unsafe {
-                    let (left, right) = arr.split_at_unchecked(mid);
-                    return Some((VmTerm::SignedBigArray(left.to_vec()), VmTerm::SignedBigArray(right.to_vec())));
-                }
+            Self::SignedBigArray(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::SignedBigArray(left.to_vec()),
+                    VmTerm::SignedBigArray(right.to_vec()),
+                ))
             },
             _ => None,
         }
