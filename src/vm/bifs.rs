@@ -117,8 +117,8 @@ pub fn blake3_256_160(term: &Term) -> Term {
     let mut out_256 = hasher_256.finalize_xof();
     out_256.fill(&mut out_buffer_256);
 
-    let new_hash = Term::Hash256(out_buffer_256); 
-    
+    let new_hash = Term::Hash256(out_buffer_256);
+
     hasher_160.update(&new_hash.to_bytes_raw());
     let mut out_160 = hasher_160.finalize_xof();
     out_160.fill(&mut out_buffer_160);
@@ -149,6 +149,6 @@ pub fn blake3_256_160_internal(term: &Term, key: &str) -> Term {
     let hash = Term::Hash256(primitive_hash_256.0);
 
     let primitive_hash = Hash160::hash_from_slice(hash.to_bytes_raw(), key);
-    
+
     Term::Hash160(primitive_hash.0)
 }

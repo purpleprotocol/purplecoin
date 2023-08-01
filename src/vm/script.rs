@@ -3643,7 +3643,7 @@ impl<'a> ScriptExecutor<'a> {
                         );
                     }
                 },
-                
+
                 ScriptEntry::Opcode(OP::Blake3_160Internal) => match exec_stack.pop() {
                     Some(val) => {
                         *memory_size -= val.size();
@@ -3711,7 +3711,7 @@ impl<'a> ScriptExecutor<'a> {
                         );
                     }
                 },
-                
+
                 ScriptEntry::Opcode(OP::Nop) => {
                     // do nothing
                 }
