@@ -85,9 +85,9 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x51` Sub - Pops the two topmost items on the stack, performs subtraction and pushes the result on the stack
     - [x] OP `0x52` Mult - Pops the two topmost items on the stack, performs multiplication and pushes the result on the stack
     - [x] OP `0x53` Div - Pops the two topmost items on the stack, performs division and pushes the result on the stack
-    - [ ] OP `0x54` BitSHLeft - Pops the two topmost items on the stack, performs a left bit shift operation on the first operand and then pushes the result on the stack
-    - [ ] OP `0x55` BitSHRight - Pops the two topmost items on the stack, performs a right bit shift operation on the first operand and then pushes the result on the stack
-    - [ ] OP `0x56` BitXOR - Pops the two topmost items on the stack, performs bit exclusive OR on the operands and then pushes the result on the stack
+    - [x] OP `0x54` BitSHLeft - Pops the two topmost items on the stack, performs a left bit shift operation on the first operand and then pushes the result on the stack
+    - [x] OP `0x55` BitSHRight - Pops the two topmost items on the stack, performs a right bit shift operation on the first operand and then pushes the result on the stack
+    - [x] OP `0x56` BitXOR - Pops the two topmost items on the stack, performs bit exclusive OR on the operands and then pushes the result on the stack
     - [x] OP `0x57` Loop - Starts a loop block
     - [x] OP `0x58` Break - Breaks the current loop
     - [x] OP `0x59` BreakIf - Breaks the current loop if the topmost item on the stack is `1`
@@ -125,16 +125,16 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x79` Rot2 - The fifth and sixth topmost items on the stack are moved to the top
     - [x] OP `0x7a` Swap2 - Swaps the topmost pairs of terms on top of the stack
     - [x] OP `0x7b` Size - Pushes the size in bytes of the topmost item on the stack
-    - [ ] OP `0x7c` Substr - Splits the given array at position n and pushes both arrays to the top of the stack
-    - [ ] OP `0x7d` BitOR -  Pops the two topmost items on the stack, performs bit OR on the operands and then pushes the result on the stack
-    - [ ] OP `0x7e` BitInvert - Inverts all bits of the topmost item on the stack
-    - [ ] OP `0x7f` DupAll - Duplicates the whole stack
+    - [x] OP `0x7c` Substr - Splits the given array at position n and pushes both arrays to the top of the stack
+    - [x] OP `0x7d` BitOR -  Pops the two topmost items on the stack, performs bit OR on the operands and then pushes the result on the stack
+    - [x] OP `0x7e` BitInvert - Inverts all bits of the topmost item on the stack
+    - [x] OP `0x7f` DupAll - Duplicates the whole stack
     - [ ] OP `0x80` IsUTF8 - Pushes `1` on top of the stack if the given `Unsigned8Array` is a valid UTF8 byte sequence
     - [x] OP `0x82` Add1 - Adds `1` to the topmost item on the stack
     - [x] OP `0x83` Sub1 - Subtracts `1` from the topmost item on the stack
     - [x] OP `0x84` Min - Returns the minimum of the two topmost items on the stack
     - [x] OP `0x85` Max - Returns the maximum of the two topmost items on the stack
-    - [ ] OP `0x86` Within - Pushes `1` on top of the stack if the topmost item on the stack is between the second and the third.
+    - [x] OP `0x86` Within - Pushes `1` on top of the stack if the topmost item on the stack is between the second and the third, `0` otherwise
     - [ ] OP `0x87` BoolAnd - And control operator
     - [ ] OP `0x88` BoolOr - Or control operator
     - [ ] OP `0x89` Negate - If the topmost item on the stack is `1`, turns it into a `0`. If the topmost item on the stack is anything but `1` it turns it into a `1`
@@ -145,14 +145,14 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x8f` FlushToScriptOuts - Flushes the terms on the current frame to the script outputs stack
     - [x] OP `0x90` PopToScriptOuts - Pops the topmost item on the stack and pushes it to the script outputs stack
     - [x] OP `0x91` PickToScriptOuts - Duplicates the `n`th item on the stack and pushes it to the script outputs stack
-    - [ ] OP `0x92` TrapIf - Traps if
-    - [ ] OP `0x93` TrapIfEq - Traps if the two topmost items on the stack are equal
-    - [ ] OP `0x94` TrapIfNeq - Traps if the two topmost items onf the stack are not equal
-    - [ ] OP `0x95` TrapIfLeq - Traps if the first item on the stack is less than the second
-    - [ ] OP `0x96` TrapIfGeq - Traps if the second item on the stack is greater or equal than the second
-    - [ ] OP `0x97` TrapIfGt - Traps if the first item on the stack is greater than the second
-    - [ ] OP `0x98` TrapIfLt - Traps if the first item on the stack lesser than the second
-    - [ ] OP `0x99` TrapIfNeqType - Pops the first item on the stack and traps if its type not equal to the given type id
+    - [x] OP `0x92` TrapIf - Traps if
+    - [x] OP `0x93` TrapIfEq - Traps if the two topmost items on the stack are equal
+    - [x] OP `0x94` TrapIfNeq - Traps if the two topmost items onf the stack are not equal
+    - [x] OP `0x95` TrapIfLeq - Traps if the first item on the stack is less than or equal than the second
+    - [x] OP `0x96` TrapIfGeq - Traps if the first item on the stack is greater or equal than the second
+    - [x] OP `0x97` TrapIfLt - Traps if the first item on the stack less than the second
+    - [x] OP `0x98` TrapIfGt - Traps if the first item on the stack is greater than the second
+    - [x] OP `0x99` TrapIfNeqType - Pops the first item on the stack and traps if its type not equal to the given type id
     - [ ] OP `0x9a` ToHex - Converts the topmost item on the stack to hexadecimal
     - [ ] OP `0x9b` FromHex - Parses the topmost item on the stack from hexadecimal
     - [ ] OP `0xa0` VerifyEd25519 - Takes the given public key and signature, and pushes them along with the current output's binary format to the Ed25519 signature verification stack and stops script execution.
@@ -203,28 +203,29 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xd9` PushOutIfGt - Pushes a new output to the output stack if the topmost item on the stack is greater than the second item on the stack. The following arguments are poped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [ ] OP `0xda` PushOutIfLeq - Pushes a new output to the output stack if the topmost item on the stack is less or equal than the second item on the stack. The following arguments are poped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [ ] OP `0xdb` PushOutIfGeq - Pushes a new output to the output stack if the topmost item on the stack is greater or equal than the second item on the stack. The following arguments are poped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
-    - [ ] OP `0xe9` GhostRider256 - Pops the topmost item on the stack, hashes it with GhostRider and then pushes the result to the stack.
-    - [ ] OP `0xea` Fugue256 - Pops the topmost item on the stack, hashes it with Fugue256 and then pushes the result to the stack.
-    - [ ] OP `0xeb` JH256 - Pops the topmost item on the stack, hashes it with JH256 and then pushes the result to the stack.
-    - [x] OP `0xec` Blake2s256 - Pops the topmost item on the stack, hashes it with Blake2s256 and then pushes the result to the stack.
-    - [x] OP `0xed` Trap - Breaks script execution and returns an implicit error.
-    - [x] OP `0xee` Sha256 - Pops the topmost item on the stack, hashes it with Sha256 and then pushes the result to the stack.
-    - [x] OP `0xef` Sha512 - Pops the topmost item on the stack, hashes it with Sha512 and then pushes the result to the stack.
-    - [x] OP `0xf0` Keccak256 - Pops the topmost item on the stack, hashes it with Keccak256 and then pushes the result to the stack.
-    - [x] OP `0xf1` Keccak512 - Pops the topmost item on the stack, hashes it with Keccak512 and then pushes the result to the stack.
-    - [x] OP `0xf2` Blake2b256 - Pops the topmost item on the stack, hashes it with Blake2b256 and then pushes the result to the stack.
-    - [x] OP `0xf3` Blake2b512 - Pops the topmost item on the stack, hashes it with Blake2b512 and then pushes the result to the stack.
-    - [ ] OP `0xf4` Blake3_160 - Pops the topmost item on the stack, hashes it with Blake3_160 and then pushes the result to the stack.
-    - [x] OP `0xf5` Blake3_256 - Pops the topmost item on the stack, hashes it with Blake3_256 and then pushes the result to the stack.
-    - [x] OP `0xf6` Blake3_512 - Pops the topmost item on the stack, hashes it with Blake3_512 and then
-    - [ ] OP `0xf7` Blake3_256_160 - Pops the topmost item on the stack, hashes it with Blake3_256, then hashes the resulting hash with Blake3_160 and then pushes the result to the stack.
-    - [ ] OP `0xf8` Blake3_256Keyed - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key and then pushes the result to the stack.
-    - [ ] OP `0xf9` Blake3_512Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_512 keyed and then pushes the result to the stack.
-    - [ ] OP `0xfa` Blake3_160Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_160 keyed and then pushes the result to the stack.
-    - [ ] OP `0xfb` Blake3_160Internal - Pops the topmost item on the stack, hashes it with Blake3_160 keyed with the current shard key, and then pushes the result to the stack.
-    - [x] OP `0xfc` Blake3_256Internal - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key, and then pushes the result to the stack.
-    - [x] OP `0xfd` Blake3_512Internal - Pops the topmost item on the stack, hashes it with Blake3_512 keyed with the current shard key, and then pushes the result to the stack.
-    - [ ] OP `0xfe` Blake3_256_160Internal - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key, and then pushes the result to the stack.
+    - [ ] OP `0xe8` GhostRider256 - Pops the topmost item on the stack, hashes it with GhostRider and then pushes the result to the stack.
+    - [ ] OP `0xe9` Fugue256 - Pops the topmost item on the stack, hashes it with Fugue256 and then pushes the result to the stack.
+    - [ ] OP `0xea` JH256 - Pops the topmost item on the stack, hashes it with JH256 and then pushes the result to the stack.
+    - [x] OP `0xeb` Blake2s256 - Pops the topmost item on the stack, hashes it with Blake2s256 and then pushes the result to the stack.
+    - [x] OP `0xec` Trap - Breaks script execution and returns an implicit error.
+    - [x] OP `0xed` Sha256 - Pops the topmost item on the stack, hashes it with Sha256 and then pushes the result to the stack.
+    - [x] OP `0xee` Sha512 - Pops the topmost item on the stack, hashes it with Sha512 and then pushes the result to the stack.
+    - [x] OP `0xef` Keccak256 - Pops the topmost item on the stack, hashes it with Keccak256 and then pushes the result to the stack.
+    - [x] OP `0xf0` Keccak512 - Pops the topmost item on the stack, hashes it with Keccak512 and then pushes the result to the stack.
+    - [x] OP `0xf1` Blake2b256 - Pops the topmost item on the stack, hashes it with Blake2b256 and then pushes the result to the stack.
+    - [x] OP `0xf2` Blake2b512 - Pops the topmost item on the stack, hashes it with Blake2b512 and then pushes the result to the stack.
+    - [x] OP `0xf3` Blake3_160 - Pops the topmost item on the stack, hashes it with Blake3_160 and then pushes the result to the stack.
+    - [x] OP `0xf4` Blake3_256 - Pops the topmost item on the stack, hashes it with Blake3_256 and then pushes the result to the stack.
+    - [x] OP `0xf5` Blake3_512 - Pops the topmost item on the stack, hashes it with Blake3_512 and then
+    - [x] OP `0xf6` Blake3_256_160 - Pops the topmost item on the stack, hashes it with Blake3_256, then hashes the resulting hash with Blake3_160 and then pushes the result to the stack.
+    - [ ] OP `0xf7` Blake3_256Keyed - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key and then pushes the result to the stack.
+    - [ ] OP `0xf8` Blake3_512Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_512 keyed and then pushes the result to the stack.
+    - [ ] OP `0xf9` Blake3_160Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_160 keyed and then pushes the result to the stack.
+    - [x] OP `0xfa` Blake3_160Internal - Pops the topmost item on the stack, hashes it with Blake3_160 keyed with the current shard key, and then pushes the result to the stack.
+    - [x] OP `0xfb` Blake3_256Internal - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key, and then pushes the result to the stack.
+    - [x] OP `0xfc` Blake3_512Internal - Pops the topmost item on the stack, hashes it with Blake3_512 keyed with the current shard key, and then pushes the result to the stack.
+    - [x] OP `0xfd` Blake3_256_160Internal - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key, and then pushes the result to the stack.
+    - [x] OP `0xfe` Ripemd160 - Pops the topmost item on the stack, hashes it with Ripemd_160 and then pushes the result to the stack.
     - [x] OP `0xff` Nop - Does nothing
 * [ ] Network layer
   - [ ] Sector networking
