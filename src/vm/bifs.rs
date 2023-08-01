@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::primitives::{Hash256, Hash512};
+use crate::primitives::{Hash160, Hash256, Hash512};
 use crate::vm::internal::VmTerm as Term;
 
 use blake2::digest::{Update, VariableOutput};
@@ -77,6 +77,16 @@ pub fn blake2s_256(term: &Term) -> Term {
     Term::Hash256(hashed_term.to_vec().try_into().unwrap())
 }
 
+pub fn blake3_160(term: &Term) -> Term {
+    let mut out_buffer = [0u8; 20];
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(&term.to_bytes_raw());
+    let mut out = hasher.finalize_xof();
+    out.fill(&mut out_buffer);
+
+    Term::Hash160(out_buffer)
+}
+
 pub fn blake3_256(term: &Term) -> Term {
     let mut out_buffer = [0u8; 32];
     let mut hasher = blake3::Hasher::new();
@@ -97,6 +107,31 @@ pub fn blake3_512(term: &Term) -> Term {
     Term::Hash512(out_buffer)
 }
 
+pub fn blake3_256_160(term: &Term) -> Term {
+    let mut out_buffer_256 = [0u8; 32];
+    let mut out_buffer_160 = [0u8; 20];
+    let mut hasher_256 = blake3::Hasher::new();
+    let mut hasher_160 = blake3::Hasher::new();
+
+    hasher_256.update(&term.to_bytes_raw());
+    let mut out_256 = hasher_256.finalize_xof();
+    out_256.fill(&mut out_buffer_256);
+
+    let new_hash = Term::Hash256(out_buffer_256); 
+    
+    hasher_160.update(&new_hash.to_bytes_raw());
+    let mut out_160 = hasher_160.finalize_xof();
+    out_160.fill(&mut out_buffer_160);
+
+    Term::Hash160(out_buffer_160)
+}
+
+pub fn blake3_160_internal(term: &Term, key: &str) -> Term {
+    let primitive_hash = Hash160::hash_from_slice(term.to_bytes_raw(), key);
+
+    Term::Hash160(primitive_hash.0)
+}
+
 pub fn blake3_256_internal(term: &Term, key: &str) -> Term {
     let primitive_hash = Hash256::hash_from_slice(term.to_bytes_raw(), key);
 
@@ -107,4 +142,13 @@ pub fn blake3_512_internal(term: &Term, key: &str) -> Term {
     let primitive_hash = Hash512::hash_from_slice(term.to_bytes_raw(), key);
 
     Term::Hash512(primitive_hash.0)
+}
+
+pub fn blake3_256_160_internal(term: &Term, key: &str) -> Term {
+    let primitive_hash_256 = Hash256::hash_from_slice(term.to_bytes_raw(), key);
+    let hash = Term::Hash256(primitive_hash_256.0);
+
+    let primitive_hash = Hash160::hash_from_slice(hash.to_bytes_raw(), key);
+    
+    Term::Hash160(primitive_hash.0)
 }

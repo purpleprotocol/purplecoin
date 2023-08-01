@@ -203,28 +203,29 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xd9` PushOutIfGt - Pushes a new output to the output stack if the topmost item on the stack is greater than the second item on the stack. The following arguments are poped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [ ] OP `0xda` PushOutIfLeq - Pushes a new output to the output stack if the topmost item on the stack is less or equal than the second item on the stack. The following arguments are poped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [ ] OP `0xdb` PushOutIfGeq - Pushes a new output to the output stack if the topmost item on the stack is greater or equal than the second item on the stack. The following arguments are poped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
-    - [ ] OP `0xe9` GhostRider256 - Pops the topmost item on the stack, hashes it with GhostRider and then pushes the result to the stack.
-    - [ ] OP `0xea` Fugue256 - Pops the topmost item on the stack, hashes it with Fugue256 and then pushes the result to the stack.
-    - [ ] OP `0xeb` JH256 - Pops the topmost item on the stack, hashes it with JH256 and then pushes the result to the stack.
-    - [x] OP `0xec` Blake2s256 - Pops the topmost item on the stack, hashes it with Blake2s256 and then pushes the result to the stack.
-    - [x] OP `0xed` Trap - Breaks script execution and returns an implicit error.
-    - [x] OP `0xee` Sha256 - Pops the topmost item on the stack, hashes it with Sha256 and then pushes the result to the stack.
-    - [x] OP `0xef` Sha512 - Pops the topmost item on the stack, hashes it with Sha512 and then pushes the result to the stack.
-    - [x] OP `0xf0` Keccak256 - Pops the topmost item on the stack, hashes it with Keccak256 and then pushes the result to the stack.
-    - [x] OP `0xf1` Keccak512 - Pops the topmost item on the stack, hashes it with Keccak512 and then pushes the result to the stack.
-    - [x] OP `0xf2` Blake2b256 - Pops the topmost item on the stack, hashes it with Blake2b256 and then pushes the result to the stack.
-    - [x] OP `0xf3` Blake2b512 - Pops the topmost item on the stack, hashes it with Blake2b512 and then pushes the result to the stack.
-    - [ ] OP `0xf4` Blake3_160 - Pops the topmost item on the stack, hashes it with Blake3_160 and then pushes the result to the stack.
-    - [x] OP `0xf5` Blake3_256 - Pops the topmost item on the stack, hashes it with Blake3_256 and then pushes the result to the stack.
-    - [x] OP `0xf6` Blake3_512 - Pops the topmost item on the stack, hashes it with Blake3_512 and then
-    - [ ] OP `0xf7` Blake3_256_160 - Pops the topmost item on the stack, hashes it with Blake3_256, then hashes the resulting hash with Blake3_160 and then pushes the result to the stack.
-    - [ ] OP `0xf8` Blake3_256Keyed - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key and then pushes the result to the stack.
-    - [ ] OP `0xf9` Blake3_512Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_512 keyed and then pushes the result to the stack.
-    - [ ] OP `0xfa` Blake3_160Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_160 keyed and then pushes the result to the stack.
-    - [ ] OP `0xfb` Blake3_160Internal - Pops the topmost item on the stack, hashes it with Blake3_160 keyed with the current shard key, and then pushes the result to the stack.
-    - [x] OP `0xfc` Blake3_256Internal - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key, and then pushes the result to the stack.
-    - [x] OP `0xfd` Blake3_512Internal - Pops the topmost item on the stack, hashes it with Blake3_512 keyed with the current shard key, and then pushes the result to the stack.
-    - [ ] OP `0xfe` Blake3_256_160Internal - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key, and then pushes the result to the stack.
+    - [ ] OP `0xe8` GhostRider256 - Pops the topmost item on the stack, hashes it with GhostRider and then pushes the result to the stack.
+    - [ ] OP `0xe9` Fugue256 - Pops the topmost item on the stack, hashes it with Fugue256 and then pushes the result to the stack.
+    - [ ] OP `0xea` JH256 - Pops the topmost item on the stack, hashes it with JH256 and then pushes the result to the stack.
+    - [x] OP `0xeb` Blake2s256 - Pops the topmost item on the stack, hashes it with Blake2s256 and then pushes the result to the stack.
+    - [x] OP `0xec` Trap - Breaks script execution and returns an implicit error.
+    - [x] OP `0xed` Sha256 - Pops the topmost item on the stack, hashes it with Sha256 and then pushes the result to the stack.
+    - [x] OP `0xee` Sha512 - Pops the topmost item on the stack, hashes it with Sha512 and then pushes the result to the stack.
+    - [x] OP `0xef` Keccak256 - Pops the topmost item on the stack, hashes it with Keccak256 and then pushes the result to the stack.
+    - [x] OP `0xf0` Keccak512 - Pops the topmost item on the stack, hashes it with Keccak512 and then pushes the result to the stack.
+    - [x] OP `0xf1` Blake2b256 - Pops the topmost item on the stack, hashes it with Blake2b256 and then pushes the result to the stack.
+    - [x] OP `0xf2` Blake2b512 - Pops the topmost item on the stack, hashes it with Blake2b512 and then pushes the result to the stack.
+    - [x] OP `0xf3` Blake3_160 - Pops the topmost item on the stack, hashes it with Blake3_160 and then pushes the result to the stack.
+    - [x] OP `0xf4` Blake3_256 - Pops the topmost item on the stack, hashes it with Blake3_256 and then pushes the result to the stack.
+    - [x] OP `0xf5` Blake3_512 - Pops the topmost item on the stack, hashes it with Blake3_512 and then
+    - [x] OP `0xf6` Blake3_256_160 - Pops the topmost item on the stack, hashes it with Blake3_256, then hashes the resulting hash with Blake3_160 and then pushes the result to the stack.
+    - [ ] OP `0xf7` Blake3_256Keyed - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key and then pushes the result to the stack.
+    - [ ] OP `0xf8` Blake3_512Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_512 keyed and then pushes the result to the stack.
+    - [ ] OP `0xf9` Blake3_160Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_160 keyed and then pushes the result to the stack.
+    - [x] OP `0xfa` Blake3_160Internal - Pops the topmost item on the stack, hashes it with Blake3_160 keyed with the current shard key, and then pushes the result to the stack.
+    - [x] OP `0xfb` Blake3_256Internal - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key, and then pushes the result to the stack.
+    - [x] OP `0xfc` Blake3_512Internal - Pops the topmost item on the stack, hashes it with Blake3_512 keyed with the current shard key, and then pushes the result to the stack.
+    - [x] OP `0xfd` Blake3_256_160Internal - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key, and then pushes the result to the stack.
+    - [x] OP `0xfe` Ripemd160 - Pops the topmost item on the stack, hashes it with Ripemd_160 and then pushes the result to the stack.
     - [x] OP `0xff` Nop - Does nothing
 * [ ] Network layer
   - [ ] Sector networking
