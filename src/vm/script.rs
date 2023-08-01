@@ -12552,6 +12552,162 @@ mod tests {
     }
 
     #[test]
+    fn it_shifts_left_primitives() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x6e),
+                ScriptEntry::Opcode(OP::BitSHLeft),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned16Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned16Var),
+                ScriptEntry::Byte(0xf3),
+                ScriptEntry::Byte(0xab),
+                ScriptEntry::Opcode(OP::BitSHLeft),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> =
+            vec![VmTerm::Unsigned8(0xb8), VmTerm::Unsigned16(0x5f98)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_shifts_left_arrays() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xf3),
+                ScriptEntry::Byte(0xf3),
+                ScriptEntry::Opcode(OP::BitSHLeft),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned16ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned16ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xf3),
+                ScriptEntry::Byte(0xab),
+                ScriptEntry::Byte(0xf3),
+                ScriptEntry::Byte(0xab),
+                ScriptEntry::Opcode(OP::BitSHLeft),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8Array(vec![0xcc, 0x98]),
+            VmTerm::Unsigned16Array(vec![0x57e6, 0xafcc]),
+        ];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_shifts_right_primitives() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x6e),
+                ScriptEntry::Opcode(OP::BitSHRight),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned16Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned16Var),
+                ScriptEntry::Byte(0xf3),
+                ScriptEntry::Byte(0xab),
+                ScriptEntry::Opcode(OP::BitSHRight),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> =
+            vec![VmTerm::Unsigned8(0x1b), VmTerm::Unsigned16(0x157e)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_shifts_right_arrays() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xf3),
+                ScriptEntry::Byte(0xf3),
+                ScriptEntry::Opcode(OP::BitSHRight),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned16ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned16ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xf3),
+                ScriptEntry::Byte(0xab),
+                ScriptEntry::Byte(0xf3),
+                ScriptEntry::Byte(0xab),
+                ScriptEntry::Opcode(OP::BitSHRight),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8Array(vec![0x3c, 0x1e]),
+            VmTerm::Unsigned16Array(vec![0x55f9, 0x2afc]),
+        ];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
     fn it_traps() {
         let key = "test_key";
         let mut ss = Script {
