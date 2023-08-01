@@ -2532,7 +2532,7 @@ impl<'a> ScriptExecutor<'a> {
                         return;
                     }
 
-                    let copy = exec_stack.to_vec();
+                    let copy = exec_stack.clone();
                     exec_stack.extend_from_slice(&copy);
                     *memory_size *= 2;
                 }
