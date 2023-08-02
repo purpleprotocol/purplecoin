@@ -13,6 +13,7 @@ use std::{fmt, mem};
 
 const WORD_SIZE: usize = 8; // 8 bytes on 64bit machines
 pub const EMPTY_VEC_HEAP_SIZE: usize = 3 * WORD_SIZE; // 3 words
+pub const HASH_KEY_TYPE: u8 = 0x12_u8; // the allowed type of the hashing key
 
 const ZERO_HASH160: [u8; 20] = [0; 20];
 const ZERO_HASH256: [u8; 32] = [0; 32];
@@ -941,7 +942,7 @@ impl VmTerm {
             Self::Hash160Array(_) => 0x0f_u8,
             Self::Hash256Array(_) => 0x10_u8,
             Self::Hash512Array(_) => 0x11_u8,
-            Self::Unsigned8Array(_) => 0x12_u8,
+            Self::Unsigned8Array(_) => HASH_KEY_TYPE,
             Self::Unsigned16Array(_) => 0x13_u8,
             Self::Unsigned32Array(_) => 0x14_u8,
             Self::Unsigned64Array(_) => 0x15_u8,
