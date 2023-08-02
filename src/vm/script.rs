@@ -3682,7 +3682,8 @@ impl<'a> ScriptExecutor<'a> {
                     }
 
                     if let VmTerm::Unsigned8Array(arr) = new_key {
-                        let hash_term = bifs::blake3_256_internal(&value_to_hash, &hex::encode(arr));
+                        let hash_term =
+                            bifs::blake3_256_internal(&value_to_hash, &hex::encode(arr));
 
                         *memory_size += hash_term.size();
                         exec_stack.push(hash_term);
@@ -3714,7 +3715,8 @@ impl<'a> ScriptExecutor<'a> {
                     }
 
                     if let VmTerm::Unsigned8Array(arr) = new_key {
-                        let hash_term = bifs::blake3_512_internal(&value_to_hash, &hex::encode(arr));
+                        let hash_term =
+                            bifs::blake3_512_internal(&value_to_hash, &hex::encode(arr));
 
                         *memory_size += hash_term.size();
                         exec_stack.push(hash_term);
@@ -3746,7 +3748,8 @@ impl<'a> ScriptExecutor<'a> {
                     }
 
                     if let VmTerm::Unsigned8Array(arr) = new_key {
-                        let hash_term = bifs::blake3_160_internal(&value_to_hash, &hex::encode(arr));
+                        let hash_term =
+                            bifs::blake3_160_internal(&value_to_hash, &hex::encode(arr));
 
                         *memory_size += hash_term.size();
                         exec_stack.push(hash_term);
@@ -11545,7 +11548,9 @@ mod tests {
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
-        let new_key = hex::encode(vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a]);
+        let new_key = hex::encode(vec![
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
+        ]);
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
@@ -11654,7 +11659,9 @@ mod tests {
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
-        let new_key = hex::encode(vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a]);
+        let new_key = hex::encode(vec![
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
+        ]);
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
@@ -11763,7 +11770,9 @@ mod tests {
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
-        let new_key = hex::encode(vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a]);
+        let new_key = hex::encode(vec![
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
+        ]);
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
