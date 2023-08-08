@@ -67,11 +67,9 @@ impl SectorBehaviour {
     }
 
     pub fn new(local_key: &Keypair, local_pbk: &PublicKey) -> Self {
-
         let identify_behavior = SectorBehaviour::build_identify_behaviour(&local_pbk);
         let ping_behavior = SectorBehaviour::build_ping_behaviour();
-        let kademlia_behavior =
-            SectorBehaviour::build_kad_behaviour(&local_pbk.into());
+        let kademlia_behavior = SectorBehaviour::build_kad_behaviour(&local_pbk.into());
         let gossip_behaviour = SectorBehaviour::build_gossip_behaviour(&local_key);
         let peer_request_behaviour = SectorBehaviour::build_peer_request_behaviour();
 

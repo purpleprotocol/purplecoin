@@ -8,6 +8,7 @@ use crate::chain::backend::disk::DiskBackend;
 use crate::chain::{Chain, ChainConfig, PowChainBackend, Shard, ShardBackend};
 use crate::node::behaviour::{ClusterBehaviour, ExchangeBehaviour, SectorBehaviour};
 use crate::node::peer_info::PeerInfo;
+use crate::settings::SETTINGS;
 use crate::{chain::backend::disk::DiskBackend, node::request_peer::PeerInfoResponse};
 use blake3::Hash;
 use futures::*;
@@ -25,9 +26,8 @@ pub use mempool::*;
 use parking_lot::RwLock;
 pub use rpc::*;
 use std::collections::HashMap;
-use std::sync::{Mutex};
+use std::sync::Mutex;
 use triomphe::Arc;
-use crate::settings::SETTINGS;
 
 use self::request_peer::PeerInfoRequest;
 
@@ -65,9 +65,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
 
         // TODO: Add listener address to settings
         let addrs = format!("/ip4/0.0.0.0/tcp/{}", SETTINGS.network.listen_port_testnet);
-        sector_swarm
-            .listen_on(addrs.parse().unwrap())
-            .unwrap();
+        sector_swarm.listen_on(addrs.parse().unwrap()).unwrap();
 
         // Exchange swarm
         let exchange_behaviour = ExchangeBehaviour::new(&local_pbk);
@@ -130,10 +128,10 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
                 return;
             }
         };
-        self.sector_swarm.behaviour_mut().kademlia.add_address(
-            &peer_id.parse().unwrap(),
-            addr.parse().unwrap()
-        );
+        self.sector_swarm
+            .behaviour_mut()
+            .kademlia
+            .add_address(&peer_id.parse().unwrap(), addr.parse().unwrap());
     }
 
     pub async fn run(&mut self) {

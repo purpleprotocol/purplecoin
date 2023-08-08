@@ -114,7 +114,6 @@ fn start_runtime() -> anyhow::Result<()> {
             #[cfg(feature = "rpc")]
             run_rpc(),
             run_periodics(),
-            run_node(chain, &config),
         )?;
 
         Ok(())
@@ -151,21 +150,6 @@ fn start_gui() -> iced::Result {
         env!("CARGO_PKG_VERSION")
     );
     GUI::run(gui_settings)
-}
-
-async fn run_node<'a, T>(chain: Chain<'a, T>, config: &ChainConfig) -> anyhow::Result<()>
-where
-    T: PowChainBackend<'a> + ShardBackend<'a>
-{
-    let mut node = Node::new(chain, Arc::new(config.clone()));
-
-    if !SETTINGS.network.is_bootstrap_node {
-        node.bootstrap();
-    }
-
-    loop {
-        node.run().await;
-    }
 }
 
 #[cfg(feature = "rpc")]
