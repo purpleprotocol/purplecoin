@@ -80,8 +80,12 @@ libp2p = { version = "0.51.3", features = [
     "yamux",
     "macros",
     "tcp",
-    "tokio"
+    "tokio",
+    "noise",
+    "request-response",
+    "gossipsub"
 ]}
+async-trait = "0.1"
 either = "1.8.1"
 bloomfilter = "1.0.9"
 croaring = "0.8.1"
