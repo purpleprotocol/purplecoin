@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::consensus::*;
+use crate::consensus::SHARDS_PER_SECTOR;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -22,6 +22,7 @@ impl Default for ChainConfig {
 }
 
 impl ChainConfig {
+    #[must_use]
     pub fn new(network_name: &'static str) -> Self {
         let mut chain_keys = HashMap::with_capacity(256);
         let mut sector_keys = HashMap::with_capacity(4);
@@ -37,20 +38,23 @@ impl ChainConfig {
         }
 
         Self {
+            network_name,
             chain_keys,
             sector_keys,
-            network_name,
         }
     }
 
+    #[must_use]
     pub fn network_name(&self) -> &'static str {
         self.network_name
     }
 
+    #[must_use]
     pub fn get_chain_key(&self, chain_id: u8) -> &str {
         self.chain_keys.get(&chain_id).unwrap()
     }
 
+    #[must_use]
     pub fn get_sector_key(&self, sector_id: u8) -> &str {
         debug_assert!(sector_id < 4);
         self.sector_keys.get(&sector_id).unwrap()
@@ -77,6 +81,7 @@ pub struct SectorConfig<'a> {
 }
 
 impl<'a> SectorConfig<'a> {
+    #[must_use]
     pub fn new(
         key: &'a str,
         sector_id: u8,
@@ -94,12 +99,14 @@ impl<'a> SectorConfig<'a> {
     }
 
     /// Returns the min chain id and max chain id in this sector
+    #[must_use]
     pub fn chain_ids(&self) -> (u8, u8) {
         let sps = SHARDS_PER_SECTOR as u8;
         let ssps = self.sector_id * sps;
         (ssps, ssps + (sps - 1))
     }
 
+    #[must_use]
     pub fn key(&self) -> &'a str {
         self.key
     }
@@ -126,6 +133,7 @@ pub struct ShardConfig<'a> {
 }
 
 impl<'a> ShardConfig<'a> {
+    #[must_use]
     pub fn new(
         key: &'a str,
         chain_id: u8,
@@ -142,6 +150,7 @@ impl<'a> ShardConfig<'a> {
         }
     }
 
+    #[must_use]
     pub fn key(&self) -> &'a str {
         self.key
     }
@@ -150,6 +159,7 @@ impl<'a> ShardConfig<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::consensus::*;
 
     #[test]
     fn sector_config_returns_correct_chain_ids() {

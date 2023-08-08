@@ -103,6 +103,9 @@ macro_rules! u_types {
         }
 
         pub fn is_perfect_square(&self) -> bool {
+          #[cfg(windows)]
+          let issqr = unsafe { gmp::mpn_perfect_square_p(self.data(), self.size as i32) };
+          #[cfg(not(windows))]
           let issqr = unsafe { gmp::mpn_perfect_square_p(self.data(), self.size) };
           issqr != 0
         }
@@ -125,12 +128,18 @@ macro_rules! u_types {
 
         pub fn is_divisible_u(&self, u: u64) -> bool {
           let s = self.as_mpz();
+          #[cfg(windows)]
+          let divisible = unsafe {gmp::mpz_divisible_ui_p(mut_ptr(&s), u as u32)};
+          #[cfg(not(windows))]
           let divisible = unsafe {gmp::mpz_divisible_ui_p(mut_ptr(&s), u)};
           divisible != 0
         }
 
         /// Panics if `buf` is not large enough.
         pub fn write_binary(&self, buf: &mut [u8]) -> usize {
+          #[cfg(windows)]
+          unsafe { gmp::mpn_get_str(mut_ptr(&buf[0]), 2, self.data(), self.size as i32) }
+          #[cfg(not(windows))]
           unsafe { gmp::mpn_get_str(mut_ptr(&buf[0]), 2, self.data(), self.size) }
         }
 
@@ -323,6 +332,19 @@ macro_rules! u_types {
             return self;
           }
           let (y, mut rem) = (Self::zero(), Self::zero());
+          #[cfg(windows)]
+          unsafe {
+            gmp::mpn_tdiv_qr(
+              y.data(),
+              rem.data(),
+              0,
+              self.data(),
+              self.size as i32,
+              x.data(),
+              x.size as i32,
+            )
+          };
+          #[cfg(not(windows))]
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -353,6 +375,19 @@ macro_rules! u_types {
             return;
           }
           let y = Self::zero();
+          #[cfg(windows)]
+          unsafe {
+            gmp::mpn_tdiv_qr(
+              y.data(),
+              self.data(),
+              0,
+              self.data(),
+              self.size as i32,
+              x.data(),
+              x.size as i32,
+            )
+          };
+          #[cfg(not(windows))]
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -382,6 +417,21 @@ macro_rules! u_types {
             return self;
           }
           let (mut y, rem) = (Self::zero(), Self::zero());
+
+          #[cfg(windows)]
+          unsafe {
+            gmp::mpn_tdiv_qr(
+              y.data(),
+              rem.data(),
+              0,
+              self.data(),
+              self.size as i32,
+              x.data(),
+              x.size as i32,
+            )
+          };
+
+          #[cfg(not(windows))]
           unsafe {
             gmp::mpn_tdiv_qr(
               y.data(),
@@ -393,6 +443,7 @@ macro_rules! u_types {
               x.size,
             )
           };
+
           y.normalize_size();
           y
         }
@@ -452,6 +503,20 @@ impl ops::Rem<&U256> for U512 {
             return self.low_u256();
         }
         let (y, mut rem) = (Self::zero(), U256::zero());
+
+        #[cfg(windows)]
+        unsafe {
+            gmp::mpn_tdiv_qr(
+                y.data(),
+                rem.data(),
+                0,
+                self.data(),
+                self.size as i32,
+                x.data(),
+                x.size as i32,
+            )
+        };
+        #[cfg(not(windows))]
         unsafe {
             gmp::mpn_tdiv_qr(
                 y.data(),
@@ -486,7 +551,11 @@ impl U256 {
         let f = f.as_mpz();
         let c = unsafe { gmp::mpz_remove(mut_ptr(&outmpz), mut_ptr(&s), mut_ptr(&f)) };
         out.size = i64::from(outmpz.size);
-        (out.low_u256(), c)
+        #[cfg(windows)]
+        let r = (out.low_u256(), c as u64);
+        #[cfg(not(windows))]
+        let r = (out.low_u256(), c);
+        r
     }
 }
 

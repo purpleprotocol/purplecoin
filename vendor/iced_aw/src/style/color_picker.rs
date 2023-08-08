@@ -65,11 +65,11 @@ impl StyleSheet for Default {
     }
 
     fn selected(&self) -> Style {
-        Style { ..self.active() }
+        self.active()
     }
 
     fn hovered(&self) -> Style {
-        Style { ..self.active() }
+        self.active()
     }
 
     fn focused(&self) -> Style {

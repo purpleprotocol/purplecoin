@@ -352,12 +352,12 @@ impl<G: UnknownOrderGroup, T: Hash + Clone> ProofOfCorrectness<G, T> {
                 let witness = Witness::from_bytes(&rest[6..6 + len1])?;
                 let proof1 = Poe::from_bytes(&rest[6 + len1..6 + len1 + len2])?;
                 let proof2 = Poe::from_bytes(&rest[6 + len1 + len2..6 + len1 + len2 + len3])?;
-                let proof_deleted = MembershipProof {
+                let proof_added = MembershipProof {
                     witness: witness.clone(),
                     proof: proof1,
                 };
 
-                let proof_added = MembershipProof {
+                let proof_deleted = MembershipProof {
                     witness,
                     proof: proof2,
                 };
@@ -607,7 +607,7 @@ impl<G: UnknownOrderGroup, T: Eq + Hash + Clone + Send + Sync> Accumulator<G, T>
             }
         }
 
-        let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(&x_hat));
+        let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.extended_gcd_ref(&x_hat));
         debug_assert!(gcd == int(1));
 
         let w = witness.0.add(untracked_additions);
@@ -633,7 +633,7 @@ impl<G: UnknownOrderGroup, T: Eq + Hash + Clone + Send + Sync> Accumulator<G, T>
     ) -> Result<NonmembershipProof<G, T>, AccError> {
         let x: Integer = elems.par_iter().map(hash_to_prime).product();
         let s = acc_set.par_iter().map(hash_to_prime).product();
-        let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(&s));
+        let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.extended_gcd_ref(&s));
 
         if gcd != int(1) {
             return Err(AccError::InputsNotCoprime);

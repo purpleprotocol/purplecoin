@@ -93,14 +93,14 @@ where
 
     /// Use 24 hour format instead of AM/PM.
     #[must_use]
-    pub fn use_24h(mut self) -> Self {
+    pub fn use_24h(self) -> Self {
         self.state.overlay_state.use_24h = true;
         self
     }
 
     /// Enables the picker to also pick seconds.
     #[must_use]
-    pub fn show_seconds(mut self) -> Self {
+    pub fn show_seconds(self) -> Self {
         self.state.overlay_state.show_seconds = true;
         self
     }

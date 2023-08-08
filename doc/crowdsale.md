@@ -2,12 +2,12 @@
 This document contains important information regarding the Purplecoin Crowdsale. For more information, please read the [Token Sale Agreement](https://purplecoin.io/tsa). To understand the scope of this project, take a look at the [Vision](https://github.com/purpleprotocol/purplecoin/blob/main/doc/vision.md) document.
 
 ### General information
-* Start date 24 Jan 2023. There is no end date, the sale ends when all coins have been sold or until we decide to end it.
+* Start date 24 Jan 2023. The crowdsale ends on the 1st of August at 12pm GMT.
 * Total coins for sale: 113,997,000 XPU (5% of the total supply before tail emission). 4.5% of the supply will be locked for 2 halving cycles. 0.5% will be used for contributor rewards, bounties or any endeavour of this sort. Check out the [Tokenomics Doc](https://github.com/purpleprotocol/purplecoin/blob/main/doc/tokenomics.md) as well.
-* Sale rate: 1 ETH = 13500 XPU for first third of coins sold, 1 ETH = 9000 XPU for the next third, and 1 ETH = 4500 XPU for the last third. We will be adjusting the rate according to market fluctuations on each Monday at around 12:00 GMT.
+* Sale rate: 1 ETH = 12000 XPU for first third of coins sold, 1 ETH = 8000 XPU for the next third, and 1 ETH = 4000 XPU for the last third. We frequently update the rate according to market fluctuations and according to current demand. Each purchase is settled at the current rate.
 * All unsold XPU will be burnt.
 * Individual cap: Max 500,000 XPU per person.
-* Minimum buy: 0.01 ETH.
+* Minimum buy: 0.05 ETH.
 * Coins will not be liquid until the sale ends.
 * Only coins sold in the crowdsale will be emitted in the smart contract. Developers will not be able to sell or access coins before the mainnet launch.
 * Coins are transferred to the main chain by burning them on Ethereum and including the receiving Purplecoin address in the transaction.

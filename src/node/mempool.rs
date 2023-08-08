@@ -5,7 +5,7 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use crate::consensus::*;
-use crate::primitives::*;
+use crate::primitives::{Hash256, TransactionWithFee};
 use parking_lot::RwLock;
 use std::collections::{BTreeSet, HashMap};
 use std::marker::PhantomPinned;
@@ -25,6 +25,7 @@ pub struct Mempool {
 }
 
 impl Mempool {
+    #[must_use]
     pub fn new() -> Pin<Box<Self>> {
         Box::pin(Self {
             tx_list: BTreeSet::new(),
@@ -45,7 +46,7 @@ impl Mempool {
         }
 
         // Write transaction and size
-        self.current_size_bytes += tx.tx_size as u64;
+        self.current_size_bytes += u64::from(tx.tx_size);
         self.tx_map.insert(tx_hash, tx);
         let ptr = NonNull::from(self.tx_map.get(&tx_hash).unwrap());
         self.tx_list.insert(ptr);
@@ -66,6 +67,7 @@ impl Mempool {
 mod tests {
     use super::*;
     use crate::chain::ChainConfig;
+    use crate::primitives::*;
     use crate::vm::internal::VmTerm;
     use crate::vm::*;
     use rand::prelude::*;
@@ -83,7 +85,7 @@ mod tests {
                 .unwrap();
         }
 
-        for tx in txs.iter() {
+        for tx in &txs {
             assert_eq!(mempool.tx_map.get(tx.hash().unwrap()).unwrap(), tx as &_);
         }
     }
@@ -114,13 +116,11 @@ mod tests {
             colour_script_args: None,
             script: Script::new_coinbase(),
             script_args,
-            nsequence: 0xffffffff,
             hash: None,
         };
         input.compute_hash(key);
 
         let mut tx = Transaction {
-            version: 1,
             chain_id,
             ins: vec![input],
             hash: None,

@@ -9,4 +9,7 @@ fn main() {
     {
         println!("cargo:rust-cfg=host_family={HOST_FAMILY}");
     }
+
+    println!("cargo:rustc-env=CC=clang");
+    println!("cargo:rustc-env=CXX=clang++");
 }

@@ -7,7 +7,7 @@
 use bech32::{self, FromBase32, ToBase32, Variant};
 use bincode::{Decode, Encode};
 use bloomfilter::Bloom;
-use lazy_static::*;
+use lazy_static::lazy_static;
 use merkletree::hash::{Algorithm, Hashable};
 use merkletree::merkle::Element;
 use rand::Rng;
@@ -23,7 +23,8 @@ use std::str;
 use zeroize::Zeroize;
 
 pub const ADDRESS_BYTES: usize = 20;
-pub const COLOURED_ADDRESS_BYTES: usize = 40;
+pub const SCRIPT_HASH_BYTES: usize = 20;
+pub const COLOURED_ADDRESS_BYTES: usize = ADDRESS_BYTES + SCRIPT_HASH_BYTES;
 
 const HASH_KEY_PREFIX: &str = "purplecoin.hash.";
 
@@ -37,26 +38,53 @@ lazy_static! {
 }
 
 #[derive(Clone, PartialEq, Eq, HashTrait, Encode, Decode)]
-pub struct ColouredAddress(pub [u8; COLOURED_ADDRESS_BYTES]);
+pub struct ColouredAddress {
+    pub address: [u8; ADDRESS_BYTES],
+    pub colour_hash: [u8; SCRIPT_HASH_BYTES],
+}
 
 impl ColouredAddress {
+    #[must_use]
     pub fn zero() -> Self {
-        Self([0; COLOURED_ADDRESS_BYTES])
+        Self {
+            address: [0; ADDRESS_BYTES],
+            colour_hash: [0; SCRIPT_HASH_BYTES],
+        }
     }
 
+    #[must_use]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        crate::codec::encode_to_vec(self).unwrap()
+    }
+
+    #[must_use]
     pub fn to_bech32(&self, hrp: &str) -> String {
-        bech32::encode(hrp, self.0.to_base32(), Variant::Bech32m).unwrap()
+        let mut buf: Vec<u8> = Vec::with_capacity(COLOURED_ADDRESS_BYTES);
+        buf.extend_from_slice(&self.address);
+        buf.extend_from_slice(&self.colour_hash);
+
+        bech32::encode(hrp, buf.to_base32(), Variant::Bech32m).unwrap()
     }
 
     pub fn from_bech32(encoded: &str) -> Result<Self, &'static str> {
         let (_hrp, data, _variant) = bech32::decode(encoded).map_err(|_| "invalid address")?;
         let data: Vec<u8> = Vec::<u8>::from_base32(&data).map_err(|_| "invalid address")?;
-        let mut out = Self([0; COLOURED_ADDRESS_BYTES]);
-        out.0.copy_from_slice(&data);
+
+        if data.len() != COLOURED_ADDRESS_BYTES {
+            return Err("invalid address length");
+        }
+
+        let mut out = Self {
+            address: [0; ADDRESS_BYTES],
+            colour_hash: [0; SCRIPT_HASH_BYTES],
+        };
+        out.address.copy_from_slice(&data[..ADDRESS_BYTES]);
+        out.colour_hash.copy_from_slice(&data[ADDRESS_BYTES..]);
         Ok(out)
     }
 
     /// Validate against public key
+    #[must_use]
     pub fn validate(&self, public_key: &PublicKey, colour_hash: &Hash160) -> bool {
         self == &public_key.to_coloured_address(colour_hash)
     }
@@ -94,14 +122,22 @@ impl fmt::Debug for ColouredAddress {
 pub struct Address(pub [u8; ADDRESS_BYTES]);
 
 impl Address {
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
+    #[must_use]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        crate::codec::encode_to_vec(self).unwrap()
+    }
+
+    #[must_use]
     pub fn zero() -> Self {
         Self([0; ADDRESS_BYTES])
     }
 
+    #[must_use]
     pub fn to_bech32(&self, hrp: &str) -> String {
         bech32::encode(hrp, self.0.to_base32(), Variant::Bech32m).unwrap()
     }
@@ -115,11 +151,13 @@ impl Address {
     }
 
     /// Validate against public key
+    #[must_use]
     pub fn validate(&self, public_key: &PublicKey) -> bool {
         self == &public_key.to_address()
     }
 
     #[cfg(test)]
+    #[must_use]
     pub fn random() -> Self {
         Self(rand::thread_rng().gen())
     }
@@ -170,12 +208,14 @@ impl PublicKey {
         ))
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         let bytes = vec![0; 32];
         Self::from_bytes(&bytes).unwrap()
     }
 
     #[inline]
+    #[must_use]
     pub fn to_address(&self) -> Address {
         let mut address = Address([0; ADDRESS_BYTES]);
         let mut hash1 = [0; 32];
@@ -192,8 +232,8 @@ impl PublicKey {
     }
 
     #[inline]
+    #[must_use]
     pub fn to_coloured_address(&self, colour_hash: &Hash160) -> ColouredAddress {
-        let mut out_bytes = [0; COLOURED_ADDRESS_BYTES];
         let mut hash1 = [0; 32];
         let pub_bytes = self.0.to_bytes();
         let mut hasher = blake3::Hasher::new_derive_key(&HASH_KEY256);
@@ -205,9 +245,11 @@ impl PublicKey {
         let mut out = hasher.finalize_xof();
         let mut hash_bytes = [0; 20];
         out.fill(&mut hash_bytes);
-        out_bytes.copy_from_slice(&[hash_bytes.as_slice(), colour_hash.as_bytes()].concat());
 
-        ColouredAddress(out_bytes)
+        ColouredAddress {
+            address: hash_bytes,
+            colour_hash: colour_hash.0,
+        }
     }
 }
 
@@ -270,14 +312,22 @@ impl fmt::Debug for Signature {
 pub struct Hash160(pub [u8; 20]);
 
 impl Hash160 {
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         Self([0; 20])
     }
 
+    #[must_use]
+    pub fn to_hex(&self) -> String {
+        hex::encode(self.0)
+    }
+
+    #[must_use]
     pub fn to_address(&self) -> Address {
         Address(self.0)
     }
@@ -316,9 +366,7 @@ impl Hash160 {
 
 impl fmt::Debug for Hash160 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Hash160")
-            .field(&hex::encode(self.0))
-            .finish()
+        f.debug_tuple("Hash160").field(&self.to_hex()).finish()
     }
 }
 
@@ -340,12 +388,19 @@ impl fmt::Debug for Hash160 {
 pub struct Hash256(pub [u8; 32]);
 
 impl Hash256 {
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         Self([0; 32])
+    }
+
+    #[must_use]
+    pub fn to_hex(&self) -> String {
+        hex::encode(self.0)
     }
 
     #[inline]
@@ -366,6 +421,7 @@ impl Hash256 {
         out_hash
     }
 
+    #[must_use]
     pub fn meets_difficulty(&self, bits: u32) -> bool {
         let diff = crate::consensus::Difficulty::new(bits);
         let out = crate::consensus::PowOutput::new(self.0);
@@ -388,9 +444,7 @@ impl AsRef<[u8]> for Hash256 {
 
 impl fmt::Debug for Hash256 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Hash256")
-            .field(&hex::encode(self.0))
-            .finish()
+        f.debug_tuple("Hash256").field(&self.to_hex()).finish()
     }
 }
 
@@ -400,9 +454,7 @@ impl Element for Hash256 {
     }
 
     fn from_slice(bytes: &[u8]) -> Self {
-        if bytes.len() != Self::byte_len() {
-            panic!("invalid slice len")
-        }
+        assert!(bytes.len() == Self::byte_len(), "invalid slice len");
 
         let mut out = [0; 32];
         out.copy_from_slice(bytes);
@@ -470,12 +522,19 @@ impl Algorithm<Hash256> for Hash256Algo {
 pub struct Hash512(pub [u8; 64]);
 
 impl Hash512 {
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         Self([0; 64])
+    }
+
+    #[must_use]
+    pub fn to_hex(&self) -> String {
+        hex::encode(self.0)
     }
 
     pub fn hash_from_slice<T: AsRef<[u8]>>(slice: T, key: &str) -> Self {
@@ -498,15 +557,14 @@ impl Hash512 {
 
 impl fmt::Debug for Hash512 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Hash512")
-            .field(&hex::encode(self.0))
-            .finish()
+        f.debug_tuple("Hash512").field(&self.to_hex()).finish()
     }
 }
 
 pub struct AggregatedSignature(PreparedBatch);
 
 impl AggregatedSignature {
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut result = Vec::with_capacity(self.0.byte_len());
         self.0.write_bytes(&mut result);
@@ -558,6 +616,7 @@ pub struct BloomFilterHash256 {
 }
 
 impl BloomFilterHash256 {
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut out = vec![];
         let bitmap = self.inner.bitmap();
@@ -605,6 +664,94 @@ pub trait PMMRIndexHashable {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hash160_test_vector() {
+        let hash = Hash160::hash_from_slice("", "");
+        let hex = hash.to_hex();
+        assert_eq!(hex, "c3ab971c69aa6c9e02fbefae6356a31254f90d43");
+    }
+
+    #[test]
+    fn hash256_test_vector() {
+        let hash = Hash256::hash_from_slice("", "");
+        let hex = hash.to_hex();
+        assert_eq!(
+            hex,
+            "f0c625025fdaa10b68e03e441d8c22b6043bf444b1272021cc75060b88dab2f9"
+        );
+    }
+
+    #[test]
+    fn hash512_test_vector() {
+        let hash = Hash512::hash_from_slice("", "");
+        let hex = hash.to_hex();
+        assert_eq!(hex, "a48b8855c4e328eb8bd48b63b3646c11a25dc7b0550681ee096dbcf26c66f8a40c3d5e74f05f94927be16dbebc9c0cfbd39dc9331cf2074bf8276e516e29b06f");
+    }
+
+    #[test]
+    fn serialised_address_is_20_bytes() {
+        let zero = Address::zero();
+        let bytes = zero.to_bytes();
+        assert_eq!(bytes.len(), 20);
+    }
+
+    #[test]
+    fn serialised_coloured_address_is_40_bytes() {
+        let zero = ColouredAddress::zero();
+        let bytes = zero.to_bytes();
+        assert_eq!(bytes.len(), 40);
+    }
+
+    #[test]
+    fn codec_coloured_bech32() {
+        let zero = ColouredAddress::zero();
+        let encoded = zero.to_bech32("pu");
+        assert_eq!(ColouredAddress::from_bech32(&encoded).unwrap(), zero);
+    }
+
+    #[test]
+    fn codec_bech32() {
+        let zero = Address::zero();
+        let encoded = zero.to_bech32("pu");
+        assert_eq!(Address::from_bech32(&encoded).unwrap(), zero);
+    }
+
+    #[test]
+    fn coloured_address_zero_encoding() {
+        let zero = ColouredAddress::zero();
+        let encoded = zero.to_bech32("pu");
+        assert_eq!(
+            encoded,
+            "pu1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqkwu6w6"
+        );
+    }
+
+    #[test]
+    fn address_zero_encoding() {
+        let zero = Address::zero();
+        let encoded = zero.to_bech32("pu");
+        assert_eq!(encoded, "pu1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr45620");
+    }
+
+    #[test]
+    fn generate_address() {
+        let pubk = PublicKey::zero();
+        let address = pubk.to_address();
+        let encoded = address.to_bech32("pu");
+        assert_eq!(encoded, "pu16yxqz45dsd83vmqys4t68kfwylk6mkgc8zzh93");
+    }
+
+    #[test]
+    fn generate_coloured_address() {
+        let pubk = PublicKey::zero();
+        let address = pubk.to_coloured_address(&Hash160::zero());
+        let encoded = address.to_bech32("pu");
+        assert_eq!(
+            encoded,
+            "pu16yxqz45dsd83vmqys4t68kfwylk6mkgcqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqshx4a9"
+        );
+    }
 
     #[test]
     fn bloom_filter_encode_decode() {

@@ -8,7 +8,7 @@ use crate::chain::ChainConfig;
 use crate::consensus::*;
 use crate::primitives::{BlockHeader, Hash256};
 use crate::wallet::HDWallet;
-use lazy_static::*;
+use lazy_static::lazy_static;
 use lru::LruCache;
 use parking_lot::{
     Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockUpgradableReadGuard, RwLockWriteGuard,
@@ -49,6 +49,7 @@ pub fn set_balance(wallet: &str, balance: i128) {
     WALLET_BLANCES.lock().insert(wallet.to_owned(), balance);
 }
 
+#[must_use]
 pub fn increment_balance(wallet: &str, incr: i128) -> Option<i128> {
     debug_assert!(incr > 0);
     let mut lock = WALLET_BLANCES.lock();
@@ -57,10 +58,12 @@ pub fn increment_balance(wallet: &str, incr: i128) -> Option<i128> {
     Some(*balance)
 }
 
+#[must_use]
 pub fn get_balance(wallet: &str) -> i128 {
     *WALLET_BLANCES.lock().get(wallet).unwrap_or(&0)
 }
 
+#[must_use]
 pub fn get_cached_genesis(chain_id: u8, chain_config: &ChainConfig) -> Arc<BlockHeader> {
     let mut gcmux = GENESIS_CACHE.upgradable_read();
 

@@ -5,8 +5,8 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use config::{Config, ConfigError, File};
-use lazy_static::*;
-use log::*;
+use lazy_static::lazy_static;
+use log::error;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -137,7 +137,7 @@ impl Settings {
 
         // Parse env vars manually and set overrides if they exist as the
         // config package `Environment` module seems to behave poorly.
-        for (k, v) in env_source.iter() {
+        for (k, v) in &env_source {
             let k = k.to_lowercase();
 
             if let Some(k_postfix) = possible_keys.get(&k) {

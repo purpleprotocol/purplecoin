@@ -400,7 +400,7 @@ where
         if let Event::Keyboard(keyboard::Event::KeyPressed { key_code, .. }) = event {
             let mut status = event::Status::Ignored;
 
-            if let keyboard::KeyCode::Tab = key_code {
+            if matches!(key_code, keyboard::KeyCode::Tab) {
                 if self.state.keyboard_modifiers.shift() {
                     self.state.focus = self.state.focus.previous();
                 } else {
@@ -1014,9 +1014,9 @@ where
 }
 
 /// Draws the 1. block of the color picker containing the HSV part.
-fn block1<'a, Message, B>(
+fn block1<Message, B>(
     renderer: &mut Renderer<B>,
-    color_picker: &ColorPickerOverlay<'a, Message, B>,
+    color_picker: &ColorPickerOverlay<'_, Message, B>,
     layout: Layout<'_>,
     cursor_position: Point,
     style_sheet: &HashMap<StyleState, Style>,
@@ -1041,9 +1041,9 @@ fn block1<'a, Message, B>(
 }
 
 /// Draws the 2. block of the color picker containing the RGBA part, Hex and buttons.
-fn block2<'a, Message, B>(
+fn block2<Message, B>(
     renderer: &mut Renderer<B>,
-    color_picker: &ColorPickerOverlay<'a, Message, B>,
+    color_picker: &ColorPickerOverlay<'_, Message, B>,
     layout: Layout<'_>,
     cursor_position: Point,
     style: &renderer::Style,
@@ -1138,9 +1138,9 @@ fn block2<'a, Message, B>(
 
 /// Draws the HSV color area.
 #[allow(clippy::too_many_lines)]
-fn hsv_color<'a, Message, B>(
+fn hsv_color<Message, B>(
     renderer: &mut Renderer<B>,
-    color_picker: &ColorPickerOverlay<'a, Message, B>,
+    color_picker: &ColorPickerOverlay<'_, Message, B>,
     layout: Layout<'_>,
     cursor_position: Point,
     style_sheet: &HashMap<StyleState, Style>,

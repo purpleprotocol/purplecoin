@@ -62,7 +62,7 @@ impl Tab for OverviewTab {
     type Message = Message;
 
     fn title(&self) -> String {
-        String::from("")
+        String::new()
     }
 
     fn tab_label(&self) -> TabLabel {

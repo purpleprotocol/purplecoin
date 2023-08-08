@@ -145,7 +145,7 @@ where
             icon_font: None,
             text_font: None,
             style_sheet: std::boxed::Box::default(),
-            _renderer: PhantomData::default(),
+            _renderer: PhantomData,
         }
     }
 

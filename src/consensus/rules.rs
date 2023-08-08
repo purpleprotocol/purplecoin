@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use static_assertions::*;
+use static_assertions::{const_assert, const_assert_eq};
 use std::cmp::{self, Ordering};
 use std::ops::RangeInclusive;
 
@@ -35,7 +35,7 @@ pub const TRANSACTION_LIMIT_SIZE: u64 = 10_000;
 /// Max number of opcodes that can be executed per script
 pub const SCRIPT_LIMIT_OPCODES: u64 = 2_500;
 
-/// Initial block reward, per shard. The miner reward is equal to INITIAL_BLOCK_REWARD * SHARDS_PER_SECTOR
+/// Initial block reward, per shard. The miner reward is equal to `INITIAL_BLOCK_REWARD` * `SHARDS_PER_SECTOR`
 pub const INITIAL_BLOCK_REWARD: Money = COIN; // 1 XPU
 
 /// Amount of coins mined in the genesis block
@@ -50,11 +50,11 @@ pub const MAX_HALVINGS: u64 = 20;
 /// Max blocktime in regards to consensus calculations
 pub const MAX_BLOCK_TIME: i64 = 60;
 
-/// Coinbase outputs cannot be spent in the same epoch they are created in. These are not Green PoW epochs.
+/// Coinbase outputs cannot be spent in the same epoch they are created in. These are not Green `PoW` epochs.
 ///
 /// All transactions are considered final after the end of a coinbase epoch.
 ///
-/// All unspent outputs we don't care about are pruned after COINBASE_EPOCH_LEN blocks past the current height
+/// All unspent outputs we don't care about are pruned after `COINBASE_EPOCH_LEN` blocks past the current height
 pub const COINBASE_EPOCH_LEN: u64 = 32;
 
 /// How long to spend mining for additional runnerups after receiving a runnerup block
@@ -66,10 +66,10 @@ pub const FIRST_ROUND_ADDITIONAL_TIME: i64 = 3;
 pub const SECOND_ROUND_TIMEOUT: i64 = 90;
 
 /// Minimum GR difficulty
-pub const MIN_DIFF_GR: u32 = 0x010fffff;
+pub const MIN_DIFF_GR: u32 = 0x010f_ffff;
 
-/// Minimum Random hash PoW difficulty
-pub const MIN_DIFF_RANDOM_HASH: u32 = 0x020fffff;
+/// Minimum Random hash `PoW` difficulty
+pub const MIN_DIFF_RANDOM_HASH: u32 = 0x020f_ffff;
 
 /// False positive rate for block header bloom filter
 pub const BLOCK_HEADER_BLOOM_FP_RATE: f64 = 0.005;
@@ -84,20 +84,23 @@ pub const SHARDS_PER_SECTOR: usize = 16;
 pub const SECTORS: usize = 256 / SHARDS_PER_SECTOR;
 
 /// Money check
+#[must_use]
 pub fn money_check(amount: Money) -> bool {
     amount >= 0
 }
 
 /// Get block reward at height
+#[must_use]
 pub fn map_height_to_block_reward(height: u64) -> Money {
     let h = cmp::min(
-        height as Money / HALVING_INTERVAL as Money,
-        MAX_HALVINGS as Money,
+        Money::from(height) / Money::from(HALVING_INTERVAL),
+        Money::from(MAX_HALVINGS),
     );
     INITIAL_BLOCK_REWARD >> h
 }
 
 /// Calculate new bits based on blocktime and old bits
+#[must_use]
 pub fn calc_difficulty(bits: u32, blocktime: u64) -> u32 {
     let mut diff = Difficulty::new(bits);
     let diff_change = (BLOCK_TIME_SECONDS as f32 / blocktime as f32).clamp(0.5f32, 2f32);
@@ -105,6 +108,7 @@ pub fn calc_difficulty(bits: u32, blocktime: u64) -> u32 {
 }
 
 /// Map sector id to a range of chain ids
+#[must_use]
 pub fn map_sector_id_to_chain_ids(sector_id: u8) -> Option<RangeInclusive<u8>> {
     let sectors = SECTORS as u8;
 
@@ -141,24 +145,31 @@ const MAX_ZEROS: u8 = 252;
 pub struct Difficulty(u32);
 
 impl Difficulty {
+    #[must_use]
     pub fn to_u32(&self) -> u32 {
         self.0
     }
+    #[must_use]
     pub fn new(d: u32) -> Self {
         Difficulty(d)
     }
+    #[must_use]
     pub fn zeros(&self) -> usize {
         (self.0 >> 24) as usize
     }
+    #[must_use]
     pub fn postfix(&self) -> u32 {
-        self.0 & 0x00ffffff
+        self.0 & 0x00ff_ffff
     }
+    #[must_use]
     pub fn power(&self) -> u128 {
-        (2f32.powf(self.zeros() as f32 * 8f32) * (0xffffff as f32 / self.postfix() as f32)) as u128
+        (2f32.powf(self.zeros() as f32 * 8f32) * (0x00ff_ffff as f32 / self.postfix() as f32))
+            as u128
     }
 
+    #[must_use]
     pub fn scale(&self, f: f32) -> Self {
-        let mply = (((self.postfix() as u64) << 16) as f32 / f) as u64;
+        let mply = ((u64::from(self.postfix()) << 16) as f32 / f) as u64;
         let offset = (mply.leading_zeros() as usize) / 8;
         let new_postfix = &mply.to_be_bytes()[offset..offset + 3];
         let offset = offset - 3;
@@ -205,6 +216,7 @@ impl Ord for Difficulty {
 pub struct PowOutput([u8; 32]);
 
 impl PowOutput {
+    #[must_use]
     pub fn new(out: [u8; 32]) -> Self {
         Self(out)
     }
@@ -227,6 +239,7 @@ impl AsRef<[u8]> for PowOutput {
 }
 
 impl PowOutput {
+    #[must_use]
     pub fn meets_difficulty(&self, d: Difficulty) -> bool {
         for (a, b) in self.0.iter().zip(PowOutput::from(d).0.iter()) {
             if a > b {
@@ -239,9 +252,10 @@ impl PowOutput {
         true
     }
 
+    #[must_use]
     pub fn leading_zeros(&self) -> u32 {
         let mut zeros = 0;
-        for limb in self.0.iter() {
+        for limb in &self.0 {
             let limb_zeros = limb.leading_zeros();
             zeros += limb_zeros;
             if limb_zeros != 8 {
@@ -251,6 +265,7 @@ impl PowOutput {
         zeros
     }
 
+    #[must_use]
     pub fn inner(&self) -> [u8; 32] {
         self.0
     }

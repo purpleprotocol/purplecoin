@@ -16,7 +16,6 @@ use std::collections::HashMap;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Transaction {
-    pub version: u8,
     pub chain_id: u8,
     pub ins: Vec<Input>,
     pub hash: Option<Hash256>,
@@ -29,14 +28,17 @@ impl Transaction {
     }
 
     /// Serialize to bytes
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         crate::codec::encode_to_vec(self).unwrap()
     }
 
+    #[must_use]
     pub fn hash(&self) -> Option<&Hash256> {
         self.hash.as_ref()
     }
 
+    #[must_use]
     pub fn is_coinbase(&self) -> bool {
         if self.ins.len() != 1 {
             return false;
@@ -46,13 +48,14 @@ impl Transaction {
         input.is_coinbase()
     }
 
+    #[must_use]
     pub fn get_outs(&self) -> Vec<Output> {
         let key = format!("{}.shard.{}", SETTINGS.node.network_name, self.chain_id);
         let mut out_stack = vec![];
         let mut idx_map = HashMap::new();
 
         // Compute outputs
-        for input in self.ins.iter() {
+        for input in &self.ins {
             input.script.execute(
                 &input.script_args,
                 &self.ins,
@@ -70,6 +73,7 @@ impl Transaction {
         out_stack
     }
 
+    #[must_use]
     pub fn get_ins(&self) -> &[Input] {
         &self.ins
     }
@@ -93,7 +97,7 @@ impl Transaction {
         let shard_height = shard.height().map_err(|_| TxVerifyErr::BackendErr)?;
 
         // Verify inputs
-        for i in self.ins.iter() {
+        for i in &self.ins {
             i.verify(
                 shard_height,
                 &mut ins_sum,
@@ -140,7 +144,7 @@ impl Transaction {
         let shard_height = shard.height().map_err(|_| TxVerifyErr::BackendErr)?;
 
         // Verify inputs
-        for i in self.ins.iter() {
+        for i in &self.ins {
             i.verify(
                 shard_height,
                 &mut ins_sum,
@@ -165,7 +169,6 @@ impl Encode for Transaction {
         &self,
         encoder: &mut E,
     ) -> core::result::Result<(), bincode::error::EncodeError> {
-        bincode::Encode::encode(&self.version, encoder)?;
         bincode::Encode::encode(&self.chain_id, encoder)?;
         bincode::Encode::encode(&self.ins, encoder)?;
         Ok(())
@@ -177,7 +180,6 @@ impl Decode for Transaction {
         decoder: &mut D,
     ) -> core::result::Result<Self, bincode::error::DecodeError> {
         Ok(Self {
-            version: bincode::Decode::decode(decoder)?,
             chain_id: bincode::Decode::decode(decoder)?,
             ins: bincode::Decode::decode(decoder)?,
             hash: None,
@@ -210,6 +212,7 @@ pub struct TransactionWithFee {
 }
 
 impl TransactionWithFee {
+    #[must_use]
     pub fn hash(&self) -> Option<&Hash256> {
         self.tx.hash()
     }
@@ -258,7 +261,7 @@ impl From<Transaction> for TransactionWithFee {
         Self {
             tx: other,
             raw_fee,
-            fee_per_byte: raw_fee / tx_size as Money,
+            fee_per_byte: raw_fee / i128::from(tx_size),
             tx_size,
         }
     }

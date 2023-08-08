@@ -519,10 +519,10 @@ where
 }
 
 /// Calculates the layout of the head.
-fn head_node<'a, Message, Renderer>(
+fn head_node<Message, Renderer>(
     renderer: &Renderer,
     limits: &iced_native::layout::Limits,
-    head: &Element<'a, Message, Renderer>,
+    head: &Element<'_, Message, Renderer>,
     padding: f32,
     width: Length,
     on_close: bool,
@@ -571,10 +571,10 @@ where
 }
 
 /// Calculates the layout of the body.
-fn body_node<'a, Message, Renderer>(
+fn body_node<Message, Renderer>(
     renderer: &Renderer,
     limits: &iced_native::layout::Limits,
-    body: &Element<'a, Message, Renderer>,
+    body: &Element<'_, Message, Renderer>,
     padding: f32,
     width: Length,
 ) -> iced_native::layout::Node
@@ -599,10 +599,10 @@ where
 }
 
 /// Calculates the layout of the foot.
-fn foot_node<'a, Message, Renderer>(
+fn foot_node<Message, Renderer>(
     renderer: &Renderer,
     limits: &iced_native::layout::Limits,
-    foot: &Element<'a, Message, Renderer>,
+    foot: &Element<'_, Message, Renderer>,
     padding: f32,
     width: Length,
 ) -> iced_native::layout::Node

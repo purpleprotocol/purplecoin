@@ -43,7 +43,6 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
         colour_script_args: None,
         script: Script::new_coinbase(),
         script_args,
-        nsequence: 0xffffffff,
         hash: None,
     };
     input.compute_hash(key);

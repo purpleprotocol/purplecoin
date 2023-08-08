@@ -4,8 +4,9 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::chain::*;
-use crate::node::behaviour::*;
+use crate::chain::backend::disk::DiskBackend;
+use crate::chain::{Chain, ChainConfig, PowChainBackend, Shard, ShardBackend};
+use crate::node::behaviour::{ClusterBehaviour, ExchangeBehaviour, SectorBehaviour};
 use crate::node::peer_info::PeerInfo;
 use crate::{chain::backend::disk::DiskBackend, node::request_peer::PeerInfoResponse};
 use blake3::Hash;

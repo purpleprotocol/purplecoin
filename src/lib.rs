@@ -12,7 +12,7 @@
 //! * **Decentralized & Secure**: Scalability usually comes at the cost of centralization. For example Proof of Stake consensus is scalable and green but brings the security of the network in the hands of the few. Purplecoin fully uses Proof of Work, the most secure and decentralized consensus algorithm. Miners secure the network as is the case of Bitcoin
 //! * **Stateless**: Nodes are not required to store all past transactions in order to validate new blocks. **A miner only requires storing the latest 50 block headers of each shard, which total a size of 20mb, in order to start mining and fully validating new blocks across all shards**. This means that miners and ultra-light nodes **can run in memory only mode and and still be able to fully validate blocks**.
 //! * **Fast Sync**: Due to the stateless design, nodes without a transaction history do not have to download all of the blocks from genesis and can synchronize with the network **in seconds**. Further, the overhead of querying the past transactions history from a fresh node that has just synced to the network, is `size_of_transactions + ~100mb * 256` per year queried. **This means that synchronising a fresh node with 10 years of transaction history in total of 1GB in size takes under 8 minutes on a 100mb/s internet connection**. Furthermore, we can still validate new blocks while querying for past transactions. For comparison, synchronizing with the Bitcoin network, regardless of the number and timespan of transactions, takes several days using the same internet speed.
-//! * **Energy Efficient**: Green PoW implementation designed to reduce energy consumption from mining up to 50%
+//! * **Energy Efficient**: Green `PoW` implementation designed to reduce energy consumption from mining up to 50%
 //!
 //! ## Use cases
 //! * **E-Notary**: Due to achieving scalability at the consensus and state layers, Purplecoin can function as an e-notary tool. In order to prove a document has been filed, one only needs the document itself and the witness for the state update. By providing only the document itself, the witness can be queried from archival nodes in `O(log n)` time where `n = current shard height`. In case of non-encrypted, public documents, the blockchain can serve as a decentralized repository of such documents and can be efficiently queried.
@@ -53,7 +53,7 @@
 //! * Energy efficient while not using Proof of Stake, which brings a degree of centralization as a cost to energy efficiency
 //!
 //! ### Disadvantages when compared to Ethereum v2.0
-//! * While the Green PoW mining model used in Purplecoin is 50% energy efficient, Proof of Stake is 98% energy efficient
+//! * While the Green `PoW` mining model used in Purplecoin is 50% energy efficient, Proof of Stake is 98% energy efficient
 //!
 //! ## Donations
 //! While the development of Purplecoin initially happened in the sphere of Purple Technologies, it is not backed in any way by it or any other company. Purple Technologies is a for-profit company while Purplecoin is a decentralized project. Thereforce, the decisions and development happens at the community level. As such, the project also relies on the community at a funding level.
@@ -61,7 +61,19 @@
 //! If you wish to support the development of Purplecoin, donations can be sent to the following BTC address: `bc1qp3lyr0dhly4k7ku2a6hhdrgwmurfsr9f5vz4xm`
 
 #![allow(dead_code, unused)]
-#![feature(trivial_bounds, slice_swap_unchecked)]
+#![feature(
+    trivial_bounds,
+    slice_swap_unchecked,
+    stmt_expr_attributes,
+    slice_split_at_unchecked
+)]
+#![warn(clippy::cargo, clippy::pedantic)]
+#![allow(
+    clippy::bad_bit_mask,
+    clippy::similar_names,
+    clippy::cast_possible_truncation,
+    clippy::missing_errors_doc
+)]
 
 pub mod chain;
 pub mod codec;

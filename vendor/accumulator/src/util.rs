@@ -46,10 +46,10 @@ pub fn shamir_trick<G: Group>(
     }
 
     #[cfg(debug_assertions)]
-    let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(y));
+    let (gcd, a, b) = <(Integer, Integer, Integer)>::from(x.extended_gcd_ref(y));
 
     #[cfg(not(debug_assertions))]
-    let (_, a, b) = <(Integer, Integer, Integer)>::from(x.gcd_cofactors_ref(y));
+    let (_, a, b) = <(Integer, Integer, Integer)>::from(x.extended_gcd_ref(y));
 
     #[cfg(debug_assertions)]
     if gcd != int(1) {
@@ -69,7 +69,7 @@ pub fn solve_linear_congruence(
     m: &Integer,
 ) -> Option<(Integer, Integer)> {
     // g = gcd(a, m) => da + em = g
-    let (g, d, _) = <(Integer, Integer, Integer)>::from(a.gcd_cofactors_ref(m));
+    let (g, d, _) = <(Integer, Integer, Integer)>::from(a.extended_gcd_ref(m));
 
     // q = floor_div(b, g)
     // r = b % g
@@ -114,12 +114,7 @@ mod tests {
     /// Merge-based computation of `Integer` array products. Faster than  the iterative
     /// `iter.product()` for really large integers.
     fn merge_product(xs: &[Integer]) -> Integer {
-        divide_and_conquer(
-            |a, b| -> Result<Integer, Never> { Ok(int(a * b)) },
-            int(1),
-            &xs,
-        )
-        .unwrap()
+        divide_and_conquer(|a, b| -> Result<Integer, Never> { Ok(int(a * b)) }, &xs).unwrap()
     }
 
     #[test]
