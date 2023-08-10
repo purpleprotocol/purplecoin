@@ -17,7 +17,6 @@ use purplecoin::primitives::*;
 use purplecoin::settings::SETTINGS;
 
 use std::env;
-use std::sync::atomic::AtomicBool;
 use std::thread;
 use std::time::Duration;
 use tarpc::server::{self, incoming::Incoming, Channel};
@@ -39,7 +38,6 @@ use purplecoin::gui::GUI;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
-static EXIT_SIGNAL: AtomicBool = AtomicBool::new(true);
 
 fn main() -> anyhow::Result<()> {
     purplecoin::global::init();
@@ -65,7 +63,7 @@ fn start_runtime() -> anyhow::Result<()> {
     let db = purplecoin::chain::backend::create_rocksdb_backend();
     let config = ChainConfig::new(&SETTINGS.node.network_name);
     let disk_backend = DiskBackend::new(db, Arc::new(config.clone()), None, None).unwrap();
-    let chain = Chain::new(disk_backend, &config);
+    let _chain = Chain::new(disk_backend, &config);
     let worker_threads = if SETTINGS.node.network_threads == 0 {
         num_cpus::get()
     } else {

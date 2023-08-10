@@ -42,9 +42,9 @@ impl SectorBehaviour {
     }
 
     fn build_kad_behaviour(peer_id: &PeerId) -> kad::Kademlia<store::MemoryStore> {
-        let store = store::MemoryStore::new(peer_id.clone());
+        let store = store::MemoryStore::new(*peer_id);
         let kad_config = kad::KademliaConfig::default();
-        kad::Kademlia::with_config(peer_id.clone(), store, kad_config)
+        kad::Kademlia::with_config(*peer_id, store, kad_config)
     }
 
     fn build_gossip_behaviour(local_key: &Keypair) -> gossipsub::Behaviour {
@@ -54,23 +54,23 @@ impl SectorBehaviour {
     }
 
     fn build_peer_request_behaviour() -> request_response::Behaviour<PeerInfoRequestCodec> {
-        let peer_request_codec = PeerInfoRequestCodec::default();
+        let peer_request_codec = PeerInfoRequestCodec;
         let peer_request_protocol = vec![(
             PeerInfoRequestProtocol::new("0.1.0".to_string(), "/purplecoin/peer_info/".to_string()),
             ProtocolSupport::Full,
         )];
         request_response::Behaviour::new(
             peer_request_codec,
-            peer_request_protocol.into_iter(),
+            peer_request_protocol,
             request_response::Config::default(),
         )
     }
 
     pub fn new(local_key: &Keypair, local_pbk: &PublicKey) -> Self {
-        let identify_behavior = SectorBehaviour::build_identify_behaviour(&local_pbk);
+        let identify_behavior = SectorBehaviour::build_identify_behaviour(local_pbk);
         let ping_behavior = SectorBehaviour::build_ping_behaviour();
         let kademlia_behavior = SectorBehaviour::build_kad_behaviour(&local_pbk.into());
-        let gossip_behaviour = SectorBehaviour::build_gossip_behaviour(&local_key);
+        let gossip_behaviour = SectorBehaviour::build_gossip_behaviour(local_key);
         let peer_request_behaviour = SectorBehaviour::build_peer_request_behaviour();
 
         Self {

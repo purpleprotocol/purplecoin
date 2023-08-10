@@ -73,7 +73,7 @@ impl<'a> PruneList<'a> {
         };
 
         for pos1 in bitmap.iter() {
-            prune_list.append(u64::from(pos1) - 1)
+            prune_list.append(u64::from(pos1) - 1);
         }
 
         prune_list.bitmap.run_optimize();
@@ -263,7 +263,7 @@ impl<'a> PruneList<'a> {
         self.shift_cache.truncate(idx as usize);
         self.leaf_shift_cache.truncate(idx as usize);
 
-        self.bitmap.remove_range(cleanup_pos1)
+        self.bitmap.remove_range(cleanup_pos1);
     }
 
     /// Push the node at the provided position in the prune list.
@@ -297,7 +297,7 @@ impl<'a> PruneList<'a> {
         let (parent0, sibling0) = family(pos0);
         if self.is_pruned(sibling0) {
             // Recursively append the parent (removing our sibling in the process).
-            self.append(parent0)
+            self.append(parent0);
         } else {
             // Make sure we roll anything beneath this up into this higher level pruned subtree root.
             // We should have no nested entries in the prune_list.

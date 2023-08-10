@@ -1342,10 +1342,10 @@ impl Encode for BlockHeader {
         bincode::Encode::encode(&self.height, encoder)?;
         bincode::Encode::encode(&self.prev_hash, encoder)?;
         bincode::Encode::encode(&self.tx_root, encoder)?;
-        for acc in self.accumulators.iter() {
+        for acc in &self.accumulators {
             bincode::Encode::encode(&acc.to_bytes(), encoder)?;
         }
-        for poc in self.poc.iter() {
+        for poc in &self.poc {
             bincode::Encode::encode(&poc.to_bytes(), encoder)?;
         }
         bincode::Encode::encode(&self.block_bloom.to_bytes(), encoder)?;

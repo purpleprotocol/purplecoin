@@ -16,7 +16,7 @@ use std::collections::{HashMap, HashSet};
 static GLOBAL: MiMalloc = MiMalloc;
 
 pub fn transaction_batch_benchmark(c: &mut Criterion) {
-    let batch_sizes = vec![250, 500, 750, 1000, 1500, 2000, 2500, 3500, 4000];
+    let batch_sizes = [250, 500, 750, 1000, 1500, 2000, 2500, 3500, 4000];
     let chain_id = 255;
     let config = ChainConfig::default();
     let address = Address::from_bech32("pu1wyzgxpzedr24l28ku8nsfwd2h4zrsqas69s3mp").unwrap();

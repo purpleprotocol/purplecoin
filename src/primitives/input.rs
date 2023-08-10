@@ -84,7 +84,7 @@ impl Input {
         }
 
         let bytes = self.to_bytes();
-        self.hash = Some(Hash256::hash_from_slice(bytes, key))
+        self.hash = Some(Hash256::hash_from_slice(bytes, key));
     }
 
     #[must_use]
@@ -140,7 +140,7 @@ impl Input {
             )
             .0;
 
-            for l in spend_proof.iter() {
+            for l in spend_proof {
                 let l1 = out.0.as_ref();
                 let l2 = l.0.as_ref();
 

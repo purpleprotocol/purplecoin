@@ -154,13 +154,13 @@ impl Application for GUI {
             Message::Trade(message) => self.trade_tab.update(message),
             Message::Settings(message) => self.settings_tab.update(message),
             Message::Welcome(WelcomeMessage::NextPressed) => {
-                self.active_screen = ActiveScreen::ChooseWalletCreation
+                self.active_screen = ActiveScreen::ChooseWalletCreation;
             }
             Message::ChooseWalletCreation(ChooseWalletCreationMessage::CreatePressed) => {
-                self.active_screen = ActiveScreen::CreateWallet
+                self.active_screen = ActiveScreen::CreateWallet;
             }
             Message::ChooseWalletCreation(ChooseWalletCreationMessage::ImportPressed) => {
-                self.active_screen = ActiveScreen::ImportWallet
+                self.active_screen = ActiveScreen::ImportWallet;
             }
             Message::CreateWallet(CreateWalletMessage::ConfirmMnemonic) => {
                 self.create_wallet_screen

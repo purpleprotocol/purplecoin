@@ -286,7 +286,7 @@ impl Script {
                 };
 
                 if frame.i_ptr >= f.len() {
-                    pop_frame = true
+                    pop_frame = true;
                 } else {
                     let i = &f[frame.i_ptr];
 
@@ -1284,19 +1284,19 @@ impl Script {
 
                     match top {
                         VmTerm::Signed8(v) => {
-                            check_top_stack_val!(v, frame, frame_stack, self, &flags)
+                            check_top_stack_val!(v, frame, frame_stack, self, &flags);
                         }
                         VmTerm::Signed16(v) => {
-                            check_top_stack_val!(v, frame, frame_stack, self, &flags)
+                            check_top_stack_val!(v, frame, frame_stack, self, &flags);
                         }
                         VmTerm::Signed32(v) => {
-                            check_top_stack_val!(v, frame, frame_stack, self, &flags)
+                            check_top_stack_val!(v, frame, frame_stack, self, &flags);
                         }
                         VmTerm::Signed64(v) => {
-                            check_top_stack_val!(v, frame, frame_stack, self, &flags)
+                            check_top_stack_val!(v, frame, frame_stack, self, &flags);
                         }
                         VmTerm::Signed128(v) => {
-                            check_top_stack_val!(v, frame, frame_stack, self, &flags)
+                            check_top_stack_val!(v, frame, frame_stack, self, &flags);
                         }
                         VmTerm::SignedBig(v) => {
                             if v == &ibig!(1) {
@@ -1546,7 +1546,7 @@ impl<'a> ScriptExecutor<'a> {
                                 output_stack_idx_map.get(&(address.clone(), script_hash.clone()))
                             {
                                 // Re-hash inputs
-                                let inputs_hashes: Vec<u8> = vec![
+                                let inputs_hashes: Vec<u8> = [
                                     output_stack[*idx as usize].inputs_hash.clone(),
                                     inputs_hash.clone(),
                                 ]
@@ -1630,7 +1630,7 @@ impl<'a> ScriptExecutor<'a> {
                                 output_stack_idx_map.get(&(address.clone(), script_hash.clone()))
                             {
                                 // Re-hash inputs
-                                let inputs_hashes: Vec<u8> = vec![
+                                let inputs_hashes: Vec<u8> = [
                                     output_stack[*idx as usize].inputs_hash.clone(),
                                     inputs_hash.clone(),
                                 ]
@@ -3821,7 +3821,7 @@ impl Encode for Script {
         }
 
         // Encode script
-        for e in self.script[1..].iter() {
+        for e in &self.script[1..] {
             match e {
                 ScriptEntry::Opcode(op) => {
                     bincode::Encode::encode(&op.to_u8().unwrap(), encoder)?;
@@ -4583,7 +4583,7 @@ mod tests {
         let inputs_hash: Hash160 = ins.iter().cloned().cycle().take(push_out_cycles).fold(
             inputs_hash.clone(),
             |mut acc: Hash160, v: Input| {
-                let inputs_hashes = vec![acc.0, inputs_hash.0]
+                let inputs_hashes = [acc.0, inputs_hash.0]
                     .iter()
                     .flatten()
                     .copied()
@@ -12450,14 +12450,14 @@ mod tests {
         let mut script_output: Vec<VmTerm> = vec![
             VmTerm::Unsigned8(0x1d),
             VmTerm::Unsigned16(0x3c1d),
-            VmTerm::Unsigned32(0x3c1d3c1d),
-            VmTerm::Unsigned64(0x3c1d3c1d3c1d3c1d),
-            VmTerm::Unsigned128(0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d),
+            VmTerm::Unsigned32(0x3c1d_3c1d),
+            VmTerm::Unsigned64(0x3c1d_3c1d_3c1d_3c1d),
+            VmTerm::Unsigned128(0x3c1d_3c1d_3c1d_3c1d_3c1d_3c1d_3c1d_3c1d),
             VmTerm::Signed8(0x1d),
             VmTerm::Signed16(0x3c1d),
-            VmTerm::Signed32(0x3c1d3c1d),
-            VmTerm::Signed64(0x3c1d3c1d3c1d3c1d),
-            VmTerm::Signed128(0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d),
+            VmTerm::Signed32(0x3c1d_3c1d),
+            VmTerm::Signed64(0x3c1d_3c1d_3c1d_3c1d),
+            VmTerm::Signed128(0x3c1d_3c1d_3c1d_3c1d_3c1d_3c1d_3c1d_3c1d),
         ];
         assert_script_ok(ss, script_output, key);
     }
@@ -12651,19 +12651,19 @@ mod tests {
         let mut script_output: Vec<VmTerm> = vec![
             VmTerm::Unsigned8Array(vec![0x1d, 0x1d]),
             VmTerm::Unsigned16Array(vec![0x3c1d, 0x3c1d]),
-            VmTerm::Unsigned32Array(vec![0x3c1d3c1d, 0x3c1d3c1d]),
-            VmTerm::Unsigned64Array(vec![0x3c1d3c1d3c1d3c1d, 0x3c1d3c1d3c1d3c1d]),
+            VmTerm::Unsigned32Array(vec![0x3c1d_3c1d, 0x3c1d_3c1d]),
+            VmTerm::Unsigned64Array(vec![0x3c1d_3c1d_3c1d_3c1d, 0x3c1d_3c1d_3c1d_3c1d]),
             VmTerm::Unsigned128Array(vec![
-                0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d,
-                0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d,
+                0x3c1d_3c1d_3c1d_3c1d_3c1d_3c1d_3c1d_3c1d,
+                0x3c1d_3c1d_3c1d_3c1d_3c1d_3c1d_3c1d_3c1d,
             ]),
             VmTerm::Signed8Array(vec![0x1d, 0x1d]),
             VmTerm::Signed16Array(vec![0x3c1d, 0x3c1d]),
-            VmTerm::Signed32Array(vec![0x3c1d3c1d, 0x3c1d3c1d]),
-            VmTerm::Signed64Array(vec![0x3c1d3c1d3c1d3c1d, 0x3c1d3c1d3c1d3c1d]),
+            VmTerm::Signed32Array(vec![0x3c1d_3c1d, 0x3c1d_3c1d]),
+            VmTerm::Signed64Array(vec![0x3c1d_3c1d_3c1d_3c1d, 0x3c1d_3c1d_3c1d_3c1d]),
             VmTerm::Signed128Array(vec![
-                0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d,
-                0x3c1d3c1d3c1d3c1d3c1d3c1d3c1d3c1d,
+                0x3c1d_3c1d_3c1d_3c1d_3c1d_3c1d_3c1d_3c1d,
+                0x3c1d_3c1d_3c1d_3c1d_3c1d_3c1d_3c1d_3c1d,
             ]),
         ];
         assert_script_ok(ss, script_output, key);
@@ -13382,8 +13382,8 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned32(0x04040404),
-            VmTerm::Unsigned32(0x01010101),
+            VmTerm::Unsigned32(0x0404_0404),
+            VmTerm::Unsigned32(0x0101_0101),
         ];
         assert_script_fail(ss, script_output, key, ExecutionResult::Panic);
     }
@@ -13417,8 +13417,8 @@ mod tests {
             ..Script::default()
         };
         let mut script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned32(0x04040404),
-            VmTerm::Unsigned32(0x01010101),
+            VmTerm::Unsigned32(0x0404_0404),
+            VmTerm::Unsigned32(0x0101_0101),
         ];
         assert_script_ok(ss, script_output, key);
     }

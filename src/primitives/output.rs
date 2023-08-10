@@ -91,7 +91,7 @@ impl Output {
         }
 
         let bytes = self.to_bytes();
-        self.hash = Some(Hash256::hash_from_slice(bytes, key))
+        self.hash = Some(Hash256::hash_from_slice(bytes, key));
     }
 }
 
@@ -234,7 +234,7 @@ mod tests {
         };
         let mut sum = 0;
 
-        assert_eq!(output.verify(&mut sum), Err(TxVerifyErr::FailedMoneyCheck))
+        assert_eq!(output.verify(&mut sum), Err(TxVerifyErr::FailedMoneyCheck));
     }
 
     #[test]
@@ -252,7 +252,7 @@ mod tests {
         };
         let mut sum = 0;
 
-        assert_eq!(output.verify(&mut sum), Err(TxVerifyErr::ZeroOutputAmount))
+        assert_eq!(output.verify(&mut sum), Err(TxVerifyErr::ZeroOutputAmount));
     }
 
     #[test]

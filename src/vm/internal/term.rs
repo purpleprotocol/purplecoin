@@ -399,27 +399,27 @@ impl VmTerm {
                 *lhs_val -= rhs_val;
             }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
-                for val in lhs_val.iter_mut() {
+                for val in &mut *lhs_val {
                     *val = val.checked_sub(*rhs_val)?;
                 }
             }
             (Self::Unsigned16Array(ref mut lhs_val), Self::Unsigned16(rhs_val)) => {
-                for val in lhs_val.iter_mut() {
+                for val in &mut *lhs_val {
                     *val = val.checked_sub(*rhs_val)?;
                 }
             }
             (Self::Unsigned32Array(ref mut lhs_val), Self::Unsigned32(rhs_val)) => {
-                for val in lhs_val.iter_mut() {
+                for val in &mut *lhs_val {
                     *val = val.checked_sub(*rhs_val)?;
                 }
             }
             (Self::Unsigned64Array(ref mut lhs_val), Self::Unsigned64(rhs_val)) => {
-                for val in lhs_val.iter_mut() {
+                for val in &mut *lhs_val {
                     *val = val.checked_sub(*rhs_val)?;
                 }
             }
             (Self::Unsigned128Array(ref mut lhs_val), Self::Unsigned128(rhs_val)) => {
-                for val in lhs_val.iter_mut() {
+                for val in &mut *lhs_val {
                     *val = val.checked_sub(*rhs_val)?;
                 }
             }
@@ -427,27 +427,27 @@ impl VmTerm {
                 *lhs_val = lhs_val.iter().map(|x| x - rhs_val).collect();
             }
             (Self::Signed8Array(ref mut lhs_val), Self::Signed8(rhs_val)) => {
-                for val in lhs_val.iter_mut() {
+                for val in &mut *lhs_val {
                     *val = val.checked_sub(*rhs_val)?;
                 }
             }
             (Self::Signed16Array(ref mut lhs_val), Self::Signed16(rhs_val)) => {
-                for val in lhs_val.iter_mut() {
+                for val in &mut *lhs_val {
                     *val = val.checked_sub(*rhs_val)?;
                 }
             }
             (Self::Signed32Array(ref mut lhs_val), Self::Signed32(rhs_val)) => {
-                for val in lhs_val.iter_mut() {
+                for val in &mut *lhs_val {
                     *val = val.checked_sub(*rhs_val)?;
                 }
             }
             (Self::Signed64Array(ref mut lhs_val), Self::Signed64(rhs_val)) => {
-                for val in lhs_val.iter_mut() {
+                for val in &mut *lhs_val {
                     *val = val.checked_sub(*rhs_val)?;
                 }
             }
             (Self::Signed128Array(ref mut lhs_val), Self::Signed128(rhs_val)) => {
-                for val in lhs_val.iter_mut() {
+                for val in &mut *lhs_val {
                     *val = val.checked_sub(*rhs_val)?;
                 }
             }
@@ -569,27 +569,27 @@ impl VmTerm {
                 *lhs_val *= rhs_val;
             }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_mul(*rhs_val)?;
                 }
             }
             (Self::Unsigned16Array(ref mut lhs_val), Self::Unsigned16(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_mul(*rhs_val)?;
                 }
             }
             (Self::Unsigned32Array(ref mut lhs_val), Self::Unsigned32(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_mul(*rhs_val)?;
                 }
             }
             (Self::Unsigned64Array(ref mut lhs_val), Self::Unsigned64(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_mul(*rhs_val)?;
                 }
             }
             (Self::Unsigned128Array(ref mut lhs_val), Self::Unsigned128(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_mul(*rhs_val)?;
                 }
             }
@@ -597,27 +597,27 @@ impl VmTerm {
                 *lhs_val = lhs_val.iter().map(|x| x * rhs_val).collect();
             }
             (Self::Signed8Array(ref mut lhs_val), Self::Signed8(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_mul(*rhs_val)?;
                 }
             }
             (Self::Signed16Array(ref mut lhs_val), Self::Signed16(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_mul(*rhs_val)?;
                 }
             }
             (Self::Signed32Array(ref mut lhs_val), Self::Signed32(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_mul(*rhs_val)?;
                 }
             }
             (Self::Signed64Array(ref mut lhs_val), Self::Signed64(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_mul(*rhs_val)?;
                 }
             }
             (Self::Signed128Array(ref mut lhs_val), Self::Signed128(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_mul(*rhs_val)?;
                 }
             }
@@ -739,27 +739,27 @@ impl VmTerm {
                 *lhs_val /= rhs_val;
             }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_div(*rhs_val)?;
                 }
             }
             (Self::Unsigned16Array(ref mut lhs_val), Self::Unsigned16(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_div(*rhs_val)?;
                 }
             }
             (Self::Unsigned32Array(ref mut lhs_val), Self::Unsigned32(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_div(*rhs_val)?;
                 }
             }
             (Self::Unsigned64Array(ref mut lhs_val), Self::Unsigned64(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_div(*rhs_val)?;
                 }
             }
             (Self::Unsigned128Array(ref mut lhs_val), Self::Unsigned128(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_div(*rhs_val)?;
                 }
             }
@@ -767,27 +767,27 @@ impl VmTerm {
                 *lhs_val = lhs_val.iter().map(|x| x / rhs_val).collect();
             }
             (Self::Signed8Array(ref mut lhs_val), Self::Signed8(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_div(*rhs_val)?;
                 }
             }
             (Self::Signed16Array(ref mut lhs_val), Self::Signed16(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_div(*rhs_val)?;
                 }
             }
             (Self::Signed32Array(ref mut lhs_val), Self::Signed32(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_div(*rhs_val)?;
                 }
             }
             (Self::Signed64Array(ref mut lhs_val), Self::Signed64(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_div(*rhs_val)?;
                 }
             }
             (Self::Signed128Array(ref mut lhs_val), Self::Signed128(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x = x.checked_div(*rhs_val)?;
                 }
             }
@@ -901,14 +901,14 @@ impl VmTerm {
             Self::Signed128Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 16,
             Self::UnsignedBigArray(val) => {
                 let mut size = EMPTY_VEC_HEAP_SIZE;
-                for v in val.iter() {
+                for v in val {
                     size += (v.bit_len() >> 3) + EMPTY_VEC_HEAP_SIZE; // additional vec allocated by ubig
                 }
                 size
             }
             Self::SignedBigArray(val) => {
                 let mut size = EMPTY_VEC_HEAP_SIZE;
-                for v in val.iter() {
+                for v in val {
                     let v = v.abs();
                     let v: UBig = v.try_into().unwrap();
                     size += (v.bit_len() >> 3) + EMPTY_VEC_HEAP_SIZE + WORD_SIZE;
@@ -1303,52 +1303,52 @@ impl VmTerm {
                 *val = !*val;
             }
             Self::Unsigned8Array(ref mut val) => {
-                for x in val.iter_mut() {
+                for x in &mut *val {
                     *x = !*x;
                 }
             }
             Self::Unsigned16Array(ref mut val) => {
-                for x in val.iter_mut() {
+                for x in &mut *val {
                     *x = !*x;
                 }
             }
             Self::Unsigned32Array(ref mut val) => {
-                for x in val.iter_mut() {
+                for x in &mut *val {
                     *x = !*x;
                 }
             }
             Self::Unsigned64Array(ref mut val) => {
-                for x in val.iter_mut() {
+                for x in &mut *val {
                     *x = !*x;
                 }
             }
             Self::Unsigned128Array(ref mut val) => {
-                for x in val.iter_mut() {
+                for x in &mut *val {
                     *x = !*x;
                 }
             }
             Self::Signed8Array(ref mut val) => {
-                for x in val.iter_mut() {
+                for x in &mut *val {
                     *x = !*x;
                 }
             }
             Self::Signed16Array(ref mut val) => {
-                for x in val.iter_mut() {
+                for x in &mut *val {
                     *x = !*x;
                 }
             }
             Self::Signed32Array(ref mut val) => {
-                for x in val.iter_mut() {
+                for x in &mut *val {
                     *x = !*x;
                 }
             }
             Self::Signed64Array(ref mut val) => {
-                for x in val.iter_mut() {
+                for x in &mut *val {
                     *x = !*x;
                 }
             }
             Self::Signed128Array(ref mut val) => {
-                for x in val.iter_mut() {
+                for x in &mut *val {
                     *x = !*x;
                 }
             }
@@ -1403,27 +1403,27 @@ impl VmTerm {
                 *lhs_val |= rhs_val;
             }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x |= *rhs_val;
                 }
             }
             (Self::Unsigned16Array(ref mut lhs_val), Self::Unsigned16(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x |= *rhs_val;
                 }
             }
             (Self::Unsigned32Array(ref mut lhs_val), Self::Unsigned32(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x |= *rhs_val;
                 }
             }
             (Self::Unsigned64Array(ref mut lhs_val), Self::Unsigned64(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x |= *rhs_val;
                 }
             }
             (Self::Unsigned128Array(ref mut lhs_val), Self::Unsigned128(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x |= *rhs_val;
                 }
             }
@@ -1431,27 +1431,27 @@ impl VmTerm {
                 *lhs_val = lhs_val.iter().map(|x| x | rhs_val).collect();
             }
             (Self::Signed8Array(ref mut lhs_val), Self::Signed8(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x |= *rhs_val;
                 }
             }
             (Self::Signed16Array(ref mut lhs_val), Self::Signed16(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x |= *rhs_val;
                 }
             }
             (Self::Signed32Array(ref mut lhs_val), Self::Signed32(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x |= *rhs_val;
                 }
             }
             (Self::Signed64Array(ref mut lhs_val), Self::Signed64(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x |= *rhs_val;
                 }
             }
             (Self::Signed128Array(ref mut lhs_val), Self::Signed128(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x |= *rhs_val;
                 }
             }
@@ -1573,27 +1573,27 @@ impl VmTerm {
                 *lhs_val ^= rhs_val;
             }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x ^= *rhs_val;
                 }
             }
             (Self::Unsigned16Array(ref mut lhs_val), Self::Unsigned16(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x ^= *rhs_val;
                 }
             }
             (Self::Unsigned32Array(ref mut lhs_val), Self::Unsigned32(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x ^= *rhs_val;
                 }
             }
             (Self::Unsigned64Array(ref mut lhs_val), Self::Unsigned64(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x ^= *rhs_val;
                 }
             }
             (Self::Unsigned128Array(ref mut lhs_val), Self::Unsigned128(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x ^= *rhs_val;
                 }
             }
@@ -1601,27 +1601,27 @@ impl VmTerm {
                 *lhs_val = lhs_val.iter().map(|x| x ^ rhs_val).collect();
             }
             (Self::Signed8Array(ref mut lhs_val), Self::Signed8(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x ^= *rhs_val;
                 }
             }
             (Self::Signed16Array(ref mut lhs_val), Self::Signed16(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x ^= *rhs_val;
                 }
             }
             (Self::Signed32Array(ref mut lhs_val), Self::Signed32(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x ^= *rhs_val;
                 }
             }
             (Self::Signed64Array(ref mut lhs_val), Self::Signed64(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x ^= *rhs_val;
                 }
             }
             (Self::Signed128Array(ref mut lhs_val), Self::Signed128(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x ^= *rhs_val;
                 }
             }
@@ -1744,27 +1744,27 @@ impl VmTerm {
             //     *lhs_val <<= rhs_val;
             // }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x <<= *rhs_val;
                 }
             }
             (Self::Unsigned16Array(ref mut lhs_val), Self::Unsigned16(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x <<= *rhs_val;
                 }
             }
             (Self::Unsigned32Array(ref mut lhs_val), Self::Unsigned32(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x <<= *rhs_val;
                 }
             }
             (Self::Unsigned64Array(ref mut lhs_val), Self::Unsigned64(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x <<= *rhs_val;
                 }
             }
             (Self::Unsigned128Array(ref mut lhs_val), Self::Unsigned128(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x <<= *rhs_val;
                 }
             }
@@ -1772,27 +1772,27 @@ impl VmTerm {
             //     *lhs_val = lhs_val.iter().map(|x| x << rhs_val).collect();
             // }
             (Self::Signed8Array(ref mut lhs_val), Self::Signed8(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x <<= *rhs_val;
                 }
             }
             (Self::Signed16Array(ref mut lhs_val), Self::Signed16(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x <<= *rhs_val;
                 }
             }
             (Self::Signed32Array(ref mut lhs_val), Self::Signed32(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x <<= *rhs_val;
                 }
             }
             (Self::Signed64Array(ref mut lhs_val), Self::Signed64(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x <<= *rhs_val;
                 }
             }
             (Self::Signed128Array(ref mut lhs_val), Self::Signed128(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x <<= *rhs_val;
                 }
             }
@@ -1915,27 +1915,27 @@ impl VmTerm {
             //     *lhs_val >>= rhs_val;
             // }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x >>= *rhs_val;
                 }
             }
             (Self::Unsigned16Array(ref mut lhs_val), Self::Unsigned16(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x >>= *rhs_val;
                 }
             }
             (Self::Unsigned32Array(ref mut lhs_val), Self::Unsigned32(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x >>= *rhs_val;
                 }
             }
             (Self::Unsigned64Array(ref mut lhs_val), Self::Unsigned64(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x >>= *rhs_val;
                 }
             }
             (Self::Unsigned128Array(ref mut lhs_val), Self::Unsigned128(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x >>= *rhs_val;
                 }
             }
@@ -1943,27 +1943,27 @@ impl VmTerm {
             //     *lhs_val = lhs_val.iter().map(|x| x >> rhs_val).collect();
             // }
             (Self::Signed8Array(ref mut lhs_val), Self::Signed8(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x >>= *rhs_val;
                 }
             }
             (Self::Signed16Array(ref mut lhs_val), Self::Signed16(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x >>= *rhs_val;
                 }
             }
             (Self::Signed32Array(ref mut lhs_val), Self::Signed32(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x >>= *rhs_val;
                 }
             }
             (Self::Signed64Array(ref mut lhs_val), Self::Signed64(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x >>= *rhs_val;
                 }
             }
             (Self::Signed128Array(ref mut lhs_val), Self::Signed128(rhs_val)) => {
-                for x in lhs_val.iter_mut() {
+                for x in &mut *lhs_val {
                     *x >>= *rhs_val;
                 }
             }
@@ -2178,7 +2178,7 @@ impl Encode for VmTerm {
             Self::Unsigned16Array(ref v) => {
                 bincode::Encode::encode(&0x17_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 2);
-                for v in v.iter() {
+                for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
                 }
                 bincode::Encode::encode(&buf, encoder)?;
@@ -2187,7 +2187,7 @@ impl Encode for VmTerm {
             Self::Unsigned32Array(ref v) => {
                 bincode::Encode::encode(&0x18_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 4);
-                for v in v.iter() {
+                for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
                 }
                 bincode::Encode::encode(&buf, encoder)?;
@@ -2196,7 +2196,7 @@ impl Encode for VmTerm {
             Self::Unsigned64Array(ref v) => {
                 bincode::Encode::encode(&0x19_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 8);
-                for v in v.iter() {
+                for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
                 }
                 bincode::Encode::encode(&buf, encoder)?;
@@ -2205,7 +2205,7 @@ impl Encode for VmTerm {
             Self::Unsigned128Array(ref v) => {
                 bincode::Encode::encode(&0x1a_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 16);
-                for v in v.iter() {
+                for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
                 }
                 bincode::Encode::encode(&buf, encoder)?;
@@ -2214,7 +2214,7 @@ impl Encode for VmTerm {
             Self::UnsignedBigArray(ref v) => {
                 bincode::Encode::encode(&0x1b_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 32);
-                for v in v.iter() {
+                for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
                 }
                 bincode::Encode::encode(&buf, encoder)?;
@@ -2228,7 +2228,7 @@ impl Encode for VmTerm {
             Self::Signed16Array(ref v) => {
                 bincode::Encode::encode(&0x1d_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 2);
-                for v in v.iter() {
+                for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
                 }
                 bincode::Encode::encode(&buf, encoder)?;
@@ -2237,7 +2237,7 @@ impl Encode for VmTerm {
             Self::Signed32Array(ref v) => {
                 bincode::Encode::encode(&0x1e_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 4);
-                for v in v.iter() {
+                for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
                 }
                 bincode::Encode::encode(&buf, encoder)?;
@@ -2246,7 +2246,7 @@ impl Encode for VmTerm {
             Self::Signed64Array(ref v) => {
                 bincode::Encode::encode(&0x1f_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 8);
-                for v in v.iter() {
+                for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
                 }
                 bincode::Encode::encode(&buf, encoder)?;
@@ -2255,7 +2255,7 @@ impl Encode for VmTerm {
             Self::Signed128Array(ref v) => {
                 bincode::Encode::encode(&0x20_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 16);
-                for v in v.iter() {
+                for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
                 }
                 bincode::Encode::encode(&buf, encoder)?;
@@ -2264,7 +2264,7 @@ impl Encode for VmTerm {
             Self::SignedBigArray(ref v) => {
                 bincode::Encode::encode(&0x21_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * (32 + 1));
-                for v in v.iter() {
+                for v in v {
                     let sign = v.signum().to_f32() as i8;
                     let v = v.abs();
 

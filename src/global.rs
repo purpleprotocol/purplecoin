@@ -8,6 +8,7 @@ use crate::chain::ChainConfig;
 use crate::consensus::*;
 use crate::primitives::{BlockHeader, Hash256};
 use crate::wallet::HDWallet;
+use chrono::prelude::*;
 use lazy_static::lazy_static;
 use lru::LruCache;
 use parking_lot::{
@@ -16,11 +17,14 @@ use parking_lot::{
 use std::collections::HashMap;
 use std::io;
 use std::num::NonZeroUsize;
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use triomphe::Arc;
 
 pub const LOGO: &[u8; 36124] = include_bytes!("./gui/img/logo_purple_square.png");
 
 type GenesisCache = RwLock<HashMap<u8, Arc<RwLock<Option<Arc<BlockHeader>>>>>>;
+pub static EXIT_SIGNAL: AtomicBool = AtomicBool::new(true);
+pub static STARTUP_TIME: AtomicI64 = AtomicI64::new(0);
 
 lazy_static! {
     /// Genesis blocks cache
@@ -42,8 +46,23 @@ lazy_static! {
     };
 }
 
+#[must_use]
+pub fn get_unix_timestamp_ms() -> i64 {
+    let now = Utc::now();
+    now.timestamp_millis()
+}
+
+#[must_use]
+pub fn get_unix_timestamp_secs() -> i64 {
+    let now = Utc::now();
+    now.timestamp()
+}
+
 /// Initialize globals
-pub fn init() {}
+pub fn init() {
+    // Store startup time
+    STARTUP_TIME.store(get_unix_timestamp_secs(), Ordering::Relaxed);
+}
 
 pub fn set_balance(wallet: &str, balance: i128) {
     WALLET_BLANCES.lock().insert(wallet.to_owned(), balance);

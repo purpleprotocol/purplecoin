@@ -10,7 +10,7 @@ use crate::node::peer_info::PeerInfo;
 use crate::settings::SETTINGS;
 use crate::{chain::backend::disk::DiskBackend, node::request_peer::PeerInfoResponse};
 use blake3::Hash;
-use futures::*;
+use futures::{FutureExt, StreamExt};
 use libp2p::yamux;
 use libp2p::{
     core::upgrade,
@@ -20,11 +20,12 @@ use libp2p::{
     swarm::{SwarmBuilder, SwarmEvent},
     tcp, Multiaddr, PeerId, Swarm, Transport,
 };
-use log::*;
+use log::{error, info};
 pub use mempool::*;
 use parking_lot::RwLock;
 pub use rpc::*;
 use std::collections::HashMap;
+use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use triomphe::Arc;
 
@@ -94,7 +95,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
         let peer_info = PeerInfo {
             id: local_peer_id.to_string(),
             internal_id: Some(local_peer_id),
-            startup_time: 0,               // TODO: Add correct startup time
+            startup_time: crate::global::STARTUP_TIME.load(Ordering::Relaxed),
             min_relay_fee: 0,              // TODO: Add correct min relay fee
             listening_sectors: [true; 16], // TODO: Add correct listening sectors
         };
@@ -150,7 +151,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
                             }
                             let peer_table_lock = self.peer_info_table.lock().unwrap();
                             if !peer_table_lock.contains_key(&peer_id) {
-                                let peer_info_request = PeerInfoRequest::default();
+                                let peer_info_request = PeerInfoRequest;
                                 sector_behaviour.peer_request.send_request(&peer_id, peer_info_request);
                             }
                         }

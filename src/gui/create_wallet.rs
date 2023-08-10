@@ -86,7 +86,7 @@ impl CreateWalletScreen {
                 self.state = CreateWalletState::RenderMnemonic(Mnemonic::new(
                     MnemonicType::Words24,
                     Language::English,
-                ))
+                ));
             }
             CreateWalletMessage::ChooseWalletNameAndPassword => {
                 let mnemonic = if let CreateWalletState::RenderMnemonic(mn) = &self.state {

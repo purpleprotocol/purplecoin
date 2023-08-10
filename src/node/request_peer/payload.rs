@@ -25,7 +25,7 @@ mod tests {
 
     #[test]
     fn test_encode_request() {
-        let new_request = PeerInfoRequest::default();
+        let new_request = PeerInfoRequest;
         let mut buf = [0u8; 8];
         bincode::encode_into_slice(&new_request, &mut buf, bincode::config::standard()).unwrap();
 

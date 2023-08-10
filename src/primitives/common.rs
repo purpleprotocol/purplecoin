@@ -497,7 +497,7 @@ pub struct Hash256Algo(Vec<u8>);
 impl Hasher for Hash256Algo {
     #[inline]
     fn write(&mut self, msg: &[u8]) {
-        self.0.extend_from_slice(msg)
+        self.0.extend_from_slice(msg);
     }
 
     #[inline]

@@ -68,7 +68,7 @@ impl SettingsTab {
     pub fn update(&mut self, message: SettingsMessage) {
         match message {
             SettingsMessage::PositionSelected(position) => {
-                self.settings().tab_bar_position = Some(position)
+                self.settings().tab_bar_position = Some(position);
             }
             SettingsMessage::ThemeSelected(theme) => self.settings().tab_bar_theme = Some(theme),
         }
