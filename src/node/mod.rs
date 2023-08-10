@@ -26,6 +26,7 @@ use parking_lot::RwLock;
 use regex::Regex;
 pub use rpc::*;
 use std::collections::HashMap;
+use std::string::ToString;
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use triomphe::Arc;
@@ -232,7 +233,7 @@ fn resolve_txt_record(fqdn: &str) -> Option<Vec<String>> {
     let txt_response = resolver.txt_lookup(fqdn);
     txt_response
         .ok()
-        .map(|txt| txt.iter().map(std::string::ToString::to_string).collect())
+        .map(|txt| txt.iter().map(ToString::to_string).collect())
 }
 
 mod behaviour;
