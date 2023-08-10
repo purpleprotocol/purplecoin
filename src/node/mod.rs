@@ -10,6 +10,7 @@ use crate::node::peer_info::PeerInfo;
 use crate::settings::SETTINGS;
 use crate::{chain::backend::disk::DiskBackend, node::request_peer::PeerInfoResponse};
 use blake3::Hash;
+use fancy_regex::Regex;
 use futures::{FutureExt, StreamExt};
 use libp2p::yamux;
 use libp2p::{
@@ -23,7 +24,6 @@ use libp2p::{
 use log::{error, info};
 pub use mempool::*;
 use parking_lot::RwLock;
-use regex::Regex;
 pub use rpc::*;
 use std::collections::HashMap;
 use std::string::ToString;
@@ -148,11 +148,16 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
         let mut peer_ids_and_addrs: Vec<(String, String)> = vec![];
 
         for s in seeds {
-            let mut to_parse = vec![s.clone()];
-            if fqdn_regx.is_match(s.as_str()) {
+            let mut to_parse = vec![];
+            if fqdn_regx
+                .is_match(s.as_str())
+                .expect("could not parse dns seed")
+            {
                 // Resolve DNS seed
                 let dns_seeds = resolve_txt_record(s.as_str()).expect("could not resolve dns seed");
                 to_parse.extend(dns_seeds);
+            } else {
+                to_parse.push(s.clone());
             }
 
             for s in to_parse {
