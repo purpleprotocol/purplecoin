@@ -177,6 +177,7 @@ async fn run_rpc() -> anyhow::Result<()> {
         let port = match SETTINGS.node.network_name.as_str() {
             "mainnet" => SETTINGS.network.rpc_listen_port_mainnet,
             "testnet" => SETTINGS.network.rpc_listen_port_testnet,
+            "devnet" => SETTINGS.network.rpc_listen_port_devnet,
             other => panic!("Invalid network name: {other}"),
         };
 

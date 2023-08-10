@@ -65,6 +65,8 @@ parking_lot = "0.12.1"
 lru = "0.8.1"
 jump-consistent-hash = "0.1.0"
 anyhow = "1.0.62"
+regex = "1.9.3"
+trust-dns-resolver = "0.22.0"
 bitvec = "1.0.1"
 futures = "0.3"
 tarpc = { version = "0.31", features = ["full"] }

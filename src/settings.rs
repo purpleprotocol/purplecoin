@@ -172,6 +172,10 @@ pub struct Network {
     #[serde(alias = "listenporttestnet")]
     pub listen_port_testnet: u16,
 
+    /// Node listen port on devnet.
+    #[serde(alias = "listenportdevnet")]
+    pub listen_port_devnet: u16,
+
     /// Enable RPC.
     #[serde(alias = "rpcenabled")]
     pub rpc_enabled: bool,
@@ -183,6 +187,10 @@ pub struct Network {
     /// RPC listen port on testnet.
     #[serde(alias = "rpclistenporttestnet")]
     pub rpc_listen_port_testnet: u16,
+
+    /// RPC listen port on devnet.
+    #[serde(alias = "rpclistenportdevnet")]
+    pub rpc_listen_port_devnet: u16,
 
     /// RPC username.
     #[serde(alias = "rpcusername")]
@@ -200,17 +208,9 @@ pub struct Network {
     #[serde(alias = "seedstestnet")]
     pub seeds_testnet: Vec<String>,
 
-    // Is bootstrap node
-    #[serde(alias = "isbootstrapnode")]
-    pub is_bootstrap_node: bool,
-
-    /// Bootstrap node peer id
-    #[serde(alias = "bootstrapnodepeerid")]
-    pub bootstrap_node_peer_id: Option<String>,
-
-    /// Bootstrap node addrs
-    #[serde(alias = "bootstrapnodeaddress")]
-    pub bootstrap_node_address: Option<String>,
+    /// DNS seeds for devnet.
+    #[serde(alias = "seedsdevnet")]
+    pub seeds_devnet: Vec<String>,
 }
 
 impl Default for Network {
@@ -219,16 +219,16 @@ impl Default for Network {
             listen_addr: "0.0.0.0".to_owned(),
             listen_port_mainnet: 8098,
             listen_port_testnet: 8031,
+            listen_port_devnet: 8021,
             rpc_enabled: true,
             rpc_listen_port_mainnet: 8067,
             rpc_listen_port_testnet: 8037,
+            rpc_listen_port_devnet: 8027,
             rpc_username: "purplecoin".to_owned(),
             rpc_password: "purplecoin".to_owned(),
-            seeds_mainnet: vec!["bootstrap.mainnet.purplecoin.io".to_owned()],
-            seeds_testnet: vec!["bootstrap.testnet.purplecoin.io".to_owned()],
-            is_bootstrap_node: true,
-            bootstrap_node_peer_id: None,
-            bootstrap_node_address: None,
+            seeds_mainnet: vec!["bootstrap.mainnet.purplecoin.io.".to_owned()],
+            seeds_testnet: vec!["bootstrap.testnet.purplecoin.io.".to_owned()],
+            seeds_devnet: vec![],
         }
     }
 }
@@ -319,7 +319,7 @@ impl Default for Node {
         path.push("Purplecoin");
 
         Self {
-            network_name: "testnet".to_owned(), // Use testnet as default for now
+            network_name: "devnet".to_owned(), // Use devnet as default for now
             verifier_threads: 0,
             network_threads: 0,
             archival_mode: true, // Leave this on for now

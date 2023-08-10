@@ -23,11 +23,18 @@ use libp2p::{
 use log::{error, info};
 pub use mempool::*;
 use parking_lot::RwLock;
+use regex::Regex;
 pub use rpc::*;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use triomphe::Arc;
+use trust_dns_resolver::error::ResolveResult;
+use trust_dns_resolver::Resolver;
+use trust_dns_resolver::{
+    config::{ResolverConfig, ResolverOpts},
+    lookup::TxtLookup,
+};
 
 use self::request_peer::PeerInfoRequest;
 
@@ -46,7 +53,6 @@ pub struct Node<'a, B: PowChainBackend<'a> + ShardBackend<'a>> {
 
 impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
     pub fn new(chain: Chain<'a, B>) -> Self {
-        // TODO: Add secret key bytes to settings
         let local_pk = Keypair::generate_ed25519();
         let local_pbk = local_pk.public();
         let local_peer_id = PeerId::from(local_pbk.clone());
@@ -124,27 +130,49 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
         // TODO: Implement the following bootstrap procedure:
         // 1. Check our database for previously contacted nodes.
         // 2. Attempt connecting to them.
-        // 3. If that fails, query dns seeds and connect to bootstrap nodes.
+        // 3. Find peers on the local network
+        // 4. If that fails, query dns seeds and connect to bootstrap nodes.
         info!("Bootstrapping...");
-        let peer_id = match &SETTINGS.network.bootstrap_node_peer_id {
-            Some(peer_id) => peer_id,
-            None => {
-                error!("No bootstrap node peer id provided");
-                return;
-            }
+
+        let fqdn_regx =
+            Regex::new(r"(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{1,63}(?<!-)\.)+[a-zA-Z]{2,63}$)")
+                .unwrap();
+        let seeds = match SETTINGS.node.network_name.as_str() {
+            "mainnet" => SETTINGS.network.seeds_mainnet.as_slice(),
+            "testnet" => SETTINGS.network.seeds_testnet.as_slice(),
+            "devnet" => SETTINGS.network.seeds_devnet.as_slice(),
+            network => panic!("invalid network name: {network}"),
         };
 
-        let addr = match &SETTINGS.network.bootstrap_node_address {
-            Some(addr) => addr,
-            None => {
-                error!("No bootstrap node address provided");
-                return;
+        let mut peer_ids_and_addrs: Vec<(String, String)> = vec![];
+
+        for s in seeds {
+            let mut to_parse = vec![s.clone()];
+            if fqdn_regx.is_match(s.as_str()) {
+                // Resolve DNS seed
+                let dns_seeds = resolve_txt_record(s.as_str()).expect("could not resolve dns seed");
+                to_parse.extend(dns_seeds);
             }
-        };
-        self.sector_swarm
-            .behaviour_mut()
-            .kademlia
-            .add_address(&peer_id.parse().unwrap(), addr.parse().unwrap());
+
+            for s in to_parse {
+                // Parse peer id and address. Written in settings as `<peer_id>:<address>`
+                let split: Vec<_> = s.split(':').collect();
+                assert!(split.len() == 2, "invalid peer address: {s}");
+                peer_ids_and_addrs.push((split[0].to_string(), split[1].to_string()));
+            }
+        }
+
+        for (id, addr) in &peer_ids_and_addrs {
+            self.sector_swarm.behaviour_mut().kademlia.add_address(
+                &id.parse().expect("invalid peer id"),
+                addr.parse().expect("invalid peer address"),
+            );
+        }
+
+        info!(
+            "Found {} bootstrap nodes. Connecting...",
+            peer_ids_and_addrs.len()
+        );
     }
 
     pub async fn run(&mut self) {
@@ -197,6 +225,14 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
             }
         }
     }
+}
+
+fn resolve_txt_record(fqdn: &str) -> Option<Vec<String>> {
+    let resolver = Resolver::new(ResolverConfig::default(), ResolverOpts::default()).unwrap();
+    let txt_response = resolver.txt_lookup(fqdn);
+    txt_response
+        .ok()
+        .map(|txt| txt.iter().map(std::string::ToString::to_string).collect())
 }
 
 mod behaviour;

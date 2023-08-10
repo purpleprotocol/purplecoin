@@ -765,7 +765,7 @@ impl BlockHeader {
         let raw = match SETTINGS.node.network_name.as_str() {
             "mainnet" => ADDRESSES_RAW_MAINNET,
 
-            "testnet" => ADDRESSES_RAW_TESTNET,
+            "testnet" | "devnet" => ADDRESSES_RAW_TESTNET,
 
             other => {
                 panic!("Invalid network: {other}")

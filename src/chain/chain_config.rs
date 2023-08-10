@@ -17,7 +17,7 @@ pub struct ChainConfig {
 
 impl Default for ChainConfig {
     fn default() -> Self {
-        Self::new("testnet")
+        Self::new("devnet")
     }
 }
 
