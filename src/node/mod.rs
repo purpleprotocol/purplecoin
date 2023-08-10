@@ -41,12 +41,11 @@ pub struct Node<'a, B: PowChainBackend<'a> + ShardBackend<'a>> {
     sector_swarm: Swarm<SectorBehaviour>,
     exchange_swarm: Swarm<ExchangeBehaviour>,
     cluster_swarm: Swarm<ClusterBehaviour>,
-    chain_config: Arc<ChainConfig>,
     shards: Arc<HashMap<u8, Option<Arc<Shard<'a, DiskBackend<'a>>>>>>,
 }
 
 impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
-    pub fn new(chain: Chain<'a, B>, chain_config: Arc<ChainConfig>) -> Self {
+    pub fn new(chain: Chain<'a, B>) -> Self {
         // TODO: Add secret key bytes to settings
         let local_pk = Keypair::generate_ed25519();
         let local_pbk = local_pk.public();
@@ -63,9 +62,13 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
             SwarmBuilder::with_tokio_executor(swarm_transport, sector_behaviour, local_peer_id)
                 .build();
 
-        // TODO: Add listener address to settings
-        let addrs = format!("/ip4/0.0.0.0/tcp/{}", SETTINGS.network.listen_port_testnet);
-        sector_swarm.listen_on(addrs.parse().unwrap()).unwrap();
+        let addrs = format!(
+            "/ip4/{}/tcp/{}",
+            SETTINGS.network.listen_addr, SETTINGS.network.listen_port_testnet
+        );
+        sector_swarm
+            .listen_on(addrs.parse().expect("Could not parse listener address"))
+            .expect("Invalid listener address");
 
         // Exchange swarm
         let exchange_behaviour = ExchangeBehaviour::new(&local_pbk);
@@ -107,12 +110,22 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
             sector_swarm,
             exchange_swarm,
             cluster_swarm,
-            chain_config,
             shards: Arc::new(HashMap::new()), // TODO: Initiate correct shards
         }
     }
 
+    pub async fn bootstrap_then_run(&mut self) -> anyhow::Result<()> {
+        self.bootstrap();
+        self.run().await;
+        Ok(())
+    }
+
     pub fn bootstrap(&mut self) {
+        // TODO: Implement the following bootstrap procedure:
+        // 1. Check our database for previously contacted nodes.
+        // 2. Attempt connecting to them.
+        // 3. If that fails, query dns seeds and connect to bootstrap nodes.
+        info!("Bootstrapping...");
         let peer_id = match &SETTINGS.network.bootstrap_node_peer_id {
             Some(peer_id) => peer_id,
             None => {

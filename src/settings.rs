@@ -216,7 +216,7 @@ pub struct Network {
 impl Default for Network {
     fn default() -> Self {
         Self {
-            listen_addr: "*".to_owned(),
+            listen_addr: "0.0.0.0".to_owned(),
             listen_port_mainnet: 8098,
             listen_port_testnet: 8031,
             rpc_enabled: true,
