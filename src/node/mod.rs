@@ -18,7 +18,7 @@ use libp2p::{
     core::upgrade,
     identify,
     identity::{self, ed25519::SecretKey, Keypair},
-    mdns, noise, ping, request_response,
+    kad, mdns, noise, ping, request_response,
     swarm::{SwarmBuilder, SwarmEvent},
     tcp, Multiaddr, PeerId, Swarm, Transport,
 };
@@ -27,6 +27,7 @@ pub use mempool::*;
 use parking_lot::{Mutex, RwLock};
 pub use rpc::*;
 use std::collections::HashMap;
+use std::string::ToString;
 use std::string::ToString;
 use std::sync::atomic::Ordering;
 use triomphe::Arc;
@@ -220,7 +221,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
             tokio::select! {
                 sector_event = self.sector_swarm.select_next_some() => match sector_event {
                     SwarmEvent::NewListenAddr { address, .. } => {
-                        info!("Node listing on {}", address);
+                        info!("Node listening on {}", address);
                     }
                     SwarmEvent::Behaviour(SectorEvent::Identify(event)) =>  match event {
                         identify::Event::Received { peer_id, info, .. } => {
@@ -267,7 +268,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
 
                                 if self.chain.backend.get::<_, String>(&peer_key).unwrap_or(None).is_none() {
                                     info!("Found new peer {} at {}", peer_id.to_base58(), addr);
-                                    self.chain.backend.put(peer_key, addr.to_string()).unwrap_or(());
+                                    self.chain.backend.put(peer_key, vec![addr.to_string()]).unwrap_or(());
                                     let sector_behaviour = self.sector_swarm.behaviour_mut();
                                     sector_behaviour.kademlia.add_address(&peer_id, addr);
                                 }
@@ -275,6 +276,31 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
                         }
 
                         mdns::Event::Expired(_) => ()
+                    }
+                    SwarmEvent::Behaviour(SectorEvent::Kademlia(event)) => match event {
+                        kad::KademliaEvent::RoutingUpdated { peer, is_new_peer, addresses, .. } => {
+                            let peer_key = format!("peer.{}", peer.to_base58());
+
+                            if !is_new_peer || self.chain.backend.get::<_, String>(&peer_key).unwrap_or(None).is_none() {
+                                let addresses_strings = addresses.iter().map(ToString::to_string).collect::<Vec<_>>();
+
+                                if is_new_peer {
+                                    info!("Found new peer {} with addresses {:?}", peer.to_base58(), addresses_strings);
+                                } else {
+                                    info!("Got new addresses for peer {}: {:?}", peer.to_base58(), addresses_strings);
+                                }
+
+                                self.chain.backend.put(peer_key, addresses_strings).unwrap_or(());
+                                let sector_behaviour = self.sector_swarm.behaviour_mut();
+
+                                for addr in addresses.iter() {
+                                    sector_behaviour.kademlia.add_address(&peer, addr.clone());
+                                }
+                            }
+                        }
+                        event => {
+                            info!("Received kademlia event: {:?}", event);
+                        }
                     }
                     event => {
                         info!("Received event: {:?}", event);
