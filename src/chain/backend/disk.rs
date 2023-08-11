@@ -6,8 +6,8 @@
 
 use crate::chain::mmr::{MMRBackend, MMRBackendErr, MMR};
 use crate::chain::{
-    BlockHeaderWithHash, ChainConfig, PowBlockHeaderWithHash, PowChainBackend, PowChainBackendErr,
-    SectorConfig, ShardBackend, ShardBackendErr, ShardConfig,
+    BlockHeaderWithHash, ChainConfig, DBInterface, PowBlockHeaderWithHash, PowChainBackend,
+    PowChainBackendErr, SectorConfig, ShardBackend, ShardBackendErr, ShardConfig,
 };
 use crate::primitives::{Block, BlockData, BlockHeader, Hash256, Output, PowBlock, PowBlockHeader};
 use accumulator::group::{Codec, Rsa2048};
@@ -75,6 +75,31 @@ impl<'a> DiskBackend<'a> {
 
     pub fn put(&self, cf: &str, k: Vec<u8>, v: Vec<u8>) -> Result<Option<Vec<u8>>, RocksDBErr> {
         unimplemented!();
+    }
+}
+
+impl<'a> DBInterface for DiskBackend<'a> {
+    fn get<K: AsRef<[u8]>, V: bincode::Decode>(
+        &self,
+        key: K,
+    ) -> Result<Option<V>, super::DBInterfaceErr> {
+        let result = self.db.get(key)?;
+        Ok(result.map(|r| crate::codec::decode::<V>(&r).expect("db corruption")))
+    }
+
+    fn put<K: AsRef<[u8]>, V: bincode::Encode>(
+        &self,
+        key: K,
+        v: V,
+    ) -> Result<(), super::DBInterfaceErr> {
+        Ok(self.db.put(key, crate::codec::encode_to_vec(&v).unwrap())?)
+    }
+
+    fn delete<K: AsRef<[u8]>, V: bincode::Decode>(
+        &self,
+        key: K,
+    ) -> Result<(), super::DBInterfaceErr> {
+        Ok(self.db.delete(key)?)
     }
 }
 

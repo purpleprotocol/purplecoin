@@ -23,6 +23,14 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use triomphe::Arc;
 
+/// Interface to the underlying database for the runtime. When using `RocksDB`,
+/// this will delegate to the default Column Family.
+pub trait DBInterface {
+    fn get<K: AsRef<[u8]>, V: Decode>(&self, key: K) -> Result<Option<V>, DBInterfaceErr>;
+    fn put<K: AsRef<[u8]>, V: Encode>(&self, key: K, v: V) -> Result<(), DBInterfaceErr>;
+    fn delete<K: AsRef<[u8]>, V: Decode>(&self, k: K) -> Result<(), DBInterfaceErr>;
+}
+
 /// Trait for state backend as used by the `PoW` chain module
 pub trait PowChainBackend<'a>: Sized + Clone {
     /// Returns a block with the given hash in the canonical chain
@@ -374,6 +382,15 @@ pub enum BlockType {
 }
 
 #[derive(Debug)]
+pub enum DBInterfaceErr {
+    /// Rocksdb error
+    RocksDB(RocksDBErr),
+
+    /// Generic error
+    Error(&'static str),
+}
+
+#[derive(Debug)]
 pub enum PowChainBackendErr {
     /// Given position is past the current bounds
     PosOutOfBounds,
@@ -398,6 +415,12 @@ pub enum PowChainBackendErr {
 
     /// Generic error
     Error(&'static str),
+}
+
+impl From<RocksDBErr> for DBInterfaceErr {
+    fn from(other: RocksDBErr) -> Self {
+        Self::RocksDB(other)
+    }
 }
 
 impl From<ShardBackendErr> for PowChainBackendErr {

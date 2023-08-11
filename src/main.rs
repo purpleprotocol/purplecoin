@@ -6,8 +6,6 @@
 
 #![feature(stmt_expr_attributes)]
 
-use iced::window::icon::Icon;
-use iced::{Application, Settings};
 use log::*;
 use mimalloc::MiMalloc;
 use purplecoin::chain::backend::disk::DiskBackend;
@@ -17,7 +15,6 @@ use purplecoin::primitives::*;
 use purplecoin::settings::SETTINGS;
 
 use std::env;
-use std::thread;
 use std::time::Duration;
 use tarpc::server::{self, incoming::Incoming, Channel};
 use tokio::runtime::Builder;
@@ -27,14 +24,18 @@ use triomphe::Arc;
 
 use warp::Filter;
 
-#[cfg(feature = "sha256sum")]
-use sha2::{Digest, Sha256};
-
 #[cfg(feature = "blake3sum")]
 use blake3::Hasher as Blake3;
-
+#[cfg(feature = "gui")]
+use iced::window::icon::Icon;
+#[cfg(feature = "gui")]
+use iced::{Application, Settings};
 #[cfg(feature = "gui")]
 use purplecoin::gui::GUI;
+#[cfg(feature = "sha256sum")]
+use sha2::{Digest, Sha256};
+#[cfg(feature = "gui")]
+use std::thread;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -64,7 +65,6 @@ fn start_runtime() -> anyhow::Result<()> {
     let config = ChainConfig::new(&SETTINGS.node.network_name);
     let disk_backend = DiskBackend::new(db, Arc::new(config.clone()), None, None).unwrap();
     let chain = Chain::new(disk_backend, &config);
-    let mut node = Node::new(chain);
     let worker_threads = if SETTINGS.node.network_threads == 0 {
         num_cpus::get()
     } else {
@@ -94,6 +94,7 @@ fn start_runtime() -> anyhow::Result<()> {
     runtime.block_on(async {
         init_tracing("PurplecoinCore").unwrap();
         perform_sanity_checks();
+        let mut node = Node::new(chain);
 
         if SETTINGS.node.memory_only {
             info!(

@@ -4,7 +4,8 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::chain::{Chain, ChainConfig, PowChainBackend, Shard, ShardBackend};
+use self::request_peer::PeerInfoRequest;
+use crate::chain::{Chain, ChainConfig, DBInterface, PowChainBackend, Shard, ShardBackend};
 use crate::node::behaviour::{ClusterBehaviour, ExchangeBehaviour, SectorBehaviour, SectorEvent};
 use crate::node::peer_info::PeerInfo;
 use crate::settings::SETTINGS;
@@ -37,12 +38,13 @@ use trust_dns_resolver::{
     lookup::TxtLookup,
 };
 
-use self::request_peer::PeerInfoRequest;
-
 type PeerInfoTable = HashMap<PeerId, PeerInfo>;
 
+/// The node identity is stored in the database under this key
+const IDENTITY_KEY: &str = "node_keypair";
+
 /// Read-only reference to the node
-pub struct Node<'a, B: PowChainBackend<'a> + ShardBackend<'a>> {
+pub struct Node<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> {
     chain: Chain<'a, B>,
     peer_info: PeerInfo,
     peer_info_table: Arc<Mutex<PeerInfoTable>>,
@@ -52,17 +54,45 @@ pub struct Node<'a, B: PowChainBackend<'a> + ShardBackend<'a>> {
     shards: Arc<HashMap<u8, Option<Arc<Shard<'a, DiskBackend<'a>>>>>>,
 }
 
-impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
+impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
     pub fn new(chain: Chain<'a, B>) -> Self {
-        let local_pk = Keypair::generate_ed25519();
-        let local_pbk = local_pk.public();
+        // Try to fetch existing identity from the database
+        // and create one if it doesn't exist.
+        let id = match chain
+            .backend
+            .get::<_, Vec<u8>>(IDENTITY_KEY.as_bytes())
+            .expect("db error")
+        {
+            Some(mut keypair_bytes) =>
+            {
+                #[allow(deprecated)]
+                Keypair::Ed25519(
+                    identity::ed25519::Keypair::try_from_bytes(&mut keypair_bytes)
+                        .expect("db corruption"),
+                )
+            }
+            None => {
+                let id: Keypair = Keypair::generate_ed25519();
+
+                // Write generated keypair to database
+                let keypair = id.clone().try_into_ed25519().unwrap();
+                let id_bytes = keypair.to_bytes().to_vec();
+                chain
+                    .backend
+                    .put(IDENTITY_KEY.as_bytes(), id_bytes)
+                    .expect("db error");
+
+                id
+            }
+        };
+        let local_pbk = id.public();
         let local_peer_id = PeerId::from(local_pbk.clone());
 
         // Sector swarm
-        let sector_behaviour = SectorBehaviour::new(&local_pk, &local_pbk);
+        let sector_behaviour = SectorBehaviour::new(&id, &local_pbk);
         let swarm_transport = tcp::tokio::Transport::new(tcp::Config::default())
             .upgrade(upgrade::Version::V1)
-            .authenticate(noise::Config::new(&local_pk).unwrap())
+            .authenticate(noise::Config::new(&id).unwrap())
             .multiplex(yamux::Config::default())
             .boxed();
         let mut sector_swarm =
@@ -81,7 +111,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
         let exchange_behaviour = ExchangeBehaviour::new(&local_pbk);
         let exchange_transport = tcp::tokio::Transport::new(tcp::Config::default())
             .upgrade(upgrade::Version::V1)
-            .authenticate(noise::Config::new(&local_pk).unwrap())
+            .authenticate(noise::Config::new(&id).unwrap())
             .multiplex(yamux::Config::default())
             .boxed();
         let exchange_swarm = SwarmBuilder::with_tokio_executor(
@@ -95,7 +125,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
         let cluster_behaviour = ClusterBehaviour::new(&local_pbk);
         let cluster_transport = tcp::tokio::Transport::new(tcp::Config::default())
             .upgrade(upgrade::Version::V1)
-            .authenticate(noise::Config::new(&local_pk).unwrap())
+            .authenticate(noise::Config::new(&id).unwrap())
             .multiplex(yamux::Config::default())
             .boxed();
         let cluster_swarm =
@@ -175,10 +205,14 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Node<'a, B> {
             );
         }
 
-        info!(
-            "Found {} bootstrap nodes. Connecting...",
-            peer_ids_and_addrs.len()
-        );
+        if peer_ids_and_addrs.is_empty() {
+            info!("Found 0 bootstrap nodes.");
+        } else {
+            info!(
+                "Found {} bootstrap nodes. Connecting...",
+                peer_ids_and_addrs.len()
+            );
+        }
     }
 
     pub async fn run(&mut self) {

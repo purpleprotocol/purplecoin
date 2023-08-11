@@ -6,8 +6,8 @@
 
 use crate::chain::mmr::{MMRBackend, MMRBackendErr, MMR};
 use crate::chain::{
-    ChainConfig, PowChainBackend, PowChainBackendErr, SectorConfig, ShardBackend, ShardBackendErr,
-    ShardConfig,
+    ChainConfig, DBInterface, PowChainBackend, PowChainBackendErr, SectorConfig, ShardBackend,
+    ShardBackendErr, ShardConfig,
 };
 use crate::primitives::{Block, BlockData, BlockHeader, Hash256, Output, PowBlock, PowBlockHeader};
 use accumulator::group::Rsa2048;
@@ -18,6 +18,30 @@ pub struct MemoryBackend<'a> {
     sector_config: SectorConfig<'a>,
     shard_config: ShardConfig<'a>,
     chain_config: ChainConfig,
+}
+
+impl<'a> DBInterface for MemoryBackend<'a> {
+    fn get<K: AsRef<[u8]>, V: bincode::Decode>(
+        &self,
+        key: K,
+    ) -> Result<Option<V>, super::DBInterfaceErr> {
+        unimplemented!()
+    }
+
+    fn put<K: AsRef<[u8]>, V: bincode::Encode>(
+        &self,
+        key: K,
+        v: V,
+    ) -> Result<(), super::DBInterfaceErr> {
+        unimplemented!()
+    }
+
+    fn delete<K: AsRef<[u8]>, V: bincode::Decode>(
+        &self,
+        k: K,
+    ) -> Result<(), super::DBInterfaceErr> {
+        unimplemented!()
+    }
 }
 
 impl<'a> PowChainBackend<'a> for MemoryBackend<'a> {

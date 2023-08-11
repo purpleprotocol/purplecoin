@@ -5,14 +5,15 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use crate::chain::{
-    ChainConfig, PowChainBackend, Sector, SectorConfig, Shard, ShardBackend, ShardConfig,
+    ChainConfig, DBInterface, PowChainBackend, Sector, SectorConfig, Shard, ShardBackend,
+    ShardConfig,
 };
 use crate::node::{Mempool, PinnedMempool};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use triomphe::Arc;
 
-pub struct Chain<'a, B: PowChainBackend<'a> + ShardBackend<'a>> {
+pub struct Chain<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> {
     pub backend: B,
     pub config: ChainConfig,
     pub mempool: PinnedMempool,
@@ -20,7 +21,7 @@ pub struct Chain<'a, B: PowChainBackend<'a> + ShardBackend<'a>> {
     pub chain_states: HashMap<u8, Shard<'a, B>>,
 }
 
-impl<'a, B: PowChainBackend<'a> + ShardBackend<'a>> Chain<'a, B> {
+impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Chain<'a, B> {
     pub fn new(backend: B, config: &'a ChainConfig) -> Self {
         let mut chain_states = HashMap::with_capacity(256);
         let mut sectors = HashMap::with_capacity(4);
