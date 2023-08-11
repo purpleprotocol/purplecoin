@@ -164,6 +164,10 @@ pub struct Network {
     #[serde(alias = "listenaddr")]
     pub listen_addr: String,
 
+    /// Desired number of peers. 8 by default.
+    #[serde(alias = "desiredpeers")]
+    pub desired_peers: u16,
+
     /// Node listen port on mainnet.
     #[serde(alias = "listenportmainnet")]
     pub listen_port_mainnet: u16,
@@ -220,6 +224,7 @@ impl Default for Network {
             listen_port_mainnet: 8098,
             listen_port_testnet: 8031,
             listen_port_devnet: 8021,
+            desired_peers: 8,
             rpc_enabled: true,
             rpc_listen_port_mainnet: 8067,
             rpc_listen_port_testnet: 8037,

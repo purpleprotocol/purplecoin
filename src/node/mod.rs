@@ -18,18 +18,17 @@ use libp2p::{
     core::upgrade,
     identify,
     identity::{self, ed25519::SecretKey, Keypair},
-    noise, ping, request_response,
+    mdns, noise, ping, request_response,
     swarm::{SwarmBuilder, SwarmEvent},
     tcp, Multiaddr, PeerId, Swarm, Transport,
 };
 use log::{error, info};
 pub use mempool::*;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 pub use rpc::*;
 use std::collections::HashMap;
 use std::string::ToString;
 use std::sync::atomic::Ordering;
-use std::sync::Mutex;
 use triomphe::Arc;
 use trust_dns_resolver::error::ResolveResult;
 use trust_dns_resolver::Resolver;
@@ -216,7 +215,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
     }
 
     pub async fn run(&mut self) {
-        info!("Peer id: {}", self.peer_info.id);
+        info!("Our node id: {}", self.peer_info.id);
         loop {
             tokio::select! {
                 sector_event = self.sector_swarm.select_next_some() => match sector_event {
@@ -230,21 +229,21 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
                             for addr in info.listen_addrs {
                                 sector_behaviour.kademlia.add_address(&peer_id, addr);
                             }
-                            let peer_table_lock = self.peer_info_table.lock().unwrap();
+                            let peer_table_lock = self.peer_info_table.lock();
                             if !peer_table_lock.contains_key(&peer_id) {
                                 let peer_info_request = PeerInfoRequest;
                                 sector_behaviour.peer_request.send_request(&peer_id, peer_info_request);
                             }
                         }
-                        _ => (),
-                    },
+                        _ => unreachable!(),
+                    }
                     SwarmEvent::Behaviour(SectorEvent::PeerRequest(event)) => match event {
                         request_response::Event::Message { peer, message } => {
                             match message {
                                 request_response::Message::Response { response, .. } => {
                                     let peer_info = response.peer_info;
-                                    let mut peer_table_lock = self.peer_info_table.lock().unwrap();
-                                    peer_table_lock.insert(peer, peer_info).unwrap();
+                                    let mut peer_table_lock = self.peer_info_table.lock();
+                                    peer_table_lock.insert(peer, peer_info);
                                 },
                                 request_response::Message::Request { request, channel, .. } => {
                                     let sector_behaviour = self.sector_swarm.behaviour_mut();
@@ -256,9 +255,30 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
                                 }
                             }
                         }
-                        _ => (),
+                        _ => unreachable!(),
                     }
-                    _ => (),
+                    SwarmEvent::Behaviour(SectorEvent::Mdns(event)) => match event {
+                        mdns::Event::Discovered(peers) => {
+                            info!("Found {} peers through mdns", peers.len());
+
+                            // Write peers to the database if they don't exist
+                            for (peer_id, addr) in peers {
+                                let peer_key = format!("peer.{}", peer_id.to_base58());
+
+                                if self.chain.backend.get::<_, String>(&peer_key).unwrap_or(None).is_none() {
+                                    info!("Found new peer {} at {}", peer_id.to_base58(), addr);
+                                    self.chain.backend.put(peer_key, addr.to_string()).unwrap_or(());
+                                    let sector_behaviour = self.sector_swarm.behaviour_mut();
+                                    sector_behaviour.kademlia.add_address(&peer_id, addr);
+                                }
+                            }
+                        }
+
+                        mdns::Event::Expired(_) => ()
+                    }
+                    event => {
+                        info!("Received event: {:?}", event);
+                    },
                 },
                 exchange_event = self.exchange_swarm.next() => unimplemented!(),
                 cluster_event = self.cluster_swarm.next() => unimplemented!(),

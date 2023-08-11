@@ -80,6 +80,7 @@ libp2p = { version = "0.51.3", features = [
     "identify",
     "kad",
     "mplex",
+    "mdns",
     "yamux",
     "macros",
     "tcp",
