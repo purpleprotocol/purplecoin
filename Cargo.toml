@@ -145,6 +145,7 @@ wallet = []
 rpc = []
 disk = []
 memory = []
+disable_tests_on_windows = []
 runtime-clang = ["bindgen/runtime"]
 static-clang = ["bindgen/static"]
 

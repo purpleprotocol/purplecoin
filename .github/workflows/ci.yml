@@ -87,7 +87,7 @@ jobs:
       - name: Install Rust toolchain
         run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain ${{ matrix.toolchain }} -y
       - name: Test
-        run: cargo +${{ matrix.toolchain }} test
+        run: cargo +${{ matrix.toolchain }} test --no-default-features --features "rpc wallet disk miner blake3sum disable_tests_on_windows"
   buildbenches:
     name: Build benches
 

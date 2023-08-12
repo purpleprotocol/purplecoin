@@ -538,6 +538,7 @@ mod tests {
     use std::boxed::Box;
 
     #[test]
+    #[cfg(not(feature = "disable_tests_on_windows"))]
     fn prefix_iterator_forward() {
         let db = crate::chain::create_rocksdb_backend();
         let backend = DiskBackend::new(db, Default::default(), None, None).unwrap();
@@ -569,6 +570,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "disable_tests_on_windows"))]
     fn prefix_iterator_backward() {
         let db = crate::chain::create_rocksdb_backend();
         let backend = DiskBackend::new(db, Default::default(), None, None).unwrap();
