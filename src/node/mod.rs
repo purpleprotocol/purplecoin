@@ -10,6 +10,7 @@ use crate::node::behaviour::{ClusterBehaviour, ExchangeBehaviour, SectorBehaviou
 use crate::node::peer_info::PeerInfo;
 use crate::settings::SETTINGS;
 use crate::{chain::backend::disk::DiskBackend, node::request_peer::PeerInfoResponse};
+use async_channel::{unbounded, Receiver, Sender};
 use blake3::Hash;
 use fancy_regex::Regex;
 use futures::{FutureExt, StreamExt};
@@ -28,8 +29,8 @@ use parking_lot::{Mutex, RwLock};
 pub use rpc::*;
 use std::collections::HashMap;
 use std::string::ToString;
-use std::string::ToString;
 use std::sync::atomic::Ordering;
+use tokio::time::{sleep, Duration};
 use triomphe::Arc;
 use trust_dns_resolver::error::ResolveResult;
 use trust_dns_resolver::Resolver;
@@ -42,6 +43,9 @@ type PeerInfoTable = HashMap<PeerId, PeerInfo>;
 
 /// The node identity is stored in the database under this key
 const IDENTITY_KEY: &str = "node_keypair";
+
+/// Bootstrap interval
+const BOOTSTRAP_INTERVAL: u64 = 60;
 
 /// Read-only reference to the node
 pub struct Node<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> {
@@ -99,10 +103,14 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
             SwarmBuilder::with_tokio_executor(swarm_transport, sector_behaviour, local_peer_id)
                 .build();
 
-        let addrs = format!(
-            "/ip4/{}/tcp/{}",
-            SETTINGS.network.listen_addr, SETTINGS.network.listen_port_testnet
-        );
+        let listen_port = match SETTINGS.node.network_name.as_str() {
+            "mainnet" => SETTINGS.network.listen_port_mainnet,
+            "testnet" => SETTINGS.network.listen_port_testnet,
+            "devnet" => SETTINGS.network.listen_port_devnet,
+            network => panic!("invalid network name: {network}"),
+        };
+
+        let addrs = format!("/ip4/{}/tcp/{}", SETTINGS.network.listen_addr, listen_port);
         sector_swarm
             .listen_on(addrs.parse().expect("Could not parse listener address"))
             .expect("Invalid listener address");
@@ -152,73 +160,96 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
     }
 
     pub async fn bootstrap_then_run(&mut self) -> anyhow::Result<()> {
-        self.bootstrap();
-        self.run().await;
+        let (bootstrap_s, bootstrap_r) = unbounded();
+        let peer_info_table = self.peer_info_table.clone();
+
+        tokio::select! {
+            _ = Self::bootstrap(peer_info_table, bootstrap_s) => {}
+            _ = self.run(bootstrap_r) => {}
+        }
+
         Ok(())
     }
 
-    pub fn bootstrap(&mut self) {
-        // TODO: Implement the following bootstrap procedure:
-        // 1. Check our database for previously contacted nodes.
-        // 2. Attempt connecting to them.
-        // 3. Find peers on the local network
-        // 4. If that fails, query dns seeds and connect to bootstrap nodes.
-        info!("Bootstrapping...");
+    pub async fn bootstrap(
+        peer_info_table: Arc<Mutex<PeerInfoTable>>,
+        sender: Sender<(PeerId, Multiaddr)>,
+    ) {
+        loop {
+            // Stop bootstrapping if we have enough peers
+            if peer_info_table.lock().len() > SETTINGS.network.desired_peers as usize {
+                sleep(Duration::from_secs(BOOTSTRAP_INTERVAL)).await;
+                continue;
+            }
+            info!("Bootstrapping...");
 
-        let fqdn_regx =
-            Regex::new(r"(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{1,63}(?<!-)\.)+[a-zA-Z]{2,63}$)")
-                .unwrap();
-        let seeds = match SETTINGS.node.network_name.as_str() {
-            "mainnet" => SETTINGS.network.seeds_mainnet.as_slice(),
-            "testnet" => SETTINGS.network.seeds_testnet.as_slice(),
-            "devnet" => SETTINGS.network.seeds_devnet.as_slice(),
-            network => panic!("invalid network name: {network}"),
-        };
+            let fqdn_regx =
+                Regex::new(r"(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{1,63}(?<!-)\.)+[a-zA-Z]{2,63}$)")
+                    .unwrap();
+            let seeds = match SETTINGS.node.network_name.as_str() {
+                "mainnet" => SETTINGS.network.seeds_mainnet.as_slice(),
+                "testnet" => SETTINGS.network.seeds_testnet.as_slice(),
+                "devnet" => SETTINGS.network.seeds_devnet.as_slice(),
+                network => panic!("invalid network name: {network}"),
+            };
 
-        let mut peer_ids_and_addrs: Vec<(String, String)> = vec![];
+            let mut peer_ids_and_addrs: Vec<(String, String)> = vec![];
 
-        for s in seeds {
-            let mut to_parse = vec![];
-            if fqdn_regx
-                .is_match(s.as_str())
-                .expect("could not parse dns seed")
-            {
-                // Resolve DNS seed
-                let dns_seeds = resolve_txt_record(s.as_str()).expect("could not resolve dns seed");
-                to_parse.extend(dns_seeds);
+            for s in seeds {
+                let mut to_parse = vec![];
+                if fqdn_regx
+                    .is_match(s.as_str())
+                    .expect("could not parse dns seed")
+                {
+                    // Resolve DNS seed
+                    let dns_seeds =
+                        resolve_txt_record(s.as_str()).expect("could not resolve dns seed");
+                    to_parse.extend(dns_seeds);
+                } else {
+                    to_parse.push(s.clone());
+                }
+
+                for s in to_parse {
+                    // Parse peer id and address. Written in settings as `<peer_id>:<address>`
+                    let split: Vec<_> = s.split(':').collect();
+                    assert!(split.len() == 2, "invalid peer address: {s}");
+                    peer_ids_and_addrs.push((split[0].to_string(), split[1].to_string()));
+                }
+            }
+
+            for (id, addr) in &peer_ids_and_addrs {
+                sender
+                    .send((
+                        id.parse().expect("invalid peer id"),
+                        addr.parse().expect("invalid peer address"),
+                    ))
+                    .await
+                    .expect("channel error");
+            }
+
+            if peer_ids_and_addrs.is_empty() {
+                info!("Found 0 bootstrap nodes.");
             } else {
-                to_parse.push(s.clone());
+                info!(
+                    "Found {} bootstrap nodes. Connecting...",
+                    peer_ids_and_addrs.len()
+                );
             }
-
-            for s in to_parse {
-                // Parse peer id and address. Written in settings as `<peer_id>:<address>`
-                let split: Vec<_> = s.split(':').collect();
-                assert!(split.len() == 2, "invalid peer address: {s}");
-                peer_ids_and_addrs.push((split[0].to_string(), split[1].to_string()));
-            }
-        }
-
-        for (id, addr) in &peer_ids_and_addrs {
-            self.sector_swarm.behaviour_mut().kademlia.add_address(
-                &id.parse().expect("invalid peer id"),
-                addr.parse().expect("invalid peer address"),
-            );
-        }
-
-        if peer_ids_and_addrs.is_empty() {
-            info!("Found 0 bootstrap nodes.");
-        } else {
-            info!(
-                "Found {} bootstrap nodes. Connecting...",
-                peer_ids_and_addrs.len()
-            );
+            sleep(Duration::from_secs(BOOTSTRAP_INTERVAL)).await;
         }
     }
 
-    pub async fn run(&mut self) {
+    pub async fn run(&mut self, bootstrap_r: Receiver<(PeerId, Multiaddr)>) {
         info!("Our node id: {}", self.peer_info.id);
         loop {
             tokio::select! {
+                res = bootstrap_r.recv() => {
+                    let (id, addr) = res.expect("channel closed");
+                    self.sector_swarm.behaviour_mut().kademlia.add_address(
+                        &id,
+                        addr,
+                    );
+                }
                 sector_event = self.sector_swarm.select_next_some() => match sector_event {
                     SwarmEvent::NewListenAddr { address, .. } => {
                         info!("Node listening on {}", address);
@@ -279,15 +310,17 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
                     }
                     SwarmEvent::Behaviour(SectorEvent::Kademlia(event)) => match event {
                         kad::KademliaEvent::RoutingUpdated { peer, is_new_peer, addresses, .. } => {
-                            let peer_key = format!("peer.{}", peer.to_base58());
+                            let peer_b58 =  peer.to_base58();
+                            info!("Received RoutingUpdated event for peer {} with addresses: {:?}", peer_b58, addresses);
+                            let peer_key = format!("peer.{}", peer_b58);
 
                             if !is_new_peer || self.chain.backend.get::<_, String>(&peer_key).unwrap_or(None).is_none() {
                                 let addresses_strings = addresses.iter().map(ToString::to_string).collect::<Vec<_>>();
 
                                 if is_new_peer {
-                                    info!("Found new peer {} with addresses {:?}", peer.to_base58(), addresses_strings);
+                                    info!("Found new peer {} with addresses {:?}", peer_b58, addresses_strings);
                                 } else {
-                                    info!("Got new addresses for peer {}: {:?}", peer.to_base58(), addresses_strings);
+                                    info!("Got new addresses for peer {}: {:?}", peer_b58, addresses_strings);
                                 }
 
                                 self.chain.backend.put(peer_key, addresses_strings).unwrap_or(());

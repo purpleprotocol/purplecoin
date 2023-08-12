@@ -354,6 +354,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-channel"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81953c529336010edd6d8e358f886d9581267795c61b19475b71314bffa46d35"
+dependencies = [
+ "concurrent-queue",
+ "event-listener",
+ "futures-core",
+]
+
+[[package]]
 name = "async-io"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5245,6 +5256,7 @@ dependencies = [
  "anyhow",
  "argon2rs",
  "arrayvec 0.7.2",
+ "async-channel",
  "async-trait",
  "base64 0.13.1",
  "bech32",

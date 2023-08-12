@@ -65,7 +65,8 @@
     trivial_bounds,
     slice_swap_unchecked,
     stmt_expr_attributes,
-    slice_split_at_unchecked
+    slice_split_at_unchecked,
+    return_position_impl_trait_in_trait
 )]
 #![warn(clippy::cargo, clippy::pedantic)]
 #![allow(
