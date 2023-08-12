@@ -231,8 +231,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [ ] Sector networking
     - [x] Seed nodes DNS resolution
     - [ ] Header synchronization
-    - [ ] Peer discovery via Kademlia DHT
-  	- [ ] Implement base header propagation
+    - [x] Peer discovery via Kademlia DHT
+    - [ ] Implement base header propagation
     - [ ] Implement graphene propagation
   - [ ] Public Bridge DHT
     - [ ] Query outputs via Kademlia
