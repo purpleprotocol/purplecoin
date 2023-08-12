@@ -5,7 +5,9 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use self::request_peer::PeerInfoRequest;
-use crate::chain::{Chain, ChainConfig, DBInterface, PowChainBackend, Shard, ShardBackend};
+use crate::chain::{
+    Chain, ChainConfig, DBInterface, IteratorDirection, PowChainBackend, Shard, ShardBackend,
+};
 use crate::node::behaviour::{ClusterBehaviour, ExchangeBehaviour, SectorBehaviour, SectorEvent};
 use crate::node::peer_info::PeerInfo;
 use crate::settings::SETTINGS;
@@ -28,6 +30,7 @@ pub use mempool::*;
 use parking_lot::{Mutex, RwLock};
 pub use rpc::*;
 use std::collections::HashMap;
+use std::str;
 use std::string::ToString;
 use std::sync::atomic::Ordering;
 use tokio::time::{sleep, Duration};
@@ -161,10 +164,11 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
 
     pub async fn bootstrap_then_run(&mut self) -> anyhow::Result<()> {
         let (bootstrap_s, bootstrap_r) = unbounded();
+        let backend = self.chain.backend.clone();
         let peer_info_table = self.peer_info_table.clone();
 
         tokio::select! {
-            _ = Self::bootstrap(peer_info_table, bootstrap_s) => {}
+            _ = Self::bootstrap(backend, peer_info_table, bootstrap_s) => {}
             _ = self.run(bootstrap_r) => {}
         }
 
@@ -172,17 +176,21 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
     }
 
     pub async fn bootstrap(
+        backend: B,
         peer_info_table: Arc<Mutex<PeerInfoTable>>,
         sender: Sender<(PeerId, Multiaddr)>,
     ) {
         loop {
+            let num_peers = peer_info_table.lock().len();
+
             // Stop bootstrapping if we have enough peers
-            if peer_info_table.lock().len() > SETTINGS.network.desired_peers as usize {
+            if num_peers > SETTINGS.network.desired_peers as usize {
                 sleep(Duration::from_secs(BOOTSTRAP_INTERVAL)).await;
                 continue;
             }
             info!("Bootstrapping...");
 
+            let mut required = SETTINGS.network.desired_peers as usize - num_peers;
             let fqdn_regx =
                 Regex::new(r"(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{1,63}(?<!-)\.)+[a-zA-Z]{2,63}$)")
                     .unwrap();
@@ -195,25 +203,48 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
 
             let mut peer_ids_and_addrs: Vec<(String, String)> = vec![];
 
-            for s in seeds {
-                let mut to_parse = vec![];
-                if fqdn_regx
-                    .is_match(s.as_str())
-                    .expect("could not parse dns seed")
-                {
-                    // Resolve DNS seed
-                    let dns_seeds =
-                        resolve_txt_record(s.as_str()).expect("could not resolve dns seed");
-                    to_parse.extend(dns_seeds);
-                } else {
-                    to_parse.push(s.clone());
+            // First check the database
+            let mut db_iter = backend.prefix_iterator::<Vec<String>>(
+                "peer.".as_bytes().to_vec(),
+                IteratorDirection::Forward,
+            );
+
+            // TODO: Skip unresponsive peers and ones we are already connected to
+            while let Some((k, v)) = db_iter.next() {
+                if required == 0 {
+                    break;
                 }
 
-                for s in to_parse {
-                    // Parse peer id and address. Written in settings as `<peer_id>:<address>`
-                    let split: Vec<_> = s.split(':').collect();
-                    assert!(split.len() == 2, "invalid peer address: {s}");
-                    peer_ids_and_addrs.push((split[0].to_string(), split[1].to_string()));
+                let k = unsafe { str::from_utf8_unchecked(k.as_slice()) }.to_owned();
+                let addr = k.split('.').nth(1).unwrap().to_owned();
+                let v = v[0].clone();
+
+                peer_ids_and_addrs.push((addr, v));
+                required -= 1;
+            }
+
+            // Resolve seed nodes if we don't have enough peers
+            if peer_ids_and_addrs.len() < SETTINGS.network.desired_peers as usize {
+                for s in seeds {
+                    let mut to_parse = vec![];
+                    if fqdn_regx
+                        .is_match(s.as_str())
+                        .expect("could not parse dns seed")
+                    {
+                        // Resolve DNS seed
+                        let dns_seeds =
+                            resolve_txt_record(s.as_str()).expect("could not resolve dns seed");
+                        to_parse.extend(dns_seeds);
+                    } else {
+                        to_parse.push(s.clone());
+                    }
+
+                    for s in to_parse {
+                        // Parse peer id and address. Written in settings as `<peer_id>:<address>`
+                        let split: Vec<_> = s.split(':').collect();
+                        assert!(split.len() == 2, "invalid peer address: {s}");
+                        peer_ids_and_addrs.push((split[0].to_string(), split[1].to_string()));
+                    }
                 }
             }
 

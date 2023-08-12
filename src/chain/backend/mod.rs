@@ -18,9 +18,12 @@ use chrono::prelude::*;
 use croaring::Bitmap;
 use rocksdb::Error as RocksDBErr;
 use rocksdb::{ColumnFamilyDescriptor, LogLevel, Options, TransactionDBOptions};
+use std::borrow::Borrow;
+use std::cmp;
 use std::mem;
 use std::path::PathBuf;
 use std::str::FromStr;
+use streaming_iterator::StreamingIterator;
 use triomphe::Arc;
 
 /// Interface to the underlying database for the runtime. When using `RocksDB`,
@@ -29,6 +32,16 @@ pub trait DBInterface {
     fn get<K: AsRef<[u8]>, V: Decode>(&self, key: K) -> Result<Option<V>, DBInterfaceErr>;
     fn put<K: AsRef<[u8]>, V: Encode>(&self, key: K, v: V) -> Result<(), DBInterfaceErr>;
     fn delete<K: AsRef<[u8]>, V: Decode>(&self, k: K) -> Result<(), DBInterfaceErr>;
+    fn prefix_iterator<'a, V: bincode::Decode + 'a>(
+        &self,
+        prefix: Vec<u8>,
+        direction: IteratorDirection,
+    ) -> Box<dyn StreamingIterator<Item = (Vec<u8>, V)> + 'a>;
+}
+
+pub enum IteratorDirection {
+    Forward,
+    Backward,
 }
 
 /// Trait for state backend as used by the `PoW` chain module
@@ -496,8 +509,9 @@ pub fn create_rocksdb_backend<'a>() -> Arc<DB> {
 
     #[cfg(test)]
     let mut path = {
+        use rand::Rng;
         let mut path = std::env::temp_dir();
-
+        path.push(hex::encode(rand::thread_rng().gen::<[u8; 32]>()));
         path.push("Purplecoin");
         path
     };
@@ -593,6 +607,85 @@ impl From<BlockHeaderWithHash> for BlockHeader {
         let mut h = header.header;
         h.hash = Some(header.hash);
         h
+    }
+}
+
+pub struct DBPrefixIterator<V: bincode::Decode> {
+    direction: IteratorDirection,
+    data: Vec<(Vec<u8>, V)>,
+    cursor: Option<usize>,
+    done: bool,
+}
+
+impl<V: bincode::Decode> DBPrefixIterator<V> {
+    #[must_use]
+    pub fn new(data: Vec<(Vec<u8>, V)>, direction: IteratorDirection) -> Self {
+        Self {
+            direction,
+            data,
+            cursor: None,
+            done: false,
+        }
+    }
+}
+
+impl<V: bincode::Decode> StreamingIterator for DBPrefixIterator<V> {
+    type Item = (Vec<u8>, V);
+
+    fn advance(&mut self) {
+        if self.done {
+            return;
+        }
+
+        if self.data.is_empty() {
+            self.done = true;
+            return;
+        }
+
+        if self.cursor.is_none() {
+            match self.direction {
+                IteratorDirection::Forward => {
+                    self.cursor = Some(0);
+                    return;
+                }
+                IteratorDirection::Backward => {
+                    self.cursor = Some(self.data.len());
+                }
+            }
+        }
+
+        match self.direction {
+            IteratorDirection::Forward => {
+                let cur_cursor = *self.cursor.as_ref().unwrap();
+                let next = cur_cursor.checked_add(1).unwrap_or(self.cursor.unwrap());
+
+                if next >= self.data.len() || next == cur_cursor {
+                    self.done = true;
+                    return;
+                }
+
+                *self.cursor.as_mut().unwrap() = next;
+            }
+            IteratorDirection::Backward => {
+                let cur_cursor = *self.cursor.as_ref().unwrap();
+
+                if cur_cursor == 0 {
+                    self.done = true;
+                    return;
+                }
+
+                *self.cursor.as_mut().unwrap() -= 1;
+            }
+        }
+    }
+
+    fn get(&self) -> Option<&Self::Item> {
+        if self.done {
+            return None;
+        }
+
+        self.cursor?;
+        self.data.get(self.cursor.unwrap())
     }
 }
 

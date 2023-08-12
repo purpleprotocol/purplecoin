@@ -6,17 +6,36 @@
 
 use crate::chain::mmr::{MMRBackend, MMRBackendErr, MMR};
 use crate::chain::{
-    ChainConfig, DBInterface, PowChainBackend, PowChainBackendErr, SectorConfig, ShardBackend,
-    ShardBackendErr, ShardConfig,
+    ChainConfig, DBInterface, DBPrefixIterator, IteratorDirection, PowChainBackend,
+    PowChainBackendErr, SectorConfig, ShardBackend, ShardBackendErr, ShardConfig,
 };
 use crate::primitives::{Block, BlockData, BlockHeader, Hash256, Output, PowBlock, PowBlockHeader};
 use accumulator::group::Rsa2048;
 use accumulator::Witness;
+use parking_lot::RwLock;
+use qp_trie::Trie;
+use std::borrow::Borrow;
+use std::cmp;
+use std::collections::BTreeMap;
+use std::str;
+use streaming_iterator::StreamingIterator;
+use triomphe::Arc;
 
-#[derive(Debug, Clone)]
+type DataStore = Trie<Vec<u8>, Vec<u8>>;
+
+#[derive(Debug, Clone, Default)]
 pub struct MemoryBackend<'a> {
+    /// Underlying data store. TODO: This isn't very performant and should
+    /// be modelled as column families to reflect RocksDB.
+    data: Arc<RwLock<DataStore>>,
+
+    /// Sector config
     sector_config: SectorConfig<'a>,
+
+    /// Shard config
     shard_config: ShardConfig<'a>,
+
+    /// Chain config
     chain_config: ChainConfig,
 }
 
@@ -33,7 +52,11 @@ impl<'a> DBInterface for MemoryBackend<'a> {
         key: K,
         v: V,
     ) -> Result<(), super::DBInterfaceErr> {
-        unimplemented!()
+        self.data.write().insert(
+            key.as_ref().to_vec(),
+            crate::codec::encode_to_vec(&v).unwrap(),
+        );
+        Ok(())
     }
 
     fn delete<K: AsRef<[u8]>, V: bincode::Decode>(
@@ -41,6 +64,22 @@ impl<'a> DBInterface for MemoryBackend<'a> {
         k: K,
     ) -> Result<(), super::DBInterfaceErr> {
         unimplemented!()
+    }
+
+    fn prefix_iterator<'b, V: bincode::Decode + 'b>(
+        &self,
+        prefix: Vec<u8>,
+        direction: IteratorDirection,
+    ) -> Box<dyn StreamingIterator<Item = (Vec<u8>, V)> + 'b> {
+        let data = self
+            .data
+            .read()
+            .subtrie(prefix.as_slice())
+            .iter()
+            .map(|(k, v)| (k.clone(), crate::codec::decode(v).unwrap()))
+            .collect::<Vec<(Vec<u8>, V)>>();
+
+        Box::new(DBPrefixIterator::new(data, direction))
     }
 }
 
@@ -291,5 +330,71 @@ impl<'a> MMRBackend<Vec<u8>> for MemoryBackend<'a> {
 
     fn prune(&mut self) -> Result<(), MMRBackendErr> {
         unimplemented!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::boxed::Box;
+
+    #[test]
+    fn prefix_iterator_forward() {
+        let mut backend = MemoryBackend::default();
+
+        backend.put("random_data1".as_bytes(), "asdf".to_owned());
+        backend.put("test.1".as_bytes(), "asdf".to_owned());
+        backend.put("random_data2".as_bytes(), "asdf".to_owned());
+        backend.put("random_data3".as_bytes(), "asdf".to_owned());
+        backend.put("test.2".as_bytes(), "asdf".to_owned());
+        backend.put("test.3".as_bytes(), "asdf".to_owned());
+        backend.put("random_data4".as_bytes(), "asdf".to_owned());
+
+        let mut result = vec![];
+        let mut iter: Box<dyn StreamingIterator<Item = (Vec<u8>, String)>> =
+            backend.prefix_iterator("test.".as_bytes().to_vec(), IteratorDirection::Forward);
+
+        while let Some((k, v)) = iter.next() {
+            result.push((k.clone(), v.clone()));
+        }
+
+        assert_eq!(
+            result,
+            vec![
+                ("test.1".as_bytes().to_vec(), "asdf".to_owned()),
+                ("test.2".as_bytes().to_vec(), "asdf".to_owned()),
+                ("test.3".as_bytes().to_vec(), "asdf".to_owned()),
+            ]
+        );
+    }
+
+    #[test]
+    fn prefix_iterator_backward() {
+        let mut backend = MemoryBackend::default();
+
+        backend.put("random_data1".as_bytes(), "asdf".to_owned());
+        backend.put("test.1".as_bytes(), "asdf".to_owned());
+        backend.put("random_data2".as_bytes(), "asdf".to_owned());
+        backend.put("random_data3".as_bytes(), "asdf".to_owned());
+        backend.put("test.2".as_bytes(), "asdf".to_owned());
+        backend.put("test.3".as_bytes(), "asdf".to_owned());
+        backend.put("random_data4".as_bytes(), "asdf".to_owned());
+
+        let mut result = vec![];
+        let mut iter: Box<dyn StreamingIterator<Item = (Vec<u8>, String)>> =
+            backend.prefix_iterator("test.".as_bytes().to_vec(), IteratorDirection::Backward);
+
+        while let Some((k, v)) = iter.next() {
+            result.push((k.clone(), v.clone()));
+        }
+
+        assert_eq!(
+            result,
+            vec![
+                ("test.3".as_bytes().to_vec(), "asdf".to_owned()),
+                ("test.2".as_bytes().to_vec(), "asdf".to_owned()),
+                ("test.1".as_bytes().to_vec(), "asdf".to_owned()),
+            ]
+        );
     }
 }

@@ -112,7 +112,7 @@ impl<'a> SectorConfig<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 /// Individual shard configuration. Takes precedence to
 /// the sector config.
 pub struct ShardConfig<'a> {

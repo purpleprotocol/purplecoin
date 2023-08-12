@@ -6,16 +6,20 @@
 
 use crate::chain::mmr::{MMRBackend, MMRBackendErr, MMR};
 use crate::chain::{
-    BlockHeaderWithHash, ChainConfig, DBInterface, PowBlockHeaderWithHash, PowChainBackend,
-    PowChainBackendErr, SectorConfig, ShardBackend, ShardBackendErr, ShardConfig,
+    BlockHeaderWithHash, ChainConfig, DBInterface, DBPrefixIterator, IteratorDirection,
+    PowBlockHeaderWithHash, PowChainBackend, PowChainBackendErr, SectorConfig, ShardBackend,
+    ShardBackendErr, ShardConfig,
 };
 use crate::primitives::{Block, BlockData, BlockHeader, Hash256, Output, PowBlock, PowBlockHeader};
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::Witness;
 use dashmap::{DashMap as HashMap, DashSet as HashSet};
 use rocksdb::Error as RocksDBErr;
-use rocksdb::{MultiThreaded, TransactionDB, WriteBatchWithTransaction};
+use rocksdb::{Direction, IteratorMode, MultiThreaded, TransactionDB, WriteBatchWithTransaction};
+use std::borrow::Borrow;
+use std::cmp;
 use std::sync::atomic::AtomicU64;
+use streaming_iterator::StreamingIterator;
 use triomphe::Arc;
 
 pub type DB = TransactionDB<MultiThreaded>;
@@ -69,11 +73,11 @@ impl<'a> DiskBackend<'a> {
         self.sector_config.is_some()
     }
 
-    pub fn get(&self, cf: &str, k: &[u8]) -> Result<Option<Vec<u8>>, RocksDBErr> {
+    pub fn get_cf(&self, cf: &str, k: &[u8]) -> Result<Option<Vec<u8>>, RocksDBErr> {
         unimplemented!();
     }
 
-    pub fn put(&self, cf: &str, k: Vec<u8>, v: Vec<u8>) -> Result<Option<Vec<u8>>, RocksDBErr> {
+    pub fn put_cf(&self, cf: &str, k: Vec<u8>, v: Vec<u8>) -> Result<Option<Vec<u8>>, RocksDBErr> {
         unimplemented!();
     }
 }
@@ -100,6 +104,26 @@ impl<'a> DBInterface for DiskBackend<'a> {
         key: K,
     ) -> Result<(), super::DBInterfaceErr> {
         Ok(self.db.delete(key)?)
+    }
+
+    fn prefix_iterator<'b, V: bincode::Decode + 'b>(
+        &self,
+        prefix: Vec<u8>,
+        direction: IteratorDirection,
+    ) -> Box<dyn StreamingIterator<Item = (Vec<u8>, V)> + 'b> {
+        let data = self
+            .db
+            .iterator(IteratorMode::From(prefix.as_slice(), Direction::Forward))
+            .map(|r| {
+                let (k, v) = r.expect("db error");
+                (
+                    k.as_ref().to_vec(),
+                    crate::codec::decode(v.as_ref()).unwrap(),
+                )
+            })
+            .collect::<Vec<(Vec<u8>, V)>>();
+
+        Box::new(DBPrefixIterator::new(data, direction))
     }
 }
 
@@ -344,8 +368,7 @@ impl<'a> ShardBackend<'a> for DiskBackend<'a> {
         let tx = self.db.transaction();
         match tx.get_cf(&headers_cf, key) {
             Ok(Some(bheight)) => {
-                let bheight = self
-                    .db
+                let bheight = tx
                     .get_cf(&headers_cf, key)?
                     .ok_or(ShardBackendErr::CorruptData)?;
                 let mut out = [0; 8];
@@ -506,5 +529,73 @@ impl<'a> MMRBackend<Vec<u8>> for DiskBackend<'a> {
 
     fn prune(&mut self) -> Result<(), MMRBackendErr> {
         unimplemented!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::boxed::Box;
+
+    #[test]
+    fn prefix_iterator_forward() {
+        let db = crate::chain::create_rocksdb_backend();
+        let backend = DiskBackend::new(db, Default::default(), None, None).unwrap();
+
+        backend.put("random_data1".as_bytes(), "asdf".to_owned());
+        backend.put("test.1".as_bytes(), "asdf".to_owned());
+        backend.put("random_data2".as_bytes(), "asdf".to_owned());
+        backend.put("random_data3".as_bytes(), "asdf".to_owned());
+        backend.put("test.2".as_bytes(), "asdf".to_owned());
+        backend.put("test.3".as_bytes(), "asdf".to_owned());
+        backend.put("random_data4".as_bytes(), "asdf".to_owned());
+
+        let mut result = vec![];
+        let mut iter: Box<dyn StreamingIterator<Item = (Vec<u8>, String)>> =
+            backend.prefix_iterator("test.".as_bytes().to_vec(), IteratorDirection::Forward);
+
+        while let Some((k, v)) = iter.next() {
+            result.push((k.clone(), v.clone()));
+        }
+
+        assert_eq!(
+            result,
+            vec![
+                ("test.1".as_bytes().to_vec(), "asdf".to_owned()),
+                ("test.2".as_bytes().to_vec(), "asdf".to_owned()),
+                ("test.3".as_bytes().to_vec(), "asdf".to_owned()),
+            ]
+        );
+    }
+
+    #[test]
+    fn prefix_iterator_backward() {
+        let db = crate::chain::create_rocksdb_backend();
+        let backend = DiskBackend::new(db, Default::default(), None, None).unwrap();
+
+        backend.put("random_data1".as_bytes(), "asdf".to_owned());
+        backend.put("test.1".as_bytes(), "asdf".to_owned());
+        backend.put("random_data2".as_bytes(), "asdf".to_owned());
+        backend.put("random_data3".as_bytes(), "asdf".to_owned());
+        backend.put("test.2".as_bytes(), "asdf".to_owned());
+        backend.put("test.3".as_bytes(), "asdf".to_owned());
+        backend.put("random_data4".as_bytes(), "asdf".to_owned());
+
+        let mut result = vec![];
+        let mut iter: Box<dyn StreamingIterator<Item = (Vec<u8>, String)>> =
+            backend.prefix_iterator("test.".as_bytes().to_vec(), IteratorDirection::Backward);
+
+        while let Some((k, v)) = iter.next() {
+            result.push((k.clone(), v.clone()));
+        }
+
+        assert_eq!(
+            result,
+            vec![
+                ("test.3".as_bytes().to_vec(), "asdf".to_owned()),
+                ("test.2".as_bytes().to_vec(), "asdf".to_owned()),
+                ("test.1".as_bytes().to_vec(), "asdf".to_owned()),
+            ]
+        );
     }
 }
