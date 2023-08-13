@@ -25,9 +25,9 @@ use libp2p::{
     swarm::{SwarmBuilder, SwarmEvent},
     tcp, Multiaddr, PeerId, Swarm, Transport,
 };
-use log::{error, info};
+use log::{debug, error, info};
 pub use mempool::*;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::RwLock;
 pub use rpc::*;
 use std::collections::HashMap;
 use std::str;
@@ -54,7 +54,7 @@ const BOOTSTRAP_INTERVAL: u64 = 60;
 pub struct Node<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> {
     chain: Chain<'a, B>,
     peer_info: PeerInfo,
-    peer_info_table: Arc<Mutex<PeerInfoTable>>,
+    peer_info_table: Arc<RwLock<PeerInfoTable>>,
     sector_swarm: Swarm<SectorBehaviour>,
     exchange_swarm: Swarm<ExchangeBehaviour>,
     cluster_swarm: Swarm<ClusterBehaviour>,
@@ -154,7 +154,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
         Self {
             chain,
             peer_info,
-            peer_info_table: Arc::new(Mutex::new(HashMap::new())),
+            peer_info_table: Arc::new(RwLock::new(HashMap::new())),
             sector_swarm,
             exchange_swarm,
             cluster_swarm,
@@ -177,11 +177,11 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
 
     pub async fn bootstrap(
         backend: B,
-        peer_info_table: Arc<Mutex<PeerInfoTable>>,
+        peer_info_table: Arc<RwLock<PeerInfoTable>>,
         sender: Sender<(PeerId, Multiaddr)>,
     ) {
         loop {
-            let num_peers = peer_info_table.lock().len();
+            let num_peers = peer_info_table.read().len();
 
             // Stop bootstrapping if we have enough peers
             if num_peers > SETTINGS.network.desired_peers as usize {
@@ -278,8 +278,9 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
                     let (id, addr) = res.expect("channel closed");
                     self.sector_swarm.behaviour_mut().kademlia.add_address(
                         &id,
-                        addr,
+                        addr.clone(),
                     );
+                    self.try_connect_sector(&id, addr);
                 }
                 sector_event = self.sector_swarm.select_next_some() => match sector_event {
                     SwarmEvent::NewListenAddr { address, .. } => {
@@ -292,20 +293,22 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
                             for addr in info.listen_addrs {
                                 sector_behaviour.kademlia.add_address(&peer_id, addr);
                             }
-                            let peer_table_lock = self.peer_info_table.lock();
+                            let peer_table_lock = self.peer_info_table.read();
                             if !peer_table_lock.contains_key(&peer_id) {
                                 let peer_info_request = PeerInfoRequest;
                                 sector_behaviour.peer_request.send_request(&peer_id, peer_info_request);
                             }
                         }
-                        _ => unreachable!(),
+                        event => {
+                            debug!("Received identify event: {:?}", event);
+                        }
                     }
                     SwarmEvent::Behaviour(SectorEvent::PeerRequest(event)) => match event {
                         request_response::Event::Message { peer, message } => {
                             match message {
                                 request_response::Message::Response { response, .. } => {
                                     let peer_info = response.peer_info;
-                                    let mut peer_table_lock = self.peer_info_table.lock();
+                                    let mut peer_table_lock = self.peer_info_table.write();
                                     peer_table_lock.insert(peer, peer_info);
                                 },
                                 request_response::Message::Request { request, channel, .. } => {
@@ -318,7 +321,9 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
                                 }
                             }
                         }
-                        _ => unreachable!(),
+                        event => {
+                            debug!("Received Peer Request event: {:?}", event);
+                        }
                     }
                     SwarmEvent::Behaviour(SectorEvent::Mdns(event)) => match event {
                         mdns::Event::Discovered(peers) => {
@@ -331,8 +336,11 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
                                 if self.chain.backend.get::<_, String>(&peer_key).unwrap_or(None).is_none() {
                                     info!("Found new peer {} at {}", peer_id.to_base58(), addr);
                                     self.chain.backend.put(peer_key, vec![addr.to_string()]).unwrap_or(());
-                                    let sector_behaviour = self.sector_swarm.behaviour_mut();
-                                    sector_behaviour.kademlia.add_address(&peer_id, addr);
+                                    {
+                                        let sector_behaviour = self.sector_swarm.behaviour_mut();
+                                        sector_behaviour.kademlia.add_address(&peer_id, addr.clone());
+                                    }
+                                    self.try_connect_sector(&peer_id, addr);
                                 }
                             }
                         }
@@ -363,17 +371,35 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
                             }
                         }
                         event => {
-                            info!("Received kademlia event: {:?}", event);
+                            debug!("Received kademlia event: {:?}", event);
                         }
                     }
+                    SwarmEvent::ConnectionEstablished { peer_id, endpoint, .. } => {
+                        info!("Connected to peer {} at {}", peer_id.to_base58(), endpoint.get_remote_address());
+                    }
+                    SwarmEvent::ConnectionClosed { peer_id, endpoint, .. } => {
+                        info!("Disconnected from peer {} at {}", peer_id.to_base58(), endpoint.get_remote_address());
+                    }
                     event => {
-                        info!("Received event: {:?}", event);
+                        debug!("Received event: {:?}", event);
                     },
                 },
                 exchange_event = self.exchange_swarm.next() => unimplemented!(),
                 cluster_event = self.cluster_swarm.next() => unimplemented!(),
             }
         }
+    }
+
+    fn try_connect_sector(&mut self, peer_id: &PeerId, addr: Multiaddr) {
+        let num_peers = self.peer_info_table.read().len();
+
+        if num_peers > SETTINGS.network.desired_peers as usize
+            || self.sector_swarm.is_connected(peer_id)
+        {
+            return;
+        }
+
+        self.sector_swarm.dial(addr);
     }
 }
 
