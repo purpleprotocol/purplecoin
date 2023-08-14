@@ -289,6 +289,9 @@ fn perform_sanity_checks() {
     verify_addresses_checksum(addresses_mainnet_filename, ADDRESSES_RAW_MAINNET);
     verify_addresses_checksum(addresses_testnet_filename, ADDRESSES_RAW_TESTNET);
 
+    // Validate settings
+    SETTINGS.validate();
+
     // Add here more sanity checks
 }
 

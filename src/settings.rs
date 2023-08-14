@@ -156,6 +156,14 @@ impl Settings {
 
         s.build()?.try_deserialize()
     }
+
+    /// Validates the settings. Panics if settings are invalid.
+    pub fn validate(&self) {
+        self.network.validate();
+        self.node.validate();
+        self.miner.validate();
+        self.cluster.validate();
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, FieldNamesAsArray)]
@@ -163,6 +171,10 @@ pub struct Network {
     /// Node listen address.
     #[serde(alias = "listenaddr")]
     pub listen_addr: String,
+
+    /// Which protocols to listen on. Possible values: tcp, quic, and uds.
+    #[serde(alias = "useprotocols")]
+    pub use_protocols: Vec<String>,
 
     /// Desired number of peers. 8 by default.
     #[serde(alias = "desiredpeers")]
@@ -224,6 +236,7 @@ impl Default for Network {
             listen_port_mainnet: 8098,
             listen_port_testnet: 8031,
             listen_port_devnet: 8021,
+            use_protocols: vec!["tcp".to_owned()],
             desired_peers: 8,
             rpc_enabled: true,
             rpc_listen_port_mainnet: 8067,
@@ -235,6 +248,23 @@ impl Default for Network {
             seeds_testnet: vec!["bootstrap.testnet.purplecoin.io.".to_owned()],
             seeds_devnet: vec![],
         }
+    }
+}
+
+impl Network {
+    fn validate(&self) {
+        assert!(
+            self.desired_peers > 0,
+            "invalid settings: desiredpeers must be greater than 0"
+        );
+        assert!(!self.use_protocols.is_empty(), "invalid settings: no value provided for useprotocols. Possible values: quic, tcp, or uds.");
+        assert!(
+            !self
+                .use_protocols
+                .iter()
+                .any(|p| p.as_str() != "quic" && p.as_str() != "tcp" && p.as_str() != "uds"),
+            "invalid settings: useprotocols is invalid, possible values: quic, tcp, or uds."
+        );
     }
 }
 
@@ -346,6 +376,12 @@ impl Default for Node {
     }
 }
 
+impl Node {
+    fn validate(&self) {
+        assert!(!(self.network_name.as_str() != "mainnet" && self.network_name.as_str() != "testnet" && self.network_name.as_str() != "devnet"), "invalid settings: networkname is invalid, possible values: mainnet, testnet, or devnet.");
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Default, FieldNamesAsArray)]
 pub struct Miner {
     /// Only mine the given sectors.
@@ -365,6 +401,10 @@ pub struct Miner {
     /// Default is 0 which means the number of cores of the system
     #[serde(alias = "minerthreads")]
     pub miner_threads: u16,
+}
+
+impl Miner {
+    fn validate(&self) {}
 }
 
 #[derive(Debug, Serialize, Deserialize, FieldNamesAsArray)]
@@ -452,6 +492,10 @@ impl Default for Cluster {
             cluster_ips: None,
         }
     }
+}
+
+impl Cluster {
+    fn validate(&self) {}
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
