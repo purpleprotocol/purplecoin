@@ -70,3 +70,11 @@ Donations can also be sent to the following ETH address:
 ```
 0x8948F2d65Fa48cB10Aeb2C91930b7f9d28b2E885
 ```
+
+## Development
+
+### Dependency vendoring
+All dependencies used by Purplecoin are vendored under the ./vendor directory. In order to add a new dependency to the project, add the dependency to the Cargo.toml file first. After that, run the following command to vendor the new dependency:
+```
+cargo vendor --versioned-dirs ./vendor/crates
+```
