@@ -15,9 +15,9 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
+use simdutf8::basic::from_utf8;
 use std::collections::HashMap;
 use std::mem;
-use simdutf8::basic::from_utf8;
 
 use super::bifs;
 
@@ -3693,7 +3693,7 @@ impl<'a> ScriptExecutor<'a> {
                         }
 
                         let hash_term =
-                            bifs::blake3_256_internal(&value_to_hash, &utf8_key.unwrap());
+                            bifs::blake3_256_internal(&value_to_hash, utf8_key.unwrap());
 
                         *memory_size += hash_term.size();
                         exec_stack.push(hash_term);
@@ -3735,7 +3735,7 @@ impl<'a> ScriptExecutor<'a> {
                         }
 
                         let hash_term =
-                            bifs::blake3_512_internal(&value_to_hash, &utf8_key.unwrap());
+                            bifs::blake3_512_internal(&value_to_hash, utf8_key.unwrap());
 
                         *memory_size += hash_term.size();
                         exec_stack.push(hash_term);
@@ -3777,7 +3777,7 @@ impl<'a> ScriptExecutor<'a> {
                         }
 
                         let hash_term =
-                            bifs::blake3_160_internal(&value_to_hash, &utf8_key.unwrap());
+                            bifs::blake3_160_internal(&value_to_hash, utf8_key.unwrap());
 
                         *memory_size += hash_term.size();
                         exec_stack.push(hash_term);
