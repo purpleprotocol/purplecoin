@@ -218,9 +218,9 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xf4` Blake3_256 - Pops the topmost item on the stack, hashes it with Blake3_256 and then pushes the result to the stack.
     - [x] OP `0xf5` Blake3_512 - Pops the topmost item on the stack, hashes it with Blake3_512 and then
     - [x] OP `0xf6` Blake3_256_160 - Pops the topmost item on the stack, hashes it with Blake3_256, then hashes the resulting hash with Blake3_160 and then pushes the result to the stack.
-    - [ ] OP `0xf7` Blake3_256Keyed - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key and then pushes the result to the stack.
-    - [ ] OP `0xf8` Blake3_512Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_512 keyed and then pushes the result to the stack.
-    - [ ] OP `0xf9` Blake3_160Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_160 keyed and then pushes the result to the stack.
+    - [x] OP `0xf7` Blake3_256Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_256 keyed and then pushes the result to the stack.
+    - [x] OP `0xf8` Blake3_512Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_512 keyed and then pushes the result to the stack.
+    - [x] OP `0xf9` Blake3_160Keyed - Pops the following from the stack: `value_to_hash = <any_type>, key = Unsigned8Array` and hashes the value it with Blake3_160 keyed and then pushes the result to the stack.
     - [x] OP `0xfa` Blake3_160Internal - Pops the topmost item on the stack, hashes it with Blake3_160 keyed with the current shard key, and then pushes the result to the stack.
     - [x] OP `0xfb` Blake3_256Internal - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key, and then pushes the result to the stack.
     - [x] OP `0xfc` Blake3_512Internal - Pops the topmost item on the stack, hashes it with Blake3_512 keyed with the current shard key, and then pushes the result to the stack.

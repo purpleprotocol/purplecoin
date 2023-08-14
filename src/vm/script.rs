@@ -15,6 +15,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
+use simdutf8::basic::from_utf8;
 use std::collections::HashMap;
 use std::mem;
 
@@ -3658,6 +3659,132 @@ impl<'a> ScriptExecutor<'a> {
                         );
                     }
                 },
+
+                ScriptEntry::Opcode(OP::Blake3_256Keyed) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let value_to_hash = exec_stack.pop().unwrap();
+                    *memory_size -= value_to_hash.size();
+                    let new_key = exec_stack.pop().unwrap();
+                    *memory_size -= new_key.size();
+
+                    if new_key.get_type() != crate::vm::internal::HASH_KEY_TYPE {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    if let VmTerm::Unsigned8Array(arr) = new_key {
+                        let utf8_key = from_utf8(&arr);
+                        if utf8_key.is_err() {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                            return;
+                        }
+
+                        let hash_term =
+                            bifs::blake3_256_internal(&value_to_hash, utf8_key.unwrap());
+
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
+                    } else {
+                        unreachable!()
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::Blake3_512Keyed) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let value_to_hash = exec_stack.pop().unwrap();
+                    *memory_size -= value_to_hash.size();
+                    let new_key = exec_stack.pop().unwrap();
+                    *memory_size -= new_key.size();
+
+                    if new_key.get_type() != crate::vm::internal::HASH_KEY_TYPE {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    if let VmTerm::Unsigned8Array(arr) = new_key {
+                        let utf8_key = from_utf8(&arr);
+                        if utf8_key.is_err() {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                            return;
+                        }
+
+                        let hash_term =
+                            bifs::blake3_512_internal(&value_to_hash, utf8_key.unwrap());
+
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
+                    } else {
+                        unreachable!()
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::Blake3_160Keyed) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let value_to_hash = exec_stack.pop().unwrap();
+                    *memory_size -= value_to_hash.size();
+                    let new_key = exec_stack.pop().unwrap();
+                    *memory_size -= new_key.size();
+
+                    if new_key.get_type() != crate::vm::internal::HASH_KEY_TYPE {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    if let VmTerm::Unsigned8Array(arr) = new_key {
+                        let utf8_key = from_utf8(&arr);
+                        if utf8_key.is_err() {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                            return;
+                        }
+
+                        let hash_term =
+                            bifs::blake3_160_internal(&value_to_hash, utf8_key.unwrap());
+
+                        *memory_size += hash_term.size();
+                        exec_stack.push(hash_term);
+                    } else {
+                        unreachable!()
+                    }
+                }
 
                 ScriptEntry::Opcode(OP::Blake3_160Internal) => match exec_stack.pop() {
                     Some(val) => {
@@ -11400,6 +11527,613 @@ mod tests {
             Ok(ExecutionResult::OkVerify).into()
         );
         assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_hashes_with_blake3_256_keyed() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Value
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_256Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::Signed8Var), // Value
+                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Blake3_256Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
+        let utf_key = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a];
+        let utf_key = from_utf8(&utf_key.as_slice()).unwrap();
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        for term in test_terms {
+            let hashed_term = bifs::blake3_256_internal(&term, &utf_key);
+            script_output.push(hashed_term);
+        }
+
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_hashes_with_blake3_256_keyed_with_valid_utf8_key() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xe2),
+                ScriptEntry::Byte(0x9d),
+                ScriptEntry::Byte(0xa4),
+                ScriptEntry::Byte(0xef),
+                ScriptEntry::Byte(0xb8),
+                ScriptEntry::Byte(0x8f),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Value
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_256Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let test_terms = vec![VmTerm::Unsigned8(0x01)];
+        let utf_key = vec![0xe2, 0x9d, 0xa4, 0xef, 0xb8, 0x8f];
+        let utf_key = from_utf8(&utf_key.as_slice()).unwrap();
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        for term in test_terms {
+            let hashed_term = bifs::blake3_256_internal(&term, &utf_key);
+            script_output.push(hashed_term);
+        }
+
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_panics_hashing_with_blake3_256_keyed_because_of_invalid_key_type() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned16ArrayVar), // Key
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Value
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_256Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![];
+
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
+    }
+
+    #[test]
+    fn it_panics_hashing_with_blake3_256_keyed_with_invalid_utf8_key() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xe2),
+                ScriptEntry::Byte(0x9d),
+                ScriptEntry::Byte(0xa4),
+                ScriptEntry::Byte(0xef),
+                ScriptEntry::Byte(0xb8),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Value
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_256Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![];
+
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
+    }
+
+    #[test]
+    fn it_hashes_with_blake3_512_keyed() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Value
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_512Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::Signed8Var), // Value
+                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Blake3_512Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
+        let utf_key = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a];
+        let utf_key = from_utf8(&utf_key.as_slice()).unwrap();
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        for term in test_terms {
+            let hashed_term = bifs::blake3_512_internal(&term, &utf_key);
+            script_output.push(hashed_term);
+        }
+
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_hashes_with_blake3_512_keyed_with_valid_utf8_key() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xe2),
+                ScriptEntry::Byte(0x9d),
+                ScriptEntry::Byte(0xa4),
+                ScriptEntry::Byte(0xef),
+                ScriptEntry::Byte(0xb8),
+                ScriptEntry::Byte(0x8f),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Value
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_512Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xe2),
+                ScriptEntry::Byte(0x9d),
+                ScriptEntry::Byte(0xa4),
+                ScriptEntry::Byte(0xef),
+                ScriptEntry::Byte(0xb8),
+                ScriptEntry::Byte(0x8f),
+                ScriptEntry::Opcode(OP::Signed8Var), // Value
+                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Blake3_512Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
+        let utf_key = vec![0xe2, 0x9d, 0xa4, 0xef, 0xb8, 0x8f];
+        let utf_key = from_utf8(&utf_key.as_slice()).unwrap();
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        for term in test_terms {
+            let hashed_term = bifs::blake3_512_internal(&term, &utf_key);
+            script_output.push(hashed_term);
+        }
+
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_panics_hashing_with_blake3_512_keyed_because_of_invalid_key_type() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned16ArrayVar), // Key
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Value
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_512Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![];
+
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
+    }
+
+    #[test]
+    fn it_panics_hashing_with_blake3_512_keyed_with_invalid_utf8_key() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xe2),
+                ScriptEntry::Byte(0x9d),
+                ScriptEntry::Byte(0xa4),
+                ScriptEntry::Byte(0xef),
+                ScriptEntry::Byte(0xb8),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Value
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_512Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![];
+
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
+    }
+
+    #[test]
+    fn it_hashes_with_blake3_160_keyed() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Value
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_160Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::Signed8Var), // Value
+                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Blake3_160Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
+        let utf_key = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a];
+        let utf_key = from_utf8(&utf_key.as_slice()).unwrap();
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        for term in test_terms {
+            let hashed_term = bifs::blake3_160_internal(&term, &utf_key);
+            script_output.push(hashed_term);
+        }
+
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_hashes_with_blake3_160_keyed_with_valid_utf8_key() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xe2),
+                ScriptEntry::Byte(0x9d),
+                ScriptEntry::Byte(0xa4),
+                ScriptEntry::Byte(0xef),
+                ScriptEntry::Byte(0xb8),
+                ScriptEntry::Byte(0x8f),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Value
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_160Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xe2),
+                ScriptEntry::Byte(0x9d),
+                ScriptEntry::Byte(0xa4),
+                ScriptEntry::Byte(0xef),
+                ScriptEntry::Byte(0xb8),
+                ScriptEntry::Byte(0x8f),
+                ScriptEntry::Opcode(OP::Signed8Var), // Value
+                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Blake3_160Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
+        let utf_key = vec![0xe2, 0x9d, 0xa4, 0xef, 0xb8, 0x8f];
+        let utf_key = from_utf8(&utf_key.as_slice()).unwrap();
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        for term in test_terms {
+            let hashed_term = bifs::blake3_160_internal(&term, &utf_key);
+            script_output.push(hashed_term);
+        }
+
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_panics_hashing_with_blake3_160_keyed_because_of_invalid_key_type() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned16ArrayVar), // Key
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Value
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_160Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![];
+
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
+    }
+
+    #[test]
+    fn it_panics_hashing_with_blake3_160_keyed_with_invalid_utf8_key() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar), // Key
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xe2),
+                ScriptEntry::Byte(0x9d),
+                ScriptEntry::Byte(0xa4),
+                ScriptEntry::Byte(0xef),
+                ScriptEntry::Byte(0xb8),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Value
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Blake3_160Keyed),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![];
+
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
     }
 
     #[test]
