@@ -432,7 +432,20 @@ impl RpcServerDefinition for RpcServer {
         address: String,
         pub_key: String,
     ) -> Self::VerifyAddressFut {
-        future::ready(Err(RpcErr::InvalidPublicKey))
+        let decoded_pub = crate::primitives::PublicKey::from_hex(pub_key.as_str());
+
+        if decoded_pub.is_err() {
+            return future::ready(Err(RpcErr::InvalidPublicKey));
+        }
+
+        let decoded_pub = decoded_pub.unwrap();
+        let address_bech = decoded_pub.to_address().to_bech32("pu");
+
+        if address_bech != address {
+            future::ready(Ok::<bool, RpcErr>(false));
+        }
+
+        future::ready(Ok(true))
     }
 
     fn send_raw_tx(self, _: context::Context, transaction: String) -> Self::SendRawTxFut {

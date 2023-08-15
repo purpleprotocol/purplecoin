@@ -208,6 +208,11 @@ impl PublicKey {
         ))
     }
 
+    pub fn from_hex(hexstr: &str) -> Result<Self, &'static str> {
+        let bytes = hex::decode(hexstr).map_err(|_| "invalid hexstr")?;
+        Self::from_bytes(&bytes)
+    }
+
     #[must_use]
     pub fn zero() -> Self {
         let bytes = vec![0; 32];

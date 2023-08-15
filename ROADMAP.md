@@ -293,7 +293,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
       - [x] ValidateAddress
       - [ ] SignMessageWithPrivKey
       - [ ] VerifyMessage
-      - [ ] VerifyAddress
+      - [x] VerifyAddress
       - [ ] GenerateWallet
       - [ ] BackupWallet
       - [ ] BackupWalletS3
