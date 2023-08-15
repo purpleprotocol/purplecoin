@@ -80,6 +80,7 @@ fn run_init() -> anyhow::Result<()> {
             if EXIT_SIGNAL.load(Ordering::Relaxed) {
                 break;
             }
+            thread::sleep(Duration::from_millis(200));
         }
 
         // Wait for thread to exit
