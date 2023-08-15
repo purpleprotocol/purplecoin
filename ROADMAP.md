@@ -283,7 +283,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
       - [ ] SubmitBlock
       - [ ] SubmitShareBlock
       - [ ] GetNetworkInfo
-      - [ ] GetPeerInfo
+      - [x] GetPeerInfo
       - [ ] AddNode
       - [ ] ListBanned
       - [ ] SetNetworkActive

@@ -147,7 +147,7 @@ fn start_runtime() -> anyhow::Result<()> {
         tokio::select!(
             _ = tokio::spawn(run_rpc()) => (),
             _ = tokio::spawn(run_periodics()) => (),
-            _ = tokio::spawn(check_exit_handler()) => (),
+            _ = tokio::spawn(check_exit_signal()) => (),
             _ = node.bootstrap_then_run() => (),
         );
 
@@ -161,7 +161,7 @@ fn start_runtime() -> anyhow::Result<()> {
     })
 }
 
-async fn check_exit_handler() {
+async fn check_exit_signal() {
     loop {
         if EXIT_SIGNAL.load(Ordering::Relaxed) {
             break;

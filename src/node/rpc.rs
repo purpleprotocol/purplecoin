@@ -4,12 +4,13 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::node::{PeerInfo, NODE_INFO, PEER_INFO_TABLE};
+use crate::node::{PeerInfo, PeerInfoTable, NODE_INFO, PEER_INFO_TABLE};
 use futures::{
     future::{self, Ready},
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::atomic::Ordering;
 use tarpc::{
@@ -85,7 +86,7 @@ pub trait RpcServerDefinition {
     async fn get_network_info() -> String;
 
     /// Returns information about each peer
-    async fn get_peer_info() -> String;
+    async fn get_peer_info() -> Option<HashMap<String, PeerInfo>>;
 
     /// Returns the total p2p connections count
     async fn get_connection_count() -> u64;
@@ -192,7 +193,7 @@ impl RpcServerDefinition for RpcServer {
     type BackupWalletFut = Ready<Result<String, RpcErr>>;
     type BackupWalletS3Fut = Ready<Result<String, RpcErr>>;
     type GetNetworkInfoFut = Ready<String>;
-    type GetPeerInfoFut = Ready<String>;
+    type GetPeerInfoFut = Ready<Option<HashMap<String, PeerInfo>>>;
     type GetConnectionCountFut = Ready<u64>;
     type GetNetTotalsFut = Ready<String>;
     type AddNodeFut = Ready<String>;
@@ -371,7 +372,18 @@ impl RpcServerDefinition for RpcServer {
     }
 
     fn get_peer_info(self, _: context::Context) -> Self::GetPeerInfoFut {
-        future::ready("Hello world!".to_string())
+        let peer_table = unsafe { PEER_INFO_TABLE.clone() };
+
+        if peer_table.is_none() {
+            return future::ready(None);
+        }
+
+        let peer_table = peer_table.unwrap().read().clone();
+        let peer_table: HashMap<_, _> = peer_table
+            .iter()
+            .map(|(id, v)| (id.to_base58(), v.clone()))
+            .collect();
+        future::ready(Some(peer_table))
     }
 
     fn get_connection_count(self, _: context::Context) -> Self::GetConnectionCountFut {
