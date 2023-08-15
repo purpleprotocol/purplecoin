@@ -287,7 +287,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
       - [ ] AddNode
       - [ ] ListBanned
       - [ ] SetNetworkActive
-      - [ ] GetNodeInfo
+      - [x] GetNodeInfo
       - [x] Stop
       - [x] Uptime
       - [x] ValidateAddress
