@@ -289,7 +289,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
       - [ ] SetNetworkActive
       - [ ] GetNodeInfo
       - [ ] Stop
-      - [ ] Uptime
+      - [x] Uptime
       - [ ] ValidateAddress
       - [ ] SignMessageWithPrivKey
       - [ ] VerifyMessage

@@ -10,6 +10,7 @@ use futures::{
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
+use std::sync::atomic::Ordering;
 use tarpc::{
     client, context,
     server::{self, incoming::Incoming, Channel},
@@ -107,7 +108,7 @@ pub trait RpcServerDefinition {
     async fn stop() -> String;
 
     /// Returns the number of seconds the server has been running
-    async fn uptime() -> u64;
+    async fn uptime() -> i64;
 
     /// Validates the given address
     async fn validate_address(address: String) -> bool;
@@ -185,7 +186,7 @@ impl RpcServerDefinition for RpcServer {
     type SubmitShareBlockFut = Ready<String>;
     type GetNodeInfoFut = Ready<String>;
     type StopFut = Ready<String>;
-    type UptimeFut = Ready<u64>;
+    type UptimeFut = Ready<i64>;
     type GenerateWalletFut = Ready<Result<String, RpcErr>>;
     type BackupWalletFut = Ready<Result<String, RpcErr>>;
     type BackupWalletS3Fut = Ready<Result<String, RpcErr>>;
@@ -315,11 +316,15 @@ impl RpcServerDefinition for RpcServer {
     }
 
     fn stop(self, _: context::Context) -> Self::StopFut {
-        future::ready("Purplecoin shutting down".to_string())
+        future::ready(format!(
+            "Purplecoin Core v{} shutting down",
+            env!("CARGO_PKG_VERSION")
+        ))
     }
 
     fn uptime(self, _: context::Context) -> Self::UptimeFut {
-        future::ready(0)
+        let startup = crate::global::STARTUP_TIME.load(Ordering::Relaxed);
+        future::ready(crate::global::get_unix_timestamp_secs() - startup)
     }
 
     fn generate_wallet(
