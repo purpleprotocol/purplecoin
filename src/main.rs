@@ -67,7 +67,7 @@ fn main() -> anyhow::Result<()> {
 fn run_init() -> anyhow::Result<()> {
     #[cfg(feature = "gui")]
     thread::spawn(start_runtime);
-    
+
     #[cfg(not(feature = "gui"))]
     let t = thread::spawn(start_runtime);
 
