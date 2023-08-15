@@ -50,10 +50,13 @@ const IDENTITY_KEY: &str = "node_keypair";
 /// Bootstrap interval
 const BOOTSTRAP_INTERVAL: u64 = 60;
 
+pub static mut NODE_INFO: Option<Arc<RwLock<PeerInfo>>> = None;
+pub static mut PEER_INFO_TABLE: Option<Arc<RwLock<PeerInfoTable>>> = None;
+
 /// Read-only reference to the node
 pub struct Node<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> {
     chain: Chain<'a, B>,
-    peer_info: PeerInfo,
+    node_info: Arc<RwLock<PeerInfo>>,
     peer_info_table: Arc<RwLock<PeerInfoTable>>,
     sector_swarm: Swarm<SectorBehaviour>,
     exchange_swarm: Swarm<ExchangeBehaviour>,
@@ -143,18 +146,25 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
             SwarmBuilder::with_tokio_executor(cluster_transport, cluster_behaviour, local_peer_id)
                 .build();
 
-        let peer_info = PeerInfo {
+        let node_info = Arc::new(RwLock::new(PeerInfo {
             id: local_peer_id.to_string(),
             internal_id: Some(local_peer_id),
             startup_time: crate::global::STARTUP_TIME.load(Ordering::Relaxed),
             min_relay_fee: 0,              // TODO: Add correct min relay fee
             listening_sectors: [true; 16], // TODO: Add correct listening sectors
-        };
+        }));
+        let peer_info_table = Arc::new(RwLock::new(HashMap::new()));
+
+        // This is fine since we only write once.
+        unsafe {
+            NODE_INFO = Some(node_info.clone());
+            PEER_INFO_TABLE = Some(peer_info_table.clone());
+        }
 
         Self {
             chain,
-            peer_info,
-            peer_info_table: Arc::new(RwLock::new(HashMap::new())),
+            node_info,
+            peer_info_table,
             sector_swarm,
             exchange_swarm,
             cluster_swarm,
@@ -273,7 +283,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
     }
 
     pub async fn run(&mut self, bootstrap_r: Receiver<(PeerId, Multiaddr)>) {
-        info!("Our node id: {}", self.peer_info.id);
+        info!("Our node id: {}", self.node_info.read().id);
         loop {
             tokio::select! {
                 res = bootstrap_r.recv() => {
@@ -315,7 +325,7 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
                                 },
                                 request_response::Message::Request { request, channel, .. } => {
                                     let sector_behaviour = self.sector_swarm.behaviour_mut();
-                                    let response = PeerInfoResponse::new(self.peer_info.clone());
+                                    let response = PeerInfoResponse::new(self.node_info.read().clone());
                                     match sector_behaviour.peer_request.send_response(channel, response) {
                                         Ok(_) => (),
                                         Err(err) => error!("Failed to send peer info response: {:?}", err),

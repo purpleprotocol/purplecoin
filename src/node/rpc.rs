@@ -4,6 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use crate::node::{PeerInfo, NODE_INFO, PEER_INFO_TABLE};
 use futures::{
     future::{self, Ready},
     prelude::*,
@@ -102,7 +103,7 @@ pub trait RpcServerDefinition {
     async fn set_network_active(active: bool) -> String;
 
     /// Returns information about the node
-    async fn get_node_info() -> String;
+    async fn get_node_info() -> Option<PeerInfo>;
 
     /// Attempts to gracefully shutdown Purplecoin
     async fn stop() -> String;
@@ -184,7 +185,7 @@ impl RpcServerDefinition for RpcServer {
     type GenerateShareToDescriptorFut = Ready<String>;
     type SubmitBlockFut = Ready<String>;
     type SubmitShareBlockFut = Ready<String>;
-    type GetNodeInfoFut = Ready<String>;
+    type GetNodeInfoFut = Ready<Option<PeerInfo>>;
     type StopFut = Ready<String>;
     type UptimeFut = Ready<i64>;
     type GenerateWalletFut = Ready<Result<String, RpcErr>>;
@@ -312,7 +313,14 @@ impl RpcServerDefinition for RpcServer {
     }
 
     fn get_node_info(self, _: context::Context) -> Self::GetNodeInfoFut {
-        future::ready("Hello world!".to_string())
+        let node_info = unsafe { NODE_INFO.clone() };
+
+        if node_info.is_none() {
+            return future::ready(None);
+        }
+
+        let node_info = node_info.unwrap().read().clone();
+        future::ready(Some(node_info))
     }
 
     fn stop(self, _: context::Context) -> Self::StopFut {
