@@ -10,17 +10,25 @@ use log::*;
 use mimalloc::MiMalloc;
 use purplecoin::chain::backend::disk::DiskBackend;
 use purplecoin::chain::*;
+use purplecoin::global::*;
 use purplecoin::node::*;
 use purplecoin::primitives::*;
 use purplecoin::settings::SETTINGS;
 
 use std::env;
+use std::sync::atomic::Ordering;
+use std::thread;
 use std::time::Duration;
 use tarpc::server::{self, incoming::Incoming, Channel};
 use tokio::runtime::Builder;
 use tokio::time::sleep;
 use tracing_subscriber::prelude::*;
 use triomphe::Arc;
+
+use signal_hook::consts::signal::*;
+use signal_hook::consts::TERM_SIGNALS;
+use signal_hook::flag;
+use signal_hook::iterator::Signals;
 
 use warp::Filter;
 
@@ -35,24 +43,42 @@ use purplecoin::gui::GUI;
 #[cfg(feature = "sha256sum")]
 use sha2::{Digest, Sha256};
 #[cfg(feature = "gui")]
-use std::thread;
-
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
 fn main() -> anyhow::Result<()> {
     purplecoin::global::init();
+
+    for sig in TERM_SIGNALS {
+        // When terminated by a second term signal, exit with exit code 1.
+        // This will do nothing the first time (because term_now is false).
+        flag::register_conditional_shutdown(*sig, 1, EXIT_SIGNAL.clone())?;
+        // But this will "arm" the above for the second time, by setting it to true.
+        // The order of registering these is important, if you put this one first, it will
+        // first arm and then terminate ‒ all in the first round.
+        flag::register(*sig, EXIT_SIGNAL.clone())?;
+    }
+
     run_init()
 }
 
 fn run_init() -> anyhow::Result<()> {
-    #[cfg(feature = "gui")]
-    thread::spawn(start_runtime);
+    let t = thread::spawn(start_runtime);
 
     purplecoin::wallet::load_wallets();
 
     #[cfg(not(feature = "gui"))]
-    start_runtime()?;
+    {
+        // This loop runs forever, and blocks until the exit signal is received
+        loop {
+            if EXIT_SIGNAL.load(Ordering::Relaxed) {
+                break;
+            }
+        }
+
+        // Wait for thread to exit
+        let _ = t.join().unwrap();
+    }
 
     #[cfg(feature = "gui")]
     start_gui()?;
@@ -110,15 +136,53 @@ fn start_runtime() -> anyhow::Result<()> {
             );
         }
 
-        tokio::try_join!(
-            #[cfg(feature = "rpc")]
-            run_rpc(),
-            run_periodics(),
-            node.bootstrap_then_run(),
-        )?;
+        tokio::select!(
+            _ = tokio::spawn(run_rpc()) => (),
+            _ = tokio::spawn(run_periodics()) => (),
+            _ = tokio::spawn(check_exit_handler()) => (),
+            _ = node.bootstrap_then_run() => (),
+        );
+
+        // TODO: Cleanup anything here
+
+        #[cfg(feature = "gui")]
+        // When we run the GUI we must terminate it this way
+        process::exit(1);
 
         Ok(())
     })
+}
+
+async fn check_exit_handler() {
+    'outer: loop {
+        if EXIT_SIGNAL.load(Ordering::Relaxed) {
+            break;
+        }
+
+        // Create iterator over signals
+        let mut signals = Signals::new(TERM_SIGNALS).unwrap();
+
+        for signal in signals.pending() {
+            match signal {
+                SIGINT => {
+                    break 'outer;
+                }
+                SIGTERM => {
+                    break 'outer;
+                }
+                term_sig => {
+                    break 'outer;
+                }
+            }
+        }
+
+        sleep(Duration::from_millis(10)).await;
+    }
+
+    info!(
+        "Purplecoin Core v{} shutting down...",
+        env!("CARGO_PKG_VERSION")
+    )
 }
 
 #[cfg(feature = "gui")]
@@ -189,6 +253,19 @@ async fn run_rpc() -> anyhow::Result<()> {
         );
 
         warp::serve(rpc_path).run(([127, 0, 0, 1], port)).await;
+    } else {
+        loop {
+            sleep(Duration::from_secs(1)).await;
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(not(feature = "rpc"))]
+async fn run_rpc() -> anyhow::Result<()> {
+    loop {
+        sleep(Duration::from_secs(1)).await;
     }
 
     Ok(())

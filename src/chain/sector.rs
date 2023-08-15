@@ -7,6 +7,7 @@
 use crate::chain::{BlockType, ChainConfig, PowChainBackend, PowChainBackendErr, ShardBackend};
 use std::marker::PhantomData;
 
+#[derive(Clone)]
 pub struct Sector<'a, B: PowChainBackend<'a>> {
     pub backend: B,
     pub sector_id: u8,

@@ -316,6 +316,7 @@ impl RpcServerDefinition for RpcServer {
     }
 
     fn stop(self, _: context::Context) -> Self::StopFut {
+        crate::global::EXIT_SIGNAL.store(true, Ordering::Relaxed);
         future::ready(format!(
             "Purplecoin Core v{} shutting down",
             env!("CARGO_PKG_VERSION")

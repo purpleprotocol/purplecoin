@@ -13,6 +13,7 @@ use parking_lot::RwLock;
 use std::collections::HashMap;
 use triomphe::Arc;
 
+#[derive(Clone)]
 pub struct Chain<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> {
     pub backend: B,
     pub config: ChainConfig,

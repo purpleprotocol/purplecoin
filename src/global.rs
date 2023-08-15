@@ -23,10 +23,12 @@ use triomphe::Arc;
 pub const LOGO: &[u8; 36124] = include_bytes!("./gui/img/logo_purple_square.png");
 
 type GenesisCache = RwLock<HashMap<u8, Arc<RwLock<Option<Arc<BlockHeader>>>>>>;
-pub static EXIT_SIGNAL: AtomicBool = AtomicBool::new(true);
 pub static STARTUP_TIME: AtomicI64 = AtomicI64::new(0);
 
 lazy_static! {
+    /// Global exit signal
+    pub static ref EXIT_SIGNAL: std::sync::Arc<AtomicBool> = std::sync::Arc::new(AtomicBool::new(false));
+
     /// Genesis blocks cache
     static ref GENESIS_CACHE: GenesisCache = RwLock::new(HashMap::with_capacity(256));
 

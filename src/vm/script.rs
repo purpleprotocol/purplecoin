@@ -11577,11 +11577,11 @@ mod tests {
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
         let utf_key = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a];
-        let utf_key = from_utf8(&utf_key.as_slice()).unwrap();
+        let utf_key = from_utf8(utf_key.as_slice()).unwrap();
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
-            let hashed_term = bifs::blake3_256_internal(&term, &utf_key);
+            let hashed_term = bifs::blake3_256_internal(&term, utf_key);
             script_output.push(hashed_term);
         }
 
@@ -11631,11 +11631,11 @@ mod tests {
 
         let test_terms = vec![VmTerm::Unsigned8(0x01)];
         let utf_key = vec![0xe2, 0x9d, 0xa4, 0xef, 0xb8, 0x8f];
-        let utf_key = from_utf8(&utf_key.as_slice()).unwrap();
+        let utf_key = from_utf8(utf_key.as_slice()).unwrap();
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
-            let hashed_term = bifs::blake3_256_internal(&term, &utf_key);
+            let hashed_term = bifs::blake3_256_internal(&term, utf_key);
             script_output.push(hashed_term);
         }
 
@@ -11770,11 +11770,11 @@ mod tests {
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
         let utf_key = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a];
-        let utf_key = from_utf8(&utf_key.as_slice()).unwrap();
+        let utf_key = from_utf8(utf_key.as_slice()).unwrap();
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
-            let hashed_term = bifs::blake3_512_internal(&term, &utf_key);
+            let hashed_term = bifs::blake3_512_internal(&term, utf_key);
             script_output.push(hashed_term);
         }
 
@@ -11837,11 +11837,11 @@ mod tests {
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
         let utf_key = vec![0xe2, 0x9d, 0xa4, 0xef, 0xb8, 0x8f];
-        let utf_key = from_utf8(&utf_key.as_slice()).unwrap();
+        let utf_key = from_utf8(utf_key.as_slice()).unwrap();
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
-            let hashed_term = bifs::blake3_512_internal(&term, &utf_key);
+            let hashed_term = bifs::blake3_512_internal(&term, utf_key);
             script_output.push(hashed_term);
         }
 
@@ -11977,11 +11977,11 @@ mod tests {
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
         let utf_key = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a];
-        let utf_key = from_utf8(&utf_key.as_slice()).unwrap();
+        let utf_key = from_utf8(utf_key.as_slice()).unwrap();
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
-            let hashed_term = bifs::blake3_160_internal(&term, &utf_key);
+            let hashed_term = bifs::blake3_160_internal(&term, utf_key);
             script_output.push(hashed_term);
         }
 
@@ -12044,11 +12044,11 @@ mod tests {
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
         let utf_key = vec![0xe2, 0x9d, 0xa4, 0xef, 0xb8, 0x8f];
-        let utf_key = from_utf8(&utf_key.as_slice()).unwrap();
+        let utf_key = from_utf8(utf_key.as_slice()).unwrap();
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
-            let hashed_term = bifs::blake3_160_internal(&term, &utf_key);
+            let hashed_term = bifs::blake3_160_internal(&term, utf_key);
             script_output.push(hashed_term);
         }
 

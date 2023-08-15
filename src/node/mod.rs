@@ -204,23 +204,25 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
             let mut peer_ids_and_addrs: Vec<(String, String)> = vec![];
 
             // First check the database
-            let mut db_iter = backend.prefix_iterator::<Vec<String>>(
-                "peer.".as_bytes().to_vec(),
-                IteratorDirection::Forward,
-            );
+            {
+                let mut db_iter = backend.prefix_iterator::<Vec<String>>(
+                    "peer.".as_bytes().to_vec(),
+                    IteratorDirection::Forward,
+                );
 
-            // TODO: Skip unresponsive peers and ones we are already connected to
-            while let Some((k, v)) = db_iter.next() {
-                if required == 0 {
-                    break;
+                // TODO: Skip unresponsive peers and ones we are already connected to
+                while let Some((k, v)) = db_iter.next() {
+                    if required == 0 {
+                        break;
+                    }
+
+                    let k = unsafe { str::from_utf8_unchecked(k.as_slice()) }.to_owned();
+                    let addr = k.split('.').nth(1).unwrap().to_owned();
+                    let v = v[0].clone();
+
+                    peer_ids_and_addrs.push((addr, v));
+                    required -= 1;
                 }
-
-                let k = unsafe { str::from_utf8_unchecked(k.as_slice()) }.to_owned();
-                let addr = k.split('.').nth(1).unwrap().to_owned();
-                let v = v[0].clone();
-
-                peer_ids_and_addrs.push((addr, v));
-                required -= 1;
             }
 
             // Resolve seed nodes if we don't have enough peers
