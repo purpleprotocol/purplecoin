@@ -387,7 +387,22 @@ impl RpcServerDefinition for RpcServer {
     }
 
     fn validate_address(self, _: context::Context, address: String) -> Self::ValidateAddressFut {
-        future::ready(false)
+        let res = bech32::decode(address.as_str());
+        if res.is_err() {
+            return future::ready(false);
+        }
+        let (hrp, _, variant) = res.unwrap();
+
+        if hrp.as_str() != "pu" {
+            return future::ready(false);
+        }
+
+        // Only the bech32m variant is allowed
+        if let bech32::Variant::Bech32 = variant {
+            return future::ready(false);
+        }
+
+        future::ready(true)
     }
 
     fn sign_message_with_priv_key(

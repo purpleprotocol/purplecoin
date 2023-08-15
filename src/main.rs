@@ -43,6 +43,8 @@ use purplecoin::gui::GUI;
 #[cfg(feature = "sha256sum")]
 use sha2::{Digest, Sha256};
 #[cfg(feature = "gui")]
+use std::process;
+
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
@@ -63,7 +65,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn run_init() -> anyhow::Result<()> {
-    let t = thread::spawn(start_runtime);
+    let _t = thread::spawn(start_runtime);
 
     purplecoin::wallet::load_wallets();
 
@@ -170,7 +172,7 @@ async fn check_exit_handler() {
                 SIGTERM => {
                     break 'outer;
                 }
-                term_sig => {
+                _term_sig => {
                     break 'outer;
                 }
             }
