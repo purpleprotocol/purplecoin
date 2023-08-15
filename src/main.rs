@@ -65,7 +65,11 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn run_init() -> anyhow::Result<()> {
-    let _t = thread::spawn(start_runtime);
+    #[cfg(feature = "gui")]
+    thread::spawn(start_runtime);
+    
+    #[cfg(not(feature = "gui"))]
+    let t = thread::spawn(start_runtime);
 
     purplecoin::wallet::load_wallets();
 
