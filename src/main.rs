@@ -26,9 +26,13 @@ use tokio::time::sleep;
 use tracing_subscriber::prelude::*;
 use triomphe::Arc;
 
+#[cfg(not(windows))]
 use signal_hook::consts::signal::*;
+#[cfg(not(windows))]
 use signal_hook::consts::TERM_SIGNALS;
+#[cfg(not(windows))]
 use signal_hook::flag;
+#[cfg(not(windows))]
 use signal_hook::iterator::Signals;
 
 use warp::Filter;
@@ -52,6 +56,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 fn main() -> anyhow::Result<()> {
     purplecoin::global::init();
 
+    #[cfg(not(windows))]
     for sig in TERM_SIGNALS {
         // When terminated by a second term signal, exit with exit code 1.
         // This will do nothing the first time (because term_now is false).
@@ -167,9 +172,10 @@ async fn check_exit_signal() {
             break;
         }
 
-        // Create iterator over signals
+        #[cfg(not(windows))]
         let mut signals = Signals::new(TERM_SIGNALS).unwrap();
 
+        #[cfg(not(windows))]
         if let Some(signal) = signals.pending().next() {
             match signal {
                 SIGINT => {
