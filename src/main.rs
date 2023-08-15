@@ -5,6 +5,7 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 #![feature(stmt_expr_attributes)]
+#![allow(unreachable_code)]
 
 use log::*;
 use mimalloc::MiMalloc;
@@ -19,7 +20,7 @@ use std::env;
 use std::sync::atomic::Ordering;
 use std::thread;
 use std::time::Duration;
-use tarpc::server::{self, incoming::Incoming, Channel};
+use tarpc::server::{self, Channel};
 use tokio::runtime::Builder;
 use tokio::time::sleep;
 use tracing_subscriber::prelude::*;
@@ -161,7 +162,7 @@ fn start_runtime() -> anyhow::Result<()> {
 }
 
 async fn check_exit_handler() {
-    'outer: loop {
+    loop {
         if EXIT_SIGNAL.load(Ordering::Relaxed) {
             break;
         }
@@ -169,16 +170,17 @@ async fn check_exit_handler() {
         // Create iterator over signals
         let mut signals = Signals::new(TERM_SIGNALS).unwrap();
 
-        for signal in signals.pending() {
+        if let Some(signal) = signals.pending().next() {
             match signal {
                 SIGINT => {
-                    break 'outer;
+                    break;
                 }
                 SIGTERM => {
-                    break 'outer;
+                    break;
                 }
-                _term_sig => {
-                    break 'outer;
+                term_sig => {
+                    debug!("Received termination signal: {}", term_sig);
+                    break;
                 }
             }
         }
