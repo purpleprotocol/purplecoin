@@ -295,7 +295,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
       - [x] SignMessage
       - [x] VerifyMessage
       - [x] VerifyAddress
-      - [ ] GenerateWallet
+      - [x] GenerateWallet
       - [ ] BackupWallet
       - [ ] BackupWalletS3
       - [ ] SendRawTx

@@ -9,6 +9,7 @@ use futures::{
     future::{self, Ready},
     prelude::*,
 };
+use rand::Rng;
 use schnorrkel::{
     signing_context, PublicKey as SchnorPK, SecretKey as SchnorSK, Signature as SchnorSig,
 };
@@ -160,7 +161,7 @@ pub trait RpcServerDefinition {
     async fn query_output(output_hash: String) -> Result<String, RpcErr>;
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum RpcErr {
     /// The provided public key could not be deserialised.
     InvalidPublicKey,
@@ -174,203 +175,178 @@ pub enum RpcErr {
     /// There already is a wallet with this name.
     WalletAlreadyExists,
 
+    /// Generic wallet error
+    WalletErr(String),
+
     /// Wallet backup error
     CouldNotBackupWallet,
+
+    /// Core runtime err
+    CoreRuntimeError,
 }
 
 /// RPC server
 #[derive(Clone)]
 pub struct RpcServer;
 
+#[tarpc::server]
 impl RpcServerDefinition for RpcServer {
-    type GetBlockchainInfoFut = Ready<String>;
-    type GetMempoolInfoFut = Ready<String>;
-    type GetBlockHashFut = Ready<String>;
-    type GetBlockStatsFut = Ready<String>;
-    type GetHeightFut = Ready<u64>;
-    type GetShardInfoFut = Ready<String>;
-    type GetRawMempoolFut = Ready<String>;
-    type GetRawMempoolShardFut = Ready<String>;
-    type PreciousBlockFut = Ready<String>;
-    type PruneShardFut = Ready<String>;
-    type GenerateFut = Ready<String>;
-    type GenerateToAddressFut = Ready<String>;
-    type GenerateToDescriptorFut = Ready<String>;
-    type GenerateShareFut = Ready<String>;
-    type GenerateShareToAddressFut = Ready<String>;
-    type GenerateShareToDescriptorFut = Ready<String>;
-    type SubmitBlockFut = Ready<String>;
-    type SubmitShareBlockFut = Ready<String>;
-    type GetNodeInfoFut = Ready<Option<PeerInfo>>;
-    type StopFut = Ready<String>;
-    type UptimeFut = Ready<i64>;
-    type GenerateWalletFut = Ready<Result<String, RpcErr>>;
-    type BackupWalletFut = Ready<Result<String, RpcErr>>;
-    type BackupWalletS3Fut = Ready<Result<String, RpcErr>>;
-    type GetNetworkInfoFut = Ready<String>;
-    type GetPeerInfoFut = Ready<Option<HashMap<String, PeerInfo>>>;
-    type GetConnectionCountFut = Ready<u64>;
-    type GetNetTotalsFut = Ready<String>;
-    type AddNodeFut = Ready<String>;
-    type ListBannedFut = Ready<String>;
-    type SetNetworkActiveFut = Ready<String>;
-    type ValidateAddressFut = Ready<bool>;
-    type SignMessageFut = Ready<Result<String, RpcErr>>;
-    type VerifyMessageFut = Ready<Result<bool, RpcErr>>;
-    type VerifyAddressFut = Ready<Result<bool, RpcErr>>;
-    type SendRawTxFut = Ready<Result<String, RpcErr>>;
-    type QueryOutputFut = Ready<Result<String, RpcErr>>;
-
-    fn get_blockchain_info(self, _: context::Context) -> Self::GetBlockchainInfoFut {
-        future::ready("Hello world!".to_string())
+    async fn get_blockchain_info(self, _: context::Context) -> String {
+        "Hello world!".to_string()
     }
 
-    fn get_mempool_info(self, _: context::Context) -> Self::GetMempoolInfoFut {
-        future::ready("Hello world!".to_string())
+    async fn get_mempool_info(self, _: context::Context) -> String {
+        "Hello world!".to_string()
     }
 
-    fn get_raw_mempool(self, _: context::Context) -> Self::GetRawMempoolFut {
-        future::ready("Hello world!".to_string())
+    async fn get_raw_mempool(self, _: context::Context) -> String {
+        "Hello world!".to_string()
     }
 
-    fn get_height(self, _: context::Context, chain_id: u8) -> Self::GetHeightFut {
-        future::ready(1)
+    async fn get_height(self, _: context::Context, chain_id: u8) -> u64 {
+        1
     }
 
-    fn get_shard_info(self, _: context::Context, chain_id: u8) -> Self::GetShardInfoFut {
-        future::ready("Hello world!".to_string())
+    async fn get_shard_info(self, _: context::Context, chain_id: u8) -> String {
+        "Hello world!".to_string()
     }
 
-    fn get_raw_mempool_shard(
-        self,
-        _: context::Context,
-        chain_id: u8,
-    ) -> Self::GetRawMempoolShardFut {
-        future::ready("Hello world!".to_string())
+    async fn get_raw_mempool_shard(self, _: context::Context, chain_id: u8) -> String {
+        "Hello world!".to_string()
     }
 
-    fn get_block_hash(
-        self,
-        _: context::Context,
-        chain_id: u8,
-        height: u64,
-    ) -> Self::GetBlockHashFut {
-        future::ready("Hello world!".to_string())
+    async fn get_block_hash(self, _: context::Context, chain_id: u8, height: u64) -> String {
+        "Hello world!".to_string()
     }
 
-    fn get_block_stats(self, _: context::Context, hash: String) -> Self::GetBlockStatsFut {
-        future::ready("Hello world!".to_string())
+    async fn get_block_stats(self, _: context::Context, hash: String) -> String {
+        "Hello world!".to_string()
     }
 
-    fn precious_block(self, _: context::Context, hash: String) -> Self::PreciousBlockFut {
-        future::ready("Hello world!".to_string())
+    async fn precious_block(self, _: context::Context, hash: String) -> String {
+        "Hello world!".to_string()
     }
 
-    fn prune_shard(
+    async fn prune_shard(
         self,
         _: context::Context,
         chain_id: u8,
         height: u64,
         mode: String,
-    ) -> Self::PruneShardFut {
-        future::ready("Hello world!".to_string())
+    ) -> String {
+        "Hello world!".to_string()
     }
 
-    fn generate(self, _: context::Context, address_or_descriptor: String) -> Self::GenerateFut {
-        future::ready("Hello world!".to_string())
+    async fn generate(self, _: context::Context, address_or_descriptor: String) -> String {
+        "Hello world!".to_string()
     }
 
-    fn generate_to_address(
-        self,
-        _: context::Context,
-        address: String,
-    ) -> Self::GenerateToAddressFut {
-        future::ready("Hello world!".to_string())
+    async fn generate_to_address(self, _: context::Context, address: String) -> String {
+        "Hello world!".to_string()
     }
 
-    fn generate_to_descriptor(
-        self,
-        _: context::Context,
-        descriptor: String,
-    ) -> Self::GenerateToDescriptorFut {
-        future::ready("Hello world!".to_string())
+    async fn generate_to_descriptor(self, _: context::Context, descriptor: String) -> String {
+        "Hello world!".to_string()
     }
 
-    fn generate_share(
-        self,
-        _: context::Context,
-        address_or_descriptor: String,
-    ) -> Self::GenerateShareFut {
-        future::ready("Hello world!".to_string())
+    async fn generate_share(self, _: context::Context, address_or_descriptor: String) -> String {
+        "Hello world!".to_string()
     }
 
-    fn generate_share_to_address(
-        self,
-        _: context::Context,
-        address: String,
-    ) -> Self::GenerateShareToAddressFut {
-        future::ready("Hello world!".to_string())
+    async fn generate_share_to_address(self, _: context::Context, address: String) -> String {
+        "Hello world!".to_string()
     }
 
-    fn generate_share_to_descriptor(
-        self,
-        _: context::Context,
-        descriptor: String,
-    ) -> Self::GenerateShareToDescriptorFut {
-        future::ready("Hello world!".to_string())
+    async fn generate_share_to_descriptor(self, _: context::Context, descriptor: String) -> String {
+        "Hello world!".to_string()
     }
 
-    fn submit_block(self, _: context::Context, payload: String) -> Self::SubmitBlockFut {
-        future::ready("Hello world!".to_string())
+    async fn submit_block(self, _: context::Context, payload: String) -> String {
+        "Hello world!".to_string()
     }
 
-    fn submit_share_block(self, _: context::Context, payload: String) -> Self::SubmitShareBlockFut {
-        future::ready("Hello world!".to_string())
+    async fn submit_share_block(self, _: context::Context, payload: String) -> String {
+        "Hello world!".to_string()
     }
 
-    fn get_node_info(self, _: context::Context) -> Self::GetNodeInfoFut {
+    async fn get_node_info(self, _: context::Context) -> Option<PeerInfo> {
         let node_info = unsafe { NODE_INFO.clone() };
 
-        if node_info.is_none() {
-            return future::ready(None);
-        }
+        node_info.as_ref()?;
 
         let node_info = node_info.unwrap().read().clone();
-        future::ready(Some(node_info))
+        Some(node_info)
     }
 
-    fn stop(self, _: context::Context) -> Self::StopFut {
+    async fn stop(self, _: context::Context) -> String {
         crate::global::EXIT_SIGNAL.store(true, Ordering::Relaxed);
-        future::ready(format!(
+        format!(
             "Purplecoin Core v{} shutting down",
             env!("CARGO_PKG_VERSION")
-        ))
+        )
     }
 
-    fn uptime(self, _: context::Context) -> Self::UptimeFut {
+    async fn uptime(self, _: context::Context) -> i64 {
         let startup = crate::global::STARTUP_TIME.load(Ordering::Relaxed);
-        future::ready(crate::global::get_unix_timestamp_secs() - startup)
+        crate::global::get_unix_timestamp_secs() - startup
     }
 
-    fn generate_wallet(
+    async fn generate_wallet(
         self,
         _: context::Context,
         name: String,
-        passphrase: String,
-    ) -> Self::GenerateWalletFut {
-        future::ready(Err(RpcErr::WalletAlreadyExists))
+        mut passphrase: String,
+    ) -> Result<String, RpcErr> {
+        // Generate random seed
+        let mut seed = [0; 64];
+        {
+            let mut rng = rand::thread_rng();
+            for i in 0..64 {
+                seed[i] = rng.gen();
+            }
+        }
+        let name_clone = name.clone();
+        let passphrase_clone = passphrase.clone();
+        let worker = tokio::task::spawn_blocking(move || {
+            let mut passphrase = passphrase_clone;
+            let name = name_clone;
+            let res = crate::wallet::generate_hdwallet(name.as_str(), passphrase.as_str(), seed);
+            passphrase.zeroize();
+            res
+        });
+
+        match worker.await {
+            Ok(Err("wallet already exists")) => {
+                passphrase.zeroize();
+                Err(RpcErr::WalletAlreadyExists)
+            }
+            Ok(Err(err)) => {
+                passphrase.zeroize();
+                Err(RpcErr::WalletErr(err.to_owned()))
+            }
+            Ok(Ok(_)) => {
+                passphrase.zeroize();
+                seed.zeroize();
+                Ok("Wallet created successfuly".to_owned())
+            }
+            Err(_join_err) => {
+                passphrase.zeroize();
+                seed.zeroize();
+                Err(RpcErr::CoreRuntimeError)
+            }
+        }
     }
 
-    fn backup_wallet(
+    async fn backup_wallet(
         self,
         _: context::Context,
         name: String,
         path: String,
-    ) -> Self::BackupWalletFut {
-        future::ready(Err(RpcErr::CouldNotBackupWallet))
+    ) -> Result<String, RpcErr> {
+        Err(RpcErr::CouldNotBackupWallet)
     }
 
-    fn backup_wallet_s3(
+    async fn backup_wallet_s3(
         self,
         _: context::Context,
         name: String,
@@ -378,87 +354,85 @@ impl RpcServerDefinition for RpcServer {
         key: String,
         access_key_id: String,
         secret_access_key: String,
-    ) -> Self::BackupWalletS3Fut {
-        future::ready(Err(RpcErr::CouldNotBackupWallet))
+    ) -> Result<String, RpcErr> {
+        Err(RpcErr::CouldNotBackupWallet)
     }
 
-    fn get_network_info(self, _: context::Context) -> Self::GetNetworkInfoFut {
-        future::ready("Hello world!".to_string())
+    async fn get_network_info(self, _: context::Context) -> String {
+        "Hello world!".to_string()
     }
 
-    fn get_peer_info(self, _: context::Context) -> Self::GetPeerInfoFut {
+    async fn get_peer_info(self, _: context::Context) -> Option<HashMap<String, PeerInfo>> {
         let peer_table = unsafe { PEER_INFO_TABLE.clone() };
 
-        if peer_table.is_none() {
-            return future::ready(None);
-        }
+        peer_table.as_ref()?;
 
         let peer_table = peer_table.unwrap().read().clone();
         let peer_table: HashMap<_, _> = peer_table
             .iter()
             .map(|(id, v)| (id.to_base58(), v.clone()))
             .collect();
-        future::ready(Some(peer_table))
+        Some(peer_table)
     }
 
-    fn get_connection_count(self, _: context::Context) -> Self::GetConnectionCountFut {
+    async fn get_connection_count(self, _: context::Context) -> u64 {
         let peer_table = unsafe { PEER_INFO_TABLE.clone() };
 
         if peer_table.is_none() {
-            return future::ready(0);
+            return 0;
         }
 
-        future::ready(peer_table.unwrap().read().len() as u64)
+        peer_table.unwrap().read().len() as u64
     }
 
-    fn get_net_totals(self, _: context::Context) -> Self::GetNetTotalsFut {
-        future::ready("Hello world!".to_string())
+    async fn get_net_totals(self, _: context::Context) -> String {
+        "Hello world!".to_string()
     }
 
-    fn add_node(self, _: context::Context, node: String) -> Self::AddNodeFut {
-        future::ready("Hello world!".to_string())
+    async fn add_node(self, _: context::Context, node: String) -> String {
+        "Hello world!".to_string()
     }
 
-    fn list_banned(self, _: context::Context) -> Self::ListBannedFut {
-        future::ready("Hello world!".to_string())
+    async fn list_banned(self, _: context::Context) -> String {
+        "Hello world!".to_string()
     }
 
-    fn set_network_active(self, _: context::Context, active: bool) -> Self::SetNetworkActiveFut {
-        future::ready("Hello world!".to_string())
+    async fn set_network_active(self, _: context::Context, active: bool) -> String {
+        "Hello world!".to_string()
     }
 
-    fn validate_address(self, _: context::Context, address: String) -> Self::ValidateAddressFut {
+    async fn validate_address(self, _: context::Context, address: String) -> bool {
         let res = bech32::decode(address.as_str());
         if res.is_err() {
-            return future::ready(false);
+            return false;
         }
         let (hrp, _, variant) = res.unwrap();
 
         if hrp.as_str() != "pu" {
-            return future::ready(false);
+            return false;
         }
 
         // Only the bech32m variant is allowed
         if let bech32::Variant::Bech32 = variant {
-            return future::ready(false);
+            return false;
         }
 
-        future::ready(true)
+        true
     }
 
-    fn sign_message(
+    async fn sign_message(
         self,
         _: context::Context,
         message: String,
         pub_key: String,
         mut priv_key: String,
         signing_ctx: String,
-    ) -> Self::SignMessageFut {
+    ) -> Result<String, RpcErr> {
         let decoded_priv = hex::decode(priv_key.as_str());
         priv_key.zeroize();
 
         if decoded_priv.is_err() {
-            return future::ready(Err(RpcErr::InvalidPrivateKey));
+            return Err(RpcErr::InvalidPrivateKey);
         }
 
         let mut decoded_priv = decoded_priv.unwrap();
@@ -466,7 +440,7 @@ impl RpcServerDefinition for RpcServer {
 
         if decoded_pub.is_err() {
             priv_key.zeroize();
-            return future::ready(Err(RpcErr::InvalidPublicKey));
+            return Err(RpcErr::InvalidPublicKey);
         }
 
         let decoded_pub = decoded_pub.unwrap();
@@ -474,7 +448,7 @@ impl RpcServerDefinition for RpcServer {
         decoded_priv.zeroize();
 
         if priv_key.is_err() {
-            return future::ready(Err(RpcErr::InvalidPrivateKey));
+            return Err(RpcErr::InvalidPrivateKey);
         }
 
         let mut priv_key = priv_key.unwrap();
@@ -482,7 +456,7 @@ impl RpcServerDefinition for RpcServer {
 
         if pub_key.is_err() {
             priv_key.zeroize();
-            return future::ready(Err(RpcErr::InvalidPublicKey));
+            return Err(RpcErr::InvalidPublicKey);
         }
 
         let pub_key = pub_key.unwrap();
@@ -490,80 +464,84 @@ impl RpcServerDefinition for RpcServer {
         let sig = priv_key.sign(ctx.bytes(message.as_bytes()), &pub_key);
 
         priv_key.zeroize();
-        future::ready(Ok(hex::encode(sig.to_bytes())))
+        Ok(hex::encode(sig.to_bytes()))
     }
 
-    fn verify_message(
+    async fn verify_message(
         self,
         _: context::Context,
         message: String,
         signature: String,
         pub_key: String,
         signing_ctx: String,
-    ) -> Self::VerifyMessageFut {
+    ) -> Result<bool, RpcErr> {
         let decoded_pub = hex::decode(pub_key);
 
         if decoded_pub.is_err() {
-            return future::ready(Err(RpcErr::InvalidPublicKey));
+            return Err(RpcErr::InvalidPublicKey);
         }
 
         let decoded_pub = decoded_pub.unwrap();
         let pub_key = SchnorPK::from_bytes(&decoded_pub);
 
         if pub_key.is_err() {
-            return future::ready(Err(RpcErr::InvalidPublicKey));
+            return Err(RpcErr::InvalidPublicKey);
         }
 
         let decoded_sig = hex::decode(signature);
 
         if decoded_sig.is_err() {
-            return future::ready(Err(RpcErr::InvalidSignature));
+            return Err(RpcErr::InvalidSignature);
         }
 
         let decoded_sig = decoded_sig.unwrap();
         let signature = SchnorSig::from_bytes(&decoded_sig);
 
         if signature.is_err() {
-            return future::ready(Err(RpcErr::InvalidSignature));
+            return Err(RpcErr::InvalidSignature);
         }
 
         let pub_key = pub_key.unwrap();
         let signature = signature.unwrap();
         let ctx = signing_context(signing_ctx.as_bytes());
 
-        future::ready(Ok(pub_key
+        Ok(pub_key
             .verify(ctx.bytes(message.as_bytes()), &signature)
-            .is_ok()))
+            .is_ok())
     }
 
-    fn verify_address(
+    async fn verify_address(
         self,
         _: context::Context,
         address: String,
         pub_key: String,
-    ) -> Self::VerifyAddressFut {
+    ) -> Result<bool, RpcErr> {
         let decoded_pub = crate::primitives::PublicKey::from_hex(pub_key.as_str());
 
         if decoded_pub.is_err() {
-            return future::ready(Err(RpcErr::InvalidPublicKey));
+            return Err(RpcErr::InvalidPublicKey);
         }
 
         let decoded_pub = decoded_pub.unwrap();
         let address_bech = decoded_pub.to_address().to_bech32("pu");
 
         if address_bech != address {
-            future::ready(Ok::<bool, RpcErr>(false));
+            return Ok(false);
         }
 
-        future::ready(Ok(true))
+        Ok(true)
     }
 
-    fn send_raw_tx(self, _: context::Context, transaction: String) -> Self::SendRawTxFut {
-        future::ready(Ok("hello world".to_owned()))
+    async fn send_raw_tx(self, _: context::Context, transaction: String) -> Result<String, RpcErr> {
+        Ok("hello world".to_owned())
     }
 
-    fn query_output(self, _: context::Context, output_hash: String) -> Self::QueryOutputFut {
-        future::ready(Ok("hello world".to_owned()))
+    async fn query_output(
+        self,
+        _: context::Context,
+        output_hash: String,
+    ) -> Result<String, RpcErr> {
+        Ok("hello world".to_owned())
     }
 }
 

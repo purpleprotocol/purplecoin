@@ -581,7 +581,7 @@ pub fn gen_hdwallet_bip39(
     mnemonic: Mnemonic,
 ) -> Result<HDWallet, &'static str> {
     let phrase: &str = mnemonic.phrase();
-    let mut seed = [0; 64];
+    let mut seed = [0; SEED_BYTES];
     let mut hasher = blake3::Hasher::new();
     hasher.update(mnemonic.phrase().as_bytes());
     let mut out = hasher.finalize_xof();
@@ -594,7 +594,7 @@ pub fn gen_hdwallet_bip39(
 pub fn generate_hdwallet(
     wallet_name: &str,
     passphrase: &str,
-    mut seed: [u8; 64],
+    mut seed: [u8; SEED_BYTES],
 ) -> Result<HDWallet, &'static str> {
     #[cfg(not(test))]
     let mut wallets_path = dirs::config_dir().unwrap();
