@@ -402,7 +402,13 @@ impl RpcServerDefinition for RpcServer {
     }
 
     fn get_connection_count(self, _: context::Context) -> Self::GetConnectionCountFut {
-        future::ready(0)
+        let peer_table = unsafe { PEER_INFO_TABLE.clone() };
+
+        if peer_table.is_none() {
+            return future::ready(0);
+        }
+
+        future::ready(peer_table.unwrap().read().len() as u64)
     }
 
     fn get_net_totals(self, _: context::Context) -> Self::GetNetTotalsFut {
