@@ -162,9 +162,19 @@ pub trait RpcServerDefinition {
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum RpcErr {
+    /// The provided public key could not be deserialised.
     InvalidPublicKey,
+
+    /// The provided private key could not be deserialised.
     InvalidPrivateKey,
+
+    /// The provided signature could nto be deserialised.
+    InvalidSignature,
+
+    /// There already is a wallet with this name.
     WalletAlreadyExists,
+
+    /// Wallet backup error
     CouldNotBackupWallet,
 }
 
@@ -485,7 +495,39 @@ impl RpcServerDefinition for RpcServer {
         pub_key: String,
         signing_ctx: String,
     ) -> Self::VerifyMessageFut {
-        future::ready(Err(RpcErr::InvalidPublicKey))
+        let decoded_pub = hex::decode(pub_key);
+
+        if decoded_pub.is_err() {
+            return future::ready(Err(RpcErr::InvalidPublicKey));
+        }
+
+        let decoded_pub = decoded_pub.unwrap();
+        let pub_key = SchnorPK::from_bytes(&decoded_pub);
+
+        if pub_key.is_err() {
+            return future::ready(Err(RpcErr::InvalidPublicKey));
+        }
+
+        let decoded_sig = hex::decode(signature);
+
+        if decoded_sig.is_err() {
+            return future::ready(Err(RpcErr::InvalidSignature));
+        }
+
+        let decoded_sig = decoded_sig.unwrap();
+        let signature = SchnorSig::from_bytes(&decoded_sig);
+
+        if signature.is_err() {
+            return future::ready(Err(RpcErr::InvalidSignature));
+        }
+
+        let pub_key = pub_key.unwrap();
+        let signature = signature.unwrap();
+        let ctx = signing_context(signing_ctx.as_bytes());
+
+        future::ready(Ok(pub_key
+            .verify(ctx.bytes(message.as_bytes()), &signature)
+            .is_ok()))
     }
 
     fn verify_address(
