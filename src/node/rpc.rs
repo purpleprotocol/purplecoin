@@ -435,10 +435,11 @@ impl RpcServerDefinition for RpcServer {
         _: context::Context,
         message: String,
         pub_key: String,
-        priv_key: String,
+        mut priv_key: String,
         signing_ctx: String,
     ) -> Self::SignMessageFut {
-        let decoded_priv = hex::decode(priv_key);
+        let decoded_priv = hex::decode(priv_key.as_str());
+        priv_key.zeroize();
 
         if decoded_priv.is_err() {
             return future::ready(Err(RpcErr::InvalidPrivateKey));
@@ -448,33 +449,31 @@ impl RpcServerDefinition for RpcServer {
         let decoded_pub = hex::decode(pub_key);
 
         if decoded_pub.is_err() {
-            decoded_priv.zeroize();
+            priv_key.zeroize();
             return future::ready(Err(RpcErr::InvalidPublicKey));
         }
 
         let decoded_pub = decoded_pub.unwrap();
         let priv_key = SchnorSK::from_bytes(&decoded_priv);
+        decoded_priv.zeroize();
 
         if priv_key.is_err() {
             return future::ready(Err(RpcErr::InvalidPrivateKey));
         }
 
+        let mut priv_key = priv_key.unwrap();
         let pub_key = SchnorPK::from_bytes(&decoded_pub);
 
         if pub_key.is_err() {
-            decoded_priv.zeroize();
+            priv_key.zeroize();
             return future::ready(Err(RpcErr::InvalidPublicKey));
         }
 
-        let mut priv_key = priv_key.unwrap();
         let pub_key = pub_key.unwrap();
-
         let ctx = signing_context(signing_ctx.as_bytes());
         let sig = priv_key.sign(ctx.bytes(message.as_bytes()), &pub_key);
 
-        decoded_priv.zeroize();
         priv_key.zeroize();
-
         future::ready(Ok(hex::encode(sig.to_bytes())))
     }
 
