@@ -291,7 +291,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
       - [x] Stop
       - [x] Uptime
       - [x] ValidateAddress
-      - [ ] SignMessageWithPrivKey
+      - [x] SignMessage
       - [ ] VerifyMessage
       - [x] VerifyAddress
       - [ ] GenerateWallet

@@ -9,6 +9,9 @@ use futures::{
     future::{self, Ready},
     prelude::*,
 };
+use schnorrkel::{
+    signing_context, PublicKey as SchnorPK, SecretKey as SchnorSK, Signature as SchnorSig,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -17,6 +20,7 @@ use tarpc::{
     client, context,
     server::{self, incoming::Incoming, Channel},
 };
+use zeroize::Zeroize;
 
 pub type RpcRequest = tarpc::ClientMessage<RpcServerDefinitionRequest>;
 pub type RpcResponse = tarpc::Response<RpcServerDefinitionResponse>;
@@ -115,9 +119,10 @@ pub trait RpcServerDefinition {
     /// Validates the given address
     async fn validate_address(address: String) -> bool;
 
-    /// Signs a message with the given private key
-    async fn sign_message_with_priv_key(
+    /// Signs a message with the given keypair
+    async fn sign_message(
         message: String,
+        pub_key: String,
         priv_key: String,
         signing_ctx: String,
     ) -> Result<String, RpcErr>;
@@ -200,7 +205,7 @@ impl RpcServerDefinition for RpcServer {
     type ListBannedFut = Ready<String>;
     type SetNetworkActiveFut = Ready<String>;
     type ValidateAddressFut = Ready<bool>;
-    type SignMessageWithPrivKeyFut = Ready<Result<String, RpcErr>>;
+    type SignMessageFut = Ready<Result<String, RpcErr>>;
     type VerifyMessageFut = Ready<Result<bool, RpcErr>>;
     type VerifyAddressFut = Ready<Result<bool, RpcErr>>;
     type SendRawTxFut = Ready<Result<String, RpcErr>>;
@@ -425,14 +430,52 @@ impl RpcServerDefinition for RpcServer {
         future::ready(true)
     }
 
-    fn sign_message_with_priv_key(
+    fn sign_message(
         self,
         _: context::Context,
         message: String,
+        pub_key: String,
         priv_key: String,
         signing_ctx: String,
-    ) -> Self::SignMessageWithPrivKeyFut {
-        future::ready(Err(RpcErr::InvalidPrivateKey))
+    ) -> Self::SignMessageFut {
+        let decoded_priv = hex::decode(priv_key);
+
+        if decoded_priv.is_err() {
+            return future::ready(Err(RpcErr::InvalidPrivateKey));
+        }
+
+        let mut decoded_priv = decoded_priv.unwrap();
+        let decoded_pub = hex::decode(pub_key);
+
+        if decoded_pub.is_err() {
+            decoded_priv.zeroize();
+            return future::ready(Err(RpcErr::InvalidPublicKey));
+        }
+
+        let decoded_pub = decoded_pub.unwrap();
+        let priv_key = SchnorSK::from_bytes(&decoded_priv);
+
+        if priv_key.is_err() {
+            return future::ready(Err(RpcErr::InvalidPrivateKey));
+        }
+
+        let pub_key = SchnorPK::from_bytes(&decoded_pub);
+
+        if pub_key.is_err() {
+            decoded_priv.zeroize();
+            return future::ready(Err(RpcErr::InvalidPublicKey));
+        }
+
+        let mut priv_key = priv_key.unwrap();
+        let pub_key = pub_key.unwrap();
+
+        let ctx = signing_context(signing_ctx.as_bytes());
+        let sig = priv_key.sign(ctx.bytes(message.as_bytes()), &pub_key);
+
+        decoded_priv.zeroize();
+        priv_key.zeroize();
+
+        future::ready(Ok(hex::encode(sig.to_bytes())))
     }
 
     fn verify_message(
