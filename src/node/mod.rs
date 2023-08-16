@@ -27,7 +27,7 @@ use libp2p::{
 };
 use log::{debug, error, info};
 pub use mempool::*;
-use parking_lot::RwLock;
+use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 pub use rpc::*;
 use std::collections::HashMap;
 use std::str;
@@ -391,6 +391,13 @@ impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
                     }
                     SwarmEvent::ConnectionClosed { peer_id, endpoint, .. } => {
                         info!("Disconnected from peer {} at {}", peer_id.to_base58(), endpoint.get_remote_address());
+                        let peer_table = self.peer_info_table.upgradable_read();
+
+                        // Delete peer from the peer table
+                        if peer_table.contains_key(&peer_id) {
+                            let mut peer_table = RwLockUpgradableReadGuard::upgrade(peer_table);
+                            peer_table.remove(&peer_id);
+                        }
                     }
                     event => {
                         debug!("Received event: {:?}", event);
