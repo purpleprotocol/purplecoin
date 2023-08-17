@@ -300,7 +300,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
       - [ ] SendRawTx
       - [ ] QueryOutput
   - [ ] Mempool
-    - [x] Base Implenentation
+    - [x] Base Implementation
     - [ ] Sharded mempool
 * [ ] Wallet
   - [x] Hierarchical Deterministic Wallet
