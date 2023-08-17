@@ -33,9 +33,9 @@ pub const OUTPUTS_CF: &str = "outputs";
 pub const SHARE_CHAIN_CF: &str = "sharechain";
 
 #[derive(Clone)]
-pub struct DiskBackend<'a> {
-    shard_config: Option<ShardConfig<'a>>,
-    sector_config: Option<SectorConfig<'a>>,
+pub struct DiskBackend {
+    shard_config: Option<ShardConfig>,
+    sector_config: Option<SectorConfig>,
     chain_config: Arc<ChainConfig>,
     db: Arc<DB>,
     cached_height: Arc<AtomicU64>,
@@ -43,12 +43,12 @@ pub struct DiskBackend<'a> {
     block_buf: Arc<HashMap<Hash256, BlockHeader>>,
 }
 
-impl<'a> DiskBackend<'a> {
+impl DiskBackend {
     pub fn new(
         db: Arc<DB>,
         chain_config: Arc<ChainConfig>,
-        shard_config: Option<ShardConfig<'a>>,
-        sector_config: Option<SectorConfig<'a>>,
+        shard_config: Option<ShardConfig>,
+        sector_config: Option<SectorConfig>,
     ) -> Result<Self, ShardBackendErr> {
         Ok(Self {
             db,
@@ -82,7 +82,7 @@ impl<'a> DiskBackend<'a> {
     }
 }
 
-impl<'a> DBInterface for DiskBackend<'a> {
+impl DBInterface for DiskBackend {
     fn get<K: AsRef<[u8]>, V: bincode::Decode>(
         &self,
         key: K,
@@ -127,7 +127,7 @@ impl<'a> DBInterface for DiskBackend<'a> {
     }
 }
 
-impl<'a> PowChainBackend<'a> for DiskBackend<'a> {
+impl PowChainBackend for DiskBackend {
     fn get_canonical_pow_block(
         &self,
         hash: &Hash256,
@@ -218,7 +218,7 @@ impl<'a> PowChainBackend<'a> for DiskBackend<'a> {
         unimplemented!()
     }
 
-    fn set_sector_config(&mut self, config: SectorConfig<'a>) {
+    fn set_sector_config(&mut self, config: SectorConfig) {
         self.sector_config = Some(config);
     }
 
@@ -239,7 +239,7 @@ impl<'a> PowChainBackend<'a> for DiskBackend<'a> {
     }
 }
 
-impl<'a> ShardBackend<'a> for DiskBackend<'a> {
+impl ShardBackend for DiskBackend {
     fn rewind(&self, pos: u64) -> Result<(), ShardBackendErr> {
         if ShardBackend::height(self)? <= pos {
             return Err(ShardBackendErr::InvalidHeight);
@@ -398,7 +398,7 @@ impl<'a> ShardBackend<'a> for DiskBackend<'a> {
         unimplemented!()
     }
 
-    fn set_shard_config(&mut self, config: ShardConfig<'a>) {
+    fn set_shard_config(&mut self, config: ShardConfig) {
         self.shard_config = Some(config);
     }
 
@@ -414,13 +414,13 @@ impl<'a> ShardBackend<'a> for DiskBackend<'a> {
     }
 }
 
-impl<'a> MMR<'a, Vec<u8>, Self> for DiskBackend<'a> {
-    fn backend(&self) -> &DiskBackend<'a> {
+impl MMR<'_, Vec<u8>, Self> for DiskBackend {
+    fn backend(&self) -> &DiskBackend {
         self
     }
 }
 
-impl<'a> MMRBackend<Vec<u8>> for DiskBackend<'a> {
+impl MMRBackend<Vec<u8>> for DiskBackend {
     fn get(&self, pos: u64) -> Result<Option<Hash256>, MMRBackendErr> {
         unimplemented!()
     }
@@ -488,11 +488,11 @@ impl<'a> MMRBackend<Vec<u8>> for DiskBackend<'a> {
 
     fn hash_key(&self) -> &str {
         if self.is_shard() {
-            return self.shard_config.as_ref().unwrap().key;
+            return self.shard_config.as_ref().unwrap().key();
         }
 
         if self.is_sector() {
-            return self.sector_config.as_ref().unwrap().key;
+            return self.sector_config.as_ref().unwrap().key();
         }
 
         unreachable!()

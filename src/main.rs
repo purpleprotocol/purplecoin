@@ -133,7 +133,7 @@ fn start_runtime() -> anyhow::Result<()> {
     runtime.block_on(async {
         init_tracing("PurplecoinCore").unwrap();
         perform_sanity_checks();
-        let mut node = Node::new(chain);
+        let mut node = Node::new(chain.clone());
 
         if SETTINGS.node.memory_only {
             info!(
@@ -149,8 +149,64 @@ fn start_runtime() -> anyhow::Result<()> {
             );
         }
 
+        #[cfg(feature = "rpc")]
+        let run_rpc = async move {
+            if SETTINGS.network.rpc_enabled {
+                // Create transports
+                let (client_transport, server_transport) = tarpc::transport::channel::unbounded();
+                let server = server::BaseChannel::with_defaults(server_transport);
+                let client = RpcServerDefinitionClient::new(
+                    tarpc::client::Config::default(),
+                    client_transport,
+                )
+                .spawn();
+
+                // Schedule rpc server
+                tokio::spawn(server.execute(RpcServer { chain }.serve()));
+
+                // Set up http route
+                let client_filter = warp::any().map(move || client.clone());
+                let rpc_path = warp::post()
+                    .and(warp::path::end())
+                    .and(json_body())
+                    .and(client_filter.clone())
+                    .and(warp::header("authorization"))
+                    .and_then(handle_rpc_request);
+
+                let port = match SETTINGS.node.network_name.as_str() {
+                    "mainnet" => SETTINGS.network.rpc_listen_port_mainnet,
+                    "testnet" => SETTINGS.network.rpc_listen_port_testnet,
+                    "devnet" => SETTINGS.network.rpc_listen_port_devnet,
+                    other => panic!("Invalid network name: {other}"),
+                };
+
+                info!(
+                    "Purplecoin Core v{} RPC Listening on port {}",
+                    env!("CARGO_PKG_VERSION"),
+                    port
+                );
+
+                warp::serve(rpc_path).run(([127, 0, 0, 1], port)).await;
+            } else {
+                loop {
+                    sleep(Duration::from_secs(1)).await;
+                }
+            }
+
+            Ok::<(), ()>(())
+        };
+
+        #[cfg(not(feature = "rpc"))]
+        let run_rpc = async move {
+            loop {
+                sleep(Duration::from_secs(1)).await;
+            }
+
+            Ok::<(), ()>(())
+        };
+
         tokio::select!(
-            _ = tokio::spawn(run_rpc()) => (),
+            _ = tokio::spawn(run_rpc) => (),
             _ = tokio::spawn(run_periodics()) => (),
             _ = tokio::spawn(check_exit_signal()) => (),
             _ = node.bootstrap_then_run() => (),
@@ -230,60 +286,6 @@ fn start_gui() -> iced::Result {
         env!("CARGO_PKG_VERSION")
     );
     GUI::run(gui_settings)
-}
-
-#[cfg(feature = "rpc")]
-async fn run_rpc() -> anyhow::Result<()> {
-    if SETTINGS.network.rpc_enabled {
-        // Create transports
-        let (client_transport, server_transport) = tarpc::transport::channel::unbounded();
-        let server = server::BaseChannel::with_defaults(server_transport);
-        let client =
-            RpcServerDefinitionClient::new(tarpc::client::Config::default(), client_transport)
-                .spawn();
-
-        // Schedule rpc server
-        tokio::spawn(server.execute(RpcServer.serve()));
-
-        // Set up http route
-        let client_filter = warp::any().map(move || client.clone());
-        let rpc_path = warp::post()
-            .and(warp::path::end())
-            .and(json_body())
-            .and(client_filter.clone())
-            .and(warp::header("authorization"))
-            .and_then(handle_rpc_request);
-
-        let port = match SETTINGS.node.network_name.as_str() {
-            "mainnet" => SETTINGS.network.rpc_listen_port_mainnet,
-            "testnet" => SETTINGS.network.rpc_listen_port_testnet,
-            "devnet" => SETTINGS.network.rpc_listen_port_devnet,
-            other => panic!("Invalid network name: {other}"),
-        };
-
-        info!(
-            "Purplecoin Core v{} RPC Listening on port {}",
-            env!("CARGO_PKG_VERSION"),
-            port
-        );
-
-        warp::serve(rpc_path).run(([127, 0, 0, 1], port)).await;
-    } else {
-        loop {
-            sleep(Duration::from_secs(1)).await;
-        }
-    }
-
-    Ok(())
-}
-
-#[cfg(not(feature = "rpc"))]
-async fn run_rpc() -> anyhow::Result<()> {
-    loop {
-        sleep(Duration::from_secs(1)).await;
-    }
-
-    Ok(())
 }
 
 /// Schedules periodic jobs such as chain pruning

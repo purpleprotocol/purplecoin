@@ -45,7 +45,7 @@ pub enum IteratorDirection {
 }
 
 /// Trait for state backend as used by the `PoW` chain module
-pub trait PowChainBackend<'a>: Sized + Clone {
+pub trait PowChainBackend: Sized + Clone {
     /// Returns a block with the given hash in the canonical chain
     ///
     /// This might return `None` when a header actually exists if header pruning is enabled.
@@ -226,7 +226,7 @@ pub trait PowChainBackend<'a>: Sized + Clone {
 
     /// Returns the hashing key of the shard
     fn key(&self) -> &str {
-        self.sector_config().key
+        self.sector_config().key()
     }
 
     /// Returns the genesis header
@@ -246,11 +246,11 @@ pub trait PowChainBackend<'a>: Sized + Clone {
     }
 
     /// Override the current sector  config
-    fn set_sector_config(&mut self, config: SectorConfig<'a>);
+    fn set_sector_config(&mut self, config: SectorConfig);
 }
 
 /// Trait for shard state backend as used by the chain module
-pub trait ShardBackend<'a>: Sized + Clone {
+pub trait ShardBackend: Sized + Clone {
     /// Returns a block with the given hash in the canonical chain
     ///
     /// This might return `None` when a header actually exists if header pruning is enabled.
@@ -362,7 +362,7 @@ pub trait ShardBackend<'a>: Sized + Clone {
 
     /// Returns the hashing key of the shard
     fn key(&self) -> &str {
-        self.shard_config().key
+        self.shard_config().key()
     }
 
     /// Returns the genesis header
@@ -384,7 +384,7 @@ pub trait ShardBackend<'a>: Sized + Clone {
     }
 
     /// Overrides the current shard config
-    fn set_shard_config(&mut self, config: ShardConfig<'a>);
+    fn set_shard_config(&mut self, config: ShardConfig);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

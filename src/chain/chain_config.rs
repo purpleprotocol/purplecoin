@@ -63,9 +63,9 @@ impl ChainConfig {
 
 #[derive(Debug, Clone, Default)]
 /// Sector wide configuration
-pub struct SectorConfig<'a> {
+pub struct SectorConfig {
     /// Sector key
-    pub key: &'a str,
+    pub key: String,
 
     /// Sector id
     pub sector_id: u8,
@@ -80,17 +80,17 @@ pub struct SectorConfig<'a> {
     pub prune_utxos: bool,
 }
 
-impl<'a> SectorConfig<'a> {
+impl SectorConfig {
     #[must_use]
     pub fn new(
-        key: &'a str,
+        key: &str,
         sector_id: u8,
         prune_headers: bool,
         prune_transactions: bool,
         prune_utxos: bool,
     ) -> Self {
         Self {
-            key,
+            key: key.to_owned(),
             sector_id,
             prune_headers,
             prune_transactions,
@@ -107,17 +107,17 @@ impl<'a> SectorConfig<'a> {
     }
 
     #[must_use]
-    pub fn key(&self) -> &'a str {
-        self.key
+    pub fn key(&self) -> &str {
+        self.key.as_str()
     }
 }
 
 #[derive(Debug, Clone, Default)]
 /// Individual shard configuration. Takes precedence to
 /// the sector config.
-pub struct ShardConfig<'a> {
+pub struct ShardConfig {
     /// Shard key
-    pub key: &'a str,
+    pub key: String,
 
     /// Chain id
     pub chain_id: u8,
@@ -132,17 +132,17 @@ pub struct ShardConfig<'a> {
     pub prune_utxos: bool,
 }
 
-impl<'a> ShardConfig<'a> {
+impl ShardConfig {
     #[must_use]
     pub fn new(
-        key: &'a str,
+        key: &str,
         chain_id: u8,
         prune_headers: bool,
         prune_transactions: bool,
         prune_utxos: bool,
     ) -> Self {
         Self {
-            key,
+            key: key.to_owned(),
             chain_id,
             prune_headers,
             prune_transactions,
@@ -151,8 +151,8 @@ impl<'a> ShardConfig<'a> {
     }
 
     #[must_use]
-    pub fn key(&self) -> &'a str {
-        self.key
+    pub fn key(&self) -> &str {
+        self.key.as_str()
     }
 }
 

@@ -5,22 +5,16 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use crate::chain::{ChainConfig, PowChainBackend, ShardBackend, ShardBackendErr, ShardConfig};
-use std::marker::PhantomData;
 
 #[derive(Clone)]
-pub struct Shard<'a, B: ShardBackend<'a>> {
+pub struct Shard<B: ShardBackend> {
     pub backend: B,
     pub chain_id: u8,
-    pub phantom: PhantomData<&'a str>,
 }
 
-impl<'a, B: ShardBackend<'a>> Shard<'a, B> {
+impl<B: ShardBackend> Shard<B> {
     pub fn new(backend: B, chain_id: u8) -> Self {
-        Self {
-            backend,
-            chain_id,
-            phantom: PhantomData,
-        }
+        Self { backend, chain_id }
     }
 
     /// Current chain height

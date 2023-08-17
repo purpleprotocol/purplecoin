@@ -13,8 +13,12 @@ use std::pin::Pin;
 use std::ptr::NonNull;
 use triomphe::Arc;
 
-pub type TransactionList = BTreeSet<NonNull<TransactionWithFee>>;
 pub type PinnedMempool = Arc<RwLock<Pin<Box<Mempool>>>>;
+
+#[derive(Debug)]
+pub struct TransactionList(pub(crate) BTreeSet<NonNull<TransactionWithFee>>);
+unsafe impl Send for TransactionList {}
+unsafe impl Sync for TransactionList {}
 
 #[derive(Debug)]
 pub struct Mempool {
@@ -28,7 +32,7 @@ impl Mempool {
     #[must_use]
     pub fn new() -> Pin<Box<Self>> {
         Box::pin(Self {
-            tx_list: BTreeSet::new(),
+            tx_list: TransactionList(BTreeSet::new()),
             tx_map: HashMap::new(),
             current_size_bytes: 0,
             _pin: PhantomPinned,
@@ -49,7 +53,7 @@ impl Mempool {
         self.current_size_bytes += u64::from(tx.tx_size);
         self.tx_map.insert(tx_hash, tx);
         let ptr = NonNull::from(self.tx_map.get(&tx_hash).unwrap());
-        self.tx_list.insert(ptr);
+        self.tx_list.0.insert(ptr);
 
         Ok(())
     }

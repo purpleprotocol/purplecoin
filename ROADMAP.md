@@ -267,7 +267,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
       - [ ] GetBlockchainInfo
       - [ ] GetBlockHash
       - [ ] GetBlockStats
-      - [ ] GetHeight
+      - [x] GetHeight
       - [ ] GetShardInfo
       - [ ] GetMempoolInfo
       - [ ] GetRawMempoolShard

@@ -54,18 +54,18 @@ pub static mut NODE_INFO: Option<Arc<RwLock<PeerInfo>>> = None;
 pub static mut PEER_INFO_TABLE: Option<Arc<RwLock<PeerInfoTable>>> = None;
 
 /// Read-only reference to the node
-pub struct Node<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> {
-    chain: Chain<'a, B>,
+pub struct Node<B: PowChainBackend + ShardBackend + DBInterface> {
+    chain: Chain<B>,
     node_info: Arc<RwLock<PeerInfo>>,
     peer_info_table: Arc<RwLock<PeerInfoTable>>,
     sector_swarm: Swarm<SectorBehaviour>,
     exchange_swarm: Swarm<ExchangeBehaviour>,
     cluster_swarm: Swarm<ClusterBehaviour>,
-    shards: Arc<HashMap<u8, Option<Arc<Shard<'a, DiskBackend<'a>>>>>>,
+    shards: Arc<HashMap<u8, Option<Arc<Shard<DiskBackend>>>>>,
 }
 
-impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Node<'a, B> {
-    pub fn new(chain: Chain<'a, B>) -> Self {
+impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
+    pub fn new(chain: Chain<B>) -> Self {
         // Try to fetch existing identity from the database
         // and create one if it doesn't exist.
         let id = match chain

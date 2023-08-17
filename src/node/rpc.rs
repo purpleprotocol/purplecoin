@@ -4,6 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use crate::chain::{Chain, DBInterface, PowChainBackend, ShardBackend, ShardBackendErr};
 use crate::node::{PeerInfo, PeerInfoTable, NODE_INFO, PEER_INFO_TABLE};
 use futures::{
     future::{self, Ready},
@@ -15,6 +16,7 @@ use schnorrkel::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::marker::{Send, Sync};
 use std::net::SocketAddr;
 use std::sync::atomic::Ordering;
 use tarpc::{
@@ -39,7 +41,7 @@ pub trait RpcServerDefinition {
     async fn get_block_stats(hash: String) -> String;
 
     /// Returns the height of the most-work fully-validated chain
-    async fn get_height(chain_id: u8) -> u64;
+    async fn get_height(chain_id: u8) -> Result<u64, RpcErr>;
 
     /// Returns information about the shard
     async fn get_shard_info(chain_id: u8) -> String;
@@ -183,14 +185,21 @@ pub enum RpcErr {
 
     /// Core runtime err
     CoreRuntimeError,
+
+    /// Shard error
+    ShardBackendErr,
 }
 
 /// RPC server
 #[derive(Clone)]
-pub struct RpcServer;
+pub struct RpcServer<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> {
+    pub chain: Chain<B>,
+}
 
 #[tarpc::server]
-impl RpcServerDefinition for RpcServer {
+impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> RpcServerDefinition
+    for RpcServer<B>
+{
     async fn get_blockchain_info(self, _: context::Context) -> String {
         "Hello world!".to_string()
     }
@@ -203,8 +212,9 @@ impl RpcServerDefinition for RpcServer {
         "Hello world!".to_string()
     }
 
-    async fn get_height(self, _: context::Context, chain_id: u8) -> u64 {
-        1
+    async fn get_height(self, _: context::Context, chain_id: u8) -> Result<u64, RpcErr> {
+        let shard = self.chain.chain_states.get(&chain_id).unwrap();
+        shard.height().map_err(|_| RpcErr::ShardBackendErr)
     }
 
     async fn get_shard_info(self, _: context::Context, chain_id: u8) -> String {
@@ -297,21 +307,24 @@ impl RpcServerDefinition for RpcServer {
         name: String,
         mut passphrase: String,
     ) -> Result<String, RpcErr> {
-        // Generate random seed
-        let mut seed = [0; 64];
-        {
-            let mut rng = rand::thread_rng();
-            for i in 0..64 {
-                seed[i] = rng.gen();
-            }
-        }
         let name_clone = name.clone();
         let passphrase_clone = passphrase.clone();
         let worker = tokio::task::spawn_blocking(move || {
             let mut passphrase = passphrase_clone;
             let name = name_clone;
+
+            // Generate random seed
+            let mut seed = [0; 64];
+            {
+                let mut rng = rand::thread_rng();
+                for i in 0..64 {
+                    seed[i] = rng.gen();
+                }
+            }
+
             let res = crate::wallet::generate_hdwallet(name.as_str(), passphrase.as_str(), seed);
             passphrase.zeroize();
+            seed.zeroize();
             res
         });
 
@@ -326,12 +339,10 @@ impl RpcServerDefinition for RpcServer {
             }
             Ok(Ok(_)) => {
                 passphrase.zeroize();
-                seed.zeroize();
                 Ok("Wallet created successfuly".to_owned())
             }
             Err(_join_err) => {
                 passphrase.zeroize();
-                seed.zeroize();
                 Err(RpcErr::CoreRuntimeError)
             }
         }

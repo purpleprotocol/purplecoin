@@ -79,10 +79,7 @@ impl Transaction {
     }
 
     /// Validate single transaction against the chain-state. Returns transaction fee if successful
-    pub fn verify_single<'a, B: ShardBackend<'a>>(
-        &self,
-        shard: &Shard<'a, B>,
-    ) -> Result<Money, TxVerifyErr> {
+    pub fn verify_single<B: ShardBackend>(&self, shard: &Shard<B>) -> Result<Money, TxVerifyErr> {
         let ctx = signing_context(
             shard
                 .chain_config()
@@ -132,12 +129,12 @@ impl Transaction {
     /// To be used in the context of validating an entire block.
     ///
     /// Returns transaction fee if successful.
-    pub fn verify_batch<'a, 's, B: ShardBackend<'s>>(
+    pub fn verify_batch<'a, B: ShardBackend>(
         &'a self,
         transcripts: &mut Vec<&'a [u8]>,
         signatures: &mut Vec<SchnorSig>,
         public_keys: &mut Vec<SchnorPK>,
-        shard: &Shard<'s, B>,
+        shard: &Shard<B>,
     ) -> Result<Money, TxVerifyErr> {
         let mut ins_sum: Money = 0;
         let mut outs_sum: Money = 0;

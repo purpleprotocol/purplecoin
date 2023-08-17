@@ -24,22 +24,22 @@ use triomphe::Arc;
 type DataStore = Trie<Vec<u8>, Vec<u8>>;
 
 #[derive(Debug, Clone, Default)]
-pub struct MemoryBackend<'a> {
+pub struct MemoryBackend {
     /// Underlying data store. TODO: This isn't very performant and should
     /// be modelled as column families to reflect RocksDB.
     data: Arc<RwLock<DataStore>>,
 
     /// Sector config
-    sector_config: SectorConfig<'a>,
+    sector_config: SectorConfig,
 
     /// Shard config
-    shard_config: ShardConfig<'a>,
+    shard_config: ShardConfig,
 
     /// Chain config
     chain_config: ChainConfig,
 }
 
-impl<'a> DBInterface for MemoryBackend<'a> {
+impl DBInterface for MemoryBackend {
     fn get<K: AsRef<[u8]>, V: bincode::Decode>(
         &self,
         key: K,
@@ -83,7 +83,7 @@ impl<'a> DBInterface for MemoryBackend<'a> {
     }
 }
 
-impl<'a> PowChainBackend<'a> for MemoryBackend<'a> {
+impl PowChainBackend for MemoryBackend {
     fn get_canonical_pow_block(
         &self,
         hash: &Hash256,
@@ -181,12 +181,12 @@ impl<'a> PowChainBackend<'a> for MemoryBackend<'a> {
         unimplemented!()
     }
 
-    fn set_sector_config(&mut self, config: SectorConfig<'a>) {
+    fn set_sector_config(&mut self, config: SectorConfig) {
         self.sector_config = config;
     }
 }
 
-impl<'a> ShardBackend<'a> for MemoryBackend<'a> {
+impl ShardBackend for MemoryBackend {
     fn rewind(&self, pos: u64) -> Result<(), ShardBackendErr> {
         unimplemented!()
     }
@@ -265,13 +265,13 @@ impl<'a> ShardBackend<'a> for MemoryBackend<'a> {
     }
 }
 
-impl<'a> MMR<'a, Vec<u8>, Self> for MemoryBackend<'a> {
-    fn backend(&self) -> &MemoryBackend<'a> {
+impl MMR<'_, Vec<u8>, Self> for MemoryBackend {
+    fn backend(&self) -> &MemoryBackend {
         self
     }
 }
 
-impl<'a> MMRBackend<Vec<u8>> for MemoryBackend<'a> {
+impl MMRBackend<Vec<u8>> for MemoryBackend {
     fn get(&self, pos: u64) -> Result<Option<Hash256>, MMRBackendErr> {
         unimplemented!()
     }

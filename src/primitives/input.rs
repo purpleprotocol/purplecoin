@@ -107,14 +107,14 @@ impl Input {
         self.colour_script.is_some()
     }
 
-    pub fn verify<'a, 's, B: ShardBackend<'s>>(
+    pub fn verify<'a, B: ShardBackend>(
         &'a self,
         height: u64,
         sum: &mut Money,
         transcripts: &mut Vec<&'a [u8]>,
         signatures: &mut Vec<SchnorSig>,
         public_keys: &mut Vec<SchnorPK>,
-        shard: &Shard<'s, B>,
+        shard: &Shard<B>,
     ) -> Result<(), TxVerifyErr> {
         if self.is_coinbase() {
             // if height < out_height + COINBASE_EPOCH_LEN {

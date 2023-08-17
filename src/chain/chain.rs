@@ -14,16 +14,16 @@ use std::collections::HashMap;
 use triomphe::Arc;
 
 #[derive(Clone)]
-pub struct Chain<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> {
+pub struct Chain<B: PowChainBackend + ShardBackend + DBInterface> {
     pub backend: B,
     pub config: ChainConfig,
     pub mempool: PinnedMempool,
-    pub sectors: HashMap<u8, Sector<'a, B>>,
-    pub chain_states: HashMap<u8, Shard<'a, B>>,
+    pub sectors: HashMap<u8, Sector<B>>,
+    pub chain_states: HashMap<u8, Shard<B>>,
 }
 
-impl<'a, B: PowChainBackend<'a> + ShardBackend<'a> + DBInterface> Chain<'a, B> {
-    pub fn new(backend: B, config: &'a ChainConfig) -> Self {
+impl<B: PowChainBackend + ShardBackend + DBInterface> Chain<B> {
+    pub fn new(backend: B, config: &ChainConfig) -> Self {
         let mut chain_states = HashMap::with_capacity(256);
         let mut sectors = HashMap::with_capacity(4);
 
