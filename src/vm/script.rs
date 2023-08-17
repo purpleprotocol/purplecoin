@@ -3487,14 +3487,15 @@ impl<'a> ScriptExecutor<'a> {
                             return;
                         }
 
-                        let hash_term = bifs::ghostrider256(&value_to_hash, arr.try_into().unwrap());
+                        let hash_term =
+                            bifs::ghostrider256(&value_to_hash, arr.try_into().unwrap());
 
                         *memory_size += hash_term.size();
                         exec_stack.push(hash_term);
                     } else {
                         unreachable!()
                     }
-                },
+                }
 
                 ScriptEntry::Opcode(OP::Fugue) => match exec_stack.pop() {
                     Some(val) => {
@@ -11306,7 +11307,11 @@ mod tests {
         };
 
         let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
-        let new_key: [u8; 32] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x2a];
+        let new_key: [u8; 32] = [
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
+            0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
+            0x1d, 0x1e, 0x1f, 0x2a,
+        ];
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
