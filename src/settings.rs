@@ -434,7 +434,7 @@ impl Node {
                 invalid.sort_unstable();
                 assert!(
                     false,
-                    "The following shard ids is not being listened to by any sectors: {invalid:?}"
+                    "The following shard ids are not being listened to by any sectors: {invalid:?}"
                 );
             }
         }
@@ -632,6 +632,6 @@ mod tests {
         let panicking_action = move || settings.validate();
         assert_that_code!(panicking_action)
             .panics()
-            .with_message("The following shard ids is not being listened to by any sectors: [0, 1, 5, 246, 250, 255]");
+            .with_message("The following shard ids are not being listened to by any sectors: [0, 1, 5, 246, 250, 255]");
     }
 }
