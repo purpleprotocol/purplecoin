@@ -9,6 +9,7 @@ use crate::chain::{
     ShardConfig,
 };
 use crate::node::{Mempool, PinnedMempool};
+use crate::settings::SETTINGS;
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use triomphe::Arc;
@@ -28,6 +29,12 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Chain<B> {
         let mut sectors = HashMap::with_capacity(4);
 
         for i in 0..=255 {
+            if let Some(shards_listening) = &SETTINGS.node.shards_listening {
+                if !shards_listening.contains(&i) {
+                    continue;
+                }
+            }
+
             let mut backend = backend.clone();
             let scfg = ShardConfig::new(config.get_chain_key(i), i, false, false, false);
             backend.set_shard_config(scfg);
@@ -35,6 +42,12 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Chain<B> {
         }
 
         for i in 0..4 {
+            if let Some(sectors_listening) = &SETTINGS.node.sectors_listening {
+                if !sectors_listening.contains(&i) {
+                    continue;
+                }
+            }
+
             let mut backend = backend.clone();
             let scfg = SectorConfig::new(config.get_chain_key(i), i, false, false, false);
             backend.set_sector_config(scfg);

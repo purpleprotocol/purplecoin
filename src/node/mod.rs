@@ -8,6 +8,7 @@ use self::request_peer::PeerInfoRequest;
 use crate::chain::{
     Chain, ChainConfig, DBInterface, IteratorDirection, PowChainBackend, Shard, ShardBackend,
 };
+use crate::consensus::{SECTORS, SHARDS_PER_SECTOR};
 use crate::node::behaviour::{ClusterBehaviour, ExchangeBehaviour, SectorBehaviour, SectorEvent};
 use crate::node::peer_info::PeerInfo;
 use crate::settings::SETTINGS;
@@ -61,7 +62,6 @@ pub struct Node<B: PowChainBackend + ShardBackend + DBInterface> {
     sector_swarm: Swarm<SectorBehaviour>,
     exchange_swarm: Swarm<ExchangeBehaviour>,
     cluster_swarm: Swarm<ClusterBehaviour>,
-    shards: Arc<HashMap<u8, Option<Arc<Shard<DiskBackend>>>>>,
 }
 
 impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
@@ -146,12 +146,51 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
             SwarmBuilder::with_tokio_executor(cluster_transport, cluster_behaviour, local_peer_id)
                 .build();
 
+        let (listening_sectors, listening_shards) = match (
+            SETTINGS.node.sectors_listening.as_ref(),
+            SETTINGS.node.shards_listening.as_ref(),
+        ) {
+            (Some(listening_sectors), Some(listening_shards)) => {
+                let mut r1 = [false; SECTORS];
+                let mut r2 = [false; SECTORS * SHARDS_PER_SECTOR];
+
+                for id in listening_sectors {
+                    r1[*id as usize] = true;
+                }
+
+                for id in listening_shards {
+                    r2[*id as usize] = true;
+                }
+
+                (r1, r2)
+            }
+
+            (Some(listening_sectors), None) => {
+                let mut r1 = [false; SECTORS];
+                let mut r2 = [false; SECTORS * SHARDS_PER_SECTOR];
+
+                for id in listening_sectors {
+                    r1[*id as usize] = true;
+
+                    let start_id = *id * SECTORS as u8;
+                    for i in start_id..(start_id + SECTORS as u8) {
+                        r2[i as usize] = true;
+                    }
+                }
+
+                (r1, r2)
+            }
+
+            _ => ([true; SECTORS], [true; SECTORS * SHARDS_PER_SECTOR]),
+        };
+
         let node_info = Arc::new(RwLock::new(PeerInfo {
             id: local_peer_id.to_string(),
             internal_id: Some(local_peer_id),
             startup_time: crate::global::STARTUP_TIME.load(Ordering::Relaxed),
-            min_relay_fee: 0,              // TODO: Add correct min relay fee
-            listening_sectors: [true; 16], // TODO: Add correct listening sectors
+            min_relay_fee: 0, // TODO: Add correct min relay fee
+            listening_sectors,
+            listening_shards,
         }));
         let peer_info_table = Arc::new(RwLock::new(HashMap::new()));
 
@@ -168,7 +207,6 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
             sector_swarm,
             exchange_swarm,
             cluster_swarm,
-            shards: Arc::new(HashMap::new()), // TODO: Initiate correct shards
         }
     }
 
