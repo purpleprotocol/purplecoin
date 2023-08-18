@@ -5,6 +5,7 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use crate::chain::{Chain, DBInterface, PowChainBackend, ShardBackend, ShardBackendErr};
+use crate::consensus::SECTORS;
 use crate::node::{PeerInfo, PeerInfoTable, NODE_INFO, PEER_INFO_TABLE};
 use futures::{
     future::{self, Ready},
@@ -40,8 +41,11 @@ pub trait RpcServerDefinition {
     /// Returns block stats for block with the given hash
     async fn get_block_stats(hash: String) -> String;
 
-    /// Returns the height of the most-work fully-validated chain
-    async fn get_height(chain_id: u8) -> Result<u64, RpcErr>;
+    /// Returns the height of the most-work fully-validated sector
+    async fn get_sector_height(chain_id: u8) -> Result<u64, RpcErr>;
+
+    /// Returns the height of the most-work fully-validated shard
+    async fn get_shard_height(chain_id: u8) -> Result<u64, RpcErr>;
 
     /// Returns information about the shard
     async fn get_shard_info(chain_id: u8) -> String;
@@ -186,6 +190,18 @@ pub enum RpcErr {
     /// Core runtime err
     CoreRuntimeError,
 
+    /// The given sector id is invalid.
+    InvalidSectorId,
+
+    /// The queried shard has not been initialised.
+    ShardNotInitialised,
+
+    /// The queried sector has not been initialised.
+    SectorNotInitialised,
+
+    /// Sector error
+    SectorBackendErr,
+
     /// Shard error
     ShardBackendErr,
 }
@@ -212,8 +228,25 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
         "Hello world!".to_string()
     }
 
-    async fn get_height(self, _: context::Context, chain_id: u8) -> Result<u64, RpcErr> {
-        let shard = self.chain.chain_states.get(&chain_id).unwrap();
+    async fn get_sector_height(self, _: context::Context, sector_id: u8) -> Result<u64, RpcErr> {
+        if sector_id >= SECTORS as u8 {
+            return Err(RpcErr::InvalidSectorId);
+        }
+
+        let sector = self
+            .chain
+            .sectors
+            .get(&sector_id)
+            .ok_or(RpcErr::SectorNotInitialised)?;
+        sector.height().map_err(|_| RpcErr::SectorBackendErr)
+    }
+
+    async fn get_shard_height(self, _: context::Context, chain_id: u8) -> Result<u64, RpcErr> {
+        let shard = self
+            .chain
+            .chain_states
+            .get(&chain_id)
+            .ok_or(RpcErr::ShardNotInitialised)?;
         shard.height().map_err(|_| RpcErr::ShardBackendErr)
     }
 

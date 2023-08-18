@@ -137,6 +137,7 @@ serial_test = "*"
 criterion = "0.3"
 quickcheck = "1"
 quickcheck_macros = "1"
+fluent-asserter = "0.1.9"
 
 [features]
 default = ["gui", "miner", "wallet", "rpc", "disk", "blake3sum", "runtime-clang"]

@@ -4,12 +4,13 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use crate::consensus::SECTORS;
 use config::{Config, ConfigError, File};
 use lazy_static::lazy_static;
 use log::error;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::{metadata, File as FsFile};
 use std::io::{self, Write};
@@ -274,6 +275,15 @@ pub struct Node {
     #[serde(alias = "networkname")]
     pub network_name: String,
 
+    /// Sector ids we are listening to. None if we listen to all.
+    #[serde(alias = "sectorslistening")]
+    pub sectors_listening: Option<HashSet<u8>>,
+
+    /// Shard ids we are listening to. None if we listen to all
+    /// shards contained in the sectors we are listening to.
+    #[serde(alias = "shardslistening")]
+    pub shards_listening: Option<HashSet<u8>>,
+
     /// Number of transaction verification threads.
     ///
     /// Default is 0 which means the number of cores of the system
@@ -357,6 +367,8 @@ impl Default for Node {
             network_name: "devnet".to_owned(), // Use devnet as default for now
             verifier_threads: 0,
             network_threads: 0,
+            sectors_listening: None,
+            shards_listening: None,
             archival_mode: true, // Leave this on for now
             prune_headers: false,
             prune_transactions: false,
@@ -378,6 +390,56 @@ impl Default for Node {
 
 impl Node {
     fn validate(&self) {
+        // Validate sector ids
+        if let Some(sectors_listening) = &self.sectors_listening {
+            for id in sectors_listening {
+                assert!(
+                    *id < SECTORS as u8,
+                    "Invalid sector id: {}. Min value: 0, Max value: {}",
+                    id,
+                    SECTORS - 1
+                );
+            }
+        }
+
+        // Validate shard ids
+        if let (Some(sectors_listening), Some(shards_listening)) =
+            (&self.sectors_listening, &self.shards_listening)
+        {
+            // Create a vector of start and end intervals
+            let mut intervals = vec![];
+            let mut valid = HashSet::new();
+
+            for id in sectors_listening {
+                intervals.push((
+                    *id * SECTORS as u8,
+                    *id * SECTORS as u8 + (SECTORS as u8 - 1),
+                ));
+            }
+
+            for id in shards_listening {
+                for (id_start, id_end) in &intervals {
+                    if id >= id_start && id <= id_end {
+                        valid.insert(*id);
+                    }
+                }
+            }
+
+            // We have invalid ids. Sort them and print them
+            if valid.len() != shards_listening.len() {
+                let mut invalid: Vec<_> = valid
+                    .symmetric_difference(shards_listening)
+                    .copied()
+                    .collect();
+                invalid.sort_unstable();
+                assert!(
+                    false,
+                    "The following shard ids is not being listened to by any sectors: {invalid:?}"
+                );
+            }
+        }
+
+        // Validate network name
         assert!(!(self.network_name.as_str() != "mainnet" && self.network_name.as_str() != "testnet" && self.network_name.as_str() != "devnet"), "invalid settings: networkname is invalid, possible values: mainnet, testnet, or devnet.");
     }
 }
@@ -508,4 +570,68 @@ enum DynamicConfVal {
     OptionSequenceByte(Option<Vec<u8>>),
     Bool(bool),
     U16(u16),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fluent_asserter::prelude::*;
+
+    #[test]
+    fn it_validates_sector_ids() {
+        let mut settings = Settings::default();
+        settings.node.sectors_listening = Some(
+            [0_u8, 1_u8, 2_u8, 3_u8, 4_u8, 7_u8, 15_u8]
+                .iter()
+                .copied()
+                .collect(),
+        );
+        settings.validate();
+    }
+
+    #[test]
+    fn it_fails_validation_on_invalid_sector_id() {
+        let mut settings = Settings::default();
+        settings.node.sectors_listening = Some(
+            [0_u8, 1_u8, 2_u8, 3_u8, 4_u8, 7_u8, 15_u8, 16_u8]
+                .iter()
+                .copied()
+                .collect(),
+        );
+        let panicking_action = move || settings.validate();
+        assert_that_code!(panicking_action)
+            .panics()
+            .with_message("Invalid sector id: 16. Min value: 0, Max value: 15");
+    }
+
+    #[test]
+    fn it_validates_shard_id() {
+        let mut settings = Settings::default();
+        settings.node.sectors_listening = Some([0_u8, 15_u8].iter().copied().collect());
+        settings.node.shards_listening = Some(
+            [0_u8, 1_u8, 5_u8, 246_u8, 250_u8, 255_u8]
+                .iter()
+                .copied()
+                .collect(),
+        );
+        settings.validate();
+    }
+
+    #[test]
+    fn it_fails_validation_on_invalid_shard_id() {
+        let mut settings = Settings::default();
+        settings.node.sectors_listening = Some([1_u8].iter().copied().collect());
+        settings.node.shards_listening = Some(
+            [
+                0_u8, 1_u8, 5_u8, 16_u8, 19_u8, 25_u8, 246_u8, 250_u8, 255_u8,
+            ]
+            .iter()
+            .copied()
+            .collect(),
+        );
+        let panicking_action = move || settings.validate();
+        assert_that_code!(panicking_action)
+            .panics()
+            .with_message("The following shard ids is not being listened to by any sectors: [0, 1, 5, 246, 250, 255]");
+    }
 }
