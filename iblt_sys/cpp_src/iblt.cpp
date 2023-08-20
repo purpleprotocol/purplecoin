@@ -3,6 +3,7 @@
 #include <list>
 #include <sstream>
 #include <utility>
+#include <cstddef>
 #include "iblt.h"
 #include "murmurhash3.h"
 

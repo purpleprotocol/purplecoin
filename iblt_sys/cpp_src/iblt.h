@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <set>
 #include <vector>
+#include <cstddef>
 
 //
 // Invertible Bloom Lookup Table implementation

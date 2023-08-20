@@ -6,7 +6,4 @@
 
 use core::ffi::{c_char, c_void};
 
-extern "C" {
-    pub fn fugue_hash(input: *const c_char, output: *mut c_char, len: u32) -> *mut c_void;
-    pub fn gr_hash(input: *const c_char, key: *const c_char, output: *mut c_char) -> *mut c_void;
-}
+extern "C" {}
