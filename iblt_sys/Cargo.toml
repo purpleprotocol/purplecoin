@@ -1,0 +1,11 @@
+[package]
+name = "iblt-sys"
+version = "0.1.0"
+authors = ["Octavian Oncescu <octavonce@gmail.com>"]
+edition = "2018"
+publish = false
+
+[dependencies]
+
+[build-dependencies]
+cc = "1.0"

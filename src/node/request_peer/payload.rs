@@ -45,7 +45,7 @@ mod tests {
             listening_shards,
         };
         let new_response = PeerInfoResponse::new(peer_info);
-        let mut buf = crate::codec::encode_to_vec(&new_response).unwrap();
+        let buf = crate::codec::encode_to_vec(&new_response).unwrap();
 
         assert_eq!(
             buf,

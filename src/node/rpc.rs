@@ -42,7 +42,7 @@ pub trait RpcServerDefinition {
     async fn get_block_stats(hash: String) -> String;
 
     /// Returns the height of the most-work fully-validated sector
-    async fn get_sector_height(chain_id: u8) -> Result<u64, RpcErr>;
+    async fn get_sector_height(sector_id: u8) -> Result<u64, RpcErr>;
 
     /// Returns the height of the most-work fully-validated shard
     async fn get_shard_height(chain_id: u8) -> Result<u64, RpcErr>;

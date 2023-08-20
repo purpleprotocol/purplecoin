@@ -2855,6 +2855,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "iblt-sys"
+version = "0.1.0"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "iced"
 version = "0.4.2"
 dependencies = [
@@ -5326,6 +5333,7 @@ dependencies = [
  "headers",
  "hex",
  "ibig",
+ "iblt-sys",
  "iced",
  "iced_aw",
  "iced_core",
