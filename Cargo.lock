@@ -535,6 +535,7 @@ dependencies = [
  "clang-sys",
  "lazy_static",
  "lazycell",
+ "log",
  "peeking_take_while",
  "prettyplease",
  "proc-macro2",
@@ -543,6 +544,7 @@ dependencies = [
  "rustc-hash",
  "shlex",
  "syn 2.0.18",
+ "which",
 ]
 
 [[package]]
@@ -2858,6 +2860,7 @@ dependencies = [
 name = "iblt-sys"
 version = "0.1.0"
 dependencies = [
+ "bindgen 0.65.1",
  "cc",
 ]
 
@@ -7959,6 +7962,17 @@ dependencies = [
  "glyph_brush",
  "log",
  "wgpu",
+]
+
+[[package]]
+name = "which"
+version = "4.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2441c784c52b289a054b7201fc93253e288f094e2f4be9058343127c4226a269"
+dependencies = [
+ "either",
+ "libc",
+ "once_cell",
 ]
 
 [[package]]

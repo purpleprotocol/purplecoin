@@ -1,9 +1,8 @@
-#include <cassert>
-#include <iostream>
+//#include <cassert>
+//#include <iostream>
 #include <list>
-#include <sstream>
-#include <utility>
-#include <cstddef>
+//#include <sstream>
+//#include <utility>
 #include "iblt.h"
 #include "murmurhash3.h"
 
@@ -71,7 +70,7 @@ IBLT::~IBLT()
 
 void IBLT::_insert(int plusOrMinus, uint64_t k, const std::vector<uint8_t> v)
 {
-    assert(v.size() == valueSize);
+    //assert(v.size() == valueSize);
 
     std::vector<uint8_t> kvec = ToVec(k);
 
@@ -191,8 +190,8 @@ bool IBLT::listEntries(std::set<std::pair<uint64_t,std::vector<uint8_t> > >& pos
 IBLT IBLT::operator-(const IBLT& other) const
 {
     // IBLT's must be same params/size:
-    assert(valueSize == other.valueSize);
-    assert(hashTable.size() == other.hashTable.size());
+    //assert(valueSize == other.valueSize);
+    //assert(hashTable.size() == other.hashTable.size());
 
     IBLT result(*this);
     for (size_t i = 0; i < hashTable.size(); i++) {
@@ -213,17 +212,17 @@ IBLT IBLT::operator-(const IBLT& other) const
 }
 
 // For debugging during development:
-std::string IBLT::DumpTable() const
-{
-    std::ostringstream result;
+// std::string IBLT::DumpTable() const
+// {
+//     std::ostringstream result;
 
-    result << "count keySum keyCheckMatch\n";
-    for (size_t i = 0; i < hashTable.size(); i++) {
-        const IBLT::HashTableEntry& entry = hashTable.at(i);
-        result << entry.count << " " << entry.keySum << " ";
-        result << (MurmurHash3(N_HASHCHECK, ToVec(entry.keySum)) == entry.keyCheck ? "true" : "false");
-        result << "\n";
-    }
+//     result << "count keySum keyCheckMatch\n";
+//     for (size_t i = 0; i < hashTable.size(); i++) {
+//         const IBLT::HashTableEntry& entry = hashTable.at(i);
+//         result << entry.count << " " << entry.keySum << " ";
+//         result << (MurmurHash3(N_HASHCHECK, ToVec(entry.keySum)) == entry.keyCheck ? "true" : "false");
+//         result << "\n";
+//     }
 
-    return result.str();
-}
+//     return result.str();
+// }

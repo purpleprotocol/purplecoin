@@ -9,3 +9,4 @@ publish = false
 
 [build-dependencies]
 cc = "1.0"
+bindgen = "0.65.1"

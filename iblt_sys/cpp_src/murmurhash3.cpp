@@ -1,5 +1,5 @@
 #include "murmurhash3.h"
-#include <cstddef>
+#include <cstring>
 
 inline uint32_t ROTL32 ( uint32_t x, int8_t r )
 {
