@@ -29,7 +29,6 @@ sha3 = "0.10.1"
 web-sys = "0.3.53"
 jh-x86_64 = "0.2.2"
 hash-sys = { path = "./hash_sys" }
-iblt-sys = { path = "./iblt_sys" }
 schnorrkel = { path = "./vendor/schnorrkel" }
 accumulator = { path = "./vendor/accumulator" }
 arrayvec = "0.7.2"
