@@ -553,14 +553,16 @@ pub fn create_rocksdb_backend<'a>() -> Arc<DB> {
 
 /// Lookup a bitmap from the database using the provided key
 pub fn read_bitmap(db: Arc<DB>, key: &str) -> Result<Option<Bitmap>, String> {
-    db.get(key)
+    let mmr_cf = db.cf_handle(crate::chain::backend::disk::MMR_CF).unwrap();
+    db.get_cf(&mmr_cf, key)
         .map(|res| res.map(|bytes| Bitmap::deserialize(&bytes)))
         .map_err(|err| format!("could not read bitmap: {err}"))
 }
 
 /// Write bitmap to the database using the provided key
 pub fn write_bitmap(db: Arc<DB>, key: &str, bitmap: Bitmap) -> Result<(), String> {
-    db.put(key, bitmap.serialize())
+    let mmr_cf = db.cf_handle(crate::chain::backend::disk::MMR_CF).unwrap();
+    db.put_cf(&mmr_cf, key, bitmap.serialize())
         .map_err(|err| format!("could not write bitmap: {err}"))
 }
 

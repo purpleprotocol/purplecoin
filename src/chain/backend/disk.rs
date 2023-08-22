@@ -430,11 +430,17 @@ impl MMRBackend<Vec<u8>> for DiskBackend {
     }
 
     fn get_leaf(&self, hash: &Hash256) -> Result<Option<Vec<u8>>, MMRBackendErr> {
-        unimplemented!()
+        let key = &[&[self.sector_config().sector_id], hash.as_bytes()].concat();
+        let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
+        Ok(self.db.get_cf(&mmr_cf, key)?)
     }
 
     fn write_leaf(&self, hash: Hash256, leaf: &Vec<u8>) -> Result<(), MMRBackendErr> {
-        unimplemented!()
+        let encoded = crate::codec::encode_to_vec(leaf);
+        let key = &[&[self.sector_config().sector_id], hash.as_bytes()].concat();
+        let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
+        self.db.put_cf(&mmr_cf, key, leaf)?;
+        Ok(())
     }
 
     fn get_peak(&self, pos: u64) -> Result<Option<Hash256>, MMRBackendErr> {
@@ -562,6 +568,26 @@ mod tests {
 
     #[test]
     #[cfg(not(feature = "disable_tests_on_windows"))]
+    fn mmr_write_leaf() {
+        let db = crate::chain::create_rocksdb_backend();
+        let mut backend = DiskBackend::new(
+            db,
+            Default::default(),
+            Some(Default::default()),
+            Some(Default::default()),
+        )
+        .unwrap();
+        let h1 = Hash256::hash_from_slice("test1", "asdf");
+        let h2 = Hash256::hash_from_slice("test2", "asdf");
+        backend.write_leaf(h1, &vec![0x00, 0x01]);
+        backend.write_leaf(h2, &vec![0x01, 0x00]);
+
+        assert_eq!(backend.get_leaf(&h1), Ok(Some(vec![0x00, 0x01])));
+        assert_eq!(backend.get_leaf(&h2), Ok(Some(vec![0x01, 0x00])));
+    }
+
+    #[test]
+    #[cfg(not(feature = "disable_tests_on_windows"))]
     fn mmr_write_get_hash_at_pos() {
         let db = crate::chain::create_rocksdb_backend();
         let mut backend = DiskBackend::new(
@@ -617,6 +643,45 @@ mod tests {
         assert_eq!(backend2.get_hash(1), Ok(Some(h2)));
         assert_eq!(backend3.get_hash(0), Ok(None));
         assert_eq!(backend3.get_hash(1), Ok(None));
+    }
+
+    #[test]
+    #[cfg(not(feature = "disable_tests_on_windows"))]
+    fn mmr_backends_are_domain_separated_by_chain_id_write_leaf() {
+        let db = crate::chain::create_rocksdb_backend();
+        let mut backend1 = DiskBackend::new(
+            db.clone(),
+            Default::default(),
+            Some(Default::default()),
+            Some(Default::default()),
+        )
+        .unwrap();
+        let mut backend2 = DiskBackend::new(
+            db.clone(),
+            Default::default(),
+            Some(Default::default()),
+            Some(Default::default()),
+        )
+        .unwrap();
+        let mut backend3 = DiskBackend::new(
+            db,
+            Default::default(),
+            Some(Default::default()),
+            Some(Default::default()),
+        )
+        .unwrap();
+        backend3.sector_config.as_mut().unwrap().sector_id = 1;
+        let h1 = Hash256::hash_from_slice("test1", "asdf");
+        let h2 = Hash256::hash_from_slice("test2", "asdf");
+        backend1.write_leaf(h1, &vec![0x00, 0x01]);
+        backend1.write_leaf(h2, &vec![0x01, 0x00]);
+
+        assert_eq!(backend1.get_leaf(&h1), Ok(Some(vec![0x00, 0x01])));
+        assert_eq!(backend1.get_leaf(&h2), Ok(Some(vec![0x01, 0x00])));
+        assert_eq!(backend2.get_leaf(&h1), Ok(Some(vec![0x00, 0x01])));
+        assert_eq!(backend2.get_leaf(&h2), Ok(Some(vec![0x01, 0x00])));
+        assert_eq!(backend3.get_leaf(&h1), Ok(None));
+        assert_eq!(backend3.get_leaf(&h2), Ok(None));
     }
 
     #[test]
