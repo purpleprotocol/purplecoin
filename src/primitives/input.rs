@@ -117,7 +117,7 @@ impl Input {
         shard: &Shard<B>,
     ) -> Result<(), TxVerifyErr> {
         if self.is_coinbase() {
-            // if height < out_height + COINBASE_EPOCH_LEN {
+            // if height < out_height + BLOCK_HORIZON {
             //     return Err(TxVerifyErr::CoinbaseOutSpentBeforeMaturation);
             // }
 

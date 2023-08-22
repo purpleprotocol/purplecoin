@@ -315,7 +315,7 @@ impl From<&str> for MMRBackendErr {
     }
 }
 
-mod leaf_set;
-mod merkle_proof;
-mod prune_list;
-mod util;
+pub mod leaf_set;
+pub mod merkle_proof;
+pub mod prune_list;
+pub mod util;

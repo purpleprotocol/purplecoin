@@ -62,6 +62,7 @@ pub struct PruneList<'a> {
 impl<'a> PruneList<'a> {
     /// Instantiate a new prune list from the provided path and 1-based bitmap.
     /// Note: Does not flush the bitmap to disk. Caller is responsible for doing this.
+    #[must_use]
     pub fn new(db: Arc<DB>, bitmap: Bitmap, key: &'a str) -> PruneList {
         assert!(!bitmap.contains(0));
         let mut prune_list = PruneList {
@@ -81,6 +82,7 @@ impl<'a> PruneList<'a> {
     }
 
     /// Instatiate a new empty prune list.
+    #[must_use]
     pub fn empty(db: Arc<DB>, key: &'a str) -> Self {
         Self::new(db, Bitmap::create(), key)
     }
@@ -129,12 +131,14 @@ impl<'a> PruneList<'a> {
 
     /// Return the total shift from all entries in the `prune_list`.
     /// This is the shift we need to account for when adding new entries to our PMMR.
+    #[must_use]
     pub fn get_total_shift(&self) -> u64 {
         self.get_shift(u64::from(self.bitmap.maximum().unwrap_or(1)) - 1)
     }
 
     /// Return the total `leaf_shift` from all entries in the `prune_list`.
     /// This is the `leaf_shift` we need to account for when adding new entries to our PMMR.
+    #[must_use]
     pub fn get_total_leaf_shift(&self) -> u64 {
         self.get_leaf_shift(u64::from(self.bitmap.maximum().unwrap_or(1)) - 1)
     }
@@ -143,6 +147,7 @@ impl<'a> PruneList<'a> {
     /// number of nodes that have already been pruned before it.
     /// Note: the node at pos may be pruned and may be compacted away itself and
     /// the caller needs to be aware of this.
+    #[must_use]
     pub fn get_shift(&self, pos0: u64) -> u64 {
         let idx = self.bitmap.rank(1 + pos0 as u32);
         if idx == 0 {
@@ -191,6 +196,7 @@ impl<'a> PruneList<'a> {
     /// As above, but only returning the number of leaf nodes to skip for a
     /// given leaf. Helpful if, for instance, data for each leaf is being stored
     /// separately in a continuous flat-file.
+    #[must_use]
     pub fn get_leaf_shift(&self, pos0: u64) -> u64 {
         let idx = self.bitmap.rank(1 + pos0 as u32);
         if idx == 0 {
@@ -307,11 +313,13 @@ impl<'a> PruneList<'a> {
     }
 
     /// Number of entries in the `prune_list`.
+    #[must_use]
     pub fn len(&self) -> u64 {
         self.bitmap.cardinality()
     }
 
     /// Is the `prune_list` empty?
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.bitmap.is_empty()
     }
@@ -319,6 +327,7 @@ impl<'a> PruneList<'a> {
     /// A pos is pruned if it is a pruned root directly or if it is
     /// beneath the "next" pruned subtree.
     /// We only need to consider the "next" subtree due to the append-only MMR structure.
+    #[must_use]
     pub fn is_pruned(&self, pos0: u64) -> bool {
         if self.is_pruned_root(pos0) {
             return true;
@@ -339,17 +348,20 @@ impl<'a> PruneList<'a> {
 
     /// Internal shift cache as slice.
     /// only used in `store/tests/prune_list.rs` tests
+    #[must_use]
     pub fn shift_cache(&self) -> &[u64] {
         self.shift_cache.as_slice()
     }
 
     /// Internal leaf shift cache as slice.
     /// only used in `store/tests/prune_list.rs` tests
+    #[must_use]
     pub fn leaf_shift_cache(&self) -> &[u64] {
         self.leaf_shift_cache.as_slice()
     }
 
     /// Is the specified position a root of a pruned subtree?
+    #[must_use]
     pub fn is_pruned_root(&self, pos0: u64) -> bool {
         self.bitmap.contains(1 + pos0 as u32)
     }
@@ -381,6 +393,7 @@ impl<'a> PruneList<'a> {
     }
 
     /// Return a clone of our internal bitmap.
+    #[must_use]
     pub fn bitmap(&self) -> Bitmap {
         self.bitmap.clone()
     }

@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::chain::mmr::{MMRBackend, MMRBackendErr, MMR};
+use crate::chain::mmr::{util::*, MMRBackend, MMRBackendErr, MMR};
 use crate::chain::{
     BlockHeaderWithHash, ChainConfig, DBInterface, DBPrefixIterator, IteratorDirection,
     PowBlockHeaderWithHash, PowChainBackend, PowChainBackendErr, SectorConfig, ShardBackend,

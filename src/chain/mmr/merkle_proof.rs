@@ -43,6 +43,7 @@ impl Default for MMRMerkleProof {
 
 impl MMRMerkleProof {
     /// The "empty" Merkle proof.
+    #[must_use]
     pub fn empty() -> MMRMerkleProof {
         MMRMerkleProof {
             mmr_size: 0,
@@ -51,6 +52,7 @@ impl MMRMerkleProof {
     }
 
     /// Serialize the Merkle proof as a hex string (for api json endpoints)
+    #[must_use]
     pub fn to_hex(&self) -> String {
         let mut buf = crate::codec::encode_to_vec(self).unwrap();
         hex::encode(buf)

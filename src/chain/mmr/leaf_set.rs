@@ -68,6 +68,7 @@ impl<'a> LeafSet<'a> {
     /// Calculate the set of pruned positions
     /// up to and including the `cutoff_pos`.
     /// Uses both the `leaf_set` and the `prune_list` to determine prunedness.
+    #[must_use]
     pub fn removed_pre_cutoff(
         &self,
         cutoff_pos: u64,
@@ -135,16 +136,19 @@ impl<'a> LeafSet<'a> {
     }
 
     /// Whether the `leaf_set` includes the provided position.
+    #[must_use]
     pub fn includes(&self, pos0: u64) -> bool {
         self.bitmap.contains(1 + pos0 as u32)
     }
 
     /// Number of positions stored in the `leaf_set`.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.bitmap.cardinality() as usize
     }
 
     /// Is the `leaf_set` empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }

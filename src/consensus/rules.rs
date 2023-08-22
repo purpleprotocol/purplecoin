@@ -50,12 +50,12 @@ pub const MAX_HALVINGS: u64 = 20;
 /// Max blocktime in regards to consensus calculations
 pub const MAX_BLOCK_TIME: i64 = 60;
 
-/// Coinbase outputs cannot be spent in the same epoch they are created in. These are not Green `PoW` epochs.
+/// Coinbase outputs cannot be spent until `cur_height - output_height > BLOCK_HORIZON`.
 ///
-/// All transactions are considered final after the end of a coinbase epoch.
+/// All transactions are considered final after the `BLOCK_HORIZON`
 ///
-/// All unspent outputs we don't care about are pruned after `COINBASE_EPOCH_LEN` blocks past the current height
-pub const COINBASE_EPOCH_LEN: u64 = 32;
+/// All unspent outputs we don't care about are pruned after `BLOCK_HORIZON` blocks past the current height
+pub const BLOCK_HORIZON: u64 = 8;
 
 /// How long to spend mining for additional runnerups after receiving a runnerup block
 pub const FIRST_ROUND_ADDITIONAL_TIME: i64 = 3;
@@ -125,8 +125,9 @@ pub fn map_sector_id_to_chain_ids(sector_id: u8) -> Option<RangeInclusive<u8>> {
 }
 
 const_assert!(COIN > 0);
-const_assert!(COINBASE_EPOCH_LEN >= 20);
-const_assert!(COINBASE_EPOCH_LEN <= 100);
+const_assert!(BLOCK_HORIZON >= 6);
+const_assert!(BLOCK_HORIZON <= 100);
+const_assert!(BLOCK_HORIZON % 2 == 0);
 const_assert!(MAX_BYTES_PER_BLOCK >= 380_000);
 const_assert!(MAX_BYTES_PER_BLOCK <= 750_000);
 const_assert!(BLOCK_HEADER_BLOOM_FP_RATE >= 0.001);
