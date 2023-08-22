@@ -173,7 +173,7 @@ impl IBLT {
             let entry = &mut self.hash_table[start_entry + (h % buckets)];
             entry.count += plus_or_minus;
             entry.key_sum ^= k;
-            entry.key_check ^= xxh3(v, &N_HASHCHECK_SEED);
+            entry.key_check ^= xxh3(&kbytes, &N_HASHCHECK_SEED);
             if entry.empty() {
                 entry.value_sum.clear();
             } else {
@@ -248,25 +248,104 @@ impl IBLTHashTableEntry {
 mod tests {
     use super::*;
 
-    // #[test]
-    // fn it_gets_values() {
-    //     let mut iblt = IBLT::new(25);
-    //     iblt.insert(342, b"fdsf1");
-    //     iblt.insert(346, b"jgoi2");
-    //     iblt.insert(378, b"jiz54");
-    //     iblt.insert(398, b"589fn");
-    //     iblt.insert(444, b"test5");
-    //     iblt.insert(345654, b"test6");
-    //     iblt.insert(5343542, b"test7");
-    //     iblt.insert(542, b"test8");
-    //     println!("{:?}", iblt);
-    //     println!("{:?}", iblt.list_entries());
-    //     assert_eq!(iblt.get(342), Some(b"fdsf1".to_vec()));
-    //     assert_eq!(iblt.get(346), Some(b"jgoi2".to_vec()));
-    //     assert_eq!(iblt.get(378), Some(b"jiz54".to_vec()));
-    //     assert_eq!(iblt.get(398), Some(b"589fn".to_vec()));
-    //     assert_eq!(iblt.get(345654), Some(b"test6".to_vec()));
-    //     assert_eq!(iblt.get(5343542), Some(b"test7".to_vec()));
-    //     assert_eq!(iblt.get(542), Some(b"test8".to_vec()));
-    // }
+    #[test]
+    fn it_gets_values() {
+        let mut iblt = IBLT::new(25);
+        iblt.insert(342, b"fdsf1");
+        iblt.insert(346, b"jgoi2");
+        iblt.insert(378, b"jiz54");
+        iblt.insert(398, b"589fn");
+        iblt.insert(444, b"test5");
+        iblt.insert(345_654, b"test6");
+        iblt.insert(5_343_542, b"test7");
+        iblt.insert(542, b"test8");
+        assert_eq!(iblt.get(342), Some(b"fdsf1".to_vec()));
+        assert_eq!(iblt.get(346), Some(b"jgoi2".to_vec()));
+        assert_eq!(iblt.get(378), Some(b"jiz54".to_vec()));
+        assert_eq!(iblt.get(398), Some(b"589fn".to_vec()));
+        assert_eq!(iblt.get(345_654), Some(b"test6".to_vec()));
+        assert_eq!(iblt.get(5_343_542), Some(b"test7".to_vec()));
+        assert_eq!(iblt.get(542), Some(b"test8".to_vec()));
+    }
+
+    #[test]
+    fn it_lists_entries() {
+        let mut iblt = IBLT::new(25);
+        iblt.insert(342, b"fdsf1");
+        iblt.insert(346, b"jgoi2");
+        iblt.insert(378, b"jiz54");
+        iblt.insert(398, b"589fn");
+        iblt.insert(444, b"test5");
+        iblt.insert(345_654, b"test6");
+        iblt.insert(5_343_542, b"test7");
+        iblt.insert(542, b"test8");
+
+        let oracle: Option<(Vec<(u64, Vec<u8>)>, Vec<(u64, Vec<u8>)>)> = Some((
+            vec![
+                (345_654, vec![116, 101, 115, 116, 54]),
+                (378, vec![106, 105, 122, 53, 52]),
+                (5_343_542, vec![116, 101, 115, 116, 55]),
+                (444, vec![116, 101, 115, 116, 53]),
+                (342, vec![102, 100, 115, 102, 49]),
+                (346, vec![106, 103, 111, 105, 50]),
+                (542, vec![116, 101, 115, 116, 56]),
+                (398, vec![53, 56, 57, 102, 110]),
+            ],
+            vec![],
+        ));
+
+        assert_eq!(iblt.list_entries(), oracle);
+    }
+
+    #[test]
+    fn it_gets_overloaded_and_fails() {
+        let mut iblt = IBLT::new(10);
+
+        // 1000 values inserted for an IBLT of size 10.
+        // Every get operation should fail.
+        for i in 0_u64..1000 {
+            iblt.insert(i, &i.to_le_bytes());
+        }
+
+        for i in 5_u64..1000 {
+            assert_eq!(iblt.get(i), None);
+        }
+    }
+
+    #[test]
+    fn it_subtracts_iblts() {
+        let mut i1 = IBLT::new(200);
+        let mut i2 = IBLT::new(200);
+
+        for i in 0_u64..195 {
+            i1.insert(i, &i.to_le_bytes());
+        }
+
+        for i in 5_u64..200 {
+            i2.insert(i, &i.to_le_bytes());
+        }
+
+        let diff = i1.clone() - i2.clone();
+        let mut oracle_pos = vec![];
+        let mut oracle_neg = vec![];
+
+        for i in 0_u64..5 {
+            oracle_pos.push((i, i.to_le_bytes().to_vec()));
+            oracle_neg.push((i + 195, (i + 195).to_le_bytes().to_vec()));
+        }
+
+        let (mut pos, mut neg) = diff.list_entries().unwrap();
+        pos.sort();
+        neg.sort();
+        assert_eq!(pos, oracle_pos);
+        assert_eq!(neg, oracle_neg);
+
+        // Opposite results
+        let diff = i2 - i1;
+        let (mut pos, mut neg) = diff.list_entries().unwrap();
+        pos.sort();
+        neg.sort();
+        assert_eq!(pos, oracle_neg);
+        assert_eq!(neg, oracle_pos);
+    }
 }
