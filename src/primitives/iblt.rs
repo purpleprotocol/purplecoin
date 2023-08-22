@@ -24,11 +24,11 @@ const N_HASH_SEEDS: [[u8; 192]; 4] = [
 const N_HASHCHECK_SEED: [u8; 192] = const_custom_default_secret(11);
 
 #[derive(Clone, Debug, PartialEq, Encode, Decode)]
-pub struct IBLT {
-    hash_table: Vec<IBLTHashTableEntry>,
+pub struct IBLT<const VAL_SIZE: usize> {
+    hash_table: Vec<IBLTHashTableEntry<VAL_SIZE>>,
 }
 
-impl IBLT {
+impl<const VAL_SIZE: usize> IBLT<VAL_SIZE> {
     #[must_use]
     pub fn new(num_entries: usize) -> Self {
         let mut num_entries = num_entries + num_entries / 2;
@@ -45,11 +45,11 @@ impl IBLT {
     }
 
     /// Returns Some(result) if a result is definitely found or not
-    /// found. If not found, result will be empty.
+    /// found. If not found, result will be None.
     /// Returns None if overloaded and we don't know whether or
     /// not k is in the table.
     #[must_use]
-    pub fn get(&self, k: u64) -> Option<Vec<u8>> {
+    pub fn get(&self, k: u64) -> Option<Option<[u8; VAL_SIZE]>> {
         let mut p = None;
         let kbytes = k.to_le_bytes();
         loop {
@@ -62,12 +62,12 @@ impl IBLT {
                 let entry = &this.hash_table[start + (h % buckets)];
 
                 if entry.empty() {
-                    return Some(vec![]);
+                    return Some(None);
                 } else if (entry.is_pure()) {
                     if (entry.key_sum == k) {
-                        return Some(entry.value_sum.clone());
+                        return Some(Some(entry.value_sum));
                     } else {
-                        return Some(vec![]);
+                        return Some(None);
                     }
                 }
             }
@@ -81,10 +81,10 @@ impl IBLT {
                     let entry = &peeled.hash_table[i];
                     if entry.is_pure() {
                         if entry.key_sum == k {
-                            return Some(entry.value_sum.clone());
+                            return Some(Some(entry.value_sum));
                         }
                         erased += 1;
-                        to_delete = Some((-entry.count, entry.key_sum, entry.value_sum.clone()));
+                        to_delete = Some((-entry.count, entry.key_sum, entry.value_sum));
                     }
                 }
 
@@ -117,7 +117,7 @@ impl IBLT {
     //   if the IBLT = A-B, all entries in B that are not in A)
     // Returns Some((positive, negative)) if all entries could be decoded, None otherwise.
     #[must_use]
-    pub fn list_entries(&self) -> Option<(Vec<(u64, Vec<u8>)>, Vec<(u64, Vec<u8>)>)> {
+    pub fn list_entries(&self) -> Option<(Vec<(u64, [u8; VAL_SIZE])>, Vec<(u64, [u8; VAL_SIZE])>)> {
         let mut peeled = self.clone();
         let mut erased = 0;
         let mut positive = Vec::new();
@@ -131,11 +131,11 @@ impl IBLT {
 
                     if entry.is_pure() {
                         if entry.count == 1 {
-                            positive.push((entry.key_sum, entry.value_sum.clone()));
+                            positive.push((entry.key_sum, entry.value_sum));
                         } else {
-                            negative.push((entry.key_sum, entry.value_sum.clone()));
+                            negative.push((entry.key_sum, entry.value_sum));
                         }
-                        to_delete = Some((-entry.count, entry.key_sum, entry.value_sum.clone()));
+                        to_delete = Some((-entry.count, entry.key_sum, entry.value_sum));
                         erased += 1;
                     }
                 }
@@ -174,16 +174,14 @@ impl IBLT {
             entry.count += plus_or_minus;
             entry.key_sum ^= k;
             entry.key_check ^= xxh3(&kbytes, &N_HASHCHECK_SEED);
-            if entry.empty() {
-                entry.value_sum.clear();
-            } else {
+            if !entry.empty() {
                 entry.add_value(v);
             }
         }
     }
 }
 
-impl Sub for IBLT {
+impl<const VAL_SIZE: usize> Sub for IBLT<VAL_SIZE> {
     type Output = Self;
 
     fn sub(mut self, mut other: Self) -> Self::Output {
@@ -195,9 +193,7 @@ impl Sub for IBLT {
             e1.count -= e2.count;
             e1.key_sum ^= e2.key_sum;
             e1.key_check ^= e2.key_check;
-            if e1.empty() {
-                e1.value_sum.clear();
-            } else {
+            if !e1.empty() {
                 e1.add_value(&e2.value_sum);
             }
         }
@@ -206,15 +202,15 @@ impl Sub for IBLT {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Encode, Decode, Default)]
-struct IBLTHashTableEntry {
+#[derive(Clone, Debug, PartialEq, Encode, Decode)]
+struct IBLTHashTableEntry<const VAL_SIZE: usize> {
     pub count: i32,
     pub key_sum: u64,
     pub key_check: u64,
-    pub value_sum: Vec<u8>,
+    pub value_sum: [u8; VAL_SIZE],
 }
 
-impl IBLTHashTableEntry {
+impl<const VAL_SIZE: usize> IBLTHashTableEntry<VAL_SIZE> {
     pub fn empty(&self) -> bool {
         self.count == 0 && self.key_sum == 0 && self.key_check == 0
     }
@@ -234,12 +230,19 @@ impl IBLTHashTableEntry {
             return;
         }
 
-        if self.value_sum.len() < v.len() {
-            self.value_sum.resize(v.len(), 0);
-        }
-
-        for i in 0..v.len() {
+        for i in 0..VAL_SIZE {
             self.value_sum[i] ^= v[i];
+        }
+    }
+}
+
+impl<const VAL_SIZE: usize> Default for IBLTHashTableEntry<VAL_SIZE> {
+    fn default() -> Self {
+        Self {
+            count: 0,
+            key_sum: 0,
+            key_check: 0,
+            value_sum: [0; VAL_SIZE],
         }
     }
 }
@@ -250,7 +253,7 @@ mod tests {
 
     #[test]
     fn it_gets_values() {
-        let mut iblt = IBLT::new(25);
+        let mut iblt = IBLT::<5>::new(25);
         iblt.insert(342, b"fdsf1");
         iblt.insert(346, b"jgoi2");
         iblt.insert(378, b"jiz54");
@@ -259,18 +262,18 @@ mod tests {
         iblt.insert(345_654, b"test6");
         iblt.insert(5_343_542, b"test7");
         iblt.insert(542, b"test8");
-        assert_eq!(iblt.get(342), Some(b"fdsf1".to_vec()));
-        assert_eq!(iblt.get(346), Some(b"jgoi2".to_vec()));
-        assert_eq!(iblt.get(378), Some(b"jiz54".to_vec()));
-        assert_eq!(iblt.get(398), Some(b"589fn".to_vec()));
-        assert_eq!(iblt.get(345_654), Some(b"test6".to_vec()));
-        assert_eq!(iblt.get(5_343_542), Some(b"test7".to_vec()));
-        assert_eq!(iblt.get(542), Some(b"test8".to_vec()));
+        assert_eq!(iblt.get(342), Some(Some(*b"fdsf1")));
+        assert_eq!(iblt.get(346), Some(Some(*b"jgoi2")));
+        assert_eq!(iblt.get(378), Some(Some(*b"jiz54")));
+        assert_eq!(iblt.get(398), Some(Some(*b"589fn")));
+        assert_eq!(iblt.get(345_654), Some(Some(*b"test6")));
+        assert_eq!(iblt.get(5_343_542), Some(Some(*b"test7")));
+        assert_eq!(iblt.get(542), Some(Some(*b"test8")));
     }
 
     #[test]
     fn it_lists_entries() {
-        let mut iblt = IBLT::new(25);
+        let mut iblt = IBLT::<5>::new(25);
         iblt.insert(342, b"fdsf1");
         iblt.insert(346, b"jgoi2");
         iblt.insert(378, b"jiz54");
@@ -280,16 +283,16 @@ mod tests {
         iblt.insert(5_343_542, b"test7");
         iblt.insert(542, b"test8");
 
-        let oracle: Option<(Vec<(u64, Vec<u8>)>, Vec<(u64, Vec<u8>)>)> = Some((
+        let oracle: Option<(Vec<(u64, [u8; 5])>, Vec<(u64, [u8; 5])>)> = Some((
             vec![
-                (345_654, vec![116, 101, 115, 116, 54]),
-                (378, vec![106, 105, 122, 53, 52]),
-                (5_343_542, vec![116, 101, 115, 116, 55]),
-                (444, vec![116, 101, 115, 116, 53]),
-                (342, vec![102, 100, 115, 102, 49]),
-                (346, vec![106, 103, 111, 105, 50]),
-                (542, vec![116, 101, 115, 116, 56]),
-                (398, vec![53, 56, 57, 102, 110]),
+                (345_654, *b"test6"),
+                (378, *b"jiz54"),
+                (5_343_542, *b"test7"),
+                (444, *b"test5"),
+                (342, *b"fdsf1"),
+                (346, *b"jgoi2"),
+                (542, *b"test8"),
+                (398, *b"589fn"),
             ],
             vec![],
         ));
@@ -299,7 +302,7 @@ mod tests {
 
     #[test]
     fn it_gets_overloaded_and_fails() {
-        let mut iblt = IBLT::new(10);
+        let mut iblt = IBLT::<8>::new(10);
 
         // 1000 values inserted for an IBLT of size 10.
         // Every get operation should fail.
@@ -307,15 +310,15 @@ mod tests {
             iblt.insert(i, &i.to_le_bytes());
         }
 
-        for i in 5_u64..1000 {
+        for i in 0_u64..1000 {
             assert_eq!(iblt.get(i), None);
         }
     }
 
     #[test]
     fn it_subtracts_iblts() {
-        let mut i1 = IBLT::new(200);
-        let mut i2 = IBLT::new(200);
+        let mut i1 = IBLT::<8>::new(200);
+        let mut i2 = IBLT::<8>::new(200);
 
         for i in 0_u64..195 {
             i1.insert(i, &i.to_le_bytes());
@@ -330,21 +333,21 @@ mod tests {
         let mut oracle_neg = vec![];
 
         for i in 0_u64..5 {
-            oracle_pos.push((i, i.to_le_bytes().to_vec()));
-            oracle_neg.push((i + 195, (i + 195).to_le_bytes().to_vec()));
+            oracle_pos.push((i, i.to_le_bytes()));
+            oracle_neg.push((i + 195, (i + 195).to_le_bytes()));
         }
 
         let (mut pos, mut neg) = diff.list_entries().unwrap();
-        pos.sort();
-        neg.sort();
+        pos.sort_unstable();
+        neg.sort_unstable();
         assert_eq!(pos, oracle_pos);
         assert_eq!(neg, oracle_neg);
 
         // Opposite results
         let diff = i2 - i1;
         let (mut pos, mut neg) = diff.list_entries().unwrap();
-        pos.sort();
-        neg.sort();
+        pos.sort_unstable();
+        neg.sort_unstable();
         assert_eq!(pos, oracle_neg);
         assert_eq!(neg, oracle_pos);
     }
