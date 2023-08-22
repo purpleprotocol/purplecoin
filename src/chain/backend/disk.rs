@@ -10,6 +10,7 @@ use crate::chain::{
     PowBlockHeaderWithHash, PowChainBackend, PowChainBackendErr, SectorConfig, ShardBackend,
     ShardBackendErr, ShardConfig,
 };
+use crate::consensus::SHARDS_PER_SECTOR;
 use crate::primitives::{Block, BlockData, BlockHeader, Hash256, Output, PowBlock, PowBlockHeader};
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::Witness;
@@ -18,6 +19,7 @@ use rocksdb::Error as RocksDBErr;
 use rocksdb::{Direction, IteratorMode, MultiThreaded, TransactionDB, WriteBatchWithTransaction};
 use std::borrow::Borrow;
 use std::cmp;
+use std::convert::Into;
 use std::sync::atomic::AtomicU64;
 use streaming_iterator::StreamingIterator;
 use triomphe::Arc;
@@ -141,7 +143,9 @@ impl PowChainBackend for DiskBackend {
         unimplemented!()
     }
 
-    fn get_sector_canonical_blocks(&self) -> Result<[Option<BlockHeader>; 64], PowChainBackendErr> {
+    fn get_sector_canonical_blocks(
+        &self,
+    ) -> Result<[Option<BlockHeader>; SHARDS_PER_SECTOR], PowChainBackendErr> {
         unimplemented!()
     }
 
@@ -438,11 +442,26 @@ impl MMRBackend<Vec<u8>> for DiskBackend {
     }
 
     fn get_hash(&self, pos: u64) -> Result<Option<Hash256>, MMRBackendErr> {
-        unimplemented!()
+        let key = &[
+            "h".as_bytes(),
+            &[self.sector_config().sector_id],
+            &pos.to_be_bytes(),
+        ]
+        .concat();
+        let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
+        Ok(self.db.get_cf(&mmr_cf, key)?.map(Into::into))
     }
 
     fn write_hash_at_pos(&self, hash: Hash256, pos: u64) -> Result<(), MMRBackendErr> {
-        unimplemented!()
+        let key = &[
+            "h".as_bytes(),
+            &[self.sector_config().sector_id],
+            &pos.to_be_bytes(),
+        ]
+        .concat();
+        let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
+        self.db.put_cf(&mmr_cf, key, hash)?;
+        Ok(())
     }
 
     fn leaf_pos_iter(&self) -> Box<dyn Iterator<Item = u64> + '_> {
@@ -523,9 +542,8 @@ impl MMRBackend<Vec<u8>> for DiskBackend {
         }
     }
 
-    fn flush(&mut self) -> Result<(), MMRBackendErr> {
-        unimplemented!()
-    }
+    // Don't rely on manual flush yet as rocksdb is quite fast
+    fn flush(&mut self) -> Result<(), MMRBackendErr> {}
 
     fn prune(&mut self) -> Result<(), MMRBackendErr> {
         unimplemented!()
@@ -536,6 +554,29 @@ impl MMRBackend<Vec<u8>> for DiskBackend {
 mod tests {
     use super::*;
     use std::boxed::Box;
+
+    // Disk backend tests don't work on the Windows CI due to temp dir
+    // permissions so we must disable them via a feature flag.
+
+    #[test]
+    #[cfg(not(feature = "disable_tests_on_windows"))]
+    fn mmr_write_get_hash_at_pos() {
+        let db = crate::chain::create_rocksdb_backend();
+        let mut backend = DiskBackend::new(
+            db,
+            Default::default(),
+            Some(Default::default()),
+            Some(Default::default()),
+        )
+        .unwrap();
+        let h1 = Hash256::hash_from_slice("test1", "asdf");
+        let h2 = Hash256::hash_from_slice("test2", "asdf");
+        backend.write_hash_at_pos(h1, 0);
+        backend.write_hash_at_pos(h2, 1);
+
+        assert_eq!(backend.get_hash(0), Ok(Some(h1)));
+        assert_eq!(backend.get_hash(1), Ok(Some(h2)));
+    }
 
     #[test]
     #[cfg(not(feature = "disable_tests_on_windows"))]

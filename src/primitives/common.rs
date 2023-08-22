@@ -441,6 +441,15 @@ impl From<crate::consensus::PowOutput> for Hash256 {
     }
 }
 
+impl From<Vec<u8>> for Hash256 {
+    fn from(v: Vec<u8>) -> Self {
+        debug_assert_eq!(v.len(), 32);
+        let mut h: Self = Default::default();
+        h.0.copy_from_slice(&v);
+        h
+    }
+}
+
 impl AsRef<[u8]> for Hash256 {
     fn as_ref(&self) -> &[u8] {
         &self.0

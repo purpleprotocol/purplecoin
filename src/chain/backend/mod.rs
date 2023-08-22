@@ -6,7 +6,7 @@
 
 use crate::chain::backend::disk::DB;
 use crate::chain::{ChainConfig, SectorConfig, ShardConfig};
-use crate::consensus::SECTORS;
+use crate::consensus::{SECTORS, SHARDS_PER_SECTOR};
 use crate::primitives::{
     Block, BlockData, BlockHeader, BlockVerifyErr, Hash256, Output, PowBlock, PowBlockHeader,
 };
@@ -60,7 +60,9 @@ pub trait PowChainBackend: Sized + Clone {
     ) -> Result<[Option<Hash256>; 64], PowChainBackendErr>;
 
     /// Returns the blocks of the tips in the current sector
-    fn get_sector_canonical_blocks(&self) -> Result<[Option<BlockHeader>; 64], PowChainBackendErr>;
+    fn get_sector_canonical_blocks(
+        &self,
+    ) -> Result<[Option<BlockHeader>; SHARDS_PER_SECTOR], PowChainBackendErr>;
 
     /// Returns the canonical block header of the shard with the given chain id.
     fn get_shard_canonical_block_header(

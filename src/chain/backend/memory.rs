@@ -9,6 +9,7 @@ use crate::chain::{
     ChainConfig, DBInterface, DBPrefixIterator, IteratorDirection, PowChainBackend,
     PowChainBackendErr, SectorConfig, ShardBackend, ShardBackendErr, ShardConfig,
 };
+use crate::consensus::SHARDS_PER_SECTOR;
 use crate::primitives::{Block, BlockData, BlockHeader, Hash256, Output, PowBlock, PowBlockHeader};
 use accumulator::group::Rsa2048;
 use accumulator::Witness;
@@ -97,7 +98,9 @@ impl PowChainBackend for MemoryBackend {
         unimplemented!()
     }
 
-    fn get_sector_canonical_blocks(&self) -> Result<[Option<BlockHeader>; 64], PowChainBackendErr> {
+    fn get_sector_canonical_blocks(
+        &self,
+    ) -> Result<[Option<BlockHeader>; SHARDS_PER_SECTOR], PowChainBackendErr> {
         unimplemented!()
     }
 
