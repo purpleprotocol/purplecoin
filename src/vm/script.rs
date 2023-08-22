@@ -11431,8 +11431,20 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Fugue),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::Signed8Var),
-                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x10),
+                ScriptEntry::Opcode(OP::Fugue),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0xa5),
+                ScriptEntry::Opcode(OP::Fugue),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0xc1),
+                ScriptEntry::Opcode(OP::Fugue),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0xff),
                 ScriptEntry::Opcode(OP::Fugue),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -11441,7 +11453,7 @@ mod tests {
             ..Script::default()
         };
 
-        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Unsigned8(0x10), VmTerm::Unsigned8(0xa5), VmTerm::Unsigned8(0xc1), VmTerm::Unsigned8(0xff)];
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
