@@ -543,7 +543,9 @@ impl MMRBackend<Vec<u8>> for DiskBackend {
     }
 
     // Don't rely on manual flush yet as rocksdb is quite fast
-    fn flush(&mut self) -> Result<(), MMRBackendErr> {}
+    fn flush(&mut self) -> Result<(), MMRBackendErr> {
+        Ok(())
+    }
 
     fn prune(&mut self) -> Result<(), MMRBackendErr> {
         unimplemented!()
@@ -576,6 +578,45 @@ mod tests {
 
         assert_eq!(backend.get_hash(0), Ok(Some(h1)));
         assert_eq!(backend.get_hash(1), Ok(Some(h2)));
+    }
+
+    #[test]
+    #[cfg(not(feature = "disable_tests_on_windows"))]
+    fn mmr_backends_are_domain_separated_by_chain_id() {
+        let db = crate::chain::create_rocksdb_backend();
+        let mut backend1 = DiskBackend::new(
+            db.clone(),
+            Default::default(),
+            Some(Default::default()),
+            Some(Default::default()),
+        )
+        .unwrap();
+        let mut backend2 = DiskBackend::new(
+            db.clone(),
+            Default::default(),
+            Some(Default::default()),
+            Some(Default::default()),
+        )
+        .unwrap();
+        let mut backend3 = DiskBackend::new(
+            db,
+            Default::default(),
+            Some(Default::default()),
+            Some(Default::default()),
+        )
+        .unwrap();
+        backend3.sector_config.as_mut().unwrap().sector_id = 1;
+        let h1 = Hash256::hash_from_slice("test1", "asdf");
+        let h2 = Hash256::hash_from_slice("test2", "asdf");
+        backend1.write_hash_at_pos(h1, 0);
+        backend1.write_hash_at_pos(h2, 1);
+
+        assert_eq!(backend1.get_hash(0), Ok(Some(h1)));
+        assert_eq!(backend1.get_hash(1), Ok(Some(h2)));
+        assert_eq!(backend2.get_hash(0), Ok(Some(h1)));
+        assert_eq!(backend2.get_hash(1), Ok(Some(h2)));
+        assert_eq!(backend3.get_hash(0), Ok(None));
+        assert_eq!(backend3.get_hash(1), Ok(None));
     }
 
     #[test]
