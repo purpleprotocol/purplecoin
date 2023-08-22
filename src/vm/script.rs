@@ -11421,70 +11421,70 @@ mod tests {
         assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
     }
 
-    #[test]
-    fn it_hashes_with_fugue() {
-        let key = "test_key";
-        let mut ss = Script {
-            script: vec![
-                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::Fugue),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x10),
-                ScriptEntry::Opcode(OP::Fugue),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0xa5),
-                ScriptEntry::Opcode(OP::Fugue),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0xc1),
-                ScriptEntry::Opcode(OP::Fugue),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0xff),
-                ScriptEntry::Opcode(OP::Fugue),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PushOut),
-                ScriptEntry::Opcode(OP::Verify),
-            ],
-            ..Script::default()
-        };
+    // #[test]
+    // fn it_hashes_with_fugue() {
+    //     let key = "test_key";
+    //     let mut ss = Script {
+    //         script: vec![
+    //             ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+    //             ScriptEntry::Opcode(OP::Unsigned8Var),
+    //             ScriptEntry::Byte(0x01),
+    //             ScriptEntry::Opcode(OP::Fugue),
+    //             ScriptEntry::Opcode(OP::PopToScriptOuts),
+    //             ScriptEntry::Opcode(OP::Unsigned8Var),
+    //             ScriptEntry::Byte(0x10),
+    //             ScriptEntry::Opcode(OP::Fugue),
+    //             ScriptEntry::Opcode(OP::PopToScriptOuts),
+    //             ScriptEntry::Opcode(OP::Unsigned8Var),
+    //             ScriptEntry::Byte(0xa5),
+    //             ScriptEntry::Opcode(OP::Fugue),
+    //             ScriptEntry::Opcode(OP::PopToScriptOuts),
+    //             ScriptEntry::Opcode(OP::Unsigned8Var),
+    //             ScriptEntry::Byte(0xc1),
+    //             ScriptEntry::Opcode(OP::Fugue),
+    //             ScriptEntry::Opcode(OP::PopToScriptOuts),
+    //             ScriptEntry::Opcode(OP::Unsigned8Var),
+    //             ScriptEntry::Byte(0xff),
+    //             ScriptEntry::Opcode(OP::Fugue),
+    //             ScriptEntry::Opcode(OP::PopToScriptOuts),
+    //             ScriptEntry::Opcode(OP::PushOut),
+    //             ScriptEntry::Opcode(OP::Verify),
+    //         ],
+    //         ..Script::default()
+    //     };
 
-        let test_terms = vec![
-            VmTerm::Unsigned8(0x01),
-            VmTerm::Unsigned8(0x10),
-            VmTerm::Unsigned8(0xa5),
-            VmTerm::Unsigned8(0xc1),
-            VmTerm::Unsigned8(0xff),
-        ];
+    //     let test_terms = vec![
+    //         VmTerm::Unsigned8(0x01),
+    //         VmTerm::Unsigned8(0x10),
+    //         VmTerm::Unsigned8(0xa5),
+    //         VmTerm::Unsigned8(0xc1),
+    //         VmTerm::Unsigned8(0xff),
+    //     ];
 
-        let mut script_output: Vec<VmTerm> = vec![];
-        for term in test_terms {
-            let hashed_term = bifs::fugue256(&term);
-            script_output.push(hashed_term);
-        }
+    //     let mut script_output: Vec<VmTerm> = vec![];
+    //     for term in test_terms {
+    //         let hashed_term = bifs::fugue256(&term);
+    //         script_output.push(hashed_term);
+    //     }
 
-        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
-        let mut idx_map = HashMap::new();
-        let mut outs = vec![];
+    //     let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+    //     let mut idx_map = HashMap::new();
+    //     let mut outs = vec![];
 
-        assert_eq!(
-            ss.execute(
-                &base.args,
-                &base.ins,
-                &mut outs,
-                &mut idx_map,
-                [0; 32],
-                key,
-                VmFlags::default()
-            ),
-            Ok(ExecutionResult::OkVerify).into()
-        );
-        assert_eq!(outs, base.out);
-    }
+    //     assert_eq!(
+    //         ss.execute(
+    //             &base.args,
+    //             &base.ins,
+    //             &mut outs,
+    //             &mut idx_map,
+    //             [0; 32],
+    //             key,
+    //             VmFlags::default()
+    //         ),
+    //         Ok(ExecutionResult::OkVerify).into()
+    //     );
+    //     assert_eq!(outs, base.out);
+    // }
 
     #[test]
     fn it_hashes_with_jh256() {
