@@ -11453,7 +11453,13 @@ mod tests {
             ..Script::default()
         };
 
-        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Unsigned8(0x10), VmTerm::Unsigned8(0xa5), VmTerm::Unsigned8(0xc1), VmTerm::Unsigned8(0xff)];
+        let test_terms = vec![
+            VmTerm::Unsigned8(0x01),
+            VmTerm::Unsigned8(0x10),
+            VmTerm::Unsigned8(0xa5),
+            VmTerm::Unsigned8(0xc1),
+            VmTerm::Unsigned8(0xff),
+        ];
 
         let mut script_output: Vec<VmTerm> = vec![];
         for term in test_terms {
