@@ -401,7 +401,7 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
                         kad::KademliaEvent::RoutingUpdated { peer, is_new_peer, addresses, .. } => {
                             let peer_b58 =  peer.to_base58();
                             info!("Received RoutingUpdated event for peer {} with addresses: {:?}", peer_b58, addresses);
-                            let peer_key = format!("peer.{}", peer_b58);
+                            let peer_key = format!("peer.{peer_b58}");
 
                             if !is_new_peer || self.chain.backend.get::<_, String>(&peer_key).unwrap_or(None).is_none() {
                                 let addresses_strings = addresses.iter().map(ToString::to_string).collect::<Vec<_>>();

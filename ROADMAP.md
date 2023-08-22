@@ -203,9 +203,9 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xd9` PushOutIfGt - Pushes a new output to the output stack if the topmost item on the stack is greater than the second item on the stack. The following arguments are poped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [ ] OP `0xda` PushOutIfLeq - Pushes a new output to the output stack if the topmost item on the stack is less or equal than the second item on the stack. The following arguments are poped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [ ] OP `0xdb` PushOutIfGeq - Pushes a new output to the output stack if the topmost item on the stack is greater or equal than the second item on the stack. The following arguments are poped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
-    - [ ] OP `0xe8` GhostRider256 - Pops the topmost item on the stack, hashes it with GhostRider and then pushes the result to the stack.
-    - [ ] OP `0xe9` Fugue256 - Pops the topmost item on the stack, hashes it with Fugue256 and then pushes the result to the stack.
-    - [ ] OP `0xea` JH256 - Pops the topmost item on the stack, hashes it with JH256 and then pushes the result to the stack.
+    - [x] OP `0xe8` GhostRider256 - Pops the topmost item on the stack, hashes it with GhostRider and then pushes the result to the stack.
+    - [x] OP `0xe9` Fugue256 - Pops the topmost item on the stack, hashes it with Fugue256 and then pushes the result to the stack.
+    - [x] OP `0xea` JH256 - Pops the topmost item on the stack, hashes it with JH256 and then pushes the result to the stack.
     - [x] OP `0xeb` Blake2s256 - Pops the topmost item on the stack, hashes it with Blake2s256 and then pushes the result to the stack.
     - [x] OP `0xec` Trap - Breaks script execution and returns an implicit error.
     - [x] OP `0xed` Sha256 - Pops the topmost item on the stack, hashes it with Sha256 and then pushes the result to the stack.
@@ -303,7 +303,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
       - [ ] SendRawTx
       - [ ] QueryOutput
   - [ ] Mempool
-    - [x] Base Implenentation
+    - [x] Base Implementation
     - [ ] Sharded mempool
 * [ ] Wallet
   - [x] Hierarchical Deterministic Wallet

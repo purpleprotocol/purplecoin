@@ -4,11 +4,13 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use crate::primitives::{hash_arb_bytes_gr, hash_bytes_fugue256};
 use crate::primitives::{Hash160, Hash256, Hash512};
 use crate::vm::internal::VmTerm as Term;
 
 use blake2::digest::{Update, VariableOutput};
 use blake2::{Blake2bVar, Blake2s, Blake2sVar, Digest as Blake2Digest};
+use jh_x86_64::{Digest as JhDigest, Jh256};
 use ripemd::{Digest as RipemdDigest, Ripemd160};
 use sha2::{Digest as ShaDigest, Sha256, Sha512};
 use sha3::{Digest as KeccakDigest, Keccak256, Keccak512};
@@ -151,4 +153,25 @@ pub fn blake3_256_160_internal(term: &Term, key: &str) -> Term {
     let primitive_hash = Hash160::hash_from_slice(hash.to_bytes_raw(), key);
 
     Term::Hash160(primitive_hash.0)
+}
+
+pub fn ghostrider256(term: &Term, key: [u8; 32]) -> Term {
+    let hashed_term = hash_arb_bytes_gr(&term.to_bytes_raw(), key);
+
+    Term::Hash256(hashed_term)
+}
+
+pub fn fugue256(term: &Term) -> Term {
+    let hashed_term = hash_bytes_fugue256(&mut term.to_bytes_raw());
+
+    Term::Hash256(hashed_term)
+}
+
+pub fn jh256(term: &Term) -> Term {
+    let mut hasher = Jh256::new();
+    hasher.input(&term.to_bytes_raw());
+    let hash = hasher.result();
+    let hash: [u8; 32] = hash.as_slice().try_into().unwrap();
+
+    Term::Hash256(hash)
 }
