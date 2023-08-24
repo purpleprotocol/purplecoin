@@ -15,9 +15,7 @@ use hash_sys::{fugue_hash, gr_hash};
 #[must_use]
 pub fn hash_bytes_fugue256(mut bytes: &[u8]) -> [u8; 32] {
     let mut out: [u8; 32] = [0; 32];
-    let data_ptr: *const c_char = &bytes as *const _ as *const c_char;
-    let mut out_ptr: *mut c_char = &mut out as *mut _ as *mut c_char;
-    unsafe { fugue_hash(data_ptr, out_ptr, bytes.len() as u32) };
+    unsafe { fugue_hash(bytes.as_ptr(), out.as_mut_ptr(), bytes.len() as u32) };
     out
 }
 
@@ -25,10 +23,7 @@ pub fn hash_bytes_fugue256(mut bytes: &[u8]) -> [u8; 32] {
 #[must_use]
 pub fn hash_bytes_gr(bytes: &[u8; 32], key: [u8; 32]) -> [u8; 32] {
     let mut out: [u8; 32] = [0; 32];
-    let data_ptr: *const c_char = bytes as *const _ as *const c_char;
-    let key_ptr: *const c_char = &key as *const _ as *const c_char;
-    let mut out_ptr: *mut c_char = &mut out as *mut _ as *mut c_char;
-    unsafe { gr_hash(data_ptr, key_ptr, out_ptr) };
+    unsafe { gr_hash(bytes.as_ptr(), key.as_ptr(), out.as_mut_ptr()) };
     out
 }
 
@@ -49,14 +44,57 @@ mod tests {
     use super::*;
 
     #[test]
-    fn hash_bytes_fugue256_test() {
-        let test_vector = "";
-        let result = hash_bytes_fugue256(test_vector.as_bytes());
+    fn hash_bytes_fugue256_test_1() {
+        let result = hash_bytes_fugue256(&[]);
         let result = hex::encode(result);
+        let result2 = hash_bytes_fugue256(&[]);
+        let result2 = hex::encode(result2);
 
         assert_eq!(
             &result,
             "d6ec528980c130aad1d1acd28b9dd8dbdeae0d79eded1fca72c2af9f37c2246f"
+        );
+        assert_eq!(
+            &result2,
+            "d6ec528980c130aad1d1acd28b9dd8dbdeae0d79eded1fca72c2af9f37c2246f"
+        );
+    }
+
+    #[test]
+    fn hash_bytes_fugue256_test_2() {
+        let result = hash_bytes_fugue256(&[0x4a, 0x4f, 0x20, 0x24, 0x84, 0x51, 0x25, 0x26]);
+        let result = hex::encode(result);
+        let result2 = hash_bytes_fugue256(&[0x4a, 0x4f, 0x20, 0x24, 0x84, 0x51, 0x25, 0x26]);
+        let result2 = hex::encode(result2);
+
+        assert_eq!(
+            &result,
+            "84e8df742af4ab3f552a148485a1d27943b57ba748b76a1cdf8e1f054bed3d7b"
+        );
+        assert_eq!(
+            &result2,
+            "84e8df742af4ab3f552a148485a1d27943b57ba748b76a1cdf8e1f054bed3d7b"
+        );
+    }
+
+    #[test]
+    fn hash_bytes_fugue256_test_3() {
+        let result = hash_bytes_fugue256(&[
+            0x5b, 0xe4, 0x3c, 0x90, 0xf2, 0x29, 0x02, 0xe4, 0xfe, 0x8e, 0xd2, 0xd3,
+        ]);
+        let result = hex::encode(result);
+        let result2 = hash_bytes_fugue256(&[
+            0x5b, 0xe4, 0x3c, 0x90, 0xf2, 0x29, 0x02, 0xe4, 0xfe, 0x8e, 0xd2, 0xd3,
+        ]);
+        let result2 = hex::encode(result2);
+
+        assert_eq!(
+            &result,
+            "d94c33e8312522b6393ebdfb4c99137265c8965782e4d7b4495640bfd6a75760"
+        );
+        assert_eq!(
+            &result2,
+            "d94c33e8312522b6393ebdfb4c99137265c8965782e4d7b4495640bfd6a75760"
         );
     }
 
@@ -79,6 +117,50 @@ mod tests {
         assert_eq!(
             &result,
             "98bfff347e50a5d105893ea0961d32148a7c572bf0d663dc980849fe95f2e2c5"
+        );
+    }
+
+    #[test]
+    fn hash_bytes_gr_test_2() {
+        let result = hash_bytes_gr(&[0xcc; 32], [0; 32]);
+        let result = hex::encode(result);
+
+        assert_eq!(
+            &result,
+            "17b96b01f6b9cc11d744940eb14d1886066ebd6954c3a5bd7878fd05cc2cee80"
+        );
+    }
+
+    #[test]
+    fn hash_bytes_arb_gr_test_2() {
+        let result = hash_arb_bytes_gr(&[0xcc; 32], [0; 32]);
+        let result = hex::encode(result);
+
+        assert_eq!(
+            &result,
+            "4998754b8c97df7fd652961fef096088ca7f49e3a52e88669d2ee55b19959478"
+        );
+    }
+
+    #[test]
+    fn hash_bytes_gr_test_3() {
+        let result = hash_bytes_gr(&[0xcc; 32], [0x05; 32]);
+        let result = hex::encode(result);
+
+        assert_eq!(
+            &result,
+            "d67a9f43c4d3f89be3bb410e4e8f4321b3f91c25658d674801dfb2bb34fef749"
+        );
+    }
+
+    #[test]
+    fn hash_bytes_arb_gr_test_3() {
+        let result = hash_arb_bytes_gr(&[0xcc; 32], [0x05; 32]);
+        let result = hex::encode(result);
+
+        assert_eq!(
+            &result,
+            "990afd3ccdca562bf8b5d0d9cd0a52482395d4a48cdad4be1d34b2ca5b4d25e0"
         );
     }
 }
