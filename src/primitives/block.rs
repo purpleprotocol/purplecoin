@@ -55,9 +55,9 @@ macro_rules! addresses_file_mainnet {
     () => {
         concat!(
             "genesisbalances.mainnet.",
-            "sha256_9d0ac2f6ec49505b96e45bd9ba6403af7070d3ffd4b2354fea84d234692de1d6",
+            "sha256_a3dad0bed27f5d2fd8f5e278ff7d46997ffc5df0d43c351b416c6931c3136f34",
             ".",
-            "blake3_f3e39c1c86683334231f7d832ec17388b96fd9500f107dd8e4efbf61a863b536",
+            "blake3_913b1c3d0e4d2de1c77f6a80907a7d80321486548311c798f7dd3b885ca82036",
             ".txt"
         )
     };

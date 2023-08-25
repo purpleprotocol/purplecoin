@@ -13,7 +13,7 @@ use hash_sys::{fugue_hash, gr_hash};
 
 #[inline]
 #[must_use]
-pub fn hash_bytes_fugue256(mut bytes: &[u8]) -> [u8; 32] {
+pub fn hash_bytes_fugue256(bytes: &[u8]) -> [u8; 32] {
     let mut out: [u8; 32] = [0; 32];
     unsafe { fugue_hash(bytes.as_ptr(), out.as_mut_ptr(), bytes.len() as u32) };
     out
