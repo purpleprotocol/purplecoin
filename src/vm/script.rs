@@ -2734,7 +2734,7 @@ impl<'a> ScriptExecutor<'a> {
                     }
 
                     if let VmTerm::Unsigned8Array(arr) = term {
-                        let utf8 = from_utf8(&arr);
+                        let utf8 = from_utf8(arr);
                         if utf8.is_err() {
                             exec_stack.push(VmTerm::Unsigned8(0));
                             *memory_size += 1;
@@ -14832,68 +14832,6 @@ mod tests {
         ];
         assert_script_fail(ss, script_output, key, ExecutionResult::IndexOutOfBounds);
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     #[test]
     fn it_verifies_if_values_equal() {
