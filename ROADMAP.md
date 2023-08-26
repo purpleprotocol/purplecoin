@@ -163,9 +163,9 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xa5` VerifyBIP340Inline - Takes the given public key, signature, and message and verifies according to BIP340. Pushes `1` on top of the stack if verification is successful. For direct compatibility with Bitcoin Taproot.
     - [ ] OP `0xae` CallBody - Interprets the top `Unsigned8Array` on the stack as a Func body and executes it
     - [x] OP `0xaf` Call - Calls the function with the given index.
-    - [ ] OP `0xb0` Concat - Concats the two topmost items on the stack
-    - [ ] OP `0xb1` Eq - Pushes `1` on top of the stack if the two topmost items on the stack are equal
-    - [ ] OP `0xb2` Neq - Pushes `1` on top of the stack if the two topmost items on the stack are not equal
+    - [x] OP `0xb0` Concat - Concats the two topmost items on the stack
+    - [x] OP `0xb1` Eq - Pushes `1` on top of the stack if the two topmost items on the stack are equal
+    - [x] OP `0xb2` Neq - Pushes `1` on top of the stack if the two topmost items on the stack are not equal
     - [ ] OP `0xb3` If - If control operator
     - [ ] OP `0xb4` Ifn - If not control operator
     - [ ] OP `0xb5` Else - Else control operator
