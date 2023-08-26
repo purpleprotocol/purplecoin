@@ -187,6 +187,7 @@ impl VmTerm {
         }
     }
 
+    /// Increments the value of the term by one
     pub fn add_one(&mut self) -> Option<()> {
         match self {
             Self::Unsigned8(ref mut val) => {
@@ -233,6 +234,7 @@ impl VmTerm {
         Some(())
     }
 
+    /// Adds `rhs` to the value of the term
     pub fn add(&mut self, rhs: &VmTerm) -> Option<()> {
         match (self, rhs) {
             (Self::Unsigned8(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
@@ -315,6 +317,7 @@ impl VmTerm {
         Some(())
     }
 
+    /// Decrements the value of the term by one
     pub fn sub_one(&mut self) -> Option<()> {
         match self {
             Self::Unsigned8(ref mut val) => {
@@ -361,6 +364,7 @@ impl VmTerm {
         Some(())
     }
 
+    /// Substracts `rhs` from the value of the term
     pub fn sub(&mut self, rhs: &VmTerm) -> Option<()> {
         match (self, rhs) {
             (Self::Unsigned8(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
@@ -527,6 +531,7 @@ impl VmTerm {
         Some(())
     }
 
+    /// Multiplies the value of the term with `rhs`
     pub fn mul(&mut self, rhs: &VmTerm) -> Option<()> {
         if self.is_array() && rhs.is_array() && self.size() != rhs.size() {
             return None;
@@ -697,6 +702,7 @@ impl VmTerm {
         Some(())
     }
 
+    /// Divides the value of the term with `rhs`
     pub fn div(&mut self, rhs: &VmTerm) -> Option<()> {
         if self.is_array() && rhs.is_array() && self.size() != rhs.size() {
             return None;
@@ -1134,7 +1140,29 @@ impl VmTerm {
         }
     }
 
-    /// Returns the length if the `VmTerm` is an array type, 0 otherwise
+    /// Checks if the term is an array same as the `other` term
+    pub fn is_same_array(&self, other: &VmTerm) -> bool {
+        match (self, other) {
+            (Self::Hash160Array(_), Self::Hash160Array(_)) => true,
+            (Self::Hash256Array(_), Self::Hash256Array(_)) => true,
+            (Self::Hash512Array(_), Self::Hash512Array(_)) => true,
+            (Self::Unsigned8Array(_), Self::Unsigned8Array(_)) => true,
+            (Self::Unsigned16Array(_), Self::Unsigned16Array(_)) => true,
+            (Self::Unsigned32Array(_), Self::Unsigned32Array(_)) => true,
+            (Self::Unsigned64Array(_), Self::Unsigned64Array(_)) => true,
+            (Self::Unsigned128Array(_), Self::Unsigned128Array(_)) => true,
+            (Self::UnsignedBigArray(_), Self::UnsignedBigArray(_)) => true,
+            (Self::Signed8Array(_), Self::Signed8Array(_)) => true,
+            (Self::Signed16Array(_), Self::Signed16Array(_)) => true,
+            (Self::Signed32Array(_), Self::Signed32Array(_)) => true,
+            (Self::Signed64Array(_), Self::Signed64Array(_)) => true,
+            (Self::Signed128Array(_), Self::Signed128Array(_)) => true,
+            (Self::SignedBigArray(_), Self::SignedBigArray(_)) => true,
+            _ => false
+        }
+    }
+
+    /// Returns the length if the term is an array type, 0 otherwise
     #[must_use]
     pub fn len(&self) -> usize {
         match self {
@@ -1270,6 +1298,7 @@ impl VmTerm {
         }
     }
 
+    /// Performs a binary `not` on the term
     pub fn not(&mut self) -> Option<()> {
         // TODO: add for ibig, ubig
         match self {
@@ -1361,6 +1390,7 @@ impl VmTerm {
         Some(())
     }
 
+    /// Performs a binary `or` on the term with `rhs` as the second operand
     pub fn or(&mut self, rhs: &VmTerm) -> Option<()> {
         if self.is_array() && rhs.is_array() && self.size() != rhs.size() {
             return None;
@@ -1531,6 +1561,7 @@ impl VmTerm {
         Some(())
     }
 
+    /// Performs a binary `xor` on the term with `rhs` as the second operand
     pub fn xor(&mut self, rhs: &VmTerm) -> Option<()> {
         if self.is_array() && rhs.is_array() && self.size() != rhs.size() {
             return None;
@@ -1701,6 +1732,7 @@ impl VmTerm {
         Some(())
     }
 
+    /// Performs a binary `shift left` on the term with `rhs` as the second operand
     pub fn sh_left(&mut self, rhs: &VmTerm) -> Option<()> {
         // TODO: add for ibig, ubig
         if self.is_array() && rhs.is_array() && self.size() != rhs.size() {
@@ -1872,6 +1904,7 @@ impl VmTerm {
         Some(())
     }
 
+    /// Performs a binary `shift right` on the term with `rhs` as the second operand
     pub fn sh_right(&mut self, rhs: &VmTerm) -> Option<()> {
         // TODO: add for ibig, ubig
         if self.is_array() && rhs.is_array() && self.size() != rhs.size() {
@@ -2035,6 +2068,62 @@ impl VmTerm {
             //         .map(|(x, y)| x >> y)
             //         .collect();
             // }
+            _ => {
+                return None;
+            }
+        }
+
+        Some(())
+    }
+
+    /// It appends the `other` array values to the term array value.
+    pub fn append(&mut self, other: &mut VmTerm) -> Option<()> {
+        match (self, other) {
+            (Self::Hash160Array(value), Self::Hash160Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Hash256Array(value), Self::Hash256Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Hash512Array(value), Self::Hash512Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Unsigned8Array(value), Self::Unsigned8Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Unsigned16Array(value), Self::Unsigned16Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Unsigned32Array(value), Self::Unsigned32Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Unsigned64Array(value), Self::Unsigned64Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Unsigned128Array(value), Self::Unsigned128Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::UnsignedBigArray(value), Self::UnsignedBigArray(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Signed8Array(value), Self::Signed8Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Signed16Array(value), Self::Signed16Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Signed32Array(value), Self::Signed32Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Signed64Array(value), Self::Signed64Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Signed128Array(value), Self::Signed128Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::SignedBigArray(value), Self::SignedBigArray(ref mut other)) => {
+                value.append(other);
+            }
             _ => {
                 return None;
             }
