@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::chain::mmr::{util::*, MMRBackend, MMRBackendErr, MMR};
+use crate::chain::mmr::{util::is_leaf, MMRBackend, MMRBackendErr, MMR};
 use crate::chain::{
     BlockHeaderWithHash, ChainConfig, DBInterface, DBPrefixIterator, IteratorDirection,
     PowBlockHeaderWithHash, PowChainBackend, PowChainBackendErr, SectorConfig, ShardBackend,
@@ -467,6 +467,18 @@ impl MMRBackend<Vec<u8>> for DiskBackend {
         .concat();
         let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
         self.db.put_cf(&mmr_cf, key, hash)?;
+
+        // Write leaf position
+        if is_leaf(pos) {
+            let key = &[
+                "l".as_bytes(),
+                &[self.sector_config().sector_id],
+                &self.unpruned_size()?.to_be_bytes(),
+            ]
+            .concat();
+            self.db.put_cf(&mmr_cf, key, pos.to_le_bytes());
+        }
+
         Ok(())
     }
 
@@ -546,6 +558,14 @@ impl MMRBackend<Vec<u8>> for DiskBackend {
 
             Err(err) => Err(err.into()),
         }
+    }
+
+    fn set_size(&self, size: u64) -> Result<(), MMRBackendErr> {
+        let key = &["u".as_bytes(), &[self.sector_config().sector_id]].concat();
+        let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
+        self.db
+            .put_cf(&mmr_cf, size.to_le_bytes(), size.to_le_bytes())?;
+        Ok(())
     }
 
     // Don't rely on manual flush yet as rocksdb is quite fast

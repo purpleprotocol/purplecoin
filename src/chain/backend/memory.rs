@@ -38,6 +38,9 @@ pub struct MemoryBackend {
 
     /// Chain config
     chain_config: ChainConfig,
+
+    /// MMR size
+    mmr_size: u64,
 }
 
 impl DBInterface for MemoryBackend {
@@ -333,6 +336,10 @@ impl MMRBackend<Vec<u8>> for MemoryBackend {
 
     fn prune(&mut self) -> Result<(), MMRBackendErr> {
         unimplemented!()
+    }
+
+    fn set_size(&self, size: u64) -> Result<(), MMRBackendErr> {
+        unimplemented!();
     }
 }
 

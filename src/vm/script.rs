@@ -2658,7 +2658,7 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= second.size();
 
                     match last.or(&mut second) {
-                        Some(_) => {
+                        Some(()) => {
                             exec_stack.push(last);
                         }
                         None => {
@@ -2683,7 +2683,7 @@ impl<'a> ScriptExecutor<'a> {
                     let mut last = &mut exec_stack[len - 1];
 
                     match last.not() {
-                        Some(_) => {}
+                        Some(()) => {}
                         None => {
                             self.state = ScriptExecutorState::Error(
                                 ExecutionResult::InvalidArgs,
@@ -3100,7 +3100,7 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= second.size();
 
                     match second.add(&mut last) {
-                        Some(_) => {
+                        Some(()) => {
                             *memory_size += second.size();
                             exec_stack.push(second);
                         }
@@ -3127,7 +3127,7 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= second.size();
 
                     match last.sub(&mut second) {
-                        Some(_) => {
+                        Some(()) => {
                             *memory_size += last.size();
                             exec_stack.push(last);
                         }
@@ -3154,7 +3154,7 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= second.size();
 
                     match second.mul(&mut last) {
-                        Some(_) => {
+                        Some(()) => {
                             *memory_size += second.size();
                             exec_stack.push(second);
                         }
@@ -3181,7 +3181,7 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= second.size();
 
                     match last.div(&mut second) {
-                        Some(_) => {
+                        Some(()) => {
                             *memory_size += last.size();
                             exec_stack.push(last);
                         }
@@ -3207,7 +3207,7 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= second.size();
 
                     match last.sh_left(&mut second) {
-                        Some(_) => {
+                        Some(()) => {
                             exec_stack.push(last);
                         }
                         None => {
@@ -3232,7 +3232,7 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= second.size();
 
                     match last.sh_right(&mut second) {
-                        Some(_) => {
+                        Some(()) => {
                             exec_stack.push(last);
                         }
                         None => {
@@ -3257,7 +3257,7 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size -= second.size();
 
                     match last.xor(&mut second) {
-                        Some(_) => {
+                        Some(()) => {
                             exec_stack.push(last);
                         }
                         None => {

@@ -216,8 +216,8 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
         let peer_info_table = self.peer_info_table.clone();
 
         tokio::select! {
-            _ = Self::bootstrap(backend, peer_info_table, bootstrap_s) => {}
-            _ = self.run(bootstrap_r) => {}
+            () = Self::bootstrap(backend, peer_info_table, bootstrap_s) => {}
+            () = self.run(bootstrap_r) => {}
         }
 
         Ok(())
@@ -365,7 +365,7 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
                                     let sector_behaviour = self.sector_swarm.behaviour_mut();
                                     let response = PeerInfoResponse::new(self.node_info.read().clone());
                                     match sector_behaviour.peer_request.send_response(channel, response) {
-                                        Ok(_) => (),
+                                        Ok(()) => (),
                                         Err(err) => error!("Failed to send peer info response: {:?}", err),
                                     };
                                 }

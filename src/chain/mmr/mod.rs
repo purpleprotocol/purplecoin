@@ -61,6 +61,37 @@ pub trait MMR<'a, T: Encode, B: MMRBackend<T> + 'a> {
 
 /// Trait for general MMR backend
 pub trait MMRBackend<T: Encode> {
+    /// Push a new leaf to the MMR
+    fn push(&self, leaf: &T) -> Result<u64, MMRBackendErr> {
+        let leaf_pos = self.unpruned_size()?;
+        let mut current_hash = hash_leaf_with_pos(leaf, leaf_pos, self.hash_key());
+
+        let mut hashes = vec![current_hash];
+        let mut pos = leaf_pos;
+
+        let (peak_map, height) = peak_map_height(pos);
+        if height != 0 {
+            return Err(format!("bad mmr size {pos}").into());
+        }
+        // hash with all immediately preceding peaks, as indicated by peak map
+        let mut peak = 1;
+        while (peak_map & peak) != 0 {
+            let left_sibling = pos + 1 - 2 * peak;
+            let left_hash = self
+                .get_peak(left_sibling)?
+                .ok_or("missing left sibling in tree, should not have been pruned")?;
+            peak *= 2;
+            pos += 1;
+            current_hash = hash_children_with_pos((left_hash, current_hash), pos, self.hash_key());
+            hashes.push(current_hash);
+        }
+
+        // append all the new nodes and update the MMR index
+        self.append(leaf, hashes)?;
+        self.set_size(pos + 1)?;
+        Ok(leaf_pos)
+    }
+
     /// Append new leaves to the MMR
     fn append(&self, leaf: &T, hashes: Vec<Hash256>) -> Result<(), MMRBackendErr> {
         // Write leaf data
@@ -87,6 +118,9 @@ pub trait MMRBackend<T: Encode> {
 
     /// Returns the leaf data for hash
     fn get_leaf(&self, hash: &Hash256) -> Result<Option<T>, MMRBackendErr>;
+
+    /// Sets new mmr size
+    fn set_size(&self, size: u64) -> Result<(), MMRBackendErr>;
 
     /// Writes the leaf data for hash
     fn write_leaf(&self, hash: Hash256, leaf: &T) -> Result<(), MMRBackendErr>;

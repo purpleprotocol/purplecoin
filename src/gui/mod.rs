@@ -119,7 +119,7 @@ impl Application for GUI {
     type Message = Message;
     type Flags = ();
 
-    fn new(_: Self::Flags) -> (Self, Command<Self::Message>) {
+    fn new((): Self::Flags) -> (Self, Command<Self::Message>) {
         let active_screen = if crate::global::WALLETS.read().is_empty() {
             ActiveScreen::Welcome
         } else {
