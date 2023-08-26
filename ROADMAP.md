@@ -129,7 +129,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x7d` BitOR -  Pops the two topmost items on the stack, performs bit OR on the operands and then pushes the result on the stack
     - [x] OP `0x7e` BitInvert - Inverts all bits of the topmost item on the stack
     - [x] OP `0x7f` DupAll - Duplicates the whole stack
-    - [ ] OP `0x80` IsUTF8 - Pushes `1` on top of the stack if the given `Unsigned8Array` is a valid UTF8 byte sequence
+    - [x] OP `0x80` IsUTF8 - Pushes `1` on top of the stack if the given `Unsigned8Array` is a valid UTF8 byte sequence
     - [x] OP `0x82` Add1 - Adds `1` to the topmost item on the stack
     - [x] OP `0x83` Sub1 - Subtracts `1` from the topmost item on the stack
     - [x] OP `0x84` Min - Returns the minimum of the two topmost items on the stack
@@ -173,7 +173,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xb7` Verify - Pushes the current output's binary format to the signature verification stack and stops script execution
     - [x] OP `0xb8` ReturnFunc - Returns from the current function and moves the terms on the current frame to the parent frame. Behaves the same as `Return` if called from the main function
     - [ ] OP `0xb9` Return - Stops script execution and succeeds if the topmost item on the stack is `1`
-    - [ ] OP `0xba` EqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are equal
+    - [x] OP `0xba` EqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are equal
     - [x] OP `0xbb` Lt - Pushes `1` on top of the stack if the topmost item on the stack is less than the second item on stack
     - [x] OP `0xbc` Gt - Pushes `1` on top of the stack if the topmost item on the stack is greater than the second item on stack
     - [x] OP `0xbd` Leq - Pushes `1` on top of the stack if the topmost item on the stack is less or equal than the second item on stack
@@ -184,11 +184,11 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xc2` IfGeq - If greater or equal control operator
     - [ ] OP `0xc3` IfEq - If equal control operator
     - [ ] OP `0xc4` IfNeq - If not equal control operator
-    - [ ] OP `0xc5` LtVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is less than the second item on the stack
-    - [ ] OP `0xc6` GtVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is greater than the second item on the stack
-    - [ ] OP `0xc7` LeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is less or equal than the second item on the stack
-    - [ ] OP `0xc8` GeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is greater or equal than the second item on the stack
-    - [ ] OP `0xc9` NeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are not equal
+    - [x] OP `0xc5` LtVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is less than the second item on the stack
+    - [x] OP `0xc6` GtVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is greater than the second item on the stack
+    - [x] OP `0xc7` LeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is less or equal than the second item on the stack
+    - [x] OP `0xc8` GeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is greater or equal than the second item on the stack
+    - [x] OP `0xc9` NeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are not equal
     - [ ] OP `0xca` CastTo - Casts the topmost item on the stack to the type id which is the second item on the stack
     - [x] OP `0xcf` PushOut - Pushes a new output to the output stack. The following arguments are poped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [x] OP `0xd0` PushOutVerify - Pushes a new output to the output stack and calls Verify. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
