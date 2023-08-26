@@ -1768,7 +1768,7 @@ impl<'a> ScriptExecutor<'a> {
                     }
 
                     let mut second = exec_stack.remove(len - 2);
-                    len = len - 1;
+                    len -= 1;
 
                     match exec_stack[len - 1].append(&mut second) {
                         Some(_) => {
@@ -15730,8 +15730,12 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned8Array(vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5]),
-            VmTerm::Signed8Array(vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04]),
+            VmTerm::Unsigned8Array(vec![
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5,
+            ]),
+            VmTerm::Signed8Array(vec![
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04,
+            ]),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();

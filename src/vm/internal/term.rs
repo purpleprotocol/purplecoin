@@ -1141,6 +1141,7 @@ impl VmTerm {
     }
 
     /// Checks if the term is an array same as the `other` term
+    #[must_use]
     pub fn is_same_array(&self, other: &VmTerm) -> bool {
         match (self, other) {
             (Self::Hash160Array(_), Self::Hash160Array(_)) => true,
@@ -1158,7 +1159,7 @@ impl VmTerm {
             (Self::Signed64Array(_), Self::Signed64Array(_)) => true,
             (Self::Signed128Array(_), Self::Signed128Array(_)) => true,
             (Self::SignedBigArray(_), Self::SignedBigArray(_)) => true,
-            _ => false
+            _ => false,
         }
     }
 
