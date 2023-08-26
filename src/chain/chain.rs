@@ -4,6 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use crate::chain::mmr::{leaf_set::LeafSet, prune_list::PruneList};
 use crate::chain::{
     ChainConfig, DBInterface, PowChainBackend, Sector, SectorConfig, Shard, ShardBackend,
     ShardConfig,
@@ -51,6 +52,14 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Chain<B> {
             let mut backend = backend.clone();
             let scfg = SectorConfig::new(config.get_chain_key(i), i, false, false, false);
             backend.set_sector_config(scfg);
+            let prune_list = Arc::new(RwLock::new(
+                PruneList::open(backend.db_handle(), config.get_chain_key(i)).unwrap(),
+            ));
+            let leaf_set = Arc::new(RwLock::new(
+                LeafSet::open(backend.db_handle(), config.get_chain_key(i)).unwrap(),
+            ));
+            backend.set_prune_list(prune_list);
+            backend.set_leaf_set(leaf_set);
             sectors.insert(i, Sector::new(backend, i));
         }
 

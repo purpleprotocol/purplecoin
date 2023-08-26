@@ -5,6 +5,7 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use crate::chain::backend::disk::DB;
+use crate::chain::mmr::{leaf_set::LeafSet, prune_list::PruneList};
 use crate::chain::{ChainConfig, SectorConfig, ShardConfig};
 use crate::consensus::{SECTORS, SHARDS_PER_SECTOR};
 use crate::primitives::{
@@ -16,6 +17,7 @@ use bincode::error::EncodeError as BincodeEncodeErr;
 use bincode::{Decode, Encode};
 use chrono::prelude::*;
 use croaring::Bitmap;
+use parking_lot::RwLock;
 use rocksdb::Error as RocksDBErr;
 use rocksdb::{ColumnFamilyDescriptor, LogLevel, Options, TransactionDBOptions};
 use std::borrow::Borrow;
@@ -37,6 +39,9 @@ pub trait DBInterface {
         prefix: Vec<u8>,
         direction: IteratorDirection,
     ) -> Box<dyn StreamingIterator<Item = (Vec<u8>, V)> + 'a>;
+
+    /// Returns a db handle if we are running in disk mode
+    fn db_handle(&self) -> Option<Arc<DB>>;
 }
 
 pub enum IteratorDirection {
@@ -247,8 +252,14 @@ pub trait PowChainBackend: Sized + Clone {
         }
     }
 
-    /// Override the current sector  config
+    /// Override the current sector config
     fn set_sector_config(&mut self, config: SectorConfig);
+
+    /// Override the current prune list
+    fn set_prune_list(&mut self, prune_list: Arc<RwLock<PruneList>>);
+
+    /// Override the current prune list
+    fn set_leaf_set(&mut self, leaf_set: Arc<RwLock<LeafSet>>);
 }
 
 /// Trait for shard state backend as used by the chain module
@@ -484,6 +495,9 @@ pub enum ShardBackendErr {
 
     /// Generic error
     Error(&'static str),
+
+    /// Error with owned strings
+    ErrorOwned(String),
 }
 
 impl From<BlockVerifyErr> for ShardBackendErr {
@@ -501,6 +515,12 @@ impl From<RocksDBErr> for ShardBackendErr {
 impl From<BincodeEncodeErr> for ShardBackendErr {
     fn from(other: BincodeEncodeErr) -> Self {
         Self::BincodeEncode(other)
+    }
+}
+
+impl From<String> for ShardBackendErr {
+    fn from(other: String) -> Self {
+        Self::ErrorOwned(other)
     }
 }
 

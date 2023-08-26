@@ -4,9 +4,9 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::chain::mmr::{MMRBackend, MMRBackendErr, MMR};
+use crate::chain::mmr::{leaf_set::LeafSet, prune_list::PruneList, MMRBackend, MMRBackendErr, MMR};
 use crate::chain::{
-    ChainConfig, DBInterface, DBPrefixIterator, IteratorDirection, PowChainBackend,
+    backend::DB, ChainConfig, DBInterface, DBPrefixIterator, IteratorDirection, PowChainBackend,
     PowChainBackendErr, SectorConfig, ShardBackend, ShardBackendErr, ShardConfig,
 };
 use crate::consensus::SHARDS_PER_SECTOR;
@@ -84,6 +84,10 @@ impl DBInterface for MemoryBackend {
             .collect::<Vec<(Vec<u8>, V)>>();
 
         Box::new(DBPrefixIterator::new(data, direction))
+    }
+
+    fn db_handle(&self) -> Option<Arc<DB>> {
+        None
     }
 }
 
@@ -189,6 +193,14 @@ impl PowChainBackend for MemoryBackend {
 
     fn set_sector_config(&mut self, config: SectorConfig) {
         self.sector_config = config;
+    }
+
+    fn set_prune_list(&mut self, prune_list: Arc<RwLock<PruneList>>) {
+        unimplemented!()
+    }
+
+    fn set_leaf_set(&mut self, leaf_set: Arc<RwLock<LeafSet>>) {
+        unimplemented!()
     }
 }
 

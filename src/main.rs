@@ -102,7 +102,8 @@ fn run_init() -> anyhow::Result<()> {
 fn start_runtime() -> anyhow::Result<()> {
     let db = purplecoin::chain::backend::create_rocksdb_backend();
     let config = ChainConfig::new(&SETTINGS.node.network_name);
-    let disk_backend = DiskBackend::new(db, Arc::new(config.clone()), None, None).unwrap();
+    let disk_backend =
+        DiskBackend::new(db, Arc::new(config.clone()), None, None, None, None).unwrap();
     let chain = Chain::new(disk_backend, &config);
     let worker_threads = if SETTINGS.node.network_threads == 0 {
         num_cpus::get()

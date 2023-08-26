@@ -25,18 +25,22 @@ use croaring::Bitmap;
 
 /// Compact (roaring) bitmap representing the set of positions of
 /// leaves that are currently unpruned in the MMR.
-pub struct LeafSet<'a> {
-    key: &'a str,
-    db: Arc<DB>,
+pub struct LeafSet {
+    key: String,
+    db: Option<Arc<DB>>,
     bitmap: Bitmap,
     bitmap_bak: Bitmap,
 }
 
-impl<'a> LeafSet<'a> {
+impl LeafSet {
     /// Open the remove log file.
     /// The content of the file will be read in memory for fast checking.
-    pub fn open(db: Arc<DB>, key: &'a str) -> Result<Self, String> {
-        let bitmap = read_bitmap(db.clone(), key)?.unwrap_or(Bitmap::default());
+    pub fn open(db: Option<Arc<DB>>, key: &str) -> Result<Self, String> {
+        let bitmap = if let Some(db) = &db {
+            read_bitmap(db.clone(), key)?.unwrap_or(Bitmap::default())
+        } else {
+            Bitmap::default()
+        };
 
         if !bitmap.is_empty() {
             #[cfg(debug_assertions)]
@@ -48,7 +52,7 @@ impl<'a> LeafSet<'a> {
         }
 
         Ok(LeafSet {
-            key,
+            key: key.to_owned(),
             db,
             bitmap_bak: bitmap.clone(),
             bitmap,
@@ -118,14 +122,16 @@ impl<'a> LeafSet<'a> {
 
     /// Flush the `leaf_set` to file.
     pub fn flush(&mut self) -> Result<(), String> {
-        // First run the optimization step on the bitmap.
-        self.bitmap.run_optimize();
+        if let Some(db) = &self.db {
+            // First run the optimization step on the bitmap.
+            self.bitmap.run_optimize();
 
-        // Write the updated bitmap file to disk.
-        write_bitmap(self.db.clone(), self.key, self.bitmap.clone());
+            // Write the updated bitmap file to disk.
+            write_bitmap(db.clone(), self.key.as_str(), self.bitmap.clone());
 
-        // Make sure our backup in memory is up to date.
-        self.bitmap_bak = self.bitmap.clone();
+            // Make sure our backup in memory is up to date.
+            self.bitmap_bak = self.bitmap.clone();
+        }
 
         Ok(())
     }

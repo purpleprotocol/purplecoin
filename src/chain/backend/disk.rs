@@ -4,7 +4,9 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::chain::mmr::{util::is_leaf, MMRBackend, MMRBackendErr, MMR};
+use crate::chain::mmr::{
+    leaf_set::LeafSet, prune_list::PruneList, util::is_leaf, MMRBackend, MMRBackendErr, MMR,
+};
 use crate::chain::{
     BlockHeaderWithHash, ChainConfig, DBInterface, DBPrefixIterator, IteratorDirection,
     PowBlockHeaderWithHash, PowChainBackend, PowChainBackendErr, SectorConfig, ShardBackend,
@@ -15,6 +17,7 @@ use crate::primitives::{Block, BlockData, BlockHeader, Hash256, Output, PowBlock
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::Witness;
 use dashmap::{DashMap as HashMap, DashSet as HashSet};
+use parking_lot::RwLock;
 use rocksdb::Error as RocksDBErr;
 use rocksdb::{Direction, IteratorMode, MultiThreaded, TransactionDB, WriteBatchWithTransaction};
 use std::borrow::Borrow;
@@ -40,6 +43,8 @@ pub struct DiskBackend {
     sector_config: Option<SectorConfig>,
     chain_config: Arc<ChainConfig>,
     db: Arc<DB>,
+    prune_list: Option<Arc<RwLock<PruneList>>>,
+    leaf_set: Option<Arc<RwLock<LeafSet>>>,
     cached_height: Arc<AtomicU64>,
     orphan_pool: Arc<HashSet<Hash256>>,
     block_buf: Arc<HashMap<Hash256, BlockHeader>>,
@@ -51,12 +56,16 @@ impl DiskBackend {
         chain_config: Arc<ChainConfig>,
         shard_config: Option<ShardConfig>,
         sector_config: Option<SectorConfig>,
+        prune_list: Option<Arc<RwLock<PruneList>>>,
+        leaf_set: Option<Arc<RwLock<LeafSet>>>,
     ) -> Result<Self, ShardBackendErr> {
         Ok(Self {
-            db,
+            db: db.clone(),
             chain_config,
             shard_config,
             sector_config,
+            prune_list,
+            leaf_set,
             cached_height: Arc::new(AtomicU64::new(0)),
             orphan_pool: Arc::new(HashSet::new()),
             block_buf: Arc::new(HashMap::new()),
@@ -126,6 +135,10 @@ impl DBInterface for DiskBackend {
             .collect::<Vec<(Vec<u8>, V)>>();
 
         Box::new(DBPrefixIterator::new(data, direction))
+    }
+
+    fn db_handle(&self) -> Option<Arc<DB>> {
+        Some(self.db.clone())
     }
 }
 
@@ -224,6 +237,14 @@ impl PowChainBackend for DiskBackend {
 
     fn set_sector_config(&mut self, config: SectorConfig) {
         self.sector_config = Some(config);
+    }
+
+    fn set_prune_list(&mut self, prune_list: Arc<RwLock<PruneList>>) {
+        self.prune_list = Some(prune_list);
+    }
+
+    fn set_leaf_set(&mut self, leaf_set: Arc<RwLock<LeafSet>>) {
+        self.leaf_set = Some(leaf_set);
     }
 
     fn write_runnerup_header(
@@ -568,8 +589,9 @@ impl MMRBackend<Vec<u8>> for DiskBackend {
         Ok(())
     }
 
-    // Don't rely on manual flush yet as rocksdb is quite fast
     fn flush(&mut self) -> Result<(), MMRBackendErr> {
+        self.prune_list.as_ref().unwrap().write().flush();
+        self.leaf_set.as_ref().unwrap().write().flush();
         Ok(())
     }
 
@@ -595,6 +617,8 @@ mod tests {
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
+            None,
+            None,
         )
         .unwrap();
         let h1 = Hash256::hash_from_slice("test1", "asdf");
@@ -615,6 +639,8 @@ mod tests {
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
+            None,
+            None,
         )
         .unwrap();
         let h1 = Hash256::hash_from_slice("test1", "asdf");
@@ -635,6 +661,8 @@ mod tests {
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
+            None,
+            None,
         )
         .unwrap();
         let mut backend2 = DiskBackend::new(
@@ -642,6 +670,8 @@ mod tests {
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
+            None,
+            None,
         )
         .unwrap();
         let mut backend3 = DiskBackend::new(
@@ -649,6 +679,8 @@ mod tests {
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
+            None,
+            None,
         )
         .unwrap();
         backend3.sector_config.as_mut().unwrap().sector_id = 1;
@@ -674,6 +706,8 @@ mod tests {
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
+            None,
+            None,
         )
         .unwrap();
         let mut backend2 = DiskBackend::new(
@@ -681,6 +715,8 @@ mod tests {
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
+            None,
+            None,
         )
         .unwrap();
         let mut backend3 = DiskBackend::new(
@@ -688,6 +724,8 @@ mod tests {
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
+            None,
+            None,
         )
         .unwrap();
         backend3.sector_config.as_mut().unwrap().sector_id = 1;
@@ -708,7 +746,7 @@ mod tests {
     #[cfg(not(feature = "disable_tests_on_windows"))]
     fn prefix_iterator_forward() {
         let db = crate::chain::create_rocksdb_backend();
-        let backend = DiskBackend::new(db, Default::default(), None, None).unwrap();
+        let backend = DiskBackend::new(db, Default::default(), None, None, None, None).unwrap();
 
         backend.put("random_data1".as_bytes(), "asdf".to_owned());
         backend.put("test.1".as_bytes(), "asdf".to_owned());
@@ -740,7 +778,7 @@ mod tests {
     #[cfg(not(feature = "disable_tests_on_windows"))]
     fn prefix_iterator_backward() {
         let db = crate::chain::create_rocksdb_backend();
-        let backend = DiskBackend::new(db, Default::default(), None, None).unwrap();
+        let backend = DiskBackend::new(db, Default::default(), None, None, None, None).unwrap();
 
         backend.put("random_data1".as_bytes(), "asdf".to_owned());
         backend.put("test.1".as_bytes(), "asdf".to_owned());

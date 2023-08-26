@@ -50,23 +50,23 @@ use std::cmp::min;
 /// but positions of a node within the PMMR will not match positions in the
 /// backend storage anymore. The `PruneList` accounts for that mismatch and does
 /// the position translation.
-pub struct PruneList<'a> {
-    key: &'a str,
-    db: Arc<DB>,
+pub struct PruneList {
+    key: String,
+    db: Option<Arc<DB>>,
     /// Bitmap representing pruned root node positions.
     bitmap: Bitmap,
     shift_cache: Vec<u64>,
     leaf_shift_cache: Vec<u64>,
 }
 
-impl<'a> PruneList<'a> {
+impl PruneList {
     /// Instantiate a new prune list from the provided path and 1-based bitmap.
     /// Note: Does not flush the bitmap to disk. Caller is responsible for doing this.
     #[must_use]
-    pub fn new(db: Arc<DB>, bitmap: Bitmap, key: &'a str) -> PruneList {
+    pub fn new(db: Option<Arc<DB>>, bitmap: Bitmap, key: &str) -> PruneList {
         assert!(!bitmap.contains(0));
         let mut prune_list = PruneList {
-            key,
+            key: key.to_owned(),
             db,
             bitmap: Bitmap::create(),
             shift_cache: vec![],
@@ -83,14 +83,18 @@ impl<'a> PruneList<'a> {
 
     /// Instatiate a new empty prune list.
     #[must_use]
-    pub fn empty(db: Arc<DB>, key: &'a str) -> Self {
+    pub fn empty(db: Option<Arc<DB>>, key: &str) -> Self {
         Self::new(db, Bitmap::create(), key)
     }
 
     /// Open an existing `prune_list` or create a new one.
     /// Takes an optional bitmap of new pruned pos to be combined with existing pos.
-    pub fn open(db: Arc<DB>, key: &'a str) -> Result<Self, String> {
-        let bitmap = read_bitmap(db.clone(), key)?.unwrap_or(Bitmap::default());
+    pub fn open(db: Option<Arc<DB>>, key: &str) -> Result<Self, String> {
+        let bitmap = if let Some(db) = &db {
+            read_bitmap(db.clone(), key)?.unwrap_or(Bitmap::default())
+        } else {
+            Bitmap::default()
+        };
         assert!(!bitmap.contains(0));
 
         let mut prune_list = PruneList::new(db, bitmap, key);
@@ -120,11 +124,13 @@ impl<'a> PruneList<'a> {
 
     /// Save the `prune_list` to disk.
     pub fn flush(&mut self) -> Result<(), String> {
-        // Run the optimization step on the bitmap.
-        self.bitmap.run_optimize();
+        if let Some(db) = &self.db {
+            // Run the optimization step on the bitmap.
+            self.bitmap.run_optimize();
 
-        // Write the updated bitmap file to disk.
-        write_bitmap(self.db.clone(), self.key, self.bitmap.clone())?;
+            // Write the updated bitmap file to disk.
+            write_bitmap(db.clone(), self.key.as_str(), self.bitmap.clone())?;
+        }
 
         Ok(())
     }
