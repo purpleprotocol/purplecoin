@@ -7,8 +7,8 @@
 use crate::chain::ChainConfig;
 use crate::consensus::{
     calc_difficulty, map_height_to_block_reward, map_sector_id_to_chain_ids, Difficulty, Money,
-    ACCUMULATOR_MULTIPLIER, COIN, MIN_DIFF_GR, MIN_DIFF_RANDOM_HASH, SECOND_ROUND_TIMEOUT, SECTORS,
-    SHARDS_PER_SECTOR,
+    ACCUMULATOR_MULTIPLIER, BLOCK_HEADER_BLOOM_FP_RATE, COIN, MIN_DIFF_GR, MIN_DIFF_RANDOM_HASH,
+    SECOND_ROUND_TIMEOUT, SECTORS, SHARDS_PER_SECTOR,
 };
 use crate::miner::{HashAlgorithm, PowAlgorithm};
 use crate::primitives::{
@@ -24,6 +24,7 @@ use arrayvec::ArrayVec;
 use bincode::{Decode, Encode};
 use bloomfilter::Bloom;
 use chrono::prelude::*;
+use itertools::izip;
 use merkletree::merkle::MerkleTree;
 use merkletree::store::VecStore;
 use rand::prelude::*;
@@ -705,6 +706,7 @@ impl BlockHeader {
             data,
             to_add.as_slice(),
             to_delete.as_slice(),
+            key,
         )
     }
 
@@ -717,47 +719,102 @@ impl BlockHeader {
         data: &BlockData,
         to_add: &[Output],
         to_delete: &[(Output, Witness<Rsa2048, Output>)],
+        key: &str,
     ) -> Result<Self, BlockVerifyErr> {
-        unimplemented!();
-        // let accumulator = prev.accumulator.clone();
-        // let (witness_deleted, proof_deleted) = accumulator
-        //     .delete_with_proof(to_delete)
-        //     .map_err(|_| BlockVerifyErr::InvalidOuts)?;
-        // let (accumulator, proof_added) = witness_deleted.add_with_proof(to_add);
-        // let mut tx_hashes: Vec<Hash256> = data
-        //     .txs
-        //     .iter()
-        //     .map(|tx| tx.hash().unwrap())
-        //     .cloned()
-        //     .collect();
-        // let tx_root = match tx_hashes.len() {
-        //     0 => Hash256::zero(),
+        let mut delete_buckets = vec![vec![]; ACCUMULATOR_MULTIPLIER];
+        let mut add_buckets = vec![vec![]; ACCUMULATOR_MULTIPLIER];
 
-        //     len if len % 2 == 1 => {
-        //         tx_hashes.push(tx_hashes[tx_hashes.len() - 1].clone());
-        //         let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
-        //             MerkleTree::from_data::<Hash256, Vec<Hash256>>(tx_hashes).unwrap();
-        //         mt.root()
-        //     }
+        // Group outputs to delete in buckets based on the hashing index
+        for (o, w) in to_delete {
+            let i = o.acc_idx();
+            delete_buckets[i].push((o.clone(), w.clone()));
+        }
 
-        //     _ => {
-        //         let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
-        //             MerkleTree::from_data::<Hash256, Vec<Hash256>>(tx_hashes).unwrap();
-        //         mt.root()
-        //     }
-        // };
-        // let poc = ProofOfCorrectness::new(proof_added, proof_deleted);
+        // Group outputs to add in buckets based on the hashing index
+        for o in to_add {
+            let i = o.acc_idx();
+            add_buckets[i].push(o.clone());
+        }
 
-        unimplemented!();
-        // Ok(Self {
-        //     chain_id: prev.chain_id,
-        //     height: prev.height + 1,
-        //     prev_hash: prev.hash().unwrap().clone(),
-        //     tx_root,
-        //     accumulator,
-        //     poc,
-        //     hash: None,
-        // })
+        let mut accumulators = ArrayVec::new();
+        let mut poc = ArrayVec::new();
+
+        for (accumulator, to_delete, to_add) in
+            izip!(&prev.accumulators, delete_buckets, add_buckets)
+        {
+            let (witness_deleted, proof_deleted) = accumulator
+                .clone()
+                .delete_with_proof(&to_delete)
+                .map_err(|_| BlockVerifyErr::InvalidOuts)?;
+            let (accumulator, proof_added) = witness_deleted.add_with_proof(&to_add);
+            let poc0 = ProofOfCorrectness::new(proof_added, proof_deleted);
+            accumulators.push(accumulator);
+            poc.push(poc0);
+        }
+
+        let mut tx_hashes: Vec<Hash256> = data
+            .txs
+            .iter()
+            .map(|tx| tx.hash().unwrap())
+            .copied()
+            .collect();
+        let mut bloom_data = tx_hashes.clone();
+        let tx_root = match tx_hashes.len() {
+            0 => Hash256::zero(),
+
+            len if len % 2 == 1 => {
+                tx_hashes.push(tx_hashes[tx_hashes.len() - 1]);
+                let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
+                    MerkleTree::from_data::<Hash256, Vec<Hash256>>(tx_hashes).unwrap();
+                mt.root()
+            }
+
+            _ => {
+                let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
+                    MerkleTree::from_data::<Hash256, Vec<Hash256>>(tx_hashes).unwrap();
+                mt.root()
+            }
+        };
+
+        // Write output addresses, colours, and outputs, if present
+        bloom_data.extend(to_add.iter().flat_map(|o| {
+            let mut buf = vec![];
+            buf.push(*o.hash().unwrap());
+            if let Some(address) = &o.address {
+                buf.push(Hash256::hash_from_slice(address.as_bytes(), key));
+            }
+            if let Some(address) = &o.coloured_address {
+                buf.push(Hash256::hash_from_slice(address.address, key));
+                buf.push(Hash256::hash_from_slice(address.colour_hash, key));
+            }
+            buf.extend(
+                o.script_outs
+                    .iter()
+                    .map(|t| Hash256::hash_from_slice(t.to_bytes(), key)),
+            );
+            buf.push(Hash256::hash_from_slice(o.script_hash.0, key));
+            buf
+        }));
+        bloom_data.dedup();
+
+        let bloom_seed_hash = Hash256::hash_from_slice(
+            prev.hash().unwrap().0,
+            &format!(bloom_hash_key!(), prev.chain_id),
+        );
+        let bloom_seed = &bloom_seed_hash.0;
+        let mut block_bloom =
+            BloomFilterHash256::new(bloom_data.len(), BLOCK_HEADER_BLOOM_FP_RATE, bloom_seed);
+
+        Ok(Self {
+            chain_id: prev.chain_id,
+            height: prev.height + 1,
+            prev_hash: *prev.hash().unwrap(),
+            tx_root,
+            accumulators,
+            poc,
+            block_bloom,
+            hash: None,
+        })
     }
 
     fn read_genesis_inputs(chain_id: u8, config: &ChainConfig) -> Vec<Input> {

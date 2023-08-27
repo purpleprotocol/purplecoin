@@ -7,6 +7,7 @@
 use bech32::{self, FromBase32, ToBase32, Variant};
 use bincode::{Decode, Encode};
 use bloomfilter::Bloom;
+use croaring::bitmap;
 use lazy_static::lazy_static;
 use merkletree::hash::{Algorithm, Hashable};
 use merkletree::merkle::Element;
@@ -630,6 +631,13 @@ pub struct BloomFilterHash256 {
 }
 
 impl BloomFilterHash256 {
+    #[must_use]
+    pub fn new(items_count: usize, fp_rate: f64, seed: &[u8; 32]) -> Self {
+        Self {
+            inner: Bloom::new_for_fp_rate_with_seed(items_count, fp_rate, seed),
+        }
+    }
+
     #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut out = vec![];

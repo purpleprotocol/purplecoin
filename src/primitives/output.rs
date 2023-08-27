@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::consensus::{money_check, Money};
+use crate::consensus::{money_check, Money, ACCUMULATOR_MULTIPLIER};
 use crate::primitives::{Address, ColouredAddress, Hash160, Hash256, TxVerifyErr};
 use crate::vm::internal::VmTerm;
 use bincode::{Decode, Encode};
@@ -83,6 +83,16 @@ impl Output {
     #[must_use]
     pub fn hash(&self) -> Option<&Hash256> {
         self.hash.as_ref()
+    }
+
+    /// Returns the index of the accumulator we write this output to
+    #[must_use]
+    pub fn acc_idx(&self) -> usize {
+        let hash = self.hash().unwrap();
+        let mut key_buf = [0; 8];
+        key_buf.copy_from_slice(&hash.as_bytes()[..8]);
+        let k = u64::from_le_bytes(key_buf);
+        jump_consistent_hash::hash(k, ACCUMULATOR_MULTIPLIER) as usize
     }
 
     pub fn compute_hash(&mut self, key: &str) {
