@@ -66,7 +66,8 @@
     slice_swap_unchecked,
     stmt_expr_attributes,
     slice_split_at_unchecked,
-    return_position_impl_trait_in_trait
+    return_position_impl_trait_in_trait,
+    impl_trait_in_assoc_type
 )]
 #![warn(clippy::cargo, clippy::pedantic)]
 #![allow(

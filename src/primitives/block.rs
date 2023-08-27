@@ -177,6 +177,7 @@ impl PowBlockHeader {
     /// if previous header's hash is not computed.
     pub fn new(
         prev: &PowBlockHeader,
+        prev_root: Hash256,
         runnerups: Option<[&PowBlockHeader; SECTORS - 1]>,
         blocks: Vec<BlockHeader>,
         key: &str,
@@ -231,46 +232,44 @@ impl PowBlockHeader {
 
         let shards_per_sector_minus_one = SHARDS_PER_SECTOR as u8 - 1;
 
-        unimplemented!();
+        let mut block = Self {
+            version: prev.version,
+            sector_id: prev.sector_id,
+            height: prev.height + 1,
+            prev_hash: *prev.hash().unwrap(),
+            nonce: 0,
+            block_root,
+            prev_root,
+            bits: prev.bits,
+            bt_mean: prev.bt_mean,
+            diff_heights: prev.diff_heights,
+            runnerup_hashes,
+            runnerups_prev_hash,
+            timestamp,
+            hash: None,
+        };
 
-        // TODO: Add prev root
-        // let mut block = Self {
-        //     version: prev.version,
-        //     sector_id: prev.sector_id,
-        //     height: prev.height + 1,
-        //     prev_hash: prev.hash().unwrap().clone(),
-        //     nonce: 0,
-        //     block_root,
-        //     bits: prev.bits,
-        //     bt_mean: prev.bt_mean,
-        //     diff_heights: prev.diff_heights,
-        //     runnerup_hashes,
-        //     runnerups_prev_hash,
-        //     timestamp,
-        //     hash: None,
-        // };
+        debug_assert!(block.timestamp > prev.timestamp);
+        let algo = block.map_height_to_algo();
+        let (diff_idx, bt) = if block.runnerup_hashes.is_none() {
+            (algo.diff_idx_r1(), block.timestamp - prev.timestamp)
+        } else if block
+            .runnerup_hashes
+            .as_ref()
+            .unwrap()
+            .iter()
+            .all(|h| h == &Hash256::zero())
+        {
+            (
+                algo.diff_idx_r1(),
+                block.timestamp - (prev.timestamp + SECOND_ROUND_TIMEOUT),
+            )
+        } else {
+            (algo.diff_idx_r2(), block.timestamp - prev.timestamp)
+        };
 
-        // debug_assert!(block.timestamp > prev.timestamp);
-        // let algo = block.map_height_to_algo();
-        // let (diff_idx, bt) = if block.runnerup_hashes.is_none() {
-        //     (algo.diff_idx_r1(), block.timestamp - prev.timestamp)
-        // } else if block
-        //     .runnerup_hashes
-        //     .as_ref()
-        //     .unwrap()
-        //     .iter()
-        //     .all(|h| h == &Hash256::zero())
-        // {
-        //     (
-        //         algo.diff_idx_r1(),
-        //         block.timestamp - (prev.timestamp + SECOND_ROUND_TIMEOUT),
-        //     )
-        // } else {
-        //     (algo.diff_idx_r2(), block.timestamp - prev.timestamp)
-        // };
-
-        // block.calc_new_bits(prev, diff_idx, bt);
-        // Ok(block)
+        block.calc_new_bits(prev, diff_idx, bt);
+        Ok(block)
     }
 
     /// Creates the genesis block for the given chain config

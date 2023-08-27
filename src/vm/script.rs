@@ -1771,7 +1771,7 @@ impl<'a> ScriptExecutor<'a> {
                     len -= 1;
 
                     match exec_stack[len - 1].append(&mut second) {
-                        Some(_) => {
+                        Some(()) => {
                             // The items size is already added to the memory_size of the VM,
                             // we only have to substract the HEAP_SIZE for the removed vector
                             *memory_size -= crate::vm::internal::EMPTY_VEC_HEAP_SIZE;

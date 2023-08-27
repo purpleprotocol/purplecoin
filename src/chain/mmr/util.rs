@@ -206,3 +206,13 @@ pub fn round_up_to_leaf_pos(pos0: u64) -> u64 {
 pub fn insertion_to_pmmr_index(nleaf0: u64) -> u64 {
     2 * nleaf0 - u64::from(nleaf0.count_ones())
 }
+
+/// The number of leaves in a MMR of the provided size.
+pub fn n_leaves(size: u64) -> u64 {
+    let (peak_map, height) = peak_map_height(size);
+    if height == 0 {
+        peak_map
+    } else {
+        peak_map + 1
+    }
+}

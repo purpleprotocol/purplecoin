@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::chain::mmr::{leaf_set::LeafSet, prune_list::PruneList, MMRBackend, MMRBackendErr, MMR};
+use crate::chain::mmr::{leaf_set::LeafSet, prune_list::PruneList, MMRBackend, MMRBackendErr};
 use crate::chain::{
     backend::DB, ChainConfig, DBInterface, DBPrefixIterator, IteratorDirection, PowChainBackend,
     PowChainBackendErr, SectorConfig, ShardBackend, ShardBackendErr, ShardConfig,
@@ -283,12 +283,6 @@ impl ShardBackend for MemoryBackend {
     }
 }
 
-impl MMR<'_, Vec<u8>, Self> for MemoryBackend {
-    fn backend(&self) -> &MemoryBackend {
-        self
-    }
-}
-
 impl MMRBackend<Vec<u8>> for MemoryBackend {
     fn get(&self, pos: u64) -> Result<Option<Hash256>, MMRBackendErr> {
         unimplemented!()
@@ -300,14 +294,6 @@ impl MMRBackend<Vec<u8>> for MemoryBackend {
 
     fn write_leaf(&self, hash: Hash256, leaf: &Vec<u8>) -> Result<(), MMRBackendErr> {
         unimplemented!()
-    }
-
-    fn leaf_pos_iter(&self) -> Box<dyn Iterator<Item = u64> + '_> {
-        unimplemented!();
-    }
-
-    fn leaf_idx_iter(&self, from_idx: u64) -> Box<dyn Iterator<Item = u64> + '_> {
-        unimplemented!();
     }
 
     fn n_unpruned_leaves(&self) -> u64 {

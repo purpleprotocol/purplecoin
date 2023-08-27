@@ -4,60 +4,15 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use crate::chain::mmr::leaf_set::LeafSetRwLockIter;
 use crate::chain::mmr::merkle_proof::MMRMerkleProof;
 use crate::chain::mmr::util::{
-    bintree_postorder_height, family_branch, hash_children_with_pos, hash_leaf_with_pos, is_leaf,
-    peak_map_height, peaks,
+    bintree_postorder_height, family_branch, hash_children_with_pos, hash_leaf_with_pos,
+    insertion_to_pmmr_index, is_leaf, n_leaves, peak_map_height, peaks,
 };
 use crate::primitives::Hash256;
 use bincode::Encode;
 use rocksdb::Error as RocksDBErr;
-
-/// MMR trait
-pub trait MMR<'a, T: Encode, B: MMRBackend<T> + 'a> {
-    /// Returns the root hash of the MMR
-    fn root(&self) -> Result<Hash256, MMRBackendErr> {
-        self.backend().root()
-    }
-
-    /// Attempts to append a new leaf to the mmr
-    fn append(&'a mut self, leaf: &T) -> Result<(), MMRBackendErr> {
-        let mut pos = self.backend().size()?;
-        let mut current_hash = hash_leaf_with_pos(leaf, pos, self.hash_key());
-        let mut hashes = vec![current_hash];
-
-        let (peak_map, height) = peak_map_height(pos);
-        if height != 0 {
-            return Err(MMRBackendErr::InvalidMMRSize);
-        }
-
-        let mut peak = 1;
-        while (peak_map & peak) != 0 {
-            let left_sibling = pos + 1 - 2 * peak;
-            let left_hash =
-                self.backend()
-                    .get(left_sibling)?
-                    .ok_or(MMRBackendErr::CustomString(
-                        "could not fetch left sibling".to_owned(),
-                    ))?;
-            peak *= 2;
-            pos += 1;
-            current_hash = hash_children_with_pos((left_hash, current_hash), pos, self.hash_key());
-            hashes.push(current_hash);
-        }
-
-        self.backend().append(leaf, hashes)?;
-        Ok(())
-    }
-
-    /// Returns a reference to the underlying `MMRBackend`
-    fn backend(&self) -> &B;
-
-    /// Returns the key passed to the hash function used in constructing the MMR
-    fn hash_key(&'a self) -> &'a str {
-        self.backend().hash_key()
-    }
-}
 
 /// Trait for general MMR backend
 pub trait MMRBackend<T: Encode> {
@@ -132,10 +87,30 @@ pub trait MMRBackend<T: Encode> {
     fn size(&self) -> Result<u64, MMRBackendErr>;
 
     /// Iterator over current (unpruned, unremoved) leaf positions.
-    fn leaf_pos_iter(&self) -> Box<dyn Iterator<Item = u64> + '_>;
+    #[must_use]
+    fn leaf_pos_iter<'a>(iter: &'a LeafSetRwLockIter<'a>) -> Box<dyn Iterator<Item = u64> + '_> {
+        Box::new(iter.into_iter().map(|x| x - 1))
+    }
 
     /// Iterator over current (unpruned, unremoved) leaf insertion indices.
-    fn leaf_idx_iter(&self, from_idx: u64) -> Box<dyn Iterator<Item = u64> + '_>;
+    #[must_use]
+    fn leaf_idx_iter<'a>(
+        iter: &'a LeafSetRwLockIter<'a>,
+        from_idx: u64,
+    ) -> Box<dyn Iterator<Item = u64> + '_> {
+        // pass from_idx in as param
+        // convert this to pos
+        // iterate, skipping everything prior to this
+        // pass in from_idx=0 then we want to convert to pos=1
+
+        let from_pos = 1 + insertion_to_pmmr_index(from_idx);
+
+        Box::new(
+            iter.into_iter()
+                .skip_while(move |x| *x < from_pos)
+                .map(|x| n_leaves(x).saturating_sub(1)),
+        )
+    }
 
     /// Returns the unpruned size of the mmr
     fn unpruned_size(&self) -> Result<u64, MMRBackendErr>;

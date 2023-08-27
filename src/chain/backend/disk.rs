@@ -4,8 +4,9 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use crate::chain::mmr::leaf_set::LeafSetRwLockIter;
 use crate::chain::mmr::{
-    leaf_set::LeafSet, prune_list::PruneList, util::is_leaf, MMRBackend, MMRBackendErr, MMR,
+    leaf_set::LeafSet, prune_list::PruneList, util::is_leaf, MMRBackend, MMRBackendErr,
 };
 use crate::chain::{
     BlockHeaderWithHash, ChainConfig, DBInterface, DBPrefixIterator, IteratorDirection,
@@ -74,13 +75,11 @@ impl DiskBackend {
 
     #[must_use]
     pub fn is_shard(&self) -> bool {
-        debug_assert!(self.sector_config.is_none());
         self.shard_config.is_some()
     }
 
     #[must_use]
     pub fn is_sector(&self) -> bool {
-        debug_assert!(self.shard_config.is_none());
         self.sector_config.is_some()
     }
 
@@ -439,12 +438,6 @@ impl ShardBackend for DiskBackend {
     }
 }
 
-impl MMR<'_, Vec<u8>, Self> for DiskBackend {
-    fn backend(&self) -> &DiskBackend {
-        self
-    }
-}
-
 impl MMRBackend<Vec<u8>> for DiskBackend {
     fn get(&self, pos: u64) -> Result<Option<Hash256>, MMRBackendErr> {
         unimplemented!()
@@ -465,10 +458,23 @@ impl MMRBackend<Vec<u8>> for DiskBackend {
     }
 
     fn get_peak(&self, pos: u64) -> Result<Option<Hash256>, MMRBackendErr> {
-        unimplemented!()
+        // let shift = self.prune_list.as_ref().expect("prune list not initialised").read().get_shift(pos);
+        // let pos = 1 + pos + shift;
+
+        let key = &[
+            "h".as_bytes(),
+            &[self.sector_config().sector_id],
+            &pos.to_be_bytes(),
+        ]
+        .concat();
+        let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
+        Ok(self.db.get_cf(&mmr_cf, key)?.map(Into::into))
     }
 
     fn get_hash(&self, pos: u64) -> Result<Option<Hash256>, MMRBackendErr> {
+        // let shift = self.prune_list.as_ref().expect("prune list not initialised").read().get_shift(pos);
+        // let pos = 1 + pos + shift;
+
         let key = &[
             "h".as_bytes(),
             &[self.sector_config().sector_id],
@@ -503,45 +509,30 @@ impl MMRBackend<Vec<u8>> for DiskBackend {
         Ok(())
     }
 
-    fn leaf_pos_iter(&self) -> Box<dyn Iterator<Item = u64> + '_> {
-        unimplemented!();
-    }
-
-    fn leaf_idx_iter(&self, from_idx: u64) -> Box<dyn Iterator<Item = u64> + '_> {
-        unimplemented!();
-    }
-
     fn n_unpruned_leaves(&self) -> u64 {
-        unimplemented!();
+        self.leaf_set
+            .as_ref()
+            .expect("leaf set not initialised")
+            .read()
+            .len() as u64
     }
 
     fn n_unpruned_leaves_to_index(&self, to_index: u64) -> u64 {
-        unimplemented!();
+        self.leaf_set
+            .as_ref()
+            .expect("leaf set not initialised")
+            .read()
+            .n_unpruned_leaves_to_index(to_index)
     }
 
     fn unpruned_size(&self) -> Result<u64, MMRBackendErr> {
-        let key = &["u".as_bytes(), &[self.sector_config().sector_id]].concat();
-        let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
-        let tx = self.db.transaction();
-        match tx.get_cf(&mmr_cf, key) {
-            Ok(Some(bheight)) => {
-                let bheight = self
-                    .db
-                    .get_cf(&mmr_cf, key)?
-                    .ok_or(MMRBackendErr::CorruptData)?;
-                let mut out = [0; 8];
-                out.copy_from_slice(&bheight);
-                Ok(u64::from_le_bytes(out))
-            }
-
-            Ok(None) => {
-                tx.put_cf(&mmr_cf, key, 1_u64.to_le_bytes())?;
-                tx.commit()?;
-                Ok(1)
-            }
-
-            Err(err) => Err(err.into()),
-        }
+        Ok(self.size()?
+            + self
+                .prune_list
+                .as_ref()
+                .expect("leaf set not initialised")
+                .read()
+                .get_total_shift())
     }
 
     fn hash_key(&self) -> &str {
@@ -572,9 +563,9 @@ impl MMRBackend<Vec<u8>> for DiskBackend {
             }
 
             Ok(None) => {
-                tx.put_cf(&mmr_cf, key, 1_u64.to_le_bytes())?;
+                tx.put_cf(&mmr_cf, key, 0_u64.to_le_bytes())?;
                 tx.commit()?;
-                Ok(1)
+                Ok(0)
             }
 
             Err(err) => Err(err.into()),
@@ -582,10 +573,9 @@ impl MMRBackend<Vec<u8>> for DiskBackend {
     }
 
     fn set_size(&self, size: u64) -> Result<(), MMRBackendErr> {
-        let key = &["u".as_bytes(), &[self.sector_config().sector_id]].concat();
+        let key = &["s".as_bytes(), &[self.sector_config().sector_id]].concat();
         let mmr_cf = self.db.cf_handle(MMR_CF).unwrap();
-        self.db
-            .put_cf(&mmr_cf, size.to_le_bytes(), size.to_le_bytes())?;
+        self.db.put_cf(&mmr_cf, key, size.to_le_bytes())?;
         Ok(())
     }
 
@@ -610,15 +600,44 @@ mod tests {
 
     #[test]
     #[cfg(not(feature = "disable_tests_on_windows"))]
+    fn mmr_push() {
+        let db = crate::chain::create_rocksdb_backend();
+        let mut backend = DiskBackend::new(
+            db.clone(),
+            Default::default(),
+            None,
+            Some(Default::default()),
+            Some(Arc::new(RwLock::new(
+                PruneList::open(Some(db.clone()), "testpl").unwrap(),
+            ))),
+            Some(Arc::new(RwLock::new(
+                LeafSet::open(Some(db), "testls").unwrap(),
+            ))),
+        )
+        .unwrap();
+        assert_eq!(Ok(0), backend.push(&vec![0x00, 0x01]));
+        assert_eq!(Ok(1), backend.push(&vec![0x01, 0x00]));
+        assert_eq!(Ok(3), backend.push(&vec![0x01, 0x00, 0x00]));
+        assert_eq!(Ok(4), backend.push(&vec![0x01, 0x00, 0x01]));
+        assert_eq!(Ok(7), backend.push(&vec![0x01, 0x01, 0x01]));
+        assert_eq!(Ok(8), backend.push(&vec![0x01, 0x01, 0x02]));
+    }
+
+    #[test]
+    #[cfg(not(feature = "disable_tests_on_windows"))]
     fn mmr_write_leaf() {
         let db = crate::chain::create_rocksdb_backend();
         let mut backend = DiskBackend::new(
-            db,
+            db.clone(),
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
-            None,
-            None,
+            Some(Arc::new(RwLock::new(
+                PruneList::open(Some(db.clone()), "testpl").unwrap(),
+            ))),
+            Some(Arc::new(RwLock::new(
+                LeafSet::open(Some(db), "testls").unwrap(),
+            ))),
         )
         .unwrap();
         let h1 = Hash256::hash_from_slice("test1", "asdf");
@@ -635,12 +654,16 @@ mod tests {
     fn mmr_write_get_hash_at_pos() {
         let db = crate::chain::create_rocksdb_backend();
         let mut backend = DiskBackend::new(
-            db,
+            db.clone(),
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
-            None,
-            None,
+            Some(Arc::new(RwLock::new(
+                PruneList::open(Some(db.clone()), "testpl").unwrap(),
+            ))),
+            Some(Arc::new(RwLock::new(
+                LeafSet::open(Some(db), "testls").unwrap(),
+            ))),
         )
         .unwrap();
         let h1 = Hash256::hash_from_slice("test1", "asdf");
@@ -661,8 +684,12 @@ mod tests {
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
-            None,
-            None,
+            Some(Arc::new(RwLock::new(
+                PruneList::open(Some(db.clone()), "testpl").unwrap(),
+            ))),
+            Some(Arc::new(RwLock::new(
+                LeafSet::open(Some(db.clone()), "testls").unwrap(),
+            ))),
         )
         .unwrap();
         let mut backend2 = DiskBackend::new(
@@ -670,17 +697,25 @@ mod tests {
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
-            None,
-            None,
+            Some(Arc::new(RwLock::new(
+                PruneList::open(Some(db.clone()), "testpl").unwrap(),
+            ))),
+            Some(Arc::new(RwLock::new(
+                LeafSet::open(Some(db.clone()), "testls").unwrap(),
+            ))),
         )
         .unwrap();
         let mut backend3 = DiskBackend::new(
-            db,
+            db.clone(),
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
-            None,
-            None,
+            Some(Arc::new(RwLock::new(
+                PruneList::open(Some(db.clone()), "testpl2").unwrap(),
+            ))),
+            Some(Arc::new(RwLock::new(
+                LeafSet::open(Some(db), "testls2").unwrap(),
+            ))),
         )
         .unwrap();
         backend3.sector_config.as_mut().unwrap().sector_id = 1;
@@ -706,8 +741,12 @@ mod tests {
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
-            None,
-            None,
+            Some(Arc::new(RwLock::new(
+                PruneList::open(Some(db.clone()), "testpl").unwrap(),
+            ))),
+            Some(Arc::new(RwLock::new(
+                LeafSet::open(Some(db.clone()), "testls").unwrap(),
+            ))),
         )
         .unwrap();
         let mut backend2 = DiskBackend::new(
@@ -715,17 +754,25 @@ mod tests {
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
-            None,
-            None,
+            Some(Arc::new(RwLock::new(
+                PruneList::open(Some(db.clone()), "testpl").unwrap(),
+            ))),
+            Some(Arc::new(RwLock::new(
+                LeafSet::open(Some(db.clone()), "testls").unwrap(),
+            ))),
         )
         .unwrap();
         let mut backend3 = DiskBackend::new(
-            db,
+            db.clone(),
             Default::default(),
             Some(Default::default()),
             Some(Default::default()),
-            None,
-            None,
+            Some(Arc::new(RwLock::new(
+                PruneList::open(Some(db.clone()), "testpl").unwrap(),
+            ))),
+            Some(Arc::new(RwLock::new(
+                LeafSet::open(Some(db), "testls").unwrap(),
+            ))),
         )
         .unwrap();
         backend3.sector_config.as_mut().unwrap().sector_id = 1;

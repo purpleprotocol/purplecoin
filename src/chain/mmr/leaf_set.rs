@@ -15,6 +15,7 @@
 //! Compact (roaring) bitmap representing the set of leaf positions
 //! that exist and are not currently pruned in the MMR.
 
+use parking_lot::{RwLock, RwLockReadGuard};
 use triomphe::Arc;
 
 use crate::chain::backend::disk::DB;
@@ -159,8 +160,34 @@ impl LeafSet {
         self.len() == 0
     }
 
+    /// Number of positions up to index n in the leaf set
+    #[must_use]
+    pub fn n_unpruned_leaves_to_index(&self, to_index: u64) -> u64 {
+        self.bitmap.range_cardinality(0..to_index as u32)
+    }
+
     /// Iterator over positionns in the `leaf_set` (all leaf positions).
     pub fn iter(&self) -> impl Iterator<Item = u64> + '_ {
         self.bitmap.iter().map(u64::from)
+    }
+}
+
+pub struct LeafSetRwLockIter<'a> {
+    guard: RwLockReadGuard<'a, LeafSet>,
+}
+
+impl<'a> LeafSetRwLockIter<'a> {
+    #[must_use]
+    pub fn new(guard: RwLockReadGuard<'a, LeafSet>) -> Self {
+        Self { guard }
+    }
+}
+
+impl<'a> IntoIterator for &'a LeafSetRwLockIter<'a> {
+    type Item = u64;
+    type IntoIter = impl Iterator<Item = u64> + 'a;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.guard.bitmap.iter().map(u64::from)
     }
 }

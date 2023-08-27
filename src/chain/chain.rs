@@ -50,13 +50,16 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Chain<B> {
             }
 
             let mut backend = backend.clone();
-            let scfg = SectorConfig::new(config.get_chain_key(i), i, false, false, false);
+            let scfg = SectorConfig::new(config.get_sector_key(i), i, false, false, false);
             backend.set_sector_config(scfg);
+            let prune_list_key = format!("{}.pl", config.get_sector_key(i));
+            let leaf_set_key = format!("{}.ls", config.get_sector_key(i));
+
             let prune_list = Arc::new(RwLock::new(
-                PruneList::open(backend.db_handle(), config.get_chain_key(i)).unwrap(),
+                PruneList::open(backend.db_handle(), prune_list_key.as_str()).unwrap(),
             ));
             let leaf_set = Arc::new(RwLock::new(
-                LeafSet::open(backend.db_handle(), config.get_chain_key(i)).unwrap(),
+                LeafSet::open(backend.db_handle(), leaf_set_key.as_str()).unwrap(),
             ));
             backend.set_prune_list(prune_list);
             backend.set_leaf_set(leaf_set);
