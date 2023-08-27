@@ -805,6 +805,10 @@ impl BlockHeader {
         let mut block_bloom =
             BloomFilterHash256::new(bloom_data.len(), BLOCK_HEADER_BLOOM_FP_RATE, bloom_seed);
 
+        for d in bloom_data.iter() {
+            block_bloom.inner.set(d);
+        }
+
         Ok(Self {
             chain_id: prev.chain_id,
             height: prev.height + 1,
