@@ -32,7 +32,7 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 use std::cmp;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{self, prelude::*, BufReader, Cursor};
 use triomphe::Arc;
 
@@ -752,13 +752,14 @@ impl BlockHeader {
             poc.push(poc0);
         }
 
-        let mut tx_hashes: Vec<Hash256> = data
-            .txs
-            .iter()
-            .map(|tx| tx.hash().unwrap())
-            .copied()
-            .collect();
-        let mut bloom_data = tx_hashes.clone();
+        let mut tx_hashes = vec![];
+        let mut bloom_data = vec![];
+        let iter = data.txs.iter().map(|tx| tx.hash().unwrap());
+        for h in iter {
+            tx_hashes.push(*h);
+            bloom_data.push(*h);
+        }
+
         let tx_root = match tx_hashes.len() {
             0 => Hash256::zero(),
 
@@ -795,7 +796,6 @@ impl BlockHeader {
             buf.push(Hash256::hash_from_slice(o.script_hash.0, key));
             buf
         }));
-        bloom_data.dedup();
 
         let bloom_seed_hash = Hash256::hash_from_slice(
             prev.hash().unwrap().0,
@@ -805,7 +805,7 @@ impl BlockHeader {
         let mut block_bloom =
             BloomFilterHash256::new(bloom_data.len(), BLOCK_HEADER_BLOOM_FP_RATE, bloom_seed);
 
-        for d in bloom_data.iter() {
+        for d in &bloom_data {
             block_bloom.inner.set(d);
         }
 
