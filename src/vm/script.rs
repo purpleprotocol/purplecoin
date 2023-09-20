@@ -6,7 +6,7 @@
 
 use crate::consensus::SCRIPT_LIMIT_OPCODES;
 use crate::primitives::{Address, Hash160, Input, Output};
-use crate::vm::internal::VmTerm;
+use crate::vm::internal::{VmTerm, Float32Wrapper, Float64Wrapper};
 use crate::vm::opcodes::OP;
 use bincode::{Decode, Encode};
 use bitvec::prelude::*;
@@ -462,6 +462,25 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 16;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomFloat32Var) => {
+                            frame.stack.push(VmTerm::Float32(Float32Wrapper(rng.gen::<f32>())));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 4;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomFloat64Var) => {
+                            frame.stack.push(VmTerm::Float64(Float64Wrapper(rng.gen::<f64>())));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 8;
+                        }
+
+                        ScriptExecutorState::ExpectingRandomTerm(OP::RandomDecimalVar) => {
+                            // TODO
+                            unimplemented!();
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Call) => {
@@ -2827,6 +2846,18 @@ impl<'a> ScriptExecutor<'a> {
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned128Var);
                 }
 
+                ScriptEntry::Opcode(OP::RandomFloat32Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomFloat32Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomFloat64Var) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomFloat64Var);
+                }
+
+                ScriptEntry::Opcode(OP::RandomDecimalVar) => {
+                    self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomDecimalVar);
+                }
+
                 ScriptEntry::Opcode(OP::Hash160Var) => {
                     self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash160Var);
                 }
@@ -2887,6 +2918,18 @@ impl<'a> ScriptExecutor<'a> {
 
                 ScriptEntry::Opcode(OP::SignedBigVar) => {
                     self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::SignedBigVar);
+                }
+
+                ScriptEntry::Opcode(OP::Float32Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float32Var);
+                }
+
+                ScriptEntry::Opcode(OP::Float64Var) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float64Var);
+                }
+
+                ScriptEntry::Opcode(OP::DecimalVar) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::DecimalVar);
                 }
 
                 ScriptEntry::Opcode(OP::Hash160ArrayVar) => {
@@ -2962,6 +3005,18 @@ impl<'a> ScriptExecutor<'a> {
                 ScriptEntry::Opcode(OP::SignedBigArrayVar) => {
                     self.state =
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::SignedBigArrayVar);
+                }
+
+                ScriptEntry::Opcode(OP::Float32ArrayVar) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float32ArrayVar);
+                }
+
+                ScriptEntry::Opcode(OP::Float64ArrayVar) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float64ArrayVar);
+                }
+
+                ScriptEntry::Opcode(OP::DecimalArrayVar) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::DecimalArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::ArrayLen) => {
@@ -4510,8 +4565,11 @@ impl ScriptParser {
                 Some(OP::Signed16Var) => impl_parser_expecting_bytes!(self, OP::Unsigned16Var, 2),
                 Some(OP::Unsigned32Var) => impl_parser_expecting_bytes!(self, OP::Unsigned32Var, 4),
                 Some(OP::Signed32Var) => impl_parser_expecting_bytes!(self, OP::Unsigned32Var, 4),
+                Some(OP::Float32Var) => impl_parser_expecting_bytes!(self, OP::Float32Var, 4),
                 Some(OP::Unsigned64Var) => impl_parser_expecting_bytes!(self, OP::Unsigned64Var, 8),
                 Some(OP::Signed64Var) => impl_parser_expecting_bytes!(self, OP::Unsigned64Var, 8),
+                Some(OP::Float64Var) => impl_parser_expecting_bytes!(self, OP::Float64Var, 8),
+                // Some(OP::DecimalVar) => impl_parser_expecting_bytes!(self, OP::DecimalVar, 8), // TODO
                 Some(OP::Unsigned128Var) => {
                     impl_parser_expecting_bytes!(self, OP::Unsigned128Var, 16)
                 }
@@ -4562,6 +4620,15 @@ impl ScriptParser {
                 }
                 Some(OP::SignedBigArrayVar) => {
                     impl_parser_expecting_len!(self, OP::SignedBigArrayVar)
+                }
+                Some(OP::Float32ArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::Float32ArrayVar)
+                }
+                Some(OP::Float64ArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::Float64ArrayVar)
+                }
+                Some(OP::DecimalArrayVar) => {
+                    impl_parser_expecting_len!(self, OP::DecimalArrayVar)
                 }
                 Some(OP::Substr) => impl_parser_expecting_bytes!(self, OP::Substr, 2),
                 Some(OP::TrapIfNeqType) => impl_parser_expecting_bytes!(self, OP::TrapIfNeqType, 1),
@@ -4740,7 +4807,7 @@ impl ScriptParser {
                             );
                             Ok(())
                         }
-                        OP::Unsigned32ArrayVar | OP::Signed32ArrayVar => {
+                        OP::Unsigned32ArrayVar | OP::Signed32ArrayVar | OP::Float32ArrayVar => {
                             self.state = ScriptParserState::ExpectingBytes(
                                 (*sum * 4) as usize,
                                 cf_stack.clone(),
@@ -4748,7 +4815,7 @@ impl ScriptParser {
                             );
                             Ok(())
                         }
-                        OP::Unsigned64ArrayVar | OP::Signed64ArrayVar => {
+                        OP::Unsigned64ArrayVar | OP::Signed64ArrayVar | OP::Float64ArrayVar=> {
                             self.state = ScriptParserState::ExpectingBytes(
                                 (*sum * 8) as usize,
                                 cf_stack.clone(),
@@ -4772,6 +4839,14 @@ impl ScriptParser {
                             );
                             Ok(())
                         }
+                        // OP::DecimalArrayVar => { // TODO
+                        //     self.state = ScriptParserState::ExpectingBytes(
+                        //         (*sum * 32) as usize,
+                        //         cf_stack.clone(),
+                        //         *blocks_allowed,
+                        //     );
+                        //     Ok(())
+                        // }
                         _ => unreachable!(),
                     }
                 } else {
@@ -10644,6 +10719,18 @@ mod tests {
                 ScriptEntry::Opcode(OP::GetType),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::Drop),
+                ScriptEntry::Opcode(OP::RandomFloat32Var),
+                ScriptEntry::Opcode(OP::GetType),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Drop),
+                ScriptEntry::Opcode(OP::RandomFloat64Var),
+                ScriptEntry::Opcode(OP::GetType),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Drop),
+                // ScriptEntry::Opcode(OP::RandomDecimalVar), // TODO
+                // ScriptEntry::Opcode(OP::GetType),
+                // ScriptEntry::Opcode(OP::PopToScriptOuts),
+                // ScriptEntry::Opcode(OP::Drop),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
@@ -10664,6 +10751,9 @@ mod tests {
             VmTerm::Unsigned8(0x0b),
             VmTerm::Unsigned8(0x0c),
             VmTerm::Unsigned8(0x0d),
+            VmTerm::Unsigned8(0x0f),
+            VmTerm::Unsigned8(0x10),
+            // VmTerm::Unsigned8(0x11),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -11220,6 +11310,90 @@ mod tests {
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Signed128(rng.gen::<i128>()),
             VmTerm::Signed128(rng.gen::<i128>()),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_float_32var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomFloat32Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomFloat32Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Float32(Float32Wrapper(rng.gen::<f32>())),
+            VmTerm::Float32(Float32Wrapper(rng.gen::<f32>())),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_float_64var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomFloat64Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomFloat64Var),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Float64(Float64Wrapper(rng.gen::<f64>())),
+            VmTerm::Float64(Float64Wrapper(rng.gen::<f64>())),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();

@@ -48,36 +48,45 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x17` RandomSigned32Var - Pushes a random `Signed32` onto the stack
     - [x] OP `0x18` RandomSigned64Var - Pushes a random `Signed64` onto the stack
     - [x] OP `0x19` RandomSigned128Var - Pushes a random `Signed128` onto the stack
-    - [x] OP `0x20` Hash160Var - Pushes a `Hash160` onto the stack
-    - [x] OP `0x21` Hash256Var - Pushes a `Hash256` onto the stack
-    - [x] OP `0x22` Hash512Var - Pushes a `Hash512` onto the stack
-    - [x] OP `0x23` Unsigned8Var - Pushes an `Unsigned8` onto the stack
-    - [x] OP `0x24` Unsigned16Var - Pushes an `Unsigned16` onto the stack
-    - [x] OP `0x25` Unsigned32Var - Pushes an `Unsigned32` onto the stack
-    - [x] OP `0x26` Unsigned64Var - Pushes an `Unsigned64` onto the stack
-    - [x] OP `0x27` Unsigned128Var - Pushes an `Unsigned128` onto the stack
-    - [ ] OP `0x28` UnsignedBigVar - Pushes an `UnsignedBig` onto the stack
-    - [x] OP `0x29` Signed8Var - Pushes a `Signed8` onto the stack
-    - [x] OP `0x2a` Signed16Var - Pushes a `Signed16` onto the stack
-    - [x] OP `0x2b` Signed32Var - Pushes a `Signed32` onto the stack
-    - [x] OP `0x2c` Signed64Var - Pushes a `Signed64` onto the stack
-    - [x] OP `0x2d` Signed128Var - Pushes a `Signed128` onto the stack
-    - [ ] OP `0x2e` SignedBigVar - Pushes a `SignedBig` onto the stack
-    - [x] OP `0x31` Hash160ArrayVar - Pushes a `Hash160Array` onto the stack
-    - [x] OP `0x32` Hash256ArrayVar - Pushes a `Hash256Array` onto the stack
-    - [x] OP `0x33` Hash512ArrayVar - Pushes a `Hash512Array` onto the stack
-    - [x] OP `0x34` Unsigned8ArrayVar - Pushes a `Unsigned8Array` onto the stack
-    - [x] OP `0x35` Unsigned16ArrayVar - Pushes a `Unsigned16Array` onto the stack
-    - [x] OP `0x36` Unsigned32ArrayVar - Pushes a `Unsigned32Array` onto the stack
-    - [x] OP `0x37` Unsigned64ArrayVar - Pushes a `Unsigned64` onto the stack
-    - [x] OP `0x38` Unsigned128ArrayVar - Pushes a `Unsigned128Array` onto the stack
-    - [ ] OP `0x39` UnsignedBigArrayVar - Pushes a `UnsignedBigArray` onto the stack
-    - [x] OP `0x3a` Signed8ArrayVar - Pushes a `Signed8Array` onto the stack
-    - [x] OP `0x3b` Signed16ArrayVar - Pushes a `Signed16Array` onto the stack
-    - [x] OP `0x3c` Signed32ArrayVar - Pushes a `Signed32Array` onto the stack
-    - [x] OP `0x3d` Signed64ArrayVar - Pushes a `Signed64Array` onto the stack
-    - [x] OP `0x3e` Signed128ArrayVar - Pushes a `Signed128Array` onto the stack
-    - [ ] OP `0x3f` SignedBigArrayVar - Pushes a `SignedBigArray` onto the stack
+    - [x] OP `0x20` RandomFloat32Var - Pushes a random `Float32` onto the stack
+    - [x] OP `0x21` RandomFloat64Var - Pushes a random `Float64` onto the stack
+    - [ ] OP `0x22` RandomDecimalVar - Pushes a random `Decimal` onto the stack
+    - [x] OP `0x23` Hash160Var - Pushes a `Hash160` onto the stack
+    - [x] OP `0x24` Hash256Var - Pushes a `Hash256` onto the stack
+    - [x] OP `0x25` Hash512Var - Pushes a `Hash512` onto the stack
+    - [x] OP `0x26` Unsigned8Var - Pushes an `Unsigned8` onto the stack
+    - [x] OP `0x27` Unsigned16Var - Pushes an `Unsigned16` onto the stack
+    - [x] OP `0x28` Unsigned32Var - Pushes an `Unsigned32` onto the stack
+    - [x] OP `0x29` Unsigned64Var - Pushes an `Unsigned64` onto the stack
+    - [x] OP `0x2a` Unsigned128Var - Pushes an `Unsigned128` onto the stack
+    - [ ] OP `0x2b` UnsignedBigVar - Pushes an `UnsignedBig` onto the stack
+    - [x] OP `0x2c` Signed8Var - Pushes a `Signed8` onto the stack
+    - [x] OP `0x2d` Signed16Var - Pushes a `Signed16` onto the stack
+    - [x] OP `0x2e` Signed32Var - Pushes a `Signed32` onto the stack
+    - [x] OP `0x2f` Signed64Var - Pushes a `Signed64` onto the stack
+    - [x] OP `0x30` Signed128Var - Pushes a `Signed128` onto the stack
+    - [ ] OP `0x31` SignedBigVar - Pushes a `SignedBig` onto the stack
+    - [ ] OP `0x32` Float32Var - Pushes a `Float32` onto the stack
+    - [ ] OP `0x33` Float64Var - Pushes a `Float64` onto the stack
+    - [ ] OP `0x34` DecimalVar - Pushes a `Decimal` onto the stack
+    - [x] OP `0x35` Hash160ArrayVar - Pushes a `Hash160Array` onto the stack
+    - [x] OP `0x36` Hash256ArrayVar - Pushes a `Hash256Array` onto the stack
+    - [x] OP `0x37` Hash512ArrayVar - Pushes a `Hash512Array` onto the stack
+    - [x] OP `0x38` Unsigned8ArrayVar - Pushes a `Unsigned8Array` onto the stack
+    - [x] OP `0x39` Unsigned16ArrayVar - Pushes a `Unsigned16Array` onto the stack
+    - [x] OP `0x3a` Unsigned32ArrayVar - Pushes a `Unsigned32Array` onto the stack
+    - [x] OP `0x3b` Unsigned64ArrayVar - Pushes a `Unsigned64` onto the stack
+    - [x] OP `0x3c` Unsigned128ArrayVar - Pushes a `Unsigned128Array` onto the stack
+    - [ ] OP `0x3d` UnsignedBigArrayVar - Pushes a `UnsignedBigArray` onto the stack
+    - [x] OP `0x3e` Signed8ArrayVar - Pushes a `Signed8Array` onto the stack
+    - [x] OP `0x3f` Signed16ArrayVar - Pushes a `Signed16Array` onto the stack
+    - [x] OP `0x40` Signed32ArrayVar - Pushes a `Signed32Array` onto the stack
+    - [x] OP `0x41` Signed64ArrayVar - Pushes a `Signed64Array` onto the stack
+    - [x] OP `0x42` Signed128ArrayVar - Pushes a `Signed128Array` onto the stack
+    - [ ] OP `0x43` SignedBigArrayVar - Pushes a `SignedBigArray` onto the stack
+    - [ ] OP `0x44` Float32ArrayVar - Pushes a `Float32Array` onto the stack
+    - [ ] OP `0x45` Float64ArrayVar - Pushes a `Float64Array` onto the stack
+    - [ ] OP `0x46` DecimalArrayVar - Pushes a `DecimalArray` onto the stack
     - [x] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
     - [x] OP `0x4b` GetType - Pushes on top of the stack the type code of the value currently on top of the stack as a `Unsigned8`
     - [x] OP `0x4f` ClearStack - Clears the stack

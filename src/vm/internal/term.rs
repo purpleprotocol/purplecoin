@@ -10,14 +10,19 @@ use ibig::{ibig, ubig, IBig, UBig};
 use num_traits::identities::Zero;
 use num_traits::ToPrimitive;
 use std::{fmt, mem};
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 
 const WORD_SIZE: usize = 8; // 8 bytes on 64bit machines
 pub const EMPTY_VEC_HEAP_SIZE: usize = 3 * WORD_SIZE; // 3 words
-pub const HASH_KEY_TYPE: u8 = 0x12_u8; // the allowed type of the hashing key
+pub const HASH_KEY_TYPE: u8 = 0x15_u8; // the allowed type of the hashing key
 
 const ZERO_HASH160: [u8; 20] = [0; 20];
 const ZERO_HASH256: [u8; 32] = [0; 32];
 const ZERO_HASH512: [u8; 64] = [0; 64];
+
+// TODO: check for !unimplemented!()
+// TODO: add arithmetic tests for wrappers
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum VmTerm {
@@ -36,6 +41,9 @@ pub enum VmTerm {
     Signed64(i64),
     Signed128(i128),
     SignedBig(IBig),
+    Float32(Float32Wrapper),
+    Float64(Float64Wrapper),
+    Decimal(Decimal),
     Hash160Array(Vec<[u8; 20]>),
     Hash256Array(Vec<[u8; 32]>),
     Hash512Array(Vec<[u8; 64]>),
@@ -51,6 +59,59 @@ pub enum VmTerm {
     Signed64Array(Vec<i64>),
     Signed128Array(Vec<i128>),
     SignedBigArray(Vec<IBig>),
+    Float32Array(Vec<Float32Wrapper>),
+    Float64Array(Vec<Float64Wrapper>),
+    DecimalArray(Vec<Decimal>),
+}
+
+#[derive(Clone, PartialEq, PartialOrd)]
+pub struct Float32Wrapper(pub f32);
+
+impl Float32Wrapper {
+    pub fn equals_0(&self) -> bool {
+        self.0 == 0.0_f32
+    }
+
+    pub fn equals_1(&self) -> bool {
+        self.0 == 1.0_f32
+    }
+
+    pub fn is_infinite(&self) -> bool {
+        self.0.is_infinite()
+    }
+}
+
+impl Eq for Float32Wrapper {}
+
+impl Ord for Float32Wrapper {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.partial_cmp(&other.0).unwrap_or(std::cmp::Ordering::Equal)
+    }
+}
+
+#[derive(Clone, PartialEq, PartialOrd)]
+pub struct Float64Wrapper(pub f64);
+
+impl Float64Wrapper {
+    pub fn equals_0(&self) -> bool {
+        self.0 == 0.0_f64
+    }
+
+    pub fn equals_1(&self) -> bool {
+        self.0 == 1.0_f64
+    }
+
+    pub fn is_infinite(&self) -> bool {
+        self.0.is_infinite()
+    }
+}
+
+impl Eq for Float64Wrapper {}
+
+impl Ord for Float64Wrapper {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.partial_cmp(&other.0).unwrap_or(std::cmp::Ordering::Equal)
+    }
 }
 
 macro_rules! impl_hash_debug {
@@ -83,6 +144,17 @@ macro_rules! check_array_values {
     }};
 }
 
+macro_rules! check_array_values_wrapper {
+    ($arr:expr, $val:expr) => {{
+        for v in $arr.iter() {
+            if v.0 != $val {
+                return false;
+            }
+        }
+        true
+    }};
+}
+
 impl fmt::Debug for VmTerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -101,6 +173,9 @@ impl fmt::Debug for VmTerm {
             Self::Signed64(val) => impl_normal_debug!(f, val, "Signed64"),
             Self::Signed128(val) => impl_normal_debug!(f, val, "Signed128"),
             Self::SignedBig(val) => impl_normal_debug!(f, val, "SignedBig"),
+            Self::Float32(val) => impl_normal_debug!(f, val.0, "Float32"),
+            Self::Float64(val) => impl_normal_debug!(f, val.0, "Float64"),
+            Self::Decimal(val) => impl_normal_debug!(f, val, "Decimal"),
             Self::Unsigned8Array(val) => impl_normal_debug!(f, val, "Unsigned8Array"),
             Self::Unsigned16Array(val) => impl_normal_debug!(f, val, "Unsigned16Array"),
             Self::Unsigned32Array(val) => impl_normal_debug!(f, val, "Unsigned32Array"),
@@ -113,6 +188,9 @@ impl fmt::Debug for VmTerm {
             Self::Signed64Array(val) => impl_normal_debug!(f, val, "Signed64Array"),
             Self::Signed128Array(val) => impl_normal_debug!(f, val, "Signed128Array"),
             Self::SignedBigArray(val) => impl_normal_debug!(f, val, "SignedBigArray"),
+            Self::Float32Array(val) => impl_normal_debug!(f, val.into_iter().map(|v| v.0).collect::<Vec<f32>>(), "Float32Array"),
+            Self::Float64Array(val) => impl_normal_debug!(f, val.into_iter().map(|v| v.0).collect::<Vec<f64>>(), "Float64Array"),
+            Self::DecimalArray(val) => impl_normal_debug!(f, val, "DecimalArray"),
             Self::Hash160Array(val) => impl_hash_array_debug!(f, val, "Hash160Array"),
             Self::Hash256Array(val) => impl_hash_array_debug!(f, val, "Hash256Array"),
             Self::Hash512Array(val) => impl_hash_array_debug!(f, val, "Hash512Array"),
@@ -156,6 +234,9 @@ impl VmTerm {
 
                 bytes
             }
+            Self::Float32(val) => val.0.to_le_bytes().to_vec(),
+            Self::Float64(val) => val.0.to_le_bytes().to_vec(),
+            Self::Decimal(val) => !unimplemented!(),
             Self::Unsigned8Array(val) => val.clone(),
             Self::Unsigned16Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
             Self::Unsigned32Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
@@ -181,6 +262,9 @@ impl VmTerm {
                     bytes
                 })
                 .collect(),
+            Self::Float32Array(val) => val.iter().flat_map(|v| v.0.to_le_bytes()).collect(),
+            Self::Float64Array(val) => val.iter().flat_map(|v| v.0.to_le_bytes()).collect(),
+            Self::DecimalArray(val) => unimplemented!(),
             Self::Hash160Array(val) => val.iter().flat_map(|v| v.to_vec()).collect(),
             Self::Hash256Array(val) => val.iter().flat_map(|v| v.to_vec()).collect(),
             Self::Hash512Array(val) => val.iter().flat_map(|v| v.to_vec()).collect(),
@@ -225,6 +309,21 @@ impl VmTerm {
             }
             Self::SignedBig(ref mut val) => {
                 *val += 1;
+            }
+            Self::Float32(ref mut val) => {
+                val.0 += 1.0_f32;
+                if val.is_infinite() {
+                    return None;
+                }
+            }
+            Self::Float64(ref mut val) => {
+                val.0 += 1.0_f64;
+                if val.is_infinite() {
+                    return None;
+                }
+            }
+            Self::Decimal(ref mut val) => {
+                *val = val.checked_add(dec!(1))?;
             }
             _ => {
                 return None;
@@ -273,6 +372,21 @@ impl VmTerm {
             (Self::SignedBig(ref mut lhs_val), Self::SignedBig(rhs_val)) => {
                 *lhs_val += rhs_val;
             }
+            (Self::Float32(ref mut lhs_val), Self::Float32(rhs_val)) => {
+                lhs_val.0 += rhs_val.0;
+                if lhs_val.is_infinite() {
+                    return None;
+                }
+            }
+            (Self::Float64(ref mut lhs_val), Self::Float64(rhs_val)) => {
+                lhs_val.0 += rhs_val.0;
+                if lhs_val.is_infinite() {
+                    return None;
+                }
+            }
+            (Self::Decimal(ref mut lhs_val), Self::Decimal(rhs_val)) => {
+                *lhs_val = lhs_val.checked_add(*rhs_val)?;
+            }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8Array(rhs_val)) => {
                 lhs_val.extend_from_slice(rhs_val);
             }
@@ -307,6 +421,15 @@ impl VmTerm {
                 lhs_val.extend_from_slice(rhs_val);
             }
             (Self::SignedBigArray(ref mut lhs_val), Self::SignedBigArray(rhs_val)) => {
+                lhs_val.extend_from_slice(rhs_val);
+            }
+            (Self::Float32Array(ref mut lhs_val), Self::Float32Array(rhs_val)) => {
+                lhs_val.extend_from_slice(rhs_val);
+            }
+            (Self::Float64Array(ref mut lhs_val), Self::Float64Array(rhs_val)) => {
+                lhs_val.extend_from_slice(rhs_val);
+            }
+            (Self::DecimalArray(ref mut lhs_val), Self::DecimalArray(rhs_val)) => {
                 lhs_val.extend_from_slice(rhs_val);
             }
             _ => {
@@ -356,6 +479,21 @@ impl VmTerm {
             Self::SignedBig(ref mut val) => {
                 *val -= 1;
             }
+            Self::Float32(ref mut val) => {
+                val.0 -= 1.0_f32;
+                if val.is_infinite() {
+                    return None;
+                }
+            }
+            Self::Float64(ref mut val) => {
+                val.0 -= 1.0_f64;
+                if val.is_infinite() {
+                    return None;
+                }
+            }
+            Self::Decimal(ref mut val) => {
+                *val = val.checked_sub(dec!(1))?;
+            }
             _ => {
                 return None;
             }
@@ -402,6 +540,21 @@ impl VmTerm {
             }
             (Self::SignedBig(ref mut lhs_val), Self::SignedBig(rhs_val)) => {
                 *lhs_val -= rhs_val;
+            }
+            (Self::Float32(ref mut lhs_val), Self::Float32(rhs_val)) => {
+                lhs_val.0 -= rhs_val.0;
+                if lhs_val.is_infinite() {
+                    return None;
+                }
+            }
+            (Self::Float64(ref mut lhs_val), Self::Float64(rhs_val)) => {
+                lhs_val.0 -= rhs_val.0;
+                if lhs_val.is_infinite() {
+                    return None;
+                }
+            }
+            (Self::Decimal(ref mut lhs_val), Self::Decimal(rhs_val)) => {
+                *lhs_val = lhs_val.checked_sub(*rhs_val)?;
             }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
                 for val in &mut *lhs_val {
@@ -459,6 +612,27 @@ impl VmTerm {
             (Self::SignedBigArray(ref mut lhs_val), Self::SignedBig(rhs_val)) => {
                 *lhs_val = lhs_val.iter().map(|x| x - rhs_val).collect();
             }
+            (Self::Float32Array(ref mut lhs_val), Self::Float32(rhs_val)) => {
+                for val in &mut *lhs_val {
+                    val.0 -= rhs_val.0;
+                    if val.is_infinite() {
+                        return None;
+                    }
+                }
+            }
+            (Self::Float64Array(ref mut lhs_val), Self::Float64(rhs_val)) => {
+                for val in &mut *lhs_val {
+                    val.0 -= rhs_val.0;
+                    if val.is_infinite() {
+                        return None;
+                    }
+                }
+            }
+            (Self::DecimalArray(ref mut lhs_val), Self::Decimal(rhs_val)) => {
+                for val in &mut *lhs_val {
+                    *val = val.checked_sub(*rhs_val)?;
+                }
+            }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8Array(rhs_val)) => {
                 for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
                     *x = x.checked_sub(*y)?;
@@ -522,6 +696,27 @@ impl VmTerm {
                     .zip(rhs_val.iter())
                     .map(|(x, y)| x - y)
                     .collect();
+            }
+            (Self::Float32Array(ref mut lhs_val), Self::Float32Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    x.0 -= y.0;
+                    if x.is_infinite() {
+                        return None;
+                    }
+                }
+            }
+            (Self::Float64Array(ref mut lhs_val), Self::Float64Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    x.0 -= y.0;
+                    if x.is_infinite() {
+                        return None;
+                    }
+                }
+            }
+            (Self::DecimalArray(ref mut lhs_val), Self::DecimalArray(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x = x.checked_sub(*y)?;
+                }
             }
             _ => {
                 return None;
@@ -574,6 +769,21 @@ impl VmTerm {
             (Self::SignedBig(ref mut lhs_val), Self::SignedBig(rhs_val)) => {
                 *lhs_val *= rhs_val;
             }
+            (Self::Float32(ref mut lhs_val), Self::Float32(rhs_val)) => {
+                lhs_val.0 *= rhs_val.0;
+                if lhs_val.is_infinite() {
+                    return None;
+                }
+            }
+            (Self::Float64(ref mut lhs_val), Self::Float64(rhs_val)) => {
+                lhs_val.0 *= rhs_val.0;
+                if lhs_val.is_infinite() {
+                    return None;
+                }
+            }
+            (Self::Decimal(ref mut lhs_val), Self::Decimal(rhs_val)) => {
+                *lhs_val = lhs_val.checked_mul(*rhs_val)?;
+            }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
                 for x in &mut *lhs_val {
                     *x = x.checked_mul(*rhs_val)?;
@@ -629,6 +839,27 @@ impl VmTerm {
             }
             (Self::SignedBigArray(ref mut lhs_val), Self::SignedBig(rhs_val)) => {
                 *lhs_val = lhs_val.iter().map(|x| x * rhs_val).collect();
+            }
+            (Self::Float32Array(ref mut lhs_val), Self::Float32(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    x.0 *= rhs_val.0;
+                    if x.is_infinite() {
+                        return None;
+                    }
+                }
+            }
+            (Self::Float64Array(ref mut lhs_val), Self::Float64(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    x.0 *= rhs_val.0;
+                    if x.is_infinite() {
+                        return None;
+                    }
+                }
+            }
+            (Self::DecimalArray(ref mut lhs_val), Self::Decimal(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    *x = x.checked_mul(*rhs_val)?;
+                }
             }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8Array(rhs_val)) => {
                 for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
@@ -693,6 +924,27 @@ impl VmTerm {
                     .zip(rhs_val.iter())
                     .map(|(x, y)| x * y)
                     .collect();
+            }
+            (Self::Float32Array(ref mut lhs_val), Self::Float32Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    x.0 *= y.0;
+                    if x.is_infinite() {
+                        return None;
+                    }
+                }
+            }
+            (Self::Float64Array(ref mut lhs_val), Self::Float64Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    x.0 *= y.0;
+                    if x.is_infinite() {
+                        return None;
+                    }
+                }
+            }
+            (Self::DecimalArray(ref mut lhs_val), Self::DecimalArray(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x = x.checked_mul(*y)?;
+                }
             }
             _ => {
                 return None;
@@ -745,6 +997,27 @@ impl VmTerm {
             (Self::SignedBig(ref mut lhs_val), Self::SignedBig(rhs_val)) => {
                 *lhs_val /= rhs_val;
             }
+            (Self::Float32(ref mut lhs_val), Self::Float32(rhs_val)) => {
+                if rhs_val.equals_0() {
+                    return None;
+                }
+                lhs_val.0 /= rhs_val.0;
+                if lhs_val.is_infinite() {
+                    return None;
+                }
+            }
+            (Self::Float64(ref mut lhs_val), Self::Float64(rhs_val)) => {
+                if rhs_val.equals_0() {
+                    return None;
+                }
+                lhs_val.0 /= rhs_val.0;
+                if lhs_val.is_infinite() {
+                    return None;
+                }
+            }
+            (Self::Decimal(ref mut lhs_val), Self::Decimal(rhs_val)) => {
+                *lhs_val = lhs_val.checked_div(*rhs_val)?;
+            }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
                 for x in &mut *lhs_val {
                     *x = x.checked_div(*rhs_val)?;
@@ -800,6 +1073,33 @@ impl VmTerm {
             }
             (Self::SignedBigArray(ref mut lhs_val), Self::SignedBig(rhs_val)) => {
                 *lhs_val = lhs_val.iter().map(|x| x / rhs_val).collect();
+            }
+            (Self::Float32Array(ref mut lhs_val), Self::Float32(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    if rhs_val.equals_0() {
+                        return None;
+                    }
+                    x.0 /= rhs_val.0;
+                    if x.is_infinite() {
+                        return None;
+                    }
+                }
+            }
+            (Self::Float64Array(ref mut lhs_val), Self::Float64(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    if rhs_val.equals_0() {
+                        return None;
+                    }
+                    x.0 /= rhs_val.0;
+                    if x.is_infinite() {
+                        return None;
+                    }
+                }
+            }
+            (Self::DecimalArray(ref mut lhs_val), Self::Decimal(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    *x = x.checked_div(*rhs_val)?;
+                }
             }
             (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8Array(rhs_val)) => {
                 for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
@@ -865,6 +1165,33 @@ impl VmTerm {
                     .map(|(x, y)| x / y)
                     .collect();
             }
+            (Self::Float32Array(ref mut lhs_val), Self::Float32Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    if y.equals_0() {
+                        return None;
+                    }
+                    x.0 /= y.0;
+                    if x.is_infinite() {
+                        return None;
+                    }
+                }
+            }
+            (Self::Float64Array(ref mut lhs_val), Self::Float64Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    if y.equals_0() {
+                        return None;
+                    }
+                    x.0 /= y.0;
+                    if x.is_infinite() {
+                        return None;
+                    }
+                }
+            }
+            (Self::DecimalArray(ref mut lhs_val), Self::DecimalArray(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x = x.checked_div(*y)?;
+                }
+            }
             _ => {
                 return None;
             }
@@ -882,8 +1209,8 @@ impl VmTerm {
             Self::Hash512(_) => 64,
             Self::Unsigned8(_) | Self::Signed8(_) => 1,
             Self::Unsigned16(_) | Self::Signed16(_) => 2,
-            Self::Unsigned32(_) | Self::Signed32(_) => 4,
-            Self::Unsigned64(_) | Self::Signed64(_) => 8,
+            Self::Unsigned32(_) | Self::Signed32(_) | Self::Float32(_) => 4,
+            Self::Unsigned64(_) | Self::Signed64(_) | Self::Float64(_) => 8,
             Self::Unsigned128(_) | Self::Signed128(_) => 16,
             Self::UnsignedBig(v) => {
                 (v.bit_len() >> 3) + EMPTY_VEC_HEAP_SIZE // additional vec allocated by ubig
@@ -893,6 +1220,7 @@ impl VmTerm {
                 let v: UBig = v.try_into().unwrap();
                 (v.bit_len() >> 3) + EMPTY_VEC_HEAP_SIZE + WORD_SIZE // additional vec allocated by ibig plus sign
             }
+            Self::Decimal(val) => unimplemented!(),
             Self::Hash160Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 20,
             Self::Hash256Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 32,
             Self::Hash512Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 64,
@@ -923,6 +1251,9 @@ impl VmTerm {
                 }
                 size
             }
+            Self::Float32Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 4,
+            Self::Float64Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 8,
+            Self::DecimalArray(val) => unimplemented!(),
         }
     }
 
@@ -945,21 +1276,27 @@ impl VmTerm {
             Self::Signed64(_) => 0x0c_u8,
             Self::Signed128(_) => 0x0d_u8,
             Self::SignedBig(_) => 0x0e_u8,
-            Self::Hash160Array(_) => 0x0f_u8,
-            Self::Hash256Array(_) => 0x10_u8,
-            Self::Hash512Array(_) => 0x11_u8,
+            Self::Float32(_) => 0x0f_u8,
+            Self::Float64(_) => 0x10_u8,
+            Self::Decimal(_) => 0x11_u8,
+            Self::Hash160Array(_) => 0x12_u8,
+            Self::Hash256Array(_) => 0x13_u8,
+            Self::Hash512Array(_) => 0x14_u8,
             Self::Unsigned8Array(_) => HASH_KEY_TYPE,
-            Self::Unsigned16Array(_) => 0x13_u8,
-            Self::Unsigned32Array(_) => 0x14_u8,
-            Self::Unsigned64Array(_) => 0x15_u8,
-            Self::Unsigned128Array(_) => 0x16_u8,
-            Self::UnsignedBigArray(_) => 0x17_u8,
-            Self::Signed8Array(_) => 0x18_u8,
-            Self::Signed16Array(_) => 0x19_u8,
-            Self::Signed32Array(_) => 0x1a_u8,
-            Self::Signed64Array(_) => 0x1b_u8,
-            Self::Signed128Array(_) => 0x1c_u8,
-            Self::SignedBigArray(_) => 0x1d_u8,
+            Self::Unsigned16Array(_) => 0x16_u8,
+            Self::Unsigned32Array(_) => 0x17_u8,
+            Self::Unsigned64Array(_) => 0x18_u8,
+            Self::Unsigned128Array(_) => 0x19_u8,
+            Self::UnsignedBigArray(_) => 0x1a_u8,
+            Self::Signed8Array(_) => 0x1b_u8,
+            Self::Signed16Array(_) => 0x1c_u8,
+            Self::Signed32Array(_) => 0x1d_u8,
+            Self::Signed64Array(_) => 0x1e_u8,
+            Self::Signed128Array(_) => 0x1f_u8,
+            Self::SignedBigArray(_) => 0x20_u8,
+            Self::Float32Array(_) => 0x21_u8,
+            Self::Float64Array(_) => 0x22_u8,
+            Self::DecimalArray(_) => 0x23_u8,
         }
     }
 
@@ -982,6 +1319,9 @@ impl VmTerm {
             Self::Signed64(val) => *val == 0_i64,
             Self::Signed128(val) => *val == 0_i128,
             Self::SignedBig(val) => *val == ibig!(0),
+            Self::Float32(val) => val.equals_0(),
+            Self::Float64(val) => val.equals_0(),
+            Self::Decimal(val) => *val == dec!(0),
             Self::Hash160Array(val) => check_array_values!(*val, ZERO_HASH160),
             Self::Hash256Array(val) => check_array_values!(*val, ZERO_HASH256),
             Self::Hash512Array(val) => check_array_values!(*val, ZERO_HASH512),
@@ -997,6 +1337,9 @@ impl VmTerm {
             Self::Signed64Array(val) => check_array_values!(*val, 0_i64),
             Self::Signed128Array(val) => check_array_values!(*val, 0_i128),
             Self::SignedBigArray(val) => check_array_values!(*val, ibig!(0)),
+            Self::Float32Array(val) => check_array_values_wrapper!(*val, 0_f32),
+            Self::Float64Array(val) => check_array_values_wrapper!(*val, 0_f64),
+            Self::DecimalArray(val) => check_array_values!(*val, dec!(0)),
         }
     }
 
@@ -1031,6 +1374,9 @@ impl VmTerm {
             Self::Signed64(val) => *val == 1_i64,
             Self::Signed128(val) => *val == 1_i128,
             Self::SignedBig(val) => *val == ibig!(1),
+            Self::Float32(val) => val.equals_1(),
+            Self::Float64(val) => val.equals_1(),
+            Self::Decimal(val) => *val == dec!(1),
             Self::Hash160Array(val) => {
                 let mut arr: [u8; 20] = [0; 20];
                 arr[0] = 0x01;
@@ -1058,6 +1404,9 @@ impl VmTerm {
             Self::Signed64Array(val) => check_array_values!(*val, 1_i64),
             Self::Signed128Array(val) => check_array_values!(*val, 1_i128),
             Self::SignedBigArray(val) => check_array_values!(*val, ibig!(1)),
+            Self::Float32Array(val) => check_array_values_wrapper!(*val, 1_f32),
+            Self::Float64Array(val) => check_array_values_wrapper!(*val, 1_f64),
+            Self::DecimalArray(val) => check_array_values!(*val, dec!(1)),
         }
     }
 
@@ -1080,6 +1429,9 @@ impl VmTerm {
             (Self::Signed64(_), Self::Signed64(_)) => true,
             (Self::Signed128(_), Self::Signed128(_)) => true,
             (Self::SignedBig(_), Self::SignedBig(_)) => true,
+            (Self::Float32(_), Self::Float32(_)) => true,
+            (Self::Float64(_), Self::Float64(_)) => true,
+            (Self::Decimal(_), Self::Decimal(_)) => true,
             (Self::Hash160Array(arr1), Self::Hash160Array(arr2)) => arr1.len() == arr2.len(),
             (Self::Hash256Array(arr1), Self::Hash256Array(arr2)) => arr1.len() == arr2.len(),
             (Self::Hash512Array(arr1), Self::Hash512Array(arr2)) => arr1.len() == arr2.len(),
@@ -1099,6 +1451,9 @@ impl VmTerm {
             (Self::Signed64Array(arr1), Self::Signed64Array(arr2)) => arr1.len() == arr2.len(),
             (Self::Signed128Array(arr1), Self::Signed128Array(arr2)) => arr1.len() == arr2.len(),
             (Self::SignedBigArray(arr1), Self::SignedBigArray(arr2)) => arr1.len() == arr2.len(),
+            (Self::Float32Array(arr1), Self::Float32Array(arr2)) => arr1.len() == arr2.len(),
+            (Self::Float64Array(arr1), Self::Float64Array(arr2)) => arr1.len() == arr2.len(),
+            (Self::DecimalArray(arr1), Self::DecimalArray(arr2)) => arr1.len() == arr2.len(),
             _ => false,
         }
     }
@@ -1122,6 +1477,9 @@ impl VmTerm {
             Self::Signed64(_) => false,
             Self::Signed128(_) => false,
             Self::SignedBig(_) => false,
+            Self::Float32(_) => false,
+            Self::Float64(_) => false,
+            Self::Decimal(_) => false,
             Self::Hash160Array(_) => true,
             Self::Hash256Array(_) => true,
             Self::Hash512Array(_) => true,
@@ -1137,6 +1495,9 @@ impl VmTerm {
             Self::Signed64Array(_) => true,
             Self::Signed128Array(_) => true,
             Self::SignedBigArray(_) => true,
+            Self::Float32Array(_) => true,
+            Self::Float64Array(_) => true,
+            Self::DecimalArray(_) => true,
         }
     }
 
@@ -1159,6 +1520,9 @@ impl VmTerm {
             (Self::Signed64Array(_), Self::Signed64Array(_)) => true,
             (Self::Signed128Array(_), Self::Signed128Array(_)) => true,
             (Self::SignedBigArray(_), Self::SignedBigArray(_)) => true,
+            (Self::Float32Array(_), Self::Float32Array(_)) => true,
+            (Self::Float64Array(_), Self::Float64Array(_)) => true,
+            (Self::DecimalArray(_), Self::DecimalArray(_)) => true,
             _ => false,
         }
     }
@@ -1182,6 +1546,9 @@ impl VmTerm {
             Self::Signed64Array(arr) => arr.len(),
             Self::Signed128Array(arr) => arr.len(),
             Self::SignedBigArray(arr) => arr.len(),
+            Self::Float32Array(arr) => arr.len(),
+            Self::Float64Array(arr) => arr.len(),
+            Self::DecimalArray(arr) => arr.len(),
             _ => 0,
         }
     }
@@ -1293,6 +1660,27 @@ impl VmTerm {
                 Some((
                     VmTerm::SignedBigArray(left.to_vec()),
                     VmTerm::SignedBigArray(right.to_vec()),
+                ))
+            },
+            Self::Float32Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Float32Array(left.to_vec()),
+                    VmTerm::Float32Array(right.to_vec()),
+                ))
+            },
+            Self::Float64Array(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::Float64Array(left.to_vec()),
+                    VmTerm::Float64Array(right.to_vec()),
+                ))
+            },
+            Self::DecimalArray(arr) => unsafe {
+                let (left, right) = arr.split_at_unchecked(mid);
+                Some((
+                    VmTerm::DecimalArray(left.to_vec()),
+                    VmTerm::DecimalArray(right.to_vec()),
                 ))
             },
             _ => None,
@@ -2125,6 +2513,15 @@ impl VmTerm {
             (Self::SignedBigArray(value), Self::SignedBigArray(ref mut other)) => {
                 value.append(other);
             }
+            (Self::Float32Array(value), Self::Float32Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::Float64Array(value), Self::Float64Array(ref mut other)) => {
+                value.append(other);
+            }
+            (Self::DecimalArray(value), Self::DecimalArray(ref mut other)) => {
+                value.append(other);
+            }
             _ => {
                 return None;
             }
@@ -2246,28 +2643,46 @@ impl Encode for VmTerm {
                 }
             }
 
-            Self::Hash160Array(ref v) => {
-                bincode::Encode::encode(&0x13_u8, encoder)?;
-                bincode::Encode::encode(v, encoder)?;
+            Self::Float32(ref v) => {
+                bincode::Encode::encode(&0x11_u8, encoder)?;
+                let v: [u8; 4] = v.0.to_le_bytes();
+                bincode::Encode::encode(&v, encoder)?;
             }
 
-            Self::Hash256Array(ref v) => {
+            Self::Float64(ref v) => {
+                bincode::Encode::encode(&0x12_u8, encoder)?;
+                let v: [u8; 8] = v.0.to_le_bytes();
+                bincode::Encode::encode(&v, encoder)?;
+            }
+
+            Self::Decimal(ref v) => {
+                bincode::Encode::encode(&0x13_u8, encoder)?;
+                unimplemented!();
+                // bincode::Encode::encode(&v, encoder)?;
+            }
+
+            Self::Hash160Array(ref v) => {
                 bincode::Encode::encode(&0x14_u8, encoder)?;
                 bincode::Encode::encode(v, encoder)?;
             }
 
-            Self::Hash512Array(ref v) => {
+            Self::Hash256Array(ref v) => {
                 bincode::Encode::encode(&0x15_u8, encoder)?;
                 bincode::Encode::encode(v, encoder)?;
             }
 
-            Self::Unsigned8Array(ref v) => {
+            Self::Hash512Array(ref v) => {
                 bincode::Encode::encode(&0x16_u8, encoder)?;
                 bincode::Encode::encode(v, encoder)?;
             }
 
-            Self::Unsigned16Array(ref v) => {
+            Self::Unsigned8Array(ref v) => {
                 bincode::Encode::encode(&0x17_u8, encoder)?;
+                bincode::Encode::encode(v, encoder)?;
+            }
+
+            Self::Unsigned16Array(ref v) => {
+                bincode::Encode::encode(&0x18_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 2);
                 for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
@@ -2276,7 +2691,7 @@ impl Encode for VmTerm {
             }
 
             Self::Unsigned32Array(ref v) => {
-                bincode::Encode::encode(&0x18_u8, encoder)?;
+                bincode::Encode::encode(&0x19_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 4);
                 for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
@@ -2285,7 +2700,7 @@ impl Encode for VmTerm {
             }
 
             Self::Unsigned64Array(ref v) => {
-                bincode::Encode::encode(&0x19_u8, encoder)?;
+                bincode::Encode::encode(&0x1a_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 8);
                 for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
@@ -2294,7 +2709,7 @@ impl Encode for VmTerm {
             }
 
             Self::Unsigned128Array(ref v) => {
-                bincode::Encode::encode(&0x1a_u8, encoder)?;
+                bincode::Encode::encode(&0x1b_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 16);
                 for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
@@ -2303,7 +2718,7 @@ impl Encode for VmTerm {
             }
 
             Self::UnsignedBigArray(ref v) => {
-                bincode::Encode::encode(&0x1b_u8, encoder)?;
+                bincode::Encode::encode(&0x1c_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 32);
                 for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
@@ -2312,12 +2727,12 @@ impl Encode for VmTerm {
             }
 
             Self::Signed8Array(ref v) => {
-                bincode::Encode::encode(&0x1c_u8, encoder)?;
+                bincode::Encode::encode(&0x1d_u8, encoder)?;
                 bincode::Encode::encode(v, encoder)?;
             }
 
             Self::Signed16Array(ref v) => {
-                bincode::Encode::encode(&0x1d_u8, encoder)?;
+                bincode::Encode::encode(&0x1e_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 2);
                 for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
@@ -2326,7 +2741,7 @@ impl Encode for VmTerm {
             }
 
             Self::Signed32Array(ref v) => {
-                bincode::Encode::encode(&0x1e_u8, encoder)?;
+                bincode::Encode::encode(&0x1f_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 4);
                 for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
@@ -2335,7 +2750,7 @@ impl Encode for VmTerm {
             }
 
             Self::Signed64Array(ref v) => {
-                bincode::Encode::encode(&0x1f_u8, encoder)?;
+                bincode::Encode::encode(&0x20_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 8);
                 for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
@@ -2344,7 +2759,7 @@ impl Encode for VmTerm {
             }
 
             Self::Signed128Array(ref v) => {
-                bincode::Encode::encode(&0x20_u8, encoder)?;
+                bincode::Encode::encode(&0x21_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * 16);
                 for v in v {
                     buf.extend_from_slice(&v.to_le_bytes());
@@ -2353,7 +2768,7 @@ impl Encode for VmTerm {
             }
 
             Self::SignedBigArray(ref v) => {
-                bincode::Encode::encode(&0x21_u8, encoder)?;
+                bincode::Encode::encode(&0x22_u8, encoder)?;
                 let mut buf = Vec::with_capacity(v.len() * (32 + 1));
                 for v in v {
                     let sign = v.signum().to_f32() as i8;
@@ -2382,6 +2797,30 @@ impl Encode for VmTerm {
                     }
                 }
                 bincode::Encode::encode(&buf, encoder)?;
+            }
+
+            Self::Float32Array(ref v) => {
+                bincode::Encode::encode(&0x23_u8, encoder)?;
+                let mut buf = Vec::with_capacity(v.len() * 4);
+                for v in v {
+                    buf.extend_from_slice(&v.0.to_le_bytes());
+                }
+                bincode::Encode::encode(&buf, encoder)?;
+            }
+
+            Self::Float64Array(ref v) => {
+                bincode::Encode::encode(&0x24_u8, encoder)?;
+                let mut buf = Vec::with_capacity(v.len() * 8);
+                for v in v {
+                    buf.extend_from_slice(&v.0.to_le_bytes());
+                }
+                bincode::Encode::encode(&buf, encoder)?;
+            }
+
+            Self::DecimalArray(ref v) => {
+                bincode::Encode::encode(&0x25_u8, encoder)?;
+                unimplemented!();
+                // bincode::Encode::encode(&buf, encoder)?;
             }
         }
 
@@ -2494,6 +2933,24 @@ impl Decode for VmTerm {
             }
 
             0x10 => Ok(VmTerm::SignedBig(IBig::zero())),
+
+            0x11 => {
+                let v: [u8; 4] = bincode::Decode::decode(decoder)?;
+                let v = f32::from_le_bytes(v);
+                Ok(VmTerm::Float32(Float32Wrapper(v)))
+            }
+
+            0x12 => {
+                let v: [u8; 8] = bincode::Decode::decode(decoder)?;
+                let v = f64::from_le_bytes(v);
+                Ok(VmTerm::Float64(Float64Wrapper(v)))
+            }
+
+            0x13 => {
+                // let v: [u8; 8] = bincode::Decode::decode(decoder)?;
+                unimplemented!();
+                // Ok(VmTerm::Decimal(v))
+            }
 
             _ => Err(bincode::error::DecodeError::OtherString(
                 "invalid term type".to_owned(),
@@ -2691,6 +3148,56 @@ mod tests {
     }
 
     #[test]
+    fn test_f32_encode_decode_negative() {
+        let t = VmTerm::Float32(Float32Wrapper(-1.123));
+        let encoded = crate::codec::encode_to_vec(&t).unwrap();
+        assert_eq!(&encoded[..1], &[0x11]);
+        assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
+    }
+
+    #[test]
+    fn test_f32_encode_decode_positive() {
+        let t = VmTerm::Float32(Float32Wrapper(1.123));
+        let encoded = crate::codec::encode_to_vec(&t).unwrap();
+        assert_eq!(&encoded[..1], &[0x11]);
+        assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
+    }
+
+
+    #[test]
+    fn test_f64_encode_decode_negative() {
+        let t = VmTerm::Float64(Float64Wrapper(-1.123));
+        let encoded = crate::codec::encode_to_vec(&t).unwrap();
+        assert_eq!(&encoded[..1], &[0x12]);
+        assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
+    }
+
+    #[test]
+    fn test_f64_encode_decode_positive() {
+        let t = VmTerm::Float64(Float64Wrapper(1.123));
+        let encoded = crate::codec::encode_to_vec(&t).unwrap();
+        assert_eq!(&encoded[..1], &[0x12]);
+        assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
+    }
+
+    // TODO: uncomment when Encoder for Decimal is implemented
+    // #[test]
+    // fn test_decimal_encode_decode_negative() {
+    //     let t = VmTerm::Decimal(dec!(-1.123));
+    //     let encoded = crate::codec::encode_to_vec(&t).unwrap();
+    //     assert_eq!(&encoded[..1], &[0x13]);
+    //     assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
+    // }
+
+    // #[test]
+    // fn test_decimal_encode_decode_positive() {
+    //     let t = VmTerm::Decimal(dec!(1.123));
+    //     let encoded = crate::codec::encode_to_vec(&t).unwrap();
+    //     assert_eq!(&encoded[..1], &[0x13]);
+    //     assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
+    // }
+
+    #[test]
     fn test_equals_0() {
         assert!(VmTerm::Hash160([0; 20]).equals_0());
         assert!(VmTerm::Hash256([0; 32]).equals_0());
@@ -2707,6 +3214,9 @@ mod tests {
         assert!(VmTerm::Signed64(0).equals_0());
         assert!(VmTerm::Signed128(0).equals_0());
         assert!(VmTerm::SignedBig(ibig!(0)).equals_0());
+        assert!(VmTerm::Float32(Float32Wrapper(0.0)).equals_0());
+        assert!(VmTerm::Float64(Float64Wrapper(0.0)).equals_0());
+        assert!(VmTerm::Decimal(dec!(0.0)).equals_0());
         assert!(VmTerm::Hash160Array(vec![[0; 20], [0; 20], [0; 20]]).equals_0());
         assert!(VmTerm::Hash256Array(vec![[0; 32], [0; 32], [0; 32], [0; 32]]).equals_0());
         assert!(VmTerm::Hash512Array(vec![[0; 64], [0; 64], [0; 64], [0; 64], [0; 64]]).equals_0());
@@ -2722,6 +3232,9 @@ mod tests {
         assert!(VmTerm::Signed64Array(vec![0, 0, 0, 0, 0, 0, 0, 0, 0]).equals_0());
         assert!(VmTerm::Signed128Array(vec![0, 0, 0, 0, 0, 0, 0, 0]).equals_0());
         assert!(VmTerm::SignedBigArray(vec![ibig!(0), ibig!(0), ibig!(0)]).equals_0());
+        assert!(VmTerm::Float32Array(vec![Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0)]).equals_0());
+        assert!(VmTerm::Float64Array(vec![Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0)]).equals_0());
+        assert!(VmTerm::DecimalArray(vec![dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0)]).equals_0());
 
         assert!(!VmTerm::Hash160([1; 20]).equals_0());
         assert!(!VmTerm::Hash256([1; 32]).equals_0());
@@ -2738,6 +3251,9 @@ mod tests {
         assert!(!VmTerm::Signed64(1).equals_0());
         assert!(!VmTerm::Signed128(1).equals_0());
         assert!(!VmTerm::SignedBig(ibig!(1)).equals_0());
+        assert!(!VmTerm::Float32(Float32Wrapper(1.0)).equals_0());
+        assert!(!VmTerm::Float64(Float64Wrapper(1.0)).equals_0());
+        assert!(!VmTerm::Decimal(dec!(1.0)).equals_0());
         assert!(!VmTerm::Hash160Array(vec![[0; 20], [1; 20], [0; 20]]).equals_0());
         assert!(!VmTerm::Hash256Array(vec![[0; 32], [0; 32], [1; 32], [0; 32]]).equals_0());
         assert!(
@@ -2755,6 +3271,9 @@ mod tests {
         assert!(!VmTerm::Signed64Array(vec![0, 0, 0, 0, 0, 4, 0, 0, 0]).equals_0());
         assert!(!VmTerm::Signed128Array(vec![0, 0, 0, 0, 0, 0, 10, 0]).equals_0());
         assert!(!VmTerm::SignedBigArray(vec![ibig!(1), ibig!(1), ibig!(1)]).equals_0());
+        assert!(!VmTerm::Float32Array(vec![Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(10.1), Float32Wrapper(0.0)]).equals_0());
+        assert!(!VmTerm::Float64Array(vec![Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(10.1), Float64Wrapper(0.0)]).equals_0());
+        assert!(!VmTerm::DecimalArray(vec![dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(10.1), dec!(0.0)]).equals_0());
     }
 
     #[test]
@@ -2781,6 +3300,9 @@ mod tests {
         assert!(VmTerm::Signed64(1).equals_1());
         assert!(VmTerm::Signed128(1).equals_1());
         assert!(VmTerm::SignedBig(ibig!(1)).equals_1());
+        assert!(VmTerm::Float32(Float32Wrapper(1.0)).equals_1());
+        assert!(VmTerm::Float64(Float64Wrapper(1.0)).equals_1());
+        assert!(VmTerm::Decimal(dec!(1.0)).equals_1());
         assert!(VmTerm::Hash160Array(vec![arr_160, arr_160, arr_160]).equals_1());
         assert!(VmTerm::Hash256Array(vec![arr_256, arr_256, arr_256, arr_256]).equals_1());
         assert!(VmTerm::Hash512Array(vec![arr_512, arr_512, arr_512, arr_512, arr_512]).equals_1());
@@ -2796,6 +3318,9 @@ mod tests {
         assert!(VmTerm::Signed64Array(vec![1, 1, 1, 1, 1, 1, 1, 1, 1]).equals_1());
         assert!(VmTerm::Signed128Array(vec![1, 1, 1, 1, 1, 1, 1, 1]).equals_1());
         assert!(VmTerm::SignedBigArray(vec![ibig!(1), ibig!(1), ibig!(1)]).equals_1());
+        assert!(VmTerm::Float32Array(vec![Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0)]).equals_1());
+        assert!(VmTerm::Float64Array(vec![Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0)]).equals_1());
+        assert!(VmTerm::DecimalArray(vec![dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0)]).equals_1());
 
         assert!(!VmTerm::Hash160([0; 20]).equals_1());
         assert!(!VmTerm::Hash256([0; 32]).equals_1());
@@ -2812,6 +3337,9 @@ mod tests {
         assert!(!VmTerm::Signed64(0).equals_1());
         assert!(!VmTerm::Signed128(0).equals_1());
         assert!(!VmTerm::SignedBig(ibig!(0)).equals_1());
+        assert!(!VmTerm::Float32(Float32Wrapper(0.0)).equals_1());
+        assert!(!VmTerm::Float64(Float64Wrapper(0.0)).equals_1());
+        assert!(!VmTerm::Decimal(dec!(0.0)).equals_1());
         assert!(!VmTerm::Hash160Array(vec![[0; 20], arr_160, arr_160]).equals_1());
         assert!(!VmTerm::Hash256Array(vec![arr_256, arr_256, arr_256, [0; 32]]).equals_1());
         assert!(
@@ -2829,6 +3357,9 @@ mod tests {
         assert!(!VmTerm::Signed64Array(vec![1, 1, 1, 1, 1, 1, 1, 1, 0]).equals_1());
         assert!(!VmTerm::Signed128Array(vec![1, 1, 1, 1, 1, 1, 0, 1]).equals_1());
         assert!(!VmTerm::SignedBigArray(vec![ibig!(1), ibig!(1), ibig!(0)]).equals_1());
+        assert!(!VmTerm::Float32Array(vec![Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(0.1), Float32Wrapper(1.0)]).equals_1());
+        assert!(!VmTerm::Float64Array(vec![Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(0.1), Float64Wrapper(1.0)]).equals_1());
+        assert!(!VmTerm::DecimalArray(vec![dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(0.1), dec!(1.0)]).equals_1());
     }
 
     #[test]
@@ -2842,6 +3373,9 @@ mod tests {
         assert!(VmTerm::Unsigned64(1_u64).is_comparable(&VmTerm::Unsigned64(2_u64)));
         assert!(VmTerm::Unsigned128(1_u128).is_comparable(&VmTerm::Unsigned128(2_u128)));
         assert!(VmTerm::UnsignedBig(ubig!(1)).is_comparable(&VmTerm::UnsignedBig(ubig!(2))));
+        assert!(VmTerm::Float32(Float32Wrapper(1.123_f32)).is_comparable(&VmTerm::Float32(Float32Wrapper(10.3153_f32))));
+        assert!(VmTerm::Float64(Float64Wrapper(5.135_f64)).is_comparable(&VmTerm::Float64(Float64Wrapper(10.1212_f64))));
+        assert!(VmTerm::Decimal(dec!(5.135)).is_comparable(&VmTerm::Decimal(dec!(10.1212))));
         assert!(VmTerm::Signed8(1_i8).is_comparable(&VmTerm::Signed8(2_i8)));
         assert!(VmTerm::Signed16(1_i16).is_comparable(&VmTerm::Signed16(2_i16)));
         assert!(VmTerm::Signed32(1_i32).is_comparable(&VmTerm::Signed32(2_i32)));
@@ -2879,7 +3413,13 @@ mod tests {
             .is_comparable(&VmTerm::Signed128Array(vec!(2_i128, 2_i128))));
         assert!(VmTerm::SignedBigArray(vec!(ibig!(1), ibig!(1)))
             .is_comparable(&VmTerm::SignedBigArray(vec!(ibig!(2), ibig!(2)))));
-
+        assert!(VmTerm::Float32Array(vec!(Float32Wrapper(1.3241_f32), Float32Wrapper(3.3453_f32)))
+            .is_comparable(&VmTerm::Float32Array(vec!(Float32Wrapper(35.3253_f32), Float32Wrapper(13.134314_f32)))));
+        assert!(VmTerm::Float64Array(vec!(Float64Wrapper(1.3241_f64), Float64Wrapper(3.3453_f64)))
+            .is_comparable(&VmTerm::Float64Array(vec!(Float64Wrapper(35.3253_f64), Float64Wrapper(13.134314_f64)))));
+        assert!(VmTerm::DecimalArray(vec!(dec!(1.3241), dec!(3.3453)))
+            .is_comparable(&VmTerm::DecimalArray(vec!(dec!(35.3253), dec!(13.134314)))));
+        
         assert!(!VmTerm::Hash160Array(vec!([1; 20], [1; 20], [1; 20]))
             .is_comparable(&VmTerm::Hash160Array(vec!([2; 20]))));
         assert!(!VmTerm::Hash256Array(vec!([1; 32], [1; 32], [1; 32]))
@@ -2910,6 +3450,12 @@ mod tests {
             .is_comparable(&VmTerm::Signed128Array(vec!(2_i128, 2_i128))));
         assert!(!VmTerm::SignedBigArray(vec!(ibig!(1)))
             .is_comparable(&VmTerm::SignedBigArray(vec!(ibig!(2), ibig!(2)))));
+        assert!(!VmTerm::Float32Array(vec!(Float32Wrapper(1.12341_f32)))
+            .is_comparable(&VmTerm::Float32Array(vec!(Float32Wrapper(1.12341_f32), Float32Wrapper(314.2424_f32)))));
+        assert!(!VmTerm::Float64Array(vec!(Float64Wrapper(35.353_f64)))
+            .is_comparable(&VmTerm::Float64Array(vec!(Float64Wrapper(235.3512_f64), Float64Wrapper(31.134_f64)))));
+        assert!(!VmTerm::DecimalArray(vec!(dec!(35.353)))
+            .is_comparable(&VmTerm::DecimalArray(vec!(dec!(235.3512), dec!(31.134)))));
 
         assert!(!VmTerm::Hash160([1; 20]).is_comparable(&VmTerm::Hash256([2; 32])));
         assert!(!VmTerm::Hash256([1; 32]).is_comparable(&VmTerm::Hash512([2; 64])));
@@ -2926,6 +3472,9 @@ mod tests {
         assert!(!VmTerm::Unsigned64(1_u64).is_comparable(&VmTerm::Signed64(2_i64)));
         assert!(!VmTerm::Unsigned128(1_u128).is_comparable(&VmTerm::Signed128(2_i128)));
         assert!(!VmTerm::UnsignedBig(ubig!(1)).is_comparable(&VmTerm::SignedBig(ibig!(2))));
+        assert!(!VmTerm::Float32(Float32Wrapper(12.1241423_f32)).is_comparable(&VmTerm::Float64(Float64Wrapper(35.32553_f64))));
+        assert!(!VmTerm::Decimal(dec!(12.1241423)).is_comparable(&VmTerm::Float32(Float32Wrapper(12.1241423_f32))));
+        assert!(!VmTerm::Decimal(dec!(12.1241423)).is_comparable(&VmTerm::Float64(Float64Wrapper(35.32553_f64))));
         assert!(!VmTerm::Unsigned8(1_u8).is_comparable(&VmTerm::Signed128(2_i128)));
         assert!(!VmTerm::Unsigned16(1_u16).is_comparable(&VmTerm::Signed64(2_i64)));
         assert!(!VmTerm::Unsigned32(1_u32).is_comparable(&VmTerm::Signed32(2_i32)));
@@ -2951,6 +3500,9 @@ mod tests {
         assert!(!VmTerm::Signed64(0).is_array());
         assert!(!VmTerm::Signed128(0).is_array());
         assert!(!VmTerm::SignedBig(ibig!(0)).is_array());
+        assert!(!VmTerm::Float32(Float32Wrapper(0.0)).is_array());
+        assert!(!VmTerm::Float64(Float64Wrapper(0.0)).is_array());
+        assert!(!VmTerm::Decimal(dec!(0.0)).is_array());
         assert!(VmTerm::Hash160Array(vec![[0; 20], [0; 20], [0; 20]]).is_array());
         assert!(VmTerm::Hash256Array(vec![[0; 32], [0; 32], [0; 32], [0; 32]]).is_array());
         assert!(VmTerm::Hash512Array(vec![[0; 64], [0; 64], [0; 64], [0; 64], [0; 64]]).is_array());
@@ -2966,10 +3518,13 @@ mod tests {
         assert!(VmTerm::Signed64Array(vec![0, 0, 0, 0, 0, 0, 0, 0, 0]).is_array());
         assert!(VmTerm::Signed128Array(vec![0, 0, 0, 0, 0, 0, 0, 0]).is_array());
         assert!(VmTerm::SignedBigArray(vec![ibig!(0), ibig!(0), ibig!(0)]).is_array());
+        assert!(VmTerm::Float32Array(vec![Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0)]).is_array());
+        assert!(VmTerm::Float64Array(vec![Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0)]).is_array());
     }
 
     #[test]
     fn test_vm_term_to_bytes_raw() {
+        // TODO + encode TODO
         assert_eq!(VmTerm::Hash160([0; 20]).to_bytes_raw(), [0; 20]);
         assert_eq!(VmTerm::Hash256([0; 32]).to_bytes_raw(), [0; 32]);
         assert_eq!(VmTerm::Hash512([0; 64]).to_bytes_raw(), [0; 64]);
@@ -3008,6 +3563,9 @@ mod tests {
         assert_eq!(VmTerm::SignedBig(ibig!(0x01)).to_bytes_raw(), [1, 1]);
         assert_eq!(VmTerm::SignedBig(ibig!(-1)).to_bytes_raw(), [1, 255]);
         assert_eq!(VmTerm::SignedBig(ibig!(0)).to_bytes_raw(), [0]);
+        assert_eq!(VmTerm::Float32(Float32Wrapper(1.123_f32)).to_bytes_raw(), [119, 190, 143, 63]);
+        assert_eq!(VmTerm::Float64(Float64Wrapper(1.123_f64)).to_bytes_raw(), [43, 135, 22, 217, 206, 247, 241, 63]);
+        // assert_eq!(VmTerm::Decimal(dec!(1.123)).to_bytes_raw(), []); TODO: uncomment and add
         assert_eq!(
             VmTerm::Hash160Array(vec![[0; 20], [0; 20], [0; 20]]).to_bytes_raw(),
             [0; 60]
@@ -3090,5 +3648,8 @@ mod tests {
             VmTerm::Hash512Array(vec![[0; 64], [0; 64], [0; 64], [0; 64], [0; 64]]).to_bytes_raw(),
             [0; 320]
         );
+        assert_eq!(VmTerm::Float32Array(vec![Float32Wrapper(1.123_f32), Float32Wrapper(1.123_f32)]).to_bytes_raw(), [119, 190, 143, 63, 119, 190, 143, 63]);
+        assert_eq!(VmTerm::Float64Array(vec![Float64Wrapper(1.123_f64), Float64Wrapper(1.123_f64)]).to_bytes_raw(), [43, 135, 22, 217, 206, 247, 241, 63, 43, 135, 22, 217, 206, 247, 241, 63]);
+        // assert_eq!(VmTerm::DecimalArray(vec![dec!(1.123), dec!(1.123)]).to_bytes_raw(), []); TODO: uncomment and add
     }
 }
