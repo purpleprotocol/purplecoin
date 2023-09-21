@@ -1409,6 +1409,12 @@ pub struct ScriptExecutor<'a> {
     state: ScriptExecutorState<'a>,
 }
 
+impl<'a> Default for ScriptExecutor<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> ScriptExecutor<'a> {
     #[must_use]
     pub fn new() -> Self {

@@ -179,6 +179,12 @@ pub struct Miner {
     miner_states: Vec<Arc<Mutex<MinerState>>>,
 }
 
+impl Default for Miner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Miner {
     #[must_use]
     pub fn new() -> Self {
