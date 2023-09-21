@@ -145,6 +145,8 @@ pub enum OP {
     FromHex = 0x9b,
     InputsLen = 0x9c,
     OutputsLen = 0x9d,
+    PeekArray = 0x9e,
+    ClearArray = 0x9f,
     VerifyEd25519 = 0xa0,
     VerifyEd25519Inline = 0xa1,
     VerifyEcdsa = 0xa2,
