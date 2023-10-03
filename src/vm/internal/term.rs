@@ -236,7 +236,7 @@ impl VmTerm {
             }
             Self::Float32(val) => val.0.to_le_bytes().to_vec(),
             Self::Float64(val) => val.0.to_le_bytes().to_vec(),
-            Self::Decimal(val) => !unimplemented!(),
+            Self::Decimal(val) => unimplemented!(),
             Self::Unsigned8Array(val) => val.clone(),
             Self::Unsigned16Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
             Self::Unsigned32Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),

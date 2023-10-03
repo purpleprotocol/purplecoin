@@ -165,6 +165,28 @@ macro_rules! var_load {
     };
 }
 
+macro_rules! var_load_float {
+    ($frame:expr, $script:expr, $arr:ident, $step:expr) => {
+        $frame.i_ptr += 1;
+        if let ScriptEntry::Byte(byte) = $script[$frame.i_ptr] {
+            $arr[$step] = byte;
+        } else {
+            unreachable!()
+        }
+    };
+
+    ($frame:expr, $script:expr, $arr:ident, $step:expr, $($tail:expr), +) => {
+        var_load_float!($frame, $script, $arr, $($tail), +);
+
+        $frame.i_ptr += 1;
+        if let ScriptEntry::Byte(byte) = $script[$frame.i_ptr] {
+            $arr[$step] = byte;
+        } else {
+            unreachable!()
+        }
+    };
+}
+
 macro_rules! bitvec_from_bools {
     () => {{
         BitVec::new()
@@ -710,6 +732,28 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 16;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float32Var) => {
+                            let mut arr: [u8; 4] = [0; 4];
+
+                            var_load_float!(frame, f, arr, 3, 2, 1, 0);
+
+                            frame.stack.push(VmTerm::Float32(Float32Wrapper(f32::from_le_bytes(arr))));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 4;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float64Var) => {
+                            let mut arr: [u8; 8] = [0; 8];
+
+                            var_load_float!(frame, f, arr, 7, 6, 5, 4, 3, 2, 1, 0);
+
+                            frame.stack.push(VmTerm::Float64(Float64Wrapper(f64::from_le_bytes(arr))));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 8;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash160ArrayVar) => {
@@ -5179,7 +5223,7 @@ mod tests {
             0x17, // Script length
             0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
             0x00, // Script flags
-            0x23, // OP_Unsigned8Var,
+            0x26, // OP_Unsigned8Var,
             0x00, // Push 0 to the stack
             0x57, // OP_Loop
             0x57, // OP_Loop
@@ -5195,7 +5239,7 @@ mod tests {
             0x82, // OP_Add1,
             0x70, // OP_Pick,
             0x00, // Pick at index 0
-            0x23, // OP_Unsigned8Var,
+            0x26, // OP_Unsigned8Var,
             0x03, // Push 3 to the stack
             0x5b, // OP_BreakIfEq
             0xb6, // OP_End
@@ -5242,7 +5286,7 @@ mod tests {
             0x15, // Script length
             0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
             0x00, // Script flags
-            0x23, // OP_Unsigned8Var,
+            0x26, // OP_Unsigned8Var,
             0x00, // Push 0 to the stack
             0x57, // OP_Loop
             0x70, // OP_Pick,
@@ -5255,7 +5299,7 @@ mod tests {
             0x82, // OP_Add1,
             0x70, // OP_Pick,
             0x00, // Pick at index 0
-            0x23, // OP_Unsigned8Var,
+            0x26, // OP_Unsigned8Var,
             0x03, // Push 3 to the stack
             0x5b, // OP_BreakIfEq
             0xb6, // OP_End
@@ -5272,7 +5316,7 @@ mod tests {
             0x13, // Script length
             0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
             0x00, // Script flags
-            0x23, // OP_Unsigned8Var,
+            0x26, // OP_Unsigned8Var,
             0x00, // Push 0 to the stack
             0x70, // OP_Pick,
             0x03, // Pick at index 3
@@ -5284,7 +5328,7 @@ mod tests {
             0x82, // OP_Add1,
             0x70, // OP_Pick,
             0x00, // Pick at index 0
-            0x23, // OP_Unsigned8Var,
+            0x26, // OP_Unsigned8Var,
             0x03, // Push 3 to the stack
             0x5b, // OP_BreakIfEq
             0xb6, // OP_End
@@ -5330,14 +5374,14 @@ mod tests {
             0x13, // Script length
             0x03, // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
             0x00, // Script flags
-            0x23, // OP_Unsigned8Var,
+            0x26, // OP_Unsigned8Var,
             0x00, // Push 0 to the stack
             0x57, // OP_Loop
             0xaf, // OP_Call
             0x00, // Call function with index 0
             0x70, // OP_Pick,
             0x00, // Pick at index 0
-            0x23, // OP_Unsigned8Var,
+            0x26, // OP_Unsigned8Var,
             0x03, // Push 3 to the stack
             0x5b, // OP_BreakIfEq
             0xb6, // OP_End
@@ -6749,7 +6793,7 @@ mod tests {
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
         assert_eq!(
             encoded,
-            vec![0x0a, 0x01, 0x00, 0x25, 0x00, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00]
+            vec![0x0a, 0x01, 0x00, 0x28, 0x00, 0x00, 0x00, 0x00, 0x27, 0x00, 0x00]
         );
     }
 
@@ -6773,7 +6817,7 @@ mod tests {
         let encoded = crate::codec::encode_to_vec(&script).unwrap();
         assert_eq!(
             encoded,
-            vec![0x0a, 0x01, 0x00, 0x25, 0xff, 0xff, 0xff, 0xff, 0x24, 0xff, 0xff]
+            vec![0x0a, 0x01, 0x00, 0x28, 0xff, 0xff, 0xff, 0xff, 0x27, 0xff, 0xff]
         );
     }
 
@@ -9119,6 +9163,90 @@ mod tests {
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Signed128(0x2200_0000_0000_0000_0123_0000_0000_2301),
             VmTerm::Signed128(0x1100_0000_0000_0000_0123_0000_0000_0123),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_float_32var() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Float32Var),
+                ScriptEntry::Byte(0x77),
+                ScriptEntry::Byte(0xbe),
+                ScriptEntry::Byte(0x8f),
+                ScriptEntry::Byte(0x3f),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Float32(Float32Wrapper(1.123)), // le bytes: [0x77, 0xbe, 0x8f, 0x37]
+        ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_float_64var() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Float64Var),
+                ScriptEntry::Byte(0x4c),
+                ScriptEntry::Byte(0xb6),
+                ScriptEntry::Byte(0xcb),
+                ScriptEntry::Byte(0xc8),
+                ScriptEntry::Byte(0x8a),
+                ScriptEntry::Byte(0x48),
+                ScriptEntry::Byte(0x93),
+                ScriptEntry::Byte(0x40),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Float64(Float64Wrapper(1234.1355316)), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();

@@ -66,8 +66,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x2f` Signed64Var - Pushes a `Signed64` onto the stack
     - [x] OP `0x30` Signed128Var - Pushes a `Signed128` onto the stack
     - [ ] OP `0x31` SignedBigVar - Pushes a `SignedBig` onto the stack
-    - [ ] OP `0x32` Float32Var - Pushes a `Float32` onto the stack
-    - [ ] OP `0x33` Float64Var - Pushes a `Float64` onto the stack
+    - [x] OP `0x32` Float32Var - Pushes a `Float32` onto the stack
+    - [x] OP `0x33` Float64Var - Pushes a `Float64` onto the stack
     - [ ] OP `0x34` DecimalVar - Pushes a `Decimal` onto the stack
     - [x] OP `0x35` Hash160ArrayVar - Pushes a `Hash160Array` onto the stack
     - [x] OP `0x36` Hash256ArrayVar - Pushes a `Hash256Array` onto the stack
