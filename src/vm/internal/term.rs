@@ -10,6 +10,7 @@ use ibig::{ibig, ubig, IBig, UBig};
 use num_traits::identities::Zero;
 use num_traits::ToPrimitive;
 use std::{fmt, mem};
+use std::iter::TrustedRandomAccessNoCoerce;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
@@ -1220,7 +1221,7 @@ impl VmTerm {
                 let v: UBig = v.try_into().unwrap();
                 (v.bit_len() >> 3) + EMPTY_VEC_HEAP_SIZE + WORD_SIZE // additional vec allocated by ibig plus sign
             }
-            Self::Decimal(val) => unimplemented!(),
+            Self::Decimal(val) => val.to_string().len(),
             Self::Hash160Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 20,
             Self::Hash256Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 32,
             Self::Hash512Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 64,
@@ -2657,8 +2658,8 @@ impl Encode for VmTerm {
 
             Self::Decimal(ref v) => {
                 bincode::Encode::encode(&0x13_u8, encoder)?;
-                unimplemented!();
-                // bincode::Encode::encode(&v, encoder)?;
+                let v = v.to_string();
+                bincode::Encode::encode(&v, encoder)?;
             }
 
             Self::Hash160Array(ref v) => {
@@ -2946,10 +2947,10 @@ impl Decode for VmTerm {
                 Ok(VmTerm::Float64(Float64Wrapper(v)))
             }
 
-            0x13 => {
-                // let v: [u8; 8] = bincode::Decode::decode(decoder)?;
-                unimplemented!();
-                // Ok(VmTerm::Decimal(v))
+            0x13 => unsafe {
+                let v: String = bincode::Decode::decode(decoder)?;
+                let v = Decimal::from_str_exact(&v).unwrap();
+                Ok(VmTerm::Decimal(v))
             }
 
             _ => Err(bincode::error::DecodeError::OtherString(
@@ -3180,22 +3181,21 @@ mod tests {
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
     }
 
-    // TODO: uncomment when Encoder for Decimal is implemented
-    // #[test]
-    // fn test_decimal_encode_decode_negative() {
-    //     let t = VmTerm::Decimal(dec!(-1.123));
-    //     let encoded = crate::codec::encode_to_vec(&t).unwrap();
-    //     assert_eq!(&encoded[..1], &[0x13]);
-    //     assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
-    // }
+    #[test]
+    fn test_decimal_encode_decode_negative() {
+        let t = VmTerm::Decimal(dec!(-1.123));
+        let encoded = crate::codec::encode_to_vec(&t).unwrap();
+        assert_eq!(&encoded[..1], &[0x13]);
+        assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
+    }
 
-    // #[test]
-    // fn test_decimal_encode_decode_positive() {
-    //     let t = VmTerm::Decimal(dec!(1.123));
-    //     let encoded = crate::codec::encode_to_vec(&t).unwrap();
-    //     assert_eq!(&encoded[..1], &[0x13]);
-    //     assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
-    // }
+    #[test]
+    fn test_decimal_encode_decode_positive() {
+        let t = VmTerm::Decimal(dec!(1.123));
+        let encoded = crate::codec::encode_to_vec(&t).unwrap();
+        assert_eq!(&encoded[..1], &[0x13]);
+        assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
+    }
 
     #[test]
     fn test_equals_0() {

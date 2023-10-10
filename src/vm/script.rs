@@ -18,6 +18,8 @@ use rand_seeder::Seeder;
 use simdutf8::basic::from_utf8;
 use std::collections::HashMap;
 use std::mem;
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 
 use super::bifs;
 
@@ -754,6 +756,61 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 8;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::DecimalVar) => {
+                            let mut bytes_len: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                bytes_len += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                bytes_len += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            // TODO: validation of characters / dots sould be done while parsing
+
+                            let mut char_bytes = Vec::new();
+                            for _ in 0..bytes_len {
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                    let ch: char = *byte as char;
+                                    char_bytes.push(ch);
+                                } else {
+                                    unreachable!()
+                                }
+                            }
+
+                            let hex: String = char_bytes.iter().collect();
+                            let dec = Decimal::from_str_exact(&hex);
+
+                            match dec {
+                                Ok(val) => {
+                                    let term = VmTerm::Decimal(val);
+                                    memory_size += term.size();
+                                    frame.stack.push(term);
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                Err(err) => {
+                                    frame.executor.state = ScriptExecutorState::Error(
+                                        ExecutionResult::InvalidArgs,
+                                        (
+                                            frame.i_ptr,
+                                            frame.func_idx,
+                                            i.clone(),
+                                            frame.stack.as_slice(),
+                                        )
+                                            .into(),
+                                    );
+                                }
+                            }
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash160ArrayVar) => {
@@ -9247,6 +9304,67 @@ mod tests {
 
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Float64(Float64Wrapper(1234.1355316)), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
+        ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_decimal_var() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::DecimalVar),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x31),
+                ScriptEntry::Byte(0x32),
+                ScriptEntry::Byte(0x33),
+                ScriptEntry::Byte(0x2e),
+                ScriptEntry::Byte(0x34),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x36),
+                ScriptEntry::Byte(0x37),
+                ScriptEntry::Byte(0x38),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::DecimalVar),
+                ScriptEntry::Byte(0x09),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x33),
+                ScriptEntry::Byte(0x31),
+                ScriptEntry::Byte(0x33),
+                ScriptEntry::Byte(0x2e),
+                ScriptEntry::Byte(0x31),
+                ScriptEntry::Byte(0x33),
+                ScriptEntry::Byte(0x35),
+                ScriptEntry::Byte(0x37),
+                ScriptEntry::Byte(0x39),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Decimal(dec!(123.45678)), // bytes: [0x31, 0x32, 0x33, 0x2E, 0x34, 0x35, 0x36, 0x37, 0x38]
+            VmTerm::Decimal(dec!(313.13579)), // bytes: [0x33, 0x31, 0x33, 0x2E, 0x31, 0x33, 0x35, 0x37, 0x39]
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
