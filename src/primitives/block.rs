@@ -310,7 +310,10 @@ impl PowBlockHeader {
             bits,
             bt_mean,
             diff_heights,
-            timestamp: Utc.ymd(2022, 8, 22).and_hms(22, 30, 47).timestamp(),
+            timestamp: Utc
+                .with_ymd_and_hms(2022, 8, 22, 22, 30, 47)
+                .unwrap()
+                .timestamp(),
             prev_root: Hash256::zero(),
             runnerup_hashes: Some([Hash256::zero(); SECTORS - 1]),
             runnerups_prev_hash: Some(Hash256::zero()),

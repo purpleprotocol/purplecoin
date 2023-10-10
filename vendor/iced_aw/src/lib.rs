@@ -42,7 +42,8 @@
     clippy::module_name_repetitions,
     clippy::borrowed_box,
     clippy::missing_const_for_fn,
-    clippy::too_many_lines
+    clippy::too_many_lines,
+    deprecated
 )]
 
 #[cfg(not(target_arch = "wasm32"))]
