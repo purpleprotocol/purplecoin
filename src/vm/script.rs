@@ -6,7 +6,7 @@
 
 use crate::consensus::SCRIPT_LIMIT_OPCODES;
 use crate::primitives::{Address, Hash160, Input, Output};
-use crate::vm::internal::{VmTerm, Float32Wrapper, Float64Wrapper};
+use crate::vm::internal::{Float32Wrapper, Float64Wrapper, VmTerm};
 use crate::vm::opcodes::OP;
 use bincode::{Decode, Encode};
 use bitvec::prelude::*;
@@ -15,11 +15,11 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
+use rust_decimal::Decimal;
+use rust_decimal_macros::dec;
 use simdutf8::basic::from_utf8;
 use std::collections::HashMap;
 use std::mem;
-use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 
 use super::bifs;
 
@@ -489,21 +489,27 @@ impl Script {
                         }
 
                         ScriptExecutorState::ExpectingRandomTerm(OP::RandomFloat32Var) => {
-                            frame.stack.push(VmTerm::Float32(Float32Wrapper(rng.gen::<f32>())));
+                            frame
+                                .stack
+                                .push(VmTerm::Float32(Float32Wrapper(rng.gen::<f32>())));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 4;
                         }
 
                         ScriptExecutorState::ExpectingRandomTerm(OP::RandomFloat64Var) => {
-                            frame.stack.push(VmTerm::Float64(Float64Wrapper(rng.gen::<f64>())));
+                            frame
+                                .stack
+                                .push(VmTerm::Float64(Float64Wrapper(rng.gen::<f64>())));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 8;
                         }
 
                         ScriptExecutorState::ExpectingRandomTerm(OP::RandomDecimalVar) => {
-                            frame.stack.push(VmTerm::Decimal(Decimal::deserialize(rng.gen::<[u8; 16]>())));
+                            frame
+                                .stack
+                                .push(VmTerm::Decimal(Decimal::deserialize(rng.gen::<[u8; 16]>())));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 16;
@@ -743,7 +749,9 @@ impl Script {
 
                             var_load_float!(frame, f, arr, 3, 2, 1, 0);
 
-                            frame.stack.push(VmTerm::Float32(Float32Wrapper(f32::from_le_bytes(arr))));
+                            frame
+                                .stack
+                                .push(VmTerm::Float32(Float32Wrapper(f32::from_le_bytes(arr))));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 4;
@@ -754,7 +762,9 @@ impl Script {
 
                             var_load_float!(frame, f, arr, 7, 6, 5, 4, 3, 2, 1, 0);
 
-                            frame.stack.push(VmTerm::Float64(Float64Wrapper(f64::from_le_bytes(arr))));
+                            frame
+                                .stack
+                                .push(VmTerm::Float64(Float64Wrapper(f64::from_le_bytes(arr))));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 8;
@@ -1622,6 +1632,12 @@ impl Script {
 #[derive(Debug, Clone)]
 pub struct ScriptExecutor<'a> {
     state: ScriptExecutorState<'a>,
+}
+
+impl<'a> Default for ScriptExecutor<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<'a> ScriptExecutor<'a> {
@@ -3204,15 +3220,18 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::Float32ArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float32ArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float32ArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::Float64ArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float64ArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float64ArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::DecimalArrayVar) => {
-                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::DecimalArrayVar);
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::DecimalArrayVar);
                 }
 
                 ScriptEntry::Opcode(OP::ArrayLen) => {
@@ -5011,7 +5030,7 @@ impl ScriptParser {
                             );
                             Ok(())
                         }
-                        OP::Unsigned64ArrayVar | OP::Signed64ArrayVar | OP::Float64ArrayVar=> {
+                        OP::Unsigned64ArrayVar | OP::Signed64ArrayVar | OP::Float64ArrayVar => {
                             self.state = ScriptParserState::ExpectingBytes(
                                 (*sum * 8) as usize,
                                 cf_stack.clone(),
@@ -9398,7 +9417,7 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Float64(Float64Wrapper(1234.1355316)), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
+            VmTerm::Float64(Float64Wrapper(1_234.135_531_6)), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -10989,13 +11008,13 @@ mod tests {
 
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Float32Array(vec![
-                Float32Wrapper(1.123_f32), // le bytes: [0x77, 0xbe, 0x8f, 0x37]
+                Float32Wrapper(1.123_f32),  // le bytes: [0x77, 0xbe, 0x8f, 0x37]
                 Float32Wrapper(13.314_f32), // le bytes: [0x25, 0x06, 0x55, 0x41]
             ]),
             VmTerm::Float32Array(vec![
                 Float32Wrapper(133.45453_f32), // le bytes: [0x5c, 0x74, 0x05, 0x43]
-                Float32Wrapper(1.123_f32), // le bytes: [0x77, 0xbe, 0x8f, 0x37]
-                Float32Wrapper(13.314_f32), // le bytes: [0x25, 0x06, 0x55, 0x41]
+                Float32Wrapper(1.123_f32),     // le bytes: [0x77, 0xbe, 0x8f, 0x37]
+                Float32Wrapper(13.314_f32),    // le bytes: [0x25, 0x06, 0x55, 0x41]
             ]),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
@@ -11071,12 +11090,12 @@ mod tests {
 
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Float64Array(vec![
-                Float64Wrapper(1234.1355316_f64), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
+                Float64Wrapper(1_234.135_531_6_f64), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
             ]),
             VmTerm::Float64Array(vec![
-                Float64Wrapper(1234.1355316_f64), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
+                Float64Wrapper(1_234.135_531_6_f64), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
                 Float64Wrapper(3269.36556_f64), // le bytes: [0x74, 0x29, 0xae, 0x2a, 0xbb, 0x8a, 0xa9, 0x40]
-                Float64Wrapper(1234.1355316_f64), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
+                Float64Wrapper(1_234.135_531_6_f64), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
             ]),
         ];
 
@@ -11154,10 +11173,10 @@ mod tests {
 
     //     let script_output: Vec<VmTerm> = vec![
     //         VmTerm::DecimalArrayVar(vec![
-                
+
     //         ]),
     //         VmTerm::DecimalArrayVar(vec![
-                
+
     //         ]),
     //     ];
 

@@ -18,6 +18,12 @@ pub struct MemoryStore<K: AsRef<[u8]> + Hash + PartialEq + Eq, V: Clone> {
     shards: Arc<Vec<Store<K, V>>>,
 }
 
+impl<K: AsRef<[u8]> + Hash + PartialEq + Eq, V: Clone> Default for MemoryStore<K, V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<K: AsRef<[u8]> + Hash + PartialEq + Eq, V: Clone> MemoryStore<K, V> {
     #[must_use]
     pub fn new() -> Self {

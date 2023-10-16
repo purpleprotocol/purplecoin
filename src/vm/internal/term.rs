@@ -9,10 +9,10 @@ use ibig::ops::Abs;
 use ibig::{ibig, ubig, IBig, UBig};
 use num_traits::identities::Zero;
 use num_traits::ToPrimitive;
-use std::{fmt, mem};
-use std::iter::TrustedRandomAccessNoCoerce;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use std::iter::TrustedRandomAccessNoCoerce;
+use std::{fmt, mem};
 
 const WORD_SIZE: usize = 8; // 8 bytes on 64bit machines
 pub const EMPTY_VEC_HEAP_SIZE: usize = 3 * WORD_SIZE; // 3 words
@@ -68,14 +68,17 @@ pub enum VmTerm {
 pub struct Float32Wrapper(pub f32);
 
 impl Float32Wrapper {
+    #[must_use]
     pub fn equals_0(&self) -> bool {
         self.0 == 0.0_f32
     }
 
+    #[must_use]
     pub fn equals_1(&self) -> bool {
         self.0 == 1.0_f32
     }
 
+    #[must_use]
     pub fn is_infinite(&self) -> bool {
         self.0.is_infinite()
     }
@@ -85,7 +88,9 @@ impl Eq for Float32Wrapper {}
 
 impl Ord for Float32Wrapper {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.0.partial_cmp(&other.0).unwrap_or(std::cmp::Ordering::Equal)
+        self.0
+            .partial_cmp(&other.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
     }
 }
 
@@ -93,14 +98,17 @@ impl Ord for Float32Wrapper {
 pub struct Float64Wrapper(pub f64);
 
 impl Float64Wrapper {
+    #[must_use]
     pub fn equals_0(&self) -> bool {
         self.0 == 0.0_f64
     }
 
+    #[must_use]
     pub fn equals_1(&self) -> bool {
         self.0 == 1.0_f64
     }
 
+    #[must_use]
     pub fn is_infinite(&self) -> bool {
         self.0.is_infinite()
     }
@@ -110,7 +118,9 @@ impl Eq for Float64Wrapper {}
 
 impl Ord for Float64Wrapper {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.0.partial_cmp(&other.0).unwrap_or(std::cmp::Ordering::Equal)
+        self.0
+            .partial_cmp(&other.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
     }
 }
 
@@ -188,8 +198,16 @@ impl fmt::Debug for VmTerm {
             Self::Signed64Array(val) => impl_normal_debug!(f, val, "Signed64Array"),
             Self::Signed128Array(val) => impl_normal_debug!(f, val, "Signed128Array"),
             Self::SignedBigArray(val) => impl_normal_debug!(f, val, "SignedBigArray"),
-            Self::Float32Array(val) => impl_normal_debug!(f, val.into_iter().map(|v| v.0).collect::<Vec<f32>>(), "Float32Array"),
-            Self::Float64Array(val) => impl_normal_debug!(f, val.into_iter().map(|v| v.0).collect::<Vec<f64>>(), "Float64Array"),
+            Self::Float32Array(val) => impl_normal_debug!(
+                f,
+                val.iter().map(|v| v.0).collect::<Vec<f32>>(),
+                "Float32Array"
+            ),
+            Self::Float64Array(val) => impl_normal_debug!(
+                f,
+                val.iter().map(|v| v.0).collect::<Vec<f64>>(),
+                "Float64Array"
+            ),
             Self::DecimalArray(val) => impl_normal_debug!(f, val, "DecimalArray"),
             Self::Hash160Array(val) => impl_hash_array_debug!(f, val, "Hash160Array"),
             Self::Hash256Array(val) => impl_hash_array_debug!(f, val, "Hash256Array"),
@@ -2953,7 +2971,7 @@ impl Decode for VmTerm {
                 let v: [u8; 16] = bincode::Decode::decode(decoder)?;
                 let v = Decimal::deserialize(v);
                 Ok(VmTerm::Decimal(v))
-            }
+            },
 
             _ => Err(bincode::error::DecodeError::OtherString(
                 "invalid term type".to_owned(),
@@ -3166,7 +3184,6 @@ mod tests {
         assert_eq!(crate::codec::decode::<VmTerm>(&encoded).unwrap(), t);
     }
 
-
     #[test]
     fn test_f64_encode_decode_negative() {
         let t = VmTerm::Float64(Float64Wrapper(-1.123));
@@ -3234,9 +3251,39 @@ mod tests {
         assert!(VmTerm::Signed64Array(vec![0, 0, 0, 0, 0, 0, 0, 0, 0]).equals_0());
         assert!(VmTerm::Signed128Array(vec![0, 0, 0, 0, 0, 0, 0, 0]).equals_0());
         assert!(VmTerm::SignedBigArray(vec![ibig!(0), ibig!(0), ibig!(0)]).equals_0());
-        assert!(VmTerm::Float32Array(vec![Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0)]).equals_0());
-        assert!(VmTerm::Float64Array(vec![Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0)]).equals_0());
-        assert!(VmTerm::DecimalArray(vec![dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0)]).equals_0());
+        assert!(VmTerm::Float32Array(vec![
+            Float32Wrapper(0.0),
+            Float32Wrapper(0.0),
+            Float32Wrapper(0.0),
+            Float32Wrapper(0.0),
+            Float32Wrapper(0.0),
+            Float32Wrapper(0.0),
+            Float32Wrapper(0.0),
+            Float32Wrapper(0.0)
+        ])
+        .equals_0());
+        assert!(VmTerm::Float64Array(vec![
+            Float64Wrapper(0.0),
+            Float64Wrapper(0.0),
+            Float64Wrapper(0.0),
+            Float64Wrapper(0.0),
+            Float64Wrapper(0.0),
+            Float64Wrapper(0.0),
+            Float64Wrapper(0.0),
+            Float64Wrapper(0.0)
+        ])
+        .equals_0());
+        assert!(VmTerm::DecimalArray(vec![
+            dec!(0.0),
+            dec!(0.0),
+            dec!(0.0),
+            dec!(0.0),
+            dec!(0.0),
+            dec!(0.0),
+            dec!(0.0),
+            dec!(0.0)
+        ])
+        .equals_0());
 
         assert!(!VmTerm::Hash160([1; 20]).equals_0());
         assert!(!VmTerm::Hash256([1; 32]).equals_0());
@@ -3273,9 +3320,39 @@ mod tests {
         assert!(!VmTerm::Signed64Array(vec![0, 0, 0, 0, 0, 4, 0, 0, 0]).equals_0());
         assert!(!VmTerm::Signed128Array(vec![0, 0, 0, 0, 0, 0, 10, 0]).equals_0());
         assert!(!VmTerm::SignedBigArray(vec![ibig!(1), ibig!(1), ibig!(1)]).equals_0());
-        assert!(!VmTerm::Float32Array(vec![Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(0.0), Float32Wrapper(10.1), Float32Wrapper(0.0)]).equals_0());
-        assert!(!VmTerm::Float64Array(vec![Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(0.0), Float64Wrapper(10.1), Float64Wrapper(0.0)]).equals_0());
-        assert!(!VmTerm::DecimalArray(vec![dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(0.0), dec!(10.1), dec!(0.0)]).equals_0());
+        assert!(!VmTerm::Float32Array(vec![
+            Float32Wrapper(0.0),
+            Float32Wrapper(0.0),
+            Float32Wrapper(0.0),
+            Float32Wrapper(0.0),
+            Float32Wrapper(0.0),
+            Float32Wrapper(0.0),
+            Float32Wrapper(10.1),
+            Float32Wrapper(0.0)
+        ])
+        .equals_0());
+        assert!(!VmTerm::Float64Array(vec![
+            Float64Wrapper(0.0),
+            Float64Wrapper(0.0),
+            Float64Wrapper(0.0),
+            Float64Wrapper(0.0),
+            Float64Wrapper(0.0),
+            Float64Wrapper(0.0),
+            Float64Wrapper(10.1),
+            Float64Wrapper(0.0)
+        ])
+        .equals_0());
+        assert!(!VmTerm::DecimalArray(vec![
+            dec!(0.0),
+            dec!(0.0),
+            dec!(0.0),
+            dec!(0.0),
+            dec!(0.0),
+            dec!(0.0),
+            dec!(10.1),
+            dec!(0.0)
+        ])
+        .equals_0());
     }
 
     #[test]
@@ -3320,9 +3397,39 @@ mod tests {
         assert!(VmTerm::Signed64Array(vec![1, 1, 1, 1, 1, 1, 1, 1, 1]).equals_1());
         assert!(VmTerm::Signed128Array(vec![1, 1, 1, 1, 1, 1, 1, 1]).equals_1());
         assert!(VmTerm::SignedBigArray(vec![ibig!(1), ibig!(1), ibig!(1)]).equals_1());
-        assert!(VmTerm::Float32Array(vec![Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0)]).equals_1());
-        assert!(VmTerm::Float64Array(vec![Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0)]).equals_1());
-        assert!(VmTerm::DecimalArray(vec![dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0)]).equals_1());
+        assert!(VmTerm::Float32Array(vec![
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0)
+        ])
+        .equals_1());
+        assert!(VmTerm::Float64Array(vec![
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0)
+        ])
+        .equals_1());
+        assert!(VmTerm::DecimalArray(vec![
+            dec!(1.0),
+            dec!(1.0),
+            dec!(1.0),
+            dec!(1.0),
+            dec!(1.0),
+            dec!(1.0),
+            dec!(1.0),
+            dec!(1.0)
+        ])
+        .equals_1());
 
         assert!(!VmTerm::Hash160([0; 20]).equals_1());
         assert!(!VmTerm::Hash256([0; 32]).equals_1());
@@ -3359,9 +3466,39 @@ mod tests {
         assert!(!VmTerm::Signed64Array(vec![1, 1, 1, 1, 1, 1, 1, 1, 0]).equals_1());
         assert!(!VmTerm::Signed128Array(vec![1, 1, 1, 1, 1, 1, 0, 1]).equals_1());
         assert!(!VmTerm::SignedBigArray(vec![ibig!(1), ibig!(1), ibig!(0)]).equals_1());
-        assert!(!VmTerm::Float32Array(vec![Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(0.1), Float32Wrapper(1.0)]).equals_1());
-        assert!(!VmTerm::Float64Array(vec![Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(0.1), Float64Wrapper(1.0)]).equals_1());
-        assert!(!VmTerm::DecimalArray(vec![dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(1.0), dec!(0.1), dec!(1.0)]).equals_1());
+        assert!(!VmTerm::Float32Array(vec![
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(0.1),
+            Float32Wrapper(1.0)
+        ])
+        .equals_1());
+        assert!(!VmTerm::Float64Array(vec![
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(0.1),
+            Float64Wrapper(1.0)
+        ])
+        .equals_1());
+        assert!(!VmTerm::DecimalArray(vec![
+            dec!(1.0),
+            dec!(1.0),
+            dec!(1.0),
+            dec!(1.0),
+            dec!(1.0),
+            dec!(1.0),
+            dec!(0.1),
+            dec!(1.0)
+        ])
+        .equals_1());
     }
 
     #[test]
@@ -3375,8 +3512,10 @@ mod tests {
         assert!(VmTerm::Unsigned64(1_u64).is_comparable(&VmTerm::Unsigned64(2_u64)));
         assert!(VmTerm::Unsigned128(1_u128).is_comparable(&VmTerm::Unsigned128(2_u128)));
         assert!(VmTerm::UnsignedBig(ubig!(1)).is_comparable(&VmTerm::UnsignedBig(ubig!(2))));
-        assert!(VmTerm::Float32(Float32Wrapper(1.123_f32)).is_comparable(&VmTerm::Float32(Float32Wrapper(10.3153_f32))));
-        assert!(VmTerm::Float64(Float64Wrapper(5.135_f64)).is_comparable(&VmTerm::Float64(Float64Wrapper(10.1212_f64))));
+        assert!(VmTerm::Float32(Float32Wrapper(1.123_f32))
+            .is_comparable(&VmTerm::Float32(Float32Wrapper(10.3153_f32))));
+        assert!(VmTerm::Float64(Float64Wrapper(5.135_f64))
+            .is_comparable(&VmTerm::Float64(Float64Wrapper(10.1212_f64))));
         assert!(VmTerm::Decimal(dec!(5.135)).is_comparable(&VmTerm::Decimal(dec!(10.1212))));
         assert!(VmTerm::Signed8(1_i8).is_comparable(&VmTerm::Signed8(2_i8)));
         assert!(VmTerm::Signed16(1_i16).is_comparable(&VmTerm::Signed16(2_i16)));
@@ -3415,13 +3554,23 @@ mod tests {
             .is_comparable(&VmTerm::Signed128Array(vec!(2_i128, 2_i128))));
         assert!(VmTerm::SignedBigArray(vec!(ibig!(1), ibig!(1)))
             .is_comparable(&VmTerm::SignedBigArray(vec!(ibig!(2), ibig!(2)))));
-        assert!(VmTerm::Float32Array(vec!(Float32Wrapper(1.3241_f32), Float32Wrapper(3.3453_f32)))
-            .is_comparable(&VmTerm::Float32Array(vec!(Float32Wrapper(35.3253_f32), Float32Wrapper(13.134314_f32)))));
-        assert!(VmTerm::Float64Array(vec!(Float64Wrapper(1.3241_f64), Float64Wrapper(3.3453_f64)))
-            .is_comparable(&VmTerm::Float64Array(vec!(Float64Wrapper(35.3253_f64), Float64Wrapper(13.134314_f64)))));
+        assert!(
+            VmTerm::Float32Array(vec!(Float32Wrapper(1.3241_f32), Float32Wrapper(3.3453_f32)))
+                .is_comparable(&VmTerm::Float32Array(vec!(
+                    Float32Wrapper(35.3253_f32),
+                    Float32Wrapper(13.134_314_f32)
+                )))
+        );
+        assert!(
+            VmTerm::Float64Array(vec!(Float64Wrapper(1.3241_f64), Float64Wrapper(3.3453_f64)))
+                .is_comparable(&VmTerm::Float64Array(vec!(
+                    Float64Wrapper(35.3253_f64),
+                    Float64Wrapper(13.134_314_f64)
+                )))
+        );
         assert!(VmTerm::DecimalArray(vec!(dec!(1.3241), dec!(3.3453)))
             .is_comparable(&VmTerm::DecimalArray(vec!(dec!(35.3253), dec!(13.134314)))));
-        
+
         assert!(!VmTerm::Hash160Array(vec!([1; 20], [1; 20], [1; 20]))
             .is_comparable(&VmTerm::Hash160Array(vec!([2; 20]))));
         assert!(!VmTerm::Hash256Array(vec!([1; 32], [1; 32], [1; 32]))
@@ -3452,10 +3601,22 @@ mod tests {
             .is_comparable(&VmTerm::Signed128Array(vec!(2_i128, 2_i128))));
         assert!(!VmTerm::SignedBigArray(vec!(ibig!(1)))
             .is_comparable(&VmTerm::SignedBigArray(vec!(ibig!(2), ibig!(2)))));
-        assert!(!VmTerm::Float32Array(vec!(Float32Wrapper(1.12341_f32)))
-            .is_comparable(&VmTerm::Float32Array(vec!(Float32Wrapper(1.12341_f32), Float32Wrapper(314.2424_f32)))));
-        assert!(!VmTerm::Float64Array(vec!(Float64Wrapper(35.353_f64)))
-            .is_comparable(&VmTerm::Float64Array(vec!(Float64Wrapper(235.3512_f64), Float64Wrapper(31.134_f64)))));
+        assert!(
+            !VmTerm::Float32Array(vec!(Float32Wrapper(1.12341_f32))).is_comparable(
+                &VmTerm::Float32Array(vec!(
+                    Float32Wrapper(1.12341_f32),
+                    Float32Wrapper(314.2424_f32)
+                ))
+            )
+        );
+        assert!(
+            !VmTerm::Float64Array(vec!(Float64Wrapper(35.353_f64))).is_comparable(
+                &VmTerm::Float64Array(vec!(
+                    Float64Wrapper(235.3512_f64),
+                    Float64Wrapper(31.134_f64)
+                ))
+            )
+        );
         assert!(!VmTerm::DecimalArray(vec!(dec!(35.353)))
             .is_comparable(&VmTerm::DecimalArray(vec!(dec!(235.3512), dec!(31.134)))));
 
@@ -3474,9 +3635,12 @@ mod tests {
         assert!(!VmTerm::Unsigned64(1_u64).is_comparable(&VmTerm::Signed64(2_i64)));
         assert!(!VmTerm::Unsigned128(1_u128).is_comparable(&VmTerm::Signed128(2_i128)));
         assert!(!VmTerm::UnsignedBig(ubig!(1)).is_comparable(&VmTerm::SignedBig(ibig!(2))));
-        assert!(!VmTerm::Float32(Float32Wrapper(12.1241423_f32)).is_comparable(&VmTerm::Float64(Float64Wrapper(35.32553_f64))));
-        assert!(!VmTerm::Decimal(dec!(12.1241423)).is_comparable(&VmTerm::Float32(Float32Wrapper(12.1241423_f32))));
-        assert!(!VmTerm::Decimal(dec!(12.1241423)).is_comparable(&VmTerm::Float64(Float64Wrapper(35.32553_f64))));
+        assert!(!VmTerm::Float32(Float32Wrapper(12.124_143_f32))
+            .is_comparable(&VmTerm::Float64(Float64Wrapper(35.32553_f64))));
+        assert!(!VmTerm::Decimal(dec!(12.1241423))
+            .is_comparable(&VmTerm::Float32(Float32Wrapper(12.124_143_f32))));
+        assert!(!VmTerm::Decimal(dec!(12.1241423))
+            .is_comparable(&VmTerm::Float64(Float64Wrapper(35.32553_f64))));
         assert!(!VmTerm::Unsigned8(1_u8).is_comparable(&VmTerm::Signed128(2_i128)));
         assert!(!VmTerm::Unsigned16(1_u16).is_comparable(&VmTerm::Signed64(2_i64)));
         assert!(!VmTerm::Unsigned32(1_u32).is_comparable(&VmTerm::Signed32(2_i32)));
@@ -3520,8 +3684,28 @@ mod tests {
         assert!(VmTerm::Signed64Array(vec![0, 0, 0, 0, 0, 0, 0, 0, 0]).is_array());
         assert!(VmTerm::Signed128Array(vec![0, 0, 0, 0, 0, 0, 0, 0]).is_array());
         assert!(VmTerm::SignedBigArray(vec![ibig!(0), ibig!(0), ibig!(0)]).is_array());
-        assert!(VmTerm::Float32Array(vec![Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0), Float32Wrapper(1.0)]).is_array());
-        assert!(VmTerm::Float64Array(vec![Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0), Float64Wrapper(1.0)]).is_array());
+        assert!(VmTerm::Float32Array(vec![
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0),
+            Float32Wrapper(1.0)
+        ])
+        .is_array());
+        assert!(VmTerm::Float64Array(vec![
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0),
+            Float64Wrapper(1.0)
+        ])
+        .is_array());
     }
 
     #[test]
@@ -3564,9 +3748,21 @@ mod tests {
         assert_eq!(VmTerm::SignedBig(ibig!(0x01)).to_bytes_raw(), [1, 1]);
         assert_eq!(VmTerm::SignedBig(ibig!(-1)).to_bytes_raw(), [1, 255]);
         assert_eq!(VmTerm::SignedBig(ibig!(0)).to_bytes_raw(), [0]);
-        assert_eq!(VmTerm::Float32(Float32Wrapper(1.123_f32)).to_bytes_raw(), [119, 190, 143, 63]);
-        assert_eq!(VmTerm::Float64(Float64Wrapper(1.123_f64)).to_bytes_raw(), [43, 135, 22, 217, 206, 247, 241, 63]);
-        assert_eq!(VmTerm::Decimal(dec!(1.123)).to_bytes_raw(), [0x00, 0x00, 0x03, 0x00, 0x63, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(
+            VmTerm::Float32(Float32Wrapper(1.123_f32)).to_bytes_raw(),
+            [119, 190, 143, 63]
+        );
+        assert_eq!(
+            VmTerm::Float64(Float64Wrapper(1.123_f64)).to_bytes_raw(),
+            [43, 135, 22, 217, 206, 247, 241, 63]
+        );
+        assert_eq!(
+            VmTerm::Decimal(dec!(1.123)).to_bytes_raw(),
+            [
+                0x00, 0x00, 0x03, 0x00, 0x63, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00
+            ]
+        );
         assert_eq!(
             VmTerm::Hash160Array(vec![[0; 20], [0; 20], [0; 20]]).to_bytes_raw(),
             [0; 60]
@@ -3649,8 +3845,23 @@ mod tests {
             VmTerm::Hash512Array(vec![[0; 64], [0; 64], [0; 64], [0; 64], [0; 64]]).to_bytes_raw(),
             [0; 320]
         );
-        assert_eq!(VmTerm::Float32Array(vec![Float32Wrapper(1.123_f32), Float32Wrapper(1.123_f32)]).to_bytes_raw(), [119, 190, 143, 63, 119, 190, 143, 63]);
-        assert_eq!(VmTerm::Float64Array(vec![Float64Wrapper(1.123_f64), Float64Wrapper(1.123_f64)]).to_bytes_raw(), [43, 135, 22, 217, 206, 247, 241, 63, 43, 135, 22, 217, 206, 247, 241, 63]);
-        assert_eq!(VmTerm::DecimalArray(vec![dec!(1.123), dec!(1.123)]).to_bytes_raw(), [0x00, 0x00, 0x03, 0x00, 0x63, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x63, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(
+            VmTerm::Float32Array(vec![Float32Wrapper(1.123_f32), Float32Wrapper(1.123_f32)])
+                .to_bytes_raw(),
+            [119, 190, 143, 63, 119, 190, 143, 63]
+        );
+        assert_eq!(
+            VmTerm::Float64Array(vec![Float64Wrapper(1.123_f64), Float64Wrapper(1.123_f64)])
+                .to_bytes_raw(),
+            [43, 135, 22, 217, 206, 247, 241, 63, 43, 135, 22, 217, 206, 247, 241, 63]
+        );
+        assert_eq!(
+            VmTerm::DecimalArray(vec![dec!(1.123), dec!(1.123)]).to_bytes_raw(),
+            [
+                0x00, 0x00, 0x03, 0x00, 0x63, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x63, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00
+            ]
+        );
     }
 }
