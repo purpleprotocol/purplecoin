@@ -21,8 +21,6 @@ const ZERO_HASH160: [u8; 20] = [0; 20];
 const ZERO_HASH256: [u8; 32] = [0; 32];
 const ZERO_HASH512: [u8; 64] = [0; 64];
 
-// TODO: add arithmetic tests for wrappers
-
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum VmTerm {
     Hash160([u8; 20]),
