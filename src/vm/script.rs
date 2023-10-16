@@ -503,8 +503,10 @@ impl Script {
                         }
 
                         ScriptExecutorState::ExpectingRandomTerm(OP::RandomDecimalVar) => {
-                            // TODO
-                            unimplemented!();
+                            frame.stack.push(VmTerm::Decimal(Decimal::deserialize(rng.gen::<[u8; 16]>())));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                            memory_size += 16;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Call) => {
@@ -10973,10 +10975,10 @@ mod tests {
                 ScriptEntry::Opcode(OP::GetType),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::Drop),
-                // ScriptEntry::Opcode(OP::RandomDecimalVar), // TODO
-                // ScriptEntry::Opcode(OP::GetType),
-                // ScriptEntry::Opcode(OP::PopToScriptOuts),
-                // ScriptEntry::Opcode(OP::Drop),
+                ScriptEntry::Opcode(OP::RandomDecimalVar),
+                ScriptEntry::Opcode(OP::GetType),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Drop),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
             ],
@@ -10999,7 +11001,7 @@ mod tests {
             VmTerm::Unsigned8(0x0d),
             VmTerm::Unsigned8(0x0f),
             VmTerm::Unsigned8(0x10),
-            // VmTerm::Unsigned8(0x11),
+            VmTerm::Unsigned8(0x11),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -11640,6 +11642,48 @@ mod tests {
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Float64(Float64Wrapper(rng.gen::<f64>())),
             VmTerm::Float64(Float64Wrapper(rng.gen::<f64>())),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                seed,
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_generates_random_decimal_var() {
+        let seed = [0; 32];
+        let mut rng: Pcg64 = Seeder::from(seed).make_rng();
+
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::RandomDecimalVar),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::RandomDecimalVar),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Decimal(Decimal::deserialize(rng.gen::<[u8; 16]>())),
+            VmTerm::Decimal(Decimal::deserialize(rng.gen::<[u8; 16]>())),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();

@@ -22,7 +22,6 @@ const ZERO_HASH160: [u8; 20] = [0; 20];
 const ZERO_HASH256: [u8; 32] = [0; 32];
 const ZERO_HASH512: [u8; 64] = [0; 64];
 
-// TODO: check for !unimplemented!()
 // TODO: add arithmetic tests for wrappers
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -237,7 +236,7 @@ impl VmTerm {
             }
             Self::Float32(val) => val.0.to_le_bytes().to_vec(),
             Self::Float64(val) => val.0.to_le_bytes().to_vec(),
-            Self::Decimal(val) => unimplemented!(),
+            Self::Decimal(val) => val.serialize().to_vec(),
             Self::Unsigned8Array(val) => val.clone(),
             Self::Unsigned16Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
             Self::Unsigned32Array(val) => val.iter().flat_map(|v| v.to_le_bytes()).collect(),
@@ -265,7 +264,7 @@ impl VmTerm {
                 .collect(),
             Self::Float32Array(val) => val.iter().flat_map(|v| v.0.to_le_bytes()).collect(),
             Self::Float64Array(val) => val.iter().flat_map(|v| v.0.to_le_bytes()).collect(),
-            Self::DecimalArray(val) => unimplemented!(),
+            Self::DecimalArray(val) => val.iter().flat_map(|v| v.serialize().to_vec()).collect(),
             Self::Hash160Array(val) => val.iter().flat_map(|v| v.to_vec()).collect(),
             Self::Hash256Array(val) => val.iter().flat_map(|v| v.to_vec()).collect(),
             Self::Hash512Array(val) => val.iter().flat_map(|v| v.to_vec()).collect(),
@@ -1221,7 +1220,7 @@ impl VmTerm {
                 let v: UBig = v.try_into().unwrap();
                 (v.bit_len() >> 3) + EMPTY_VEC_HEAP_SIZE + WORD_SIZE // additional vec allocated by ibig plus sign
             }
-            Self::Decimal(val) => val.to_string().len(),
+            Self::Decimal(val) => 16,
             Self::Hash160Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 20,
             Self::Hash256Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 32,
             Self::Hash512Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 64,
@@ -1254,7 +1253,7 @@ impl VmTerm {
             }
             Self::Float32Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 4,
             Self::Float64Array(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 8,
-            Self::DecimalArray(val) => unimplemented!(),
+            Self::DecimalArray(val) => EMPTY_VEC_HEAP_SIZE + val.len() * 16,
         }
     }
 
@@ -2658,7 +2657,7 @@ impl Encode for VmTerm {
 
             Self::Decimal(ref v) => {
                 bincode::Encode::encode(&0x13_u8, encoder)?;
-                let v = v.to_string();
+                let v: [u8; 16] = v.serialize();
                 bincode::Encode::encode(&v, encoder)?;
             }
 
@@ -2820,8 +2819,11 @@ impl Encode for VmTerm {
 
             Self::DecimalArray(ref v) => {
                 bincode::Encode::encode(&0x25_u8, encoder)?;
-                unimplemented!();
-                // bincode::Encode::encode(&buf, encoder)?;
+                let mut buf = Vec::with_capacity(v.len() * 16);
+                for v in v {
+                    buf.extend_from_slice(&v.serialize());
+                }
+                bincode::Encode::encode(&buf, encoder)?;
             }
         }
 
@@ -2948,8 +2950,8 @@ impl Decode for VmTerm {
             }
 
             0x13 => unsafe {
-                let v: String = bincode::Decode::decode(decoder)?;
-                let v = Decimal::from_str_exact(&v).unwrap();
+                let v: [u8; 16] = bincode::Decode::decode(decoder)?;
+                let v = Decimal::deserialize(v);
                 Ok(VmTerm::Decimal(v))
             }
 
@@ -3524,7 +3526,6 @@ mod tests {
 
     #[test]
     fn test_vm_term_to_bytes_raw() {
-        // TODO + encode TODO
         assert_eq!(VmTerm::Hash160([0; 20]).to_bytes_raw(), [0; 20]);
         assert_eq!(VmTerm::Hash256([0; 32]).to_bytes_raw(), [0; 32]);
         assert_eq!(VmTerm::Hash512([0; 64]).to_bytes_raw(), [0; 64]);
@@ -3565,7 +3566,7 @@ mod tests {
         assert_eq!(VmTerm::SignedBig(ibig!(0)).to_bytes_raw(), [0]);
         assert_eq!(VmTerm::Float32(Float32Wrapper(1.123_f32)).to_bytes_raw(), [119, 190, 143, 63]);
         assert_eq!(VmTerm::Float64(Float64Wrapper(1.123_f64)).to_bytes_raw(), [43, 135, 22, 217, 206, 247, 241, 63]);
-        // assert_eq!(VmTerm::Decimal(dec!(1.123)).to_bytes_raw(), []); TODO: uncomment and add
+        assert_eq!(VmTerm::Decimal(dec!(1.123)).to_bytes_raw(), [0x00, 0x00, 0x03, 0x00, 0x63, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(
             VmTerm::Hash160Array(vec![[0; 20], [0; 20], [0; 20]]).to_bytes_raw(),
             [0; 60]
@@ -3650,6 +3651,6 @@ mod tests {
         );
         assert_eq!(VmTerm::Float32Array(vec![Float32Wrapper(1.123_f32), Float32Wrapper(1.123_f32)]).to_bytes_raw(), [119, 190, 143, 63, 119, 190, 143, 63]);
         assert_eq!(VmTerm::Float64Array(vec![Float64Wrapper(1.123_f64), Float64Wrapper(1.123_f64)]).to_bytes_raw(), [43, 135, 22, 217, 206, 247, 241, 63, 43, 135, 22, 217, 206, 247, 241, 63]);
-        // assert_eq!(VmTerm::DecimalArray(vec![dec!(1.123), dec!(1.123)]).to_bytes_raw(), []); TODO: uncomment and add
+        assert_eq!(VmTerm::DecimalArray(vec![dec!(1.123), dec!(1.123)]).to_bytes_raw(), [0x00, 0x00, 0x03, 0x00, 0x63, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x63, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 }

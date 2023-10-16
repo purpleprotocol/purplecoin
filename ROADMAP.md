@@ -50,7 +50,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x19` RandomSigned128Var - Pushes a random `Signed128` onto the stack
     - [x] OP `0x20` RandomFloat32Var - Pushes a random `Float32` onto the stack
     - [x] OP `0x21` RandomFloat64Var - Pushes a random `Float64` onto the stack
-    - [ ] OP `0x22` RandomDecimalVar - Pushes a random `Decimal` onto the stack
+    - [x] OP `0x22` RandomDecimalVar - Pushes a random `Decimal` onto the stack
     - [x] OP `0x23` Hash160Var - Pushes a `Hash160` onto the stack
     - [x] OP `0x24` Hash256Var - Pushes a `Hash256` onto the stack
     - [x] OP `0x25` Hash512Var - Pushes a `Hash512` onto the stack
@@ -68,7 +68,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x31` SignedBigVar - Pushes a `SignedBig` onto the stack
     - [x] OP `0x32` Float32Var - Pushes a `Float32` onto the stack
     - [x] OP `0x33` Float64Var - Pushes a `Float64` onto the stack
-    - [ ] OP `0x34` DecimalVar - Pushes a `Decimal` onto the stack
+    - [x] OP `0x34` DecimalVar - Pushes a `Decimal` onto the stack
     - [x] OP `0x35` Hash160ArrayVar - Pushes a `Hash160Array` onto the stack
     - [x] OP `0x36` Hash256ArrayVar - Pushes a `Hash256Array` onto the stack
     - [x] OP `0x37` Hash512ArrayVar - Pushes a `Hash512Array` onto the stack
