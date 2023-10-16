@@ -5,7 +5,6 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 #![feature(stmt_expr_attributes)]
-#![feature(trusted_random_access)]
 #![allow(unreachable_code)]
 
 use log::*;

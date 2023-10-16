@@ -11,7 +11,6 @@ use num_traits::identities::Zero;
 use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
-use std::iter::TrustedRandomAccessNoCoerce;
 use std::{fmt, mem};
 
 const WORD_SIZE: usize = 8; // 8 bytes on 64bit machines

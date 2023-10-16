@@ -65,7 +65,6 @@
     trivial_bounds,
     slice_swap_unchecked,
     stmt_expr_attributes,
-    trusted_random_access,
     slice_split_at_unchecked,
     return_position_impl_trait_in_trait,
     impl_trait_in_assoc_type
