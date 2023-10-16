@@ -773,7 +773,9 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::DecimalVar) => {
                             let mut arr: [u8; 16] = [0; 16];
 
-                            var_load_from_array!(frame, f, arr, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+                            var_load_from_array!(
+                                frame, f, arr, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
+                            );
 
                             frame.stack.push(VmTerm::Decimal(Decimal::deserialize(arr)));
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
@@ -1317,7 +1319,10 @@ impl Script {
                             for _ in 0..len {
                                 let mut d_arr: [u8; 16] = [0; 16];
 
-                                var_load_from_array!(frame, f, d_arr, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+                                var_load_from_array!(
+                                    frame, f, d_arr, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
+                                    2, 1, 0
+                                );
 
                                 arr.push(Decimal::deserialize(d_arr));
                             }
@@ -4997,7 +5002,7 @@ impl ScriptParser {
                             );
                             Ok(())
                         }
-                        OP::Unsigned128ArrayVar | OP::Signed128ArrayVar | OP::DecimalArrayVar=> {
+                        OP::Unsigned128ArrayVar | OP::Signed128ArrayVar | OP::DecimalArrayVar => {
                             self.state = ScriptParserState::ExpectingBytes(
                                 (*sum * 16) as usize,
                                 cf_stack.clone(),
