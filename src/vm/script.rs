@@ -167,7 +167,7 @@ macro_rules! var_load {
     };
 }
 
-macro_rules! var_load_float {
+macro_rules! var_load_from_array {
     ($frame:expr, $script:expr, $arr:ident, $step:expr) => {
         $frame.i_ptr += 1;
         if let ScriptEntry::Byte(byte) = $script[$frame.i_ptr] {
@@ -178,7 +178,7 @@ macro_rules! var_load_float {
     };
 
     ($frame:expr, $script:expr, $arr:ident, $step:expr, $($tail:expr), +) => {
-        var_load_float!($frame, $script, $arr, $($tail), +);
+        var_load_from_array!($frame, $script, $arr, $($tail), +);
 
         $frame.i_ptr += 1;
         if let ScriptEntry::Byte(byte) = $script[$frame.i_ptr] {
@@ -747,7 +747,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float32Var) => {
                             let mut arr: [u8; 4] = [0; 4];
 
-                            var_load_float!(frame, f, arr, 3, 2, 1, 0);
+                            var_load_from_array!(frame, f, arr, 3, 2, 1, 0);
 
                             frame
                                 .stack
@@ -760,7 +760,7 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float64Var) => {
                             let mut arr: [u8; 8] = [0; 8];
 
-                            var_load_float!(frame, f, arr, 7, 6, 5, 4, 3, 2, 1, 0);
+                            var_load_from_array!(frame, f, arr, 7, 6, 5, 4, 3, 2, 1, 0);
 
                             frame
                                 .stack
@@ -771,58 +771,14 @@ impl Script {
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::DecimalVar) => {
-                            let mut bytes_len: u16 = 0;
+                            let mut arr: [u8; 16] = [0; 16];
 
+                            var_load_from_array!(frame, f, arr, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+
+                            frame.stack.push(VmTerm::Decimal(Decimal::deserialize(arr)));
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                bytes_len += u16::from(*byte);
-                            } else {
-                                unreachable!()
-                            }
-                            frame.i_ptr += 1;
-                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                bytes_len += u16::from(*byte) << 8;
-                            } else {
-                                unreachable!()
-                            }
-
-                            // TODO: validation of characters / dots sould be done while parsing
-
-                            let mut char_bytes = Vec::new();
-                            for _ in 0..bytes_len {
-                                frame.i_ptr += 1;
-                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                    let ch: char = *byte as char;
-                                    char_bytes.push(ch);
-                                } else {
-                                    unreachable!()
-                                }
-                            }
-
-                            let hex: String = char_bytes.iter().collect();
-                            let dec = Decimal::from_str_exact(&hex);
-
-                            match dec {
-                                Ok(val) => {
-                                    let term = VmTerm::Decimal(val);
-                                    memory_size += term.size();
-                                    frame.stack.push(term);
-                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                    frame.i_ptr += 1;
-                                }
-                                Err(err) => {
-                                    frame.executor.state = ScriptExecutorState::Error(
-                                        ExecutionResult::InvalidArgs,
-                                        (
-                                            frame.i_ptr,
-                                            frame.func_idx,
-                                            i.clone(),
-                                            frame.stack.as_slice(),
-                                        )
-                                            .into(),
-                                    );
-                                }
-                            }
+                            memory_size += 16;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash160ArrayVar) => {
@@ -1297,7 +1253,7 @@ impl Script {
                             for _ in 0..len {
                                 let mut f_arr: [u8; 4] = [0; 4];
 
-                                var_load_float!(frame, f, f_arr, 3, 2, 1, 0);
+                                var_load_from_array!(frame, f, f_arr, 3, 2, 1, 0);
 
                                 arr.push(Float32Wrapper(f32::from_le_bytes(f_arr)));
                             }
@@ -1329,7 +1285,7 @@ impl Script {
                             for _ in 0..len {
                                 let mut f_arr: [u8; 8] = [0; 8];
 
-                                var_load_float!(frame, f, f_arr, 7, 6, 5, 4, 3, 2, 1, 0);
+                                var_load_from_array!(frame, f, f_arr, 7, 6, 5, 4, 3, 2, 1, 0);
 
                                 arr.push(Float64Wrapper(f64::from_le_bytes(f_arr)));
                             }
@@ -1359,8 +1315,11 @@ impl Script {
 
                             let mut arr: Vec<Decimal> = Vec::new();
                             for _ in 0..len {
-                                // TODO
-                                unimplemented!();
+                                let mut d_arr: [u8; 16] = [0; 16];
+
+                                var_load_from_array!(frame, f, d_arr, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+
+                                arr.push(Decimal::deserialize(d_arr));
                             }
 
                             let term = VmTerm::DecimalArray(arr);
@@ -4784,7 +4743,7 @@ impl ScriptParser {
                 Some(OP::Unsigned64Var) => impl_parser_expecting_bytes!(self, OP::Unsigned64Var, 8),
                 Some(OP::Signed64Var) => impl_parser_expecting_bytes!(self, OP::Unsigned64Var, 8),
                 Some(OP::Float64Var) => impl_parser_expecting_bytes!(self, OP::Float64Var, 8),
-                // Some(OP::DecimalVar) => impl_parser_expecting_bytes!(self, OP::DecimalVar, 8), // TODO
+                Some(OP::DecimalVar) => impl_parser_expecting_bytes!(self, OP::DecimalVar, 16),
                 Some(OP::Unsigned128Var) => {
                     impl_parser_expecting_bytes!(self, OP::Unsigned128Var, 16)
                 }
@@ -5038,7 +4997,7 @@ impl ScriptParser {
                             );
                             Ok(())
                         }
-                        OP::Unsigned128ArrayVar | OP::Signed128ArrayVar => {
+                        OP::Unsigned128ArrayVar | OP::Signed128ArrayVar | OP::DecimalArrayVar=> {
                             self.state = ScriptParserState::ExpectingBytes(
                                 (*sum * 16) as usize,
                                 cf_stack.clone(),
@@ -5054,14 +5013,6 @@ impl ScriptParser {
                             );
                             Ok(())
                         }
-                        // OP::DecimalArrayVar => { // TODO
-                        //     self.state = ScriptParserState::ExpectingBytes(
-                        //         (*sum * 32) as usize,
-                        //         cf_stack.clone(),
-                        //         *blocks_allowed,
-                        //     );
-                        //     Ok(())
-                        // }
                         _ => unreachable!(),
                     }
                 } else {
@@ -9445,30 +9396,40 @@ mod tests {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::DecimalVar),
-                ScriptEntry::Byte(0x09),
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x31),
-                ScriptEntry::Byte(0x32),
-                ScriptEntry::Byte(0x33),
-                ScriptEntry::Byte(0x2e),
-                ScriptEntry::Byte(0x34),
-                ScriptEntry::Byte(0x35),
-                ScriptEntry::Byte(0x36),
-                ScriptEntry::Byte(0x37),
-                ScriptEntry::Byte(0x38),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x4e),
+                ScriptEntry::Byte(0x61),
+                ScriptEntry::Byte(0xbc),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::DecimalVar),
-                ScriptEntry::Byte(0x09),
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x33),
-                ScriptEntry::Byte(0x31),
-                ScriptEntry::Byte(0x33),
-                ScriptEntry::Byte(0x2e),
-                ScriptEntry::Byte(0x31),
-                ScriptEntry::Byte(0x33),
-                ScriptEntry::Byte(0x35),
-                ScriptEntry::Byte(0x37),
-                ScriptEntry::Byte(0x39),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xab),
+                ScriptEntry::Byte(0xce),
+                ScriptEntry::Byte(0xdd),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
@@ -9477,8 +9438,8 @@ mod tests {
         };
 
         let script_output: Vec<VmTerm> = vec![
-            VmTerm::Decimal(dec!(123.45678)), // bytes: [0x31, 0x32, 0x33, 0x2E, 0x34, 0x35, 0x36, 0x37, 0x38]
-            VmTerm::Decimal(dec!(313.13579)), // bytes: [0x33, 0x31, 0x33, 0x2E, 0x31, 0x33, 0x35, 0x37, 0x39]
+            VmTerm::Decimal(dec!(123.45678)), // serialized: [0x00, 0x00, 0x05, 0x00, 0x4e, 0x61, 0xbc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+            VmTerm::Decimal(dec!(313.13579)), // serialized: [0x00, 0x00, 0x05, 0x00, 0xab, 0xce, 0xdd, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -11118,86 +11079,119 @@ mod tests {
         assert_eq!(outs, base.out);
     }
 
-    // TODO
-    // #[test]
-    // fn it_loads_decimal_array_var() {
-    //     let key = "test_key";
-    //     let mut ss = Script {
-    //         script: vec![
-    //             ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
-    //             ScriptEntry::Opcode(OP::DecimalArrayVar),
-    //             ScriptEntry::Byte(0x01),
-    //             ScriptEntry::Byte(0x00),
-    //             ScriptEntry::Byte(0x4c),
-    //             ScriptEntry::Byte(0xb6),
-    //             ScriptEntry::Byte(0xcb),
-    //             ScriptEntry::Byte(0xc8),
-    //             ScriptEntry::Byte(0x8a),
-    //             ScriptEntry::Byte(0x48),
-    //             ScriptEntry::Byte(0x93),
-    //             ScriptEntry::Byte(0x40),
-    //             ScriptEntry::Opcode(OP::PopToScriptOuts),
-    //             ScriptEntry::Opcode(OP::DecimalArrayVar),
-    //             ScriptEntry::Byte(0x03),
-    //             ScriptEntry::Byte(0x00),
-    //             ScriptEntry::Byte(0x4c),
-    //             ScriptEntry::Byte(0xb6),
-    //             ScriptEntry::Byte(0xcb),
-    //             ScriptEntry::Byte(0xc8),
-    //             ScriptEntry::Byte(0x8a),
-    //             ScriptEntry::Byte(0x48),
-    //             ScriptEntry::Byte(0x93),
-    //             ScriptEntry::Byte(0x40),
-    //             ScriptEntry::Byte(0x74),
-    //             ScriptEntry::Byte(0x29),
-    //             ScriptEntry::Byte(0xae),
-    //             ScriptEntry::Byte(0x2a),
-    //             ScriptEntry::Byte(0xbb),
-    //             ScriptEntry::Byte(0x8a),
-    //             ScriptEntry::Byte(0xa9),
-    //             ScriptEntry::Byte(0x40),
-    //             ScriptEntry::Byte(0x4c),
-    //             ScriptEntry::Byte(0xb6),
-    //             ScriptEntry::Byte(0xcb),
-    //             ScriptEntry::Byte(0xc8),
-    //             ScriptEntry::Byte(0x8a),
-    //             ScriptEntry::Byte(0x48),
-    //             ScriptEntry::Byte(0x93),
-    //             ScriptEntry::Byte(0x40),
-    //             ScriptEntry::Opcode(OP::PopToScriptOuts),
-    //             ScriptEntry::Opcode(OP::PushOut),
-    //             ScriptEntry::Opcode(OP::Verify),
-    //         ],
-    //         ..Script::default()
-    //     };
+    #[test]
+    fn it_loads_decimal_array_var() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::DecimalArrayVar),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x4e),
+                ScriptEntry::Byte(0x61),
+                ScriptEntry::Byte(0xbc),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::DecimalArrayVar),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x4e),
+                ScriptEntry::Byte(0x61),
+                ScriptEntry::Byte(0xbc),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0xab),
+                ScriptEntry::Byte(0xce),
+                ScriptEntry::Byte(0xdd),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x4e),
+                ScriptEntry::Byte(0x61),
+                ScriptEntry::Byte(0xbc),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
 
-    //     let script_output: Vec<VmTerm> = vec![
-    //         VmTerm::DecimalArrayVar(vec![
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::DecimalArray(vec![
+                dec!(123.45678), // serialized: [0x00, 0x00, 0x05, 0x00, 0x4e, 0x61, 0xbc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+            ]),
+            VmTerm::DecimalArray(vec![
+                dec!(123.45678), // serialized: [0x00, 0x00, 0x05, 0x00, 0x4e, 0x61, 0xbc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+                dec!(313.13579), // serialized: [0x00, 0x00, 0x05, 0x00, 0xab, 0xce, 0xdd, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+                dec!(123.45678), // serialized: [0x00, 0x00, 0x05, 0x00, 0x4e, 0x61, 0xbc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+            ]),
+        ];
 
-    //         ]),
-    //         VmTerm::DecimalArrayVar(vec![
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
 
-    //         ]),
-    //     ];
-
-    //     let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
-    //     let mut idx_map = HashMap::new();
-    //     let mut outs = vec![];
-
-    //     assert_eq!(
-    //         ss.execute(
-    //             &base.args,
-    //             &base.ins,
-    //             &mut outs,
-    //             &mut idx_map,
-    //             [0; 32],
-    //             key,
-    //             VmFlags::default()
-    //         ),
-    //         Ok(ExecutionResult::OkVerify).into()
-    //     );
-    //     assert_eq!(outs, base.out);
-    // }
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
 
     #[test]
     fn it_pushes_array_len() {
