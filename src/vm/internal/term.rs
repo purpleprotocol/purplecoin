@@ -61,7 +61,7 @@ pub enum VmTerm {
     DecimalArray(Vec<Decimal>),
 }
 
-#[derive(Clone, PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq)]
 pub struct Float32Wrapper(pub f32);
 
 impl Float32Wrapper {
@@ -83,6 +83,12 @@ impl Float32Wrapper {
 
 impl Eq for Float32Wrapper {}
 
+impl PartialOrd for Float32Wrapper {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl Ord for Float32Wrapper {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.0
@@ -91,7 +97,7 @@ impl Ord for Float32Wrapper {
     }
 }
 
-#[derive(Clone, PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq)]
 pub struct Float64Wrapper(pub f64);
 
 impl Float64Wrapper {
@@ -112,6 +118,12 @@ impl Float64Wrapper {
 }
 
 impl Eq for Float64Wrapper {}
+
+impl PartialOrd for Float64Wrapper {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 impl Ord for Float64Wrapper {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
