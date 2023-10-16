@@ -1331,6 +1331,35 @@ impl Script {
                             frame.i_ptr += 1;
                         }
 
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::DecimalArrayVar) => {
+                            let mut len: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            let mut arr: Vec<Decimal> = Vec::new();
+                            for _ in 0..len {
+                                // TODO
+                                unimplemented!();
+                            }
+
+                            let term = VmTerm::DecimalArray(arr);
+                            memory_size += term.size();
+                            frame.stack.push(term);
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                        }
+
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Substr) => {
                             let mut len: u16 = 0;
 
@@ -11069,6 +11098,87 @@ mod tests {
         );
         assert_eq!(outs, base.out);
     }
+
+    // TODO
+    // #[test]
+    // fn it_loads_decimal_array_var() {
+    //     let key = "test_key";
+    //     let mut ss = Script {
+    //         script: vec![
+    //             ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+    //             ScriptEntry::Opcode(OP::DecimalArrayVar),
+    //             ScriptEntry::Byte(0x01),
+    //             ScriptEntry::Byte(0x00),
+    //             ScriptEntry::Byte(0x4c),
+    //             ScriptEntry::Byte(0xb6),
+    //             ScriptEntry::Byte(0xcb),
+    //             ScriptEntry::Byte(0xc8),
+    //             ScriptEntry::Byte(0x8a),
+    //             ScriptEntry::Byte(0x48),
+    //             ScriptEntry::Byte(0x93),
+    //             ScriptEntry::Byte(0x40),
+    //             ScriptEntry::Opcode(OP::PopToScriptOuts),
+    //             ScriptEntry::Opcode(OP::DecimalArrayVar),
+    //             ScriptEntry::Byte(0x03),
+    //             ScriptEntry::Byte(0x00),
+    //             ScriptEntry::Byte(0x4c),
+    //             ScriptEntry::Byte(0xb6),
+    //             ScriptEntry::Byte(0xcb),
+    //             ScriptEntry::Byte(0xc8),
+    //             ScriptEntry::Byte(0x8a),
+    //             ScriptEntry::Byte(0x48),
+    //             ScriptEntry::Byte(0x93),
+    //             ScriptEntry::Byte(0x40),
+    //             ScriptEntry::Byte(0x74),
+    //             ScriptEntry::Byte(0x29),
+    //             ScriptEntry::Byte(0xae),
+    //             ScriptEntry::Byte(0x2a),
+    //             ScriptEntry::Byte(0xbb),
+    //             ScriptEntry::Byte(0x8a),
+    //             ScriptEntry::Byte(0xa9),
+    //             ScriptEntry::Byte(0x40),
+    //             ScriptEntry::Byte(0x4c),
+    //             ScriptEntry::Byte(0xb6),
+    //             ScriptEntry::Byte(0xcb),
+    //             ScriptEntry::Byte(0xc8),
+    //             ScriptEntry::Byte(0x8a),
+    //             ScriptEntry::Byte(0x48),
+    //             ScriptEntry::Byte(0x93),
+    //             ScriptEntry::Byte(0x40),
+    //             ScriptEntry::Opcode(OP::PopToScriptOuts),
+    //             ScriptEntry::Opcode(OP::PushOut),
+    //             ScriptEntry::Opcode(OP::Verify),
+    //         ],
+    //         ..Script::default()
+    //     };
+
+    //     let script_output: Vec<VmTerm> = vec![
+    //         VmTerm::DecimalArrayVar(vec![
+                
+    //         ]),
+    //         VmTerm::DecimalArrayVar(vec![
+                
+    //         ]),
+    //     ];
+
+    //     let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+    //     let mut idx_map = HashMap::new();
+    //     let mut outs = vec![];
+
+    //     assert_eq!(
+    //         ss.execute(
+    //             &base.args,
+    //             &base.ins,
+    //             &mut outs,
+    //             &mut idx_map,
+    //             [0; 32],
+    //             key,
+    //             VmFlags::default()
+    //         ),
+    //         Ok(ExecutionResult::OkVerify).into()
+    //     );
+    //     assert_eq!(outs, base.out);
+    // }
 
     #[test]
     fn it_pushes_array_len() {
