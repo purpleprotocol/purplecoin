@@ -1267,6 +1267,70 @@ impl Script {
                             frame.i_ptr += 1;
                         }
 
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float32ArrayVar) => {
+                            let mut len: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            let mut arr: Vec<Float32Wrapper> = Vec::new();
+                            for _ in 0..len {
+                                let mut f_arr: [u8; 4] = [0; 4];
+
+                                var_load_float!(frame, f, f_arr, 3, 2, 1, 0);
+
+                                arr.push(Float32Wrapper(f32::from_le_bytes(f_arr)));
+                            }
+
+                            let term = VmTerm::Float32Array(arr);
+                            memory_size += term.size();
+                            frame.stack.push(term);
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float64ArrayVar) => {
+                            let mut len: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            let mut arr: Vec<Float64Wrapper> = Vec::new();
+                            for _ in 0..len {
+                                let mut f_arr: [u8; 8] = [0; 8];
+
+                                var_load_float!(frame, f, f_arr, 7, 6, 5, 4, 3, 2, 1, 0);
+
+                                arr.push(Float64Wrapper(f64::from_le_bytes(f_arr)));
+                            }
+
+                            let term = VmTerm::Float64Array(arr);
+                            memory_size += term.size();
+                            frame.stack.push(term);
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                        }
+
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Substr) => {
                             let mut len: u16 = 0;
 
@@ -10835,6 +10899,158 @@ mod tests {
                 0x7516_7536_7516_7536_a5f6_af41_a5f6_af41,
             ]),
         ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_float_32_array_var() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Float32ArrayVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x77),
+                ScriptEntry::Byte(0xbe),
+                ScriptEntry::Byte(0x8f),
+                ScriptEntry::Byte(0x3f),
+                ScriptEntry::Byte(0x25),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x55),
+                ScriptEntry::Byte(0x41),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Float32ArrayVar),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x5c),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Byte(0x43),
+                ScriptEntry::Byte(0x77),
+                ScriptEntry::Byte(0xbe),
+                ScriptEntry::Byte(0x8f),
+                ScriptEntry::Byte(0x3f),
+                ScriptEntry::Byte(0x25),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x55),
+                ScriptEntry::Byte(0x41),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Float32Array(vec![
+                Float32Wrapper(1.123_f32), // le bytes: [0x77, 0xbe, 0x8f, 0x37]
+                Float32Wrapper(13.314_f32), // le bytes: [0x25, 0x06, 0x55, 0x41]
+            ]),
+            VmTerm::Float32Array(vec![
+                Float32Wrapper(133.45453_f32), // le bytes: [0x5c, 0x74, 0x05, 0x43]
+                Float32Wrapper(1.123_f32), // le bytes: [0x77, 0xbe, 0x8f, 0x37]
+                Float32Wrapper(13.314_f32), // le bytes: [0x25, 0x06, 0x55, 0x41]
+            ]),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_loads_float_64_array_var() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Float64ArrayVar),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x4c),
+                ScriptEntry::Byte(0xb6),
+                ScriptEntry::Byte(0xcb),
+                ScriptEntry::Byte(0xc8),
+                ScriptEntry::Byte(0x8a),
+                ScriptEntry::Byte(0x48),
+                ScriptEntry::Byte(0x93),
+                ScriptEntry::Byte(0x40),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Float64ArrayVar),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x4c),
+                ScriptEntry::Byte(0xb6),
+                ScriptEntry::Byte(0xcb),
+                ScriptEntry::Byte(0xc8),
+                ScriptEntry::Byte(0x8a),
+                ScriptEntry::Byte(0x48),
+                ScriptEntry::Byte(0x93),
+                ScriptEntry::Byte(0x40),
+                ScriptEntry::Byte(0x74),
+                ScriptEntry::Byte(0x29),
+                ScriptEntry::Byte(0xae),
+                ScriptEntry::Byte(0x2a),
+                ScriptEntry::Byte(0xbb),
+                ScriptEntry::Byte(0x8a),
+                ScriptEntry::Byte(0xa9),
+                ScriptEntry::Byte(0x40),
+                ScriptEntry::Byte(0x4c),
+                ScriptEntry::Byte(0xb6),
+                ScriptEntry::Byte(0xcb),
+                ScriptEntry::Byte(0xc8),
+                ScriptEntry::Byte(0x8a),
+                ScriptEntry::Byte(0x48),
+                ScriptEntry::Byte(0x93),
+                ScriptEntry::Byte(0x40),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Float64Array(vec![
+                Float64Wrapper(1234.1355316_f64), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
+            ]),
+            VmTerm::Float64Array(vec![
+                Float64Wrapper(1234.1355316_f64), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
+                Float64Wrapper(3269.36556_f64), // le bytes: [0x74, 0x29, 0xae, 0x2a, 0xbb, 0x8a, 0xa9, 0x40]
+                Float64Wrapper(1234.1355316_f64), // le bytes: [0x4c, 0xb6, 0xcb, 0xc8, 0x8a, 0x48, 0x93, 0x40]
+            ]),
+        ];
+
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
