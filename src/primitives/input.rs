@@ -131,7 +131,7 @@ impl Input {
         let oracle_script_hash = if let Some(ref spend_proof) = self.spend_proof {
             let mut out = self.script.to_script_hash(key);
             out.0 = Hash160::hash_from_slice(
-                &[
+                [
                     &self.spending_pkey.as_ref().unwrap().0.to_bytes(),
                     out.0.as_slice(),
                 ]

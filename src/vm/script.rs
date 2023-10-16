@@ -296,7 +296,7 @@ impl Script {
                 acc.extend_from_slice(i.hash().unwrap().as_bytes());
                 acc
             });
-        let inputs_hash = Hash160::hash_from_slice(&inputs_hashes, key);
+        let inputs_hash = Hash160::hash_from_slice(inputs_hashes, key);
 
         loop {
             let mut new_frame = None;

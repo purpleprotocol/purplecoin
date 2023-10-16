@@ -63,7 +63,6 @@ fn main() {
     c_build.include("c_src/compat");
     c_build.include("c_src/prevector");
     c_build.include("c_src/gr");
-    c_build.file("c_src/crypto/aes_helper.c");
     c_build.file("c_src/crypto/sph_fugue.c");
     c_build.file("c_src/crypto/sph_hamsi.c");
     c_build.file("c_src/crypto/sph_blake.c");
@@ -91,6 +90,7 @@ fn main() {
     c_build.file("c_src/cryptonote/oaes_lib.c");
     c_build.file("c_src/cryptonote/slow-hash.c");
     c_build.file("c_src/fugue.c");
+    c_build.warnings(false);
     c_build.compile("c_hash_sys");
 
     // C++ build
@@ -264,6 +264,7 @@ fn main() {
     cpp_build.cpp(true);
     cpp_build.static_crt(true);
     cpp_build.flag_if_supported("-std=c++11");
+    cpp_build.warnings(false);
     cpp_build.compile("hash_sys");
 
     println!("cargo:rustc-link-search=native={}", out_path.display());
