@@ -1581,7 +1581,7 @@ impl VmTerm {
     }
 
     /// Returns a clone of the element at position `index`
-    /// 
+    ///
     /// # Safety
     ///
     /// Calling this method on a non-array `VmTerm` or with an
@@ -1592,103 +1592,103 @@ impl VmTerm {
     pub fn clone_at_unchecked(&self, index: usize) -> VmTerm {
         match self {
             Self::Hash160Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Hash160(clone)
-            },
+            }
             Self::Hash256Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Hash256(clone)
-            },
+            }
             Self::Hash512Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Hash512(clone)
-            },
+            }
             Self::Unsigned8Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Unsigned8(clone)
-            },
+            }
             Self::Unsigned16Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Unsigned16(clone)
-            },
+            }
             Self::Unsigned32Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Unsigned32(clone)
-            },
+            }
             Self::Unsigned64Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Unsigned64(clone)
-            },
+            }
             Self::Unsigned128Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Unsigned128(clone)
-            },
+            }
             Self::UnsignedBigArray(arr) => {
                 let clone = arr[index].clone();
 
                 VmTerm::UnsignedBig(clone)
-            },
+            }
             Self::Signed8Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Signed8(clone)
-            },
+            }
             Self::Signed16Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Signed16(clone)
-            },
+            }
             Self::Signed32Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Signed32(clone)
-            },
+            }
             Self::Signed64Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Signed64(clone)
-            },
+            }
             Self::Signed128Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Signed128(clone)
-            },
+            }
             Self::SignedBigArray(arr) => {
                 let clone = arr[index].clone();
 
                 VmTerm::SignedBig(clone)
-            },
+            }
             Self::Float32Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Float32(clone)
-            },
+            }
             Self::Float64Array(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Float64(clone)
-            },
+            }
             Self::DecimalArray(arr) => {
-                let clone = arr[index].clone();
+                let clone = arr[index];
 
                 VmTerm::Decimal(clone)
-            },
+            }
             _ => unreachable!(),
         }
     }
 
     /// Divides a vector into two at a specified index, without bounds checks
-    /// 
+    ///
     /// # Safety
-    /// 
+    ///
     /// Calling this method on a non-array `VmTerm` or with an
     /// out-of-bounds `mid` is *[undefined behavior]*
     /// The caller has to ensure that the `VmTerm` is an array
@@ -1827,7 +1827,7 @@ impl VmTerm {
     }
 
     /// Removes the element at position `index` and returns it
-    /// 
+    ///
     /// # Safety
     ///
     /// Calling this method on a non-array `VmTerm` or with an
@@ -1841,92 +1841,92 @@ impl VmTerm {
                 let removed = arr.remove(index);
 
                 VmTerm::Hash160(removed)
-            },
+            }
             Self::Hash256Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Hash256(removed)
-            },
+            }
             Self::Hash512Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Hash512(removed)
-            },
+            }
             Self::Unsigned8Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Unsigned8(removed)
-            },
+            }
             Self::Unsigned16Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Unsigned16(removed)
-            },
+            }
             Self::Unsigned32Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Unsigned32(removed)
-            },
+            }
             Self::Unsigned64Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Unsigned64(removed)
-            },
+            }
             Self::Unsigned128Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Unsigned128(removed)
-            },
+            }
             Self::UnsignedBigArray(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::UnsignedBig(removed)
-            },
+            }
             Self::Signed8Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Signed8(removed)
-            },
+            }
             Self::Signed16Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Signed16(removed)
-            },
+            }
             Self::Signed32Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Signed32(removed)
-            },
+            }
             Self::Signed64Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Signed64(removed)
-            },
+            }
             Self::Signed128Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Signed128(removed)
-            },
+            }
             Self::SignedBigArray(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::SignedBig(removed)
-            },
+            }
             Self::Float32Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Float32(removed)
-            },
+            }
             Self::Float64Array(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Float64(removed)
-            },
+            }
             Self::DecimalArray(ref mut arr) => {
                 let removed = arr.remove(index);
 
                 VmTerm::Decimal(removed)
-            },
+            }
             _ => unreachable!(),
         }
     }
@@ -1943,7 +1943,9 @@ impl VmTerm {
             (Self::Unsigned32Array(ref mut arr), Self::Unsigned32(term)) => arr.push(*term),
             (Self::Unsigned64Array(ref mut arr), Self::Unsigned64(term)) => arr.push(*term),
             (Self::Unsigned128Array(ref mut arr), Self::Unsigned128(term)) => arr.push(*term),
-            (Self::UnsignedBigArray(ref mut arr), Self::UnsignedBig(term)) => arr.push(term.clone()),
+            (Self::UnsignedBigArray(ref mut arr), Self::UnsignedBig(term)) => {
+                arr.push(term.clone())
+            }
             (Self::Signed8Array(ref mut arr), Self::Signed8(term)) => arr.push(*term),
             (Self::Signed16Array(ref mut arr), Self::Signed16(term)) => arr.push(*term),
             (Self::Signed32Array(ref mut arr), Self::Signed32(term)) => arr.push(*term),
@@ -1953,7 +1955,7 @@ impl VmTerm {
             (Self::Float32Array(ref mut arr), Self::Float32(term)) => arr.push(*term),
             (Self::Float64Array(ref mut arr), Self::Float64(term)) => arr.push(*term),
             (Self::DecimalArray(ref mut arr), Self::Decimal(term)) => arr.push(*term),
-            _ => return None
+            _ => return None,
         }
 
         Some(())
@@ -1971,17 +1973,21 @@ impl VmTerm {
             (Self::Unsigned32Array(ref mut arr), Self::Unsigned32(term)) => arr.insert(0, *term),
             (Self::Unsigned64Array(ref mut arr), Self::Unsigned64(term)) => arr.insert(0, *term),
             (Self::Unsigned128Array(ref mut arr), Self::Unsigned128(term)) => arr.insert(0, *term),
-            (Self::UnsignedBigArray(ref mut arr), Self::UnsignedBig(term)) => arr.insert(0, term.clone()),
+            (Self::UnsignedBigArray(ref mut arr), Self::UnsignedBig(term)) => {
+                arr.insert(0, term.clone())
+            }
             (Self::Signed8Array(ref mut arr), Self::Signed8(term)) => arr.insert(0, *term),
             (Self::Signed16Array(ref mut arr), Self::Signed16(term)) => arr.insert(0, *term),
             (Self::Signed32Array(ref mut arr), Self::Signed32(term)) => arr.insert(0, *term),
             (Self::Signed64Array(ref mut arr), Self::Signed64(term)) => arr.insert(0, *term),
             (Self::Signed128Array(ref mut arr), Self::Signed128(term)) => arr.insert(0, *term),
-            (Self::SignedBigArray(ref mut arr), Self::SignedBig(term)) => arr.insert(0, term.clone()),
+            (Self::SignedBigArray(ref mut arr), Self::SignedBig(term)) => {
+                arr.insert(0, term.clone())
+            }
             (Self::Float32Array(ref mut arr), Self::Float32(term)) => arr.insert(0, *term),
             (Self::Float64Array(ref mut arr), Self::Float64(term)) => arr.insert(0, *term),
             (Self::DecimalArray(ref mut arr), Self::Decimal(term)) => arr.insert(0, *term),
-            _ => return None
+            _ => return None,
         }
 
         Some(())
@@ -1998,92 +2004,92 @@ impl VmTerm {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Hash160(pop));
-            },
+            }
             Self::Hash256Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Hash256(pop));
-            },
+            }
             Self::Hash512Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Hash512(pop));
-            },
+            }
             Self::Unsigned8Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Unsigned8(pop));
-            },
+            }
             Self::Unsigned16Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Unsigned16(pop));
-            },
+            }
             Self::Unsigned32Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Unsigned32(pop));
-            },
+            }
             Self::Unsigned64Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Unsigned64(pop));
-            },
+            }
             Self::Unsigned128Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Unsigned128(pop));
-            },
+            }
             Self::UnsignedBigArray(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::UnsignedBig(pop));
-            },
+            }
             Self::Signed8Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Signed8(pop));
-            },
+            }
             Self::Signed16Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Signed16(pop));
-            },
+            }
             Self::Signed32Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Signed32(pop));
-            },
+            }
             Self::Signed64Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Signed64(pop));
-            },
+            }
             Self::Signed128Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Signed128(pop));
-            },
+            }
             Self::SignedBigArray(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::SignedBig(pop));
-            },
+            }
             Self::Float32Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Float32(pop));
-            },
+            }
             Self::Float64Array(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Float64(pop));
-            },
+            }
             Self::DecimalArray(ref mut arr) => {
                 let pop = arr.pop().unwrap();
 
                 return Some(VmTerm::Decimal(pop));
-            },
+            }
             _ => return None,
         }
 
@@ -2101,92 +2107,92 @@ impl VmTerm {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Hash160(pop));
-            },
+            }
             Self::Hash256Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Hash256(pop));
-            },
+            }
             Self::Hash512Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Hash512(pop));
-            },
+            }
             Self::Unsigned8Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Unsigned8(pop));
-            },
+            }
             Self::Unsigned16Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Unsigned16(pop));
-            },
+            }
             Self::Unsigned32Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Unsigned32(pop));
-            },
+            }
             Self::Unsigned64Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Unsigned64(pop));
-            },
+            }
             Self::Unsigned128Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Unsigned128(pop));
-            },
+            }
             Self::UnsignedBigArray(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::UnsignedBig(pop));
-            },
+            }
             Self::Signed8Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Signed8(pop));
-            },
+            }
             Self::Signed16Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Signed16(pop));
-            },
+            }
             Self::Signed32Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Signed32(pop));
-            },
+            }
             Self::Signed64Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Signed64(pop));
-            },
+            }
             Self::Signed128Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Signed128(pop));
-            },
+            }
             Self::SignedBigArray(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::SignedBig(pop));
-            },
+            }
             Self::Float32Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Float32(pop));
-            },
+            }
             Self::Float64Array(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Float64(pop));
-            },
+            }
             Self::DecimalArray(ref mut arr) => {
                 let pop = arr.remove(0);
 
                 return Some(VmTerm::Decimal(pop));
-            },
+            }
             _ => return None,
         }
 

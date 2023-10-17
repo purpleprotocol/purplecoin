@@ -1718,7 +1718,7 @@ impl<'a> ScriptExecutor<'a> {
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
-                    } 
+                    }
 
                     let cloned = exec_stack[len - 1].clone_at_unchecked(idx);
                     *memory_size += cloned.size();
@@ -1745,7 +1745,7 @@ impl<'a> ScriptExecutor<'a> {
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
-                    } 
+                    }
 
                     let removed = exec_stack[len - 1].remove_at_unchecked(idx);
                     *memory_size -= removed.size();
@@ -3270,9 +3270,9 @@ impl<'a> ScriptExecutor<'a> {
                     }
 
                     let r = exec_stack.remove(exec_stack.len() - 2);
-                    
+
                     match exec_stack[len - 1].push_back(&r) {
-                        Some(()) => { }
+                        Some(()) => {}
                         None => {
                             self.state = ScriptExecutorState::Error(
                                 ExecutionResult::InvalidArgs,
@@ -3294,9 +3294,9 @@ impl<'a> ScriptExecutor<'a> {
                     }
 
                     let r = exec_stack.remove(exec_stack.len() - 2);
-                    
+
                     match exec_stack[len - 1].push_front(&r) {
-                        Some(()) => { }
+                        Some(()) => {}
                         None => {
                             self.state = ScriptExecutorState::Error(
                                 ExecutionResult::InvalidArgs,
@@ -3318,7 +3318,7 @@ impl<'a> ScriptExecutor<'a> {
                     }
 
                     match exec_stack[len - 1].pop_back() {
-                        Some(term) => { 
+                        Some(term) => {
                             exec_stack.push(term);
                         }
                         None => {
@@ -3342,7 +3342,7 @@ impl<'a> ScriptExecutor<'a> {
                     }
 
                     match exec_stack[len - 1].pop_front() {
-                        Some(term) => { 
+                        Some(term) => {
                             exec_stack.push(term);
                         }
                         None => {
@@ -4924,7 +4924,9 @@ impl ScriptParser {
                 Some(OP::Hash512Var) => impl_parser_expecting_bytes!(self, OP::Hash512Var, 64),
                 Some(OP::Pick) => impl_parser_expecting_bytes!(self, OP::Pick, 1),
                 Some(OP::Roll) => impl_parser_expecting_bytes!(self, OP::Roll, 1),
-                Some(OP::PickToScriptOuts) => impl_parser_expecting_bytes!(self, OP::PickToScriptOuts, 1),
+                Some(OP::PickToScriptOuts) => {
+                    impl_parser_expecting_bytes!(self, OP::PickToScriptOuts, 1)
+                }
                 Some(OP::GetAtArray) => impl_parser_expecting_bytes!(self, OP::GetAtArray, 1),
                 Some(OP::DeleteAtArray) => impl_parser_expecting_bytes!(self, OP::DeleteAtArray, 1),
                 Some(OP::Hash160ArrayVar) => impl_parser_expecting_len!(self, OP::Hash160ArrayVar),
