@@ -86,15 +86,15 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x43` SignedBigArrayVar - Pushes a `SignedBigArray` onto the stack
     - [x] OP `0x44` Float32ArrayVar - Pushes a `Float32Array` onto the stack
     - [x] OP `0x45` Float64ArrayVar - Pushes a `Float64Array` onto the stack
-    - [ ] OP `0x46` DecimalArrayVar - Pushes a `DecimalArray` onto the stack
-    - [ ] OP `0x47` GetAtArray - Duplicates the element at index in array and pushes it on top of the stack
-    - [ ] OP `0x48` PushBackArray - Pushes the second item on the stack to the back of the array which is the first item on the stack
-    - [ ] OP `0x49` PushFrontArray - Pushes the second item on the stack to the front of the array which is the first item on the stack
+    - [x] OP `0x46` DecimalArrayVar - Pushes a `DecimalArray` onto the stack
+    - [x] OP `0x47` GetAtArray - Duplicates the element at index in array and pushes it on top of the stack
+    - [x] OP `0x48` PushBackArray - Pushes the second item on the stack to the back of the array which is the first item on the stack
+    - [x] OP `0x49` PushFrontArray - Pushes the second item on the stack to the front of the array which is the first item on the stack
     - [x] OP `0x4a` ArrayLen - Pushes on top of the stack the len of the array currently on top of the stack
     - [x] OP `0x4b` GetType - Pushes on top of the stack the type code of the value currently on top of the stack as a `Unsigned8`
-    - [ ] OP `0x4c` PopBackArray - Pops the last item in the given array and pushes it to the top of the stack
-    - [ ] OP `0x4d` PopFrontArray - Pops the first item in the given array and pushes it to the top of the stack
-    - [ ] OP `0x4e` DeleteAtArray - Deletes the element at index in array and pushes it on top of the stack
+    - [x] OP `0x4c` PopBackArray - Pops the last item in the given array and pushes it to the top of the stack
+    - [x] OP `0x4d` PopFrontArray - Pops the first item in the given array and pushes it to the top of the stack
+    - [x] OP `0x4e` DeleteAtArray - Deletes the element at index in array and pushes it on top of the stack
     - [x] OP `0x4f` ClearStack - Clears the stack
     - [x] OP `0x50` Add - Pops the two topmost items on the stack, performs addition and pushes the result on the stack
     - [x] OP `0x51` Sub - Pops the two topmost items on the stack, performs subtraction and pushes the result on the stack
