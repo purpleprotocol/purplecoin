@@ -1944,7 +1944,7 @@ impl VmTerm {
             (Self::Unsigned64Array(ref mut arr), Self::Unsigned64(term)) => arr.push(*term),
             (Self::Unsigned128Array(ref mut arr), Self::Unsigned128(term)) => arr.push(*term),
             (Self::UnsignedBigArray(ref mut arr), Self::UnsignedBig(term)) => {
-                arr.push(term.clone())
+                arr.push(term.clone());
             }
             (Self::Signed8Array(ref mut arr), Self::Signed8(term)) => arr.push(*term),
             (Self::Signed16Array(ref mut arr), Self::Signed16(term)) => arr.push(*term),
@@ -1974,7 +1974,7 @@ impl VmTerm {
             (Self::Unsigned64Array(ref mut arr), Self::Unsigned64(term)) => arr.insert(0, *term),
             (Self::Unsigned128Array(ref mut arr), Self::Unsigned128(term)) => arr.insert(0, *term),
             (Self::UnsignedBigArray(ref mut arr), Self::UnsignedBig(term)) => {
-                arr.insert(0, term.clone())
+                arr.insert(0, term.clone());
             }
             (Self::Signed8Array(ref mut arr), Self::Signed8(term)) => arr.insert(0, *term),
             (Self::Signed16Array(ref mut arr), Self::Signed16(term)) => arr.insert(0, *term),
@@ -1982,7 +1982,7 @@ impl VmTerm {
             (Self::Signed64Array(ref mut arr), Self::Signed64(term)) => arr.insert(0, *term),
             (Self::Signed128Array(ref mut arr), Self::Signed128(term)) => arr.insert(0, *term),
             (Self::SignedBigArray(ref mut arr), Self::SignedBig(term)) => {
-                arr.insert(0, term.clone())
+                arr.insert(0, term.clone());
             }
             (Self::Float32Array(ref mut arr), Self::Float32(term)) => arr.insert(0, *term),
             (Self::Float64Array(ref mut arr), Self::Float64(term)) => arr.insert(0, *term),

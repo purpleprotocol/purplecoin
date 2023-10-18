@@ -11654,7 +11654,8 @@ mod tests {
             ..Script::default()
         };
 
-        let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03, 0x04, 0x0a])];
+        let script_output: Vec<VmTerm> =
+            vec![VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03, 0x04, 0x0a])];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
@@ -11726,7 +11727,8 @@ mod tests {
             ..Script::default()
         };
 
-        let script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8Array(vec![0x0a, 0x01, 0x02, 0x03, 0x04])];
+        let script_output: Vec<VmTerm> =
+            vec![VmTerm::Unsigned8Array(vec![0x0a, 0x01, 0x02, 0x03, 0x04])];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
@@ -11799,7 +11801,7 @@ mod tests {
 
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Unsigned8(0x04),
-            VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03])
+            VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03]),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
@@ -11867,7 +11869,7 @@ mod tests {
 
         let script_output: Vec<VmTerm> = vec![
             VmTerm::Unsigned8(0x01),
-            VmTerm::Unsigned8Array(vec![0x02, 0x03, 0x04])
+            VmTerm::Unsigned8Array(vec![0x02, 0x03, 0x04]),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
