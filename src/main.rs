@@ -39,16 +39,6 @@ use warp::Filter;
 
 #[cfg(feature = "blake3sum")]
 use blake3::Hasher as Blake3;
-#[cfg(feature = "gui")]
-use iced::window::icon::Icon;
-#[cfg(feature = "gui")]
-use iced::{Application, Settings};
-#[cfg(feature = "gui")]
-use purplecoin::gui::GUI;
-#[cfg(feature = "sha256sum")]
-use sha2::{Digest, Sha256};
-#[cfg(feature = "gui")]
-use std::process;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -71,15 +61,9 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn run_init() -> anyhow::Result<()> {
-    #[cfg(feature = "gui")]
-    thread::spawn(start_runtime);
-
-    #[cfg(not(feature = "gui"))]
     let t = thread::spawn(start_runtime);
 
     purplecoin::wallet::load_wallets();
-
-    #[cfg(not(feature = "gui"))]
     {
         // This loop runs forever, and blocks until the exit signal is received
         loop {
@@ -92,9 +76,6 @@ fn run_init() -> anyhow::Result<()> {
         // Wait for thread to exit
         let _ = t.join().unwrap();
     }
-
-    #[cfg(feature = "gui")]
-    start_gui()?;
 
     Ok(())
 }
@@ -215,10 +196,6 @@ fn start_runtime() -> anyhow::Result<()> {
 
         // TODO: Cleanup anything here
 
-        #[cfg(feature = "gui")]
-        // When we run the GUI we must terminate it this way
-        process::exit(1);
-
         Ok(())
     })
 }
@@ -255,38 +232,6 @@ async fn check_exit_signal() {
         "Purplecoin Core v{} shutting down...",
         env!("CARGO_PKG_VERSION")
     )
-}
-
-#[cfg(feature = "gui")]
-fn start_gui() -> iced::Result {
-    let mut gui_settings = Settings {
-        id: Some("org.purplecoin.PurplecoinCore".to_owned()),
-        ..Settings::default()
-    };
-
-    // Set application icon
-    {
-        gui_settings.window.icon = Some(
-            Icon::from_rgba(
-                purplecoin::global::LOGO_PIXELS.0.clone(),
-                purplecoin::global::LOGO_PIXELS.1,
-                purplecoin::global::LOGO_PIXELS.2,
-            )
-            .unwrap(),
-        );
-    }
-
-    // Don't close application implicitly when clicking the close window button
-    #[cfg(target_os = "macos")]
-    {
-        gui_settings.exit_on_close_request = false;
-    }
-
-    info!(
-        "Starting Purplecoin Core v{} GUI",
-        env!("CARGO_PKG_VERSION")
-    );
-    GUI::run(gui_settings)
 }
 
 /// Schedules periodic jobs such as chain pruning

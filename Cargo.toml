@@ -9,19 +9,6 @@ repository = "https://github.com/purpleprotocol/purplecoin"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-iced = { path = "./vendor/iced", features = ["tokio", "glow", "image"] }
-iced_glow = { path = "./vendor/iced/glow" }
-iced_core = { path = "./vendor/iced/core" }
-iced_lazy = { path = "./vendor/iced/lazy" }
-iced_glutin = { path = "./vendor/iced/glutin" }
-iced_native = { path = "./vendor/iced/native" }
-iced_futures = { path = "./vendor/iced/futures", features = ["tokio"] }
-iced_graphics = { path = "./vendor/iced/graphics" }
-iced_style = { path = "./vendor/iced/style" }
-iced_pure = { path = "./vendor/iced/pure" }
-iced_winit = { path = "./vendor/iced/winit" }
-iced_wgpu = { path = "./vendor/iced/wgpu" }
-iced_aw = { path = "./vendor/iced_aw" }
 image = "0.24.5"
 blake2 = "0.10.4"
 blake3 = "1.3.1"
@@ -142,10 +129,9 @@ quickcheck_macros = "1"
 fluent-asserter = "0.1.9"
 
 [features]
-default = ["gui", "miner", "wallet", "rpc", "disk", "blake3sum", "runtime-clang"]
+default = ["miner", "wallet", "rpc", "disk", "blake3sum", "runtime-clang"]
 sha256sum = []
 blake3sum = []
-gui = []
 cli = []
 miner = []
 wallet = []

@@ -1,6 +1,0 @@
-target/
-pkg/
-**/*.rs.bk
-Cargo.lock
-.cargo/
-dist/

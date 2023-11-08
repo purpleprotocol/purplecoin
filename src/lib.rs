@@ -86,6 +86,3 @@ pub mod primitives;
 pub mod settings;
 pub mod vm;
 pub mod wallet;
-
-#[cfg(feature = "gui")]
-pub mod gui;
