@@ -4,6 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use crate::vm::internal::VmTerm::{Hash512, Unsigned8, UnsignedBig};
 use bincode::{Decode, Encode};
 use ibig::ops::Abs;
 use ibig::{ibig, ubig, IBig, UBig};
@@ -12,7 +13,6 @@ use num_traits::ToPrimitive;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use std::{fmt, mem};
-use crate::vm::internal::VmTerm::{Hash512, Unsigned8, UnsignedBig};
 
 const WORD_SIZE: usize = 8; // 8 bytes on 64bit machines
 pub const EMPTY_VEC_HEAP_SIZE: usize = 3 * WORD_SIZE; // 3 words
@@ -1591,24 +1591,24 @@ impl VmTerm {
         }
 
         match self {
-            Self::Hash160Array(arr) => Some(VmTerm::Hash160(arr[len - 1].clone())),
-            Self::Hash256Array(arr) => Some(VmTerm::Hash256(arr[len - 1].clone())),
-            Self::Hash512Array(arr) => Some(VmTerm::Hash512(arr[len - 1].clone())),
-            Self::Unsigned8Array(arr) => Some(VmTerm::Unsigned8(arr[len - 1].clone())),
-            Self::Unsigned16Array(arr) => Some(VmTerm::Unsigned16(arr[len - 1].clone())),
-            Self::Unsigned32Array(arr) => Some(VmTerm::Unsigned32(arr[len - 1].clone())),
-            Self::Unsigned64Array(arr) => Some(VmTerm::Unsigned64(arr[len - 1].clone())),
-            Self::Unsigned128Array(arr) => Some(VmTerm::Unsigned128(arr[len - 1].clone())),
+            Self::Hash160Array(arr) => Some(VmTerm::Hash160(arr[len - 1])),
+            Self::Hash256Array(arr) => Some(VmTerm::Hash256(arr[len - 1])),
+            Self::Hash512Array(arr) => Some(VmTerm::Hash512(arr[len - 1])),
+            Self::Unsigned8Array(arr) => Some(VmTerm::Unsigned8(arr[len - 1])),
+            Self::Unsigned16Array(arr) => Some(VmTerm::Unsigned16(arr[len - 1])),
+            Self::Unsigned32Array(arr) => Some(VmTerm::Unsigned32(arr[len - 1])),
+            Self::Unsigned64Array(arr) => Some(VmTerm::Unsigned64(arr[len - 1])),
+            Self::Unsigned128Array(arr) => Some(VmTerm::Unsigned128(arr[len - 1])),
             Self::UnsignedBigArray(arr) => Some(VmTerm::UnsignedBig(arr[len - 1].clone())),
-            Self::Signed8Array(arr) => Some(VmTerm::Signed8(arr[len - 1].clone())),
-            Self::Signed16Array(arr) => Some(VmTerm::Signed16(arr[len - 1].clone())),
-            Self::Signed32Array(arr) => Some(VmTerm::Signed32(arr[len - 1].clone())),
-            Self::Signed64Array(arr) => Some(VmTerm::Signed64(arr[len - 1].clone())),
-            Self::Signed128Array(arr) => Some(VmTerm::Signed128(arr[len - 1].clone())),
+            Self::Signed8Array(arr) => Some(VmTerm::Signed8(arr[len - 1])),
+            Self::Signed16Array(arr) => Some(VmTerm::Signed16(arr[len - 1])),
+            Self::Signed32Array(arr) => Some(VmTerm::Signed32(arr[len - 1])),
+            Self::Signed64Array(arr) => Some(VmTerm::Signed64(arr[len - 1])),
+            Self::Signed128Array(arr) => Some(VmTerm::Signed128(arr[len - 1])),
             Self::SignedBigArray(arr) => Some(VmTerm::SignedBig(arr[len - 1].clone())),
-            Self::Float32Array(arr) => Some(VmTerm::Float32(arr[len - 1].clone())),
-            Self::Float64Array(arr) => Some(VmTerm::Float64(arr[len - 1].clone())),
-            Self::DecimalArray(arr) => Some(VmTerm::Decimal(arr[len - 1].clone())),
+            Self::Float32Array(arr) => Some(VmTerm::Float32(arr[len - 1])),
+            Self::Float64Array(arr) => Some(VmTerm::Float64(arr[len - 1])),
+            Self::DecimalArray(arr) => Some(VmTerm::Decimal(arr[len - 1])),
             _ => None,
         }
     }
