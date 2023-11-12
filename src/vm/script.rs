@@ -12141,139 +12141,6 @@ mod tests {
     }
 
     #[test]
-    fn it_peeks_array() {
-        let key = "test_key";
-        let mut ss = Script {
-            script: vec![
-                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
-                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
-                ScriptEntry::Byte(0x04),
-                ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x01),
-                ScriptEntry::Byte(0x02),
-                ScriptEntry::Byte(0x03),
-                ScriptEntry::Byte(0x04),
-                ScriptEntry::Opcode(OP::PeekArray),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PushOut),
-                ScriptEntry::Opcode(OP::Verify),
-            ],
-            ..Script::default()
-        };
-
-        let script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned8(0x04),
-            VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03, 0x04]),
-        ];
-        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
-        let mut idx_map = HashMap::new();
-        let mut outs = vec![];
-
-        assert_eq!(
-            ss.execute(
-                &base.args,
-                &base.ins,
-                &mut outs,
-                &mut idx_map,
-                [0; 32],
-                key,
-                VmFlags::default()
-            ),
-            Ok(ExecutionResult::OkVerify).into()
-        );
-        assert_eq!(outs, base.out);
-    }
-
-    #[test]
-    fn it_fails_to_peek_array() {
-        let key = "test_key";
-        let mut ss = Script {
-            script: vec![
-                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x00),
-                ScriptEntry::Opcode(OP::PeekArray),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PushOut),
-                ScriptEntry::Opcode(OP::Verify),
-            ],
-            ..Script::default()
-        };
-
-        let mut script_output: Vec<VmTerm> = vec![];
-
-        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
-    }
-
-    #[test]
-    fn it_clears_array() {
-        let key = "test_key";
-        let mut ss = Script {
-            script: vec![
-                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
-                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
-                ScriptEntry::Byte(0x04),
-                ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x01),
-                ScriptEntry::Byte(0x02),
-                ScriptEntry::Byte(0x03),
-                ScriptEntry::Byte(0x04),
-                ScriptEntry::Opcode(OP::Dup),
-                ScriptEntry::Opcode(OP::ClearArray),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PushOut),
-                ScriptEntry::Opcode(OP::Verify),
-            ],
-            ..Script::default()
-        };
-
-        let script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned8Array(vec![]),
-            VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03, 0x04]),
-        ];
-        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
-        let mut idx_map = HashMap::new();
-        let mut outs = vec![];
-
-        assert_eq!(
-            ss.execute(
-                &base.args,
-                &base.ins,
-                &mut outs,
-                &mut idx_map,
-                [0; 32],
-                key,
-                VmFlags::default()
-            ),
-            Ok(ExecutionResult::OkVerify).into()
-        );
-        assert_eq!(outs, base.out);
-    }
-
-    #[test]
-    fn it_fails_to_clear_array() {
-        let key = "test_key";
-        let mut ss = Script {
-            script: vec![
-                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x00),
-                ScriptEntry::Opcode(OP::ClearArray),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PushOut),
-                ScriptEntry::Opcode(OP::Verify),
-            ],
-            ..Script::default()
-        };
-
-        let mut script_output: Vec<VmTerm> = vec![];
-
-        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
-    }
-
-    #[test]
     fn it_generates_random_160_hash() {
         let seed = [0; 32];
         let mut rng: Pcg64 = Seeder::from(seed).make_rng();
@@ -17539,6 +17406,139 @@ mod tests {
     }
 
     #[test]
+    fn it_peeks_array() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::PeekArray),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(0x04),
+            VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03, 0x04]),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_fails_to_peek_array() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PeekArray),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![];
+
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
+    }
+
+    #[test]
+    fn it_clears_array() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::ClearArray),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8Array(vec![]),
+            VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03, 0x04]),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_fails_to_clear_array() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::ClearArray),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![];
+
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
+    }
+
+    #[test]
     fn it_pushes_out_if_value_equals_1() {
         let key = "test_key";
         let mut ss = Script {
@@ -17554,7 +17554,7 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x00), // stack: [out, out, out, 0, 0, 0, 1, 0]
-                ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments, stack: [out, out, out, 0, 1, 2, 3, 4, out, out, out]
+                ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments, stack: [out, out, out, 0, 0, 0, 1, 0, out, out, out]
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x07),
