@@ -1769,14 +1769,24 @@ impl<'a> ScriptExecutor<'a> {
                     );
                 }
 
-                ScriptEntry::Opcode(OP::PushOut)
-                | ScriptEntry::Opcode(OP::PushOutIf)
-                | ScriptEntry::Opcode(OP::PushOutIfEq)
-                | ScriptEntry::Opcode(OP::PushOutIfNeq)
-                | ScriptEntry::Opcode(OP::PushOutIfLt)
-                | ScriptEntry::Opcode(OP::PushOutIfGt)
-                | ScriptEntry::Opcode(OP::PushOutIfLeq)
-                | ScriptEntry::Opcode(OP::PushOutIfGeq) if Self::check_condition_push_out(exec_stack, memory_size, op.clone()).unwrap_or_else(|_| {self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs, (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into()); false}) => {
+                ScriptEntry::Opcode(
+                    OP::PushOut
+                    | OP::PushOutIf
+                    | OP::PushOutIfEq
+                    | OP::PushOutIfNeq
+                    | OP::PushOutIfLt
+                    | OP::PushOutIfGt
+                    | OP::PushOutIfLeq
+                    | OP::PushOutIfGeq,
+                ) if Self::check_condition_push_out(exec_stack, memory_size, op.clone())
+                    .unwrap_or_else(|()| {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        false
+                    }) =>
+                {
                     if exec_stack.len() < 3 {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
@@ -4698,7 +4708,11 @@ impl<'a> ScriptExecutor<'a> {
 
     #[inline]
     #[must_use]
-    fn check_condition_push_out(exec_stack: &mut Vec<VmTerm>, memory_size: &mut usize, op: ScriptEntry) -> Result<bool, ()> {
+    fn check_condition_push_out(
+        exec_stack: &mut Vec<VmTerm>,
+        memory_size: &mut usize,
+        op: ScriptEntry,
+    ) -> Result<bool, ()> {
         match op {
             ScriptEntry::Opcode(OP::PushOut) => Ok(true),
             ScriptEntry::Opcode(OP::PushOutIf) => {
@@ -4732,7 +4746,7 @@ impl<'a> ScriptExecutor<'a> {
                     ScriptEntry::Opcode(OP::PushOutIfGt) => Ok(e1 > e2),
                     ScriptEntry::Opcode(OP::PushOutIfLeq) => Ok(e1 <= e2),
                     ScriptEntry::Opcode(OP::PushOutIfGeq) => Ok(e1 >= e2),
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 }
             }
         }
