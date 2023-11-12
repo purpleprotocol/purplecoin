@@ -1769,7 +1769,14 @@ impl<'a> ScriptExecutor<'a> {
                     );
                 }
 
-                ScriptEntry::Opcode(OP::PushOut) => {
+                ScriptEntry::Opcode(OP::PushOut)
+                | ScriptEntry::Opcode(OP::PushOutIf)
+                | ScriptEntry::Opcode(OP::PushOutIfEq)
+                | ScriptEntry::Opcode(OP::PushOutIfNeq)
+                | ScriptEntry::Opcode(OP::PushOutIfLt)
+                | ScriptEntry::Opcode(OP::PushOutIfGt)
+                | ScriptEntry::Opcode(OP::PushOutIfLeq)
+                | ScriptEntry::Opcode(OP::PushOutIfGeq) if Self::check_condition_push_out(exec_stack, memory_size, op.clone()).unwrap_or_else(|_| {self.state = ScriptExecutorState::Error(ExecutionResult::InvalidArgs, (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into()); false}) => {
                     if exec_stack.len() < 3 {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
@@ -4686,6 +4693,48 @@ impl<'a> ScriptExecutor<'a> {
             ScriptExecutorState::OkVerify => Some(Ok(ExecutionResult::OkVerify)),
             ScriptExecutorState::Error(res, trace) => Some(Err((*res, trace.clone()))),
             _ => None,
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    fn check_condition_push_out(exec_stack: &mut Vec<VmTerm>, memory_size: &mut usize, op: ScriptEntry) -> Result<bool, ()> {
+        match op {
+            ScriptEntry::Opcode(OP::PushOut) => Ok(true),
+            ScriptEntry::Opcode(OP::PushOutIf) => {
+                if exec_stack.is_empty() {
+                    return Err(());
+                }
+
+                let top = exec_stack.pop().unwrap();
+                *memory_size -= top.size();
+
+                Ok(top.equals_1())
+            }
+            _ => {
+                if exec_stack.len() < 2 {
+                    return Err(());
+                }
+
+                let e1 = exec_stack.pop().unwrap();
+                *memory_size -= e1.size();
+                let e2 = exec_stack.pop().unwrap();
+                *memory_size -= e2.size();
+
+                if !e1.is_comparable(&e2) {
+                    return Err(());
+                }
+
+                match op {
+                    ScriptEntry::Opcode(OP::PushOutIfEq) => Ok(e1 == e2),
+                    ScriptEntry::Opcode(OP::PushOutIfNeq) => Ok(e1 != e2),
+                    ScriptEntry::Opcode(OP::PushOutIfLt) => Ok(e1 < e2),
+                    ScriptEntry::Opcode(OP::PushOutIfGt) => Ok(e1 > e2),
+                    ScriptEntry::Opcode(OP::PushOutIfLeq) => Ok(e1 <= e2),
+                    ScriptEntry::Opcode(OP::PushOutIfGeq) => Ok(e1 >= e2),
+                    _ => unreachable!()
+                }
+            }
         }
     }
 }
