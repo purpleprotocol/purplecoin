@@ -1769,7 +1769,16 @@ impl<'a> ScriptExecutor<'a> {
                     );
                 }
 
-                ScriptEntry::Opcode(OP::PushOut | OP::PushOutIf | OP::PushOutIfEq | OP::PushOutIfNeq | OP::PushOutIfLt | OP::PushOutIfGt | OP::PushOutIfLeq | OP::PushOutIfGeq) => {
+                ScriptEntry::Opcode(
+                    OP::PushOut
+                    | OP::PushOutIf
+                    | OP::PushOutIfEq
+                    | OP::PushOutIfNeq
+                    | OP::PushOutIfLt
+                    | OP::PushOutIfGt
+                    | OP::PushOutIfLeq
+                    | OP::PushOutIfGeq,
+                ) => {
                     match Self::check_condition_push_out(exec_stack, memory_size, op.clone()) {
                         Ok(val) => {
                             if val {
@@ -1797,26 +1806,28 @@ impl<'a> ScriptExecutor<'a> {
                                         let address = Address(addr);
                                         let script_hash = Hash160(script_hash);
 
-                                        if let Some(idx) =
-                                            output_stack_idx_map.get(&(address.clone(), script_hash.clone()))
+                                        if let Some(idx) = output_stack_idx_map
+                                            .get(&(address.clone(), script_hash.clone()))
                                         {
                                             // Re-hash inputs
                                             let inputs_hashes: Vec<u8> = [
                                                 output_stack[*idx as usize].inputs_hash.clone(),
                                                 inputs_hash.clone(),
                                             ]
-                                                .iter()
-                                                .fold(vec![], |mut acc, hash| {
-                                                    acc.extend(hash.0);
-                                                    acc
-                                                });
+                                            .iter()
+                                            .fold(vec![], |mut acc, hash| {
+                                                acc.extend(hash.0);
+                                                acc
+                                            });
 
-                                            let inputs_hash = Hash160::hash_from_slice(inputs_hashes, key);
+                                            let inputs_hash =
+                                                Hash160::hash_from_slice(inputs_hashes, key);
 
                                             output_stack[*idx as usize].amount += amount;
                                             output_stack[*idx as usize].inputs_hash = inputs_hash;
                                             output_stack[*idx as usize].compute_hash(key);
-                                            output_stack[*idx as usize].script_outs = script_outputs.clone();
+                                            output_stack[*idx as usize].script_outs =
+                                                script_outputs.clone();
 
                                             *script_outputs = vec![];
                                         } else {
@@ -1833,8 +1844,10 @@ impl<'a> ScriptExecutor<'a> {
                                             };
 
                                             output.compute_hash(key);
-                                            output_stack_idx_map
-                                                .insert((address, script_hash), output_stack.len() as u16);
+                                            output_stack_idx_map.insert(
+                                                (address, script_hash),
+                                                output_stack.len() as u16,
+                                            );
                                             output_stack.push(output);
                                             *script_outputs = vec![];
                                         }
@@ -1842,7 +1855,13 @@ impl<'a> ScriptExecutor<'a> {
                                         if output_stack.len() > MAX_OUT_STACK {
                                             self.state = ScriptExecutorState::Error(
                                                 ExecutionResult::OutStackOverflow,
-                                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                                (
+                                                    i_ptr,
+                                                    func_idx,
+                                                    op.clone(),
+                                                    exec_stack.as_slice(),
+                                                )
+                                                    .into(),
                                             );
                                             return;
                                         }
@@ -1853,18 +1872,18 @@ impl<'a> ScriptExecutor<'a> {
                                     _ => {
                                         self.state = ScriptExecutorState::Error(
                                             ExecutionResult::InvalidArgs,
-                                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice())
+                                                .into(),
                                         );
                                     }
                                 }
                             }
                         }
-                        Err(_) => {
+                        Err(()) => {
                             self.state = ScriptExecutorState::Error(
                                 ExecutionResult::InvalidArgs,
                                 (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                             );
-                            return;
                         }
                     }
                 }
@@ -17541,28 +17560,21 @@ mod tests {
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x07),
-
                 ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::PushOutIf), // 0 == 1 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),      // roll the next value to the top
                 ScriptEntry::Byte(0x06),
                 ScriptEntry::Opcode(OP::PushOutIf), // 0 == 1 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),      // roll the next value to the top
                 ScriptEntry::Byte(0x05),
                 ScriptEntry::Opcode(OP::PushOutIf), // 0 == 1 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),      // roll the next value to the top
                 ScriptEntry::Byte(0x04),
                 ScriptEntry::Opcode(OP::PushOutIf), // 1 == 1 true, will push out, stack: [out, out, out, 0]
-
                 ScriptEntry::Opcode(OP::PushOutIf), // one last false check, 0 == 1 false, will not push out, stack: [out, out, out]
-
-                ScriptEntry::Opcode(OP::Drop), // drop original arguments
+                ScriptEntry::Opcode(OP::Drop),      // drop original arguments
                 ScriptEntry::Opcode(OP::Drop2),
-
                 ScriptEntry::Opcode(OP::Verify),
             ],
             ..Script::default()
@@ -17608,38 +17620,31 @@ mod tests {
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x07),
-
                 ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x03),
                 ScriptEntry::Opcode(OP::PushOutIfEq), // 0 == 3 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
                 ScriptEntry::Byte(0x06),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x03),
                 ScriptEntry::Opcode(OP::PushOutIfEq), // 1 == 3 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
                 ScriptEntry::Byte(0x05),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x03),
                 ScriptEntry::Opcode(OP::PushOutIfEq), // 2 == 3 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
                 ScriptEntry::Byte(0x04),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x03),
                 ScriptEntry::Opcode(OP::PushOutIfEq), // 3 == 3 true, will push out, stack: [out, out, out, 4]
-
                 ScriptEntry::Opcode(OP::Unsigned8Var), // add one last false check
                 ScriptEntry::Byte(0x0a),
                 ScriptEntry::Opcode(OP::PushOutIfEq), // 10 == 4 false, will not push out, stack: [out, out, out]
-
-                ScriptEntry::Opcode(OP::Drop), // drop original arguments
+                ScriptEntry::Opcode(OP::Drop),        // drop original arguments
                 ScriptEntry::Opcode(OP::Drop2),
-
                 ScriptEntry::Opcode(OP::Verify),
             ],
             ..Script::default()
@@ -17685,38 +17690,31 @@ mod tests {
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x07),
-
                 ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PushOutIfNeq), // 0 != 0 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
                 ScriptEntry::Byte(0x06),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PushOutIfNeq), // 0 != 0 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
                 ScriptEntry::Byte(0x05),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PushOutIfNeq), // 0 != 0 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
                 ScriptEntry::Byte(0x04),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x0b),
                 ScriptEntry::Opcode(OP::PushOutIfNeq), // 10 != 11 true, will push out, stack: [out, out, out, 0]
-
                 ScriptEntry::Opcode(OP::Unsigned8Var), // add one last false check
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PushOutIfNeq), // 0 != 0 false, will not push out, stack: [out, out, out]
-
-                ScriptEntry::Opcode(OP::Drop), // drop original arguments
+                ScriptEntry::Opcode(OP::Drop),         // drop original arguments
                 ScriptEntry::Opcode(OP::Drop2),
-
                 ScriptEntry::Opcode(OP::Verify),
             ],
             ..Script::default()
@@ -17762,38 +17760,31 @@ mod tests {
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x07),
-
                 ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::PushOutIfLt), // 1 < 1 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
                 ScriptEntry::Byte(0x06),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::PushOutIfLt), // 2 < 1 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
                 ScriptEntry::Byte(0x05),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x03),
                 ScriptEntry::Opcode(OP::PushOutIfLt), // 3 < 1 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
                 ScriptEntry::Byte(0x04),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PushOutIfLt), // 0 < 1 true, will push out, stack: [out, out, out, 1]
-
                 ScriptEntry::Opcode(OP::Unsigned8Var), // add one last false check
                 ScriptEntry::Byte(0x0a),
                 ScriptEntry::Opcode(OP::PushOutIfLt), // 10 < 1 false, will not push out, stack: [out, out, out]
-
-                ScriptEntry::Opcode(OP::Drop), // drop original arguments
+                ScriptEntry::Opcode(OP::Drop),        // drop original arguments
                 ScriptEntry::Opcode(OP::Drop2),
-
                 ScriptEntry::Opcode(OP::Verify),
             ],
             ..Script::default()
@@ -17839,38 +17830,31 @@ mod tests {
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x07),
-
                 ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PushOutIfGt), // 0 > 1 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
                 ScriptEntry::Byte(0x06),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PushOutIfGt), // 0 > 1 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
                 ScriptEntry::Byte(0x05),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::PushOutIfGt), // 1 > 1 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
                 ScriptEntry::Byte(0x04),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::PushOutIfGt), // 2 > 1 true, will push out, stack: [out, out, out, 1]
-
                 ScriptEntry::Opcode(OP::Unsigned8Var), // add one last false check
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::PushOutIfGt), // 1 > 1 false, will not push out, stack: [out, out, out]
-
-                ScriptEntry::Opcode(OP::Drop), // drop original arguments
+                ScriptEntry::Opcode(OP::Drop),        // drop original arguments
                 ScriptEntry::Opcode(OP::Drop2),
-
                 ScriptEntry::Opcode(OP::Verify),
             ],
             ..Script::default()
@@ -17916,45 +17900,37 @@ mod tests {
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x07),
-
                 ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::PushOutIfLeq), // 2 <= 1 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
                 ScriptEntry::Byte(0x06),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::PushOutIfLeq), // 2 <= 1 false, continue
-
                 ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments because we will push out, stack: [out, out, out, 1, 1, 1, out, out, out, out, out, out]
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x02),
-
                 ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
                 ScriptEntry::Byte(0x08),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PushOutIfLeq), // 0 <= 1 true, will push out, stack: [out, out, out, 1, 1, out, out, out]
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
                 ScriptEntry::Byte(0x04),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::PushOutIfLeq), // 1 <= 1 true, will push out, stack: [out, out, out, 1]
-
                 ScriptEntry::Opcode(OP::Unsigned8Var), // add one last false check
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::PushOutIfLeq), // 2 <= 1 false, will not push out, stack: [out, out, out]
-
-                ScriptEntry::Opcode(OP::Drop), // drop original arguments
+                ScriptEntry::Opcode(OP::Drop),         // drop original arguments
                 ScriptEntry::Opcode(OP::Drop2),
-
                 ScriptEntry::Opcode(OP::Verify),
             ],
             ..Script::default()
@@ -18000,45 +17976,37 @@ mod tests {
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x07),
-
                 ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
                 ScriptEntry::Byte(0x07),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PushOutIfGeq), // 0 >= 1 false, continue
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
                 ScriptEntry::Byte(0x06),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PushOutIfGeq), // 0 >= 1 false, continue
-
                 ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments because we will push out, stack: [out, out, out, 1, 1, 1, out, out, out, out, out, out]
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Pick),
                 ScriptEntry::Byte(0x02),
-
                 ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
                 ScriptEntry::Byte(0x08),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::PushOutIfGeq), // 1 >= 1 true, will push out, stack: [out, out, out, 1, 1, out, out, out]
-
-                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
                 ScriptEntry::Byte(0x04),
                 ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::PushOutIfGeq), // 2 >= 1 true, will push out, stack: [out, out, out, 1]
-
                 ScriptEntry::Opcode(OP::Unsigned8Var), // add one last false check
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PushOutIfGeq), // 0 >= 1 false, will not push out, stack: [out, out, out]
-
-                ScriptEntry::Opcode(OP::Drop), // drop original arguments
+                ScriptEntry::Opcode(OP::Drop),         // drop original arguments
                 ScriptEntry::Opcode(OP::Drop2),
-
                 ScriptEntry::Opcode(OP::Verify),
             ],
             ..Script::default()
