@@ -4,6 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use crate::vm::internal::VmTerm::{Hash512, Unsigned8, UnsignedBig};
 use bincode::{Decode, Encode};
 use ibig::ops::Abs;
 use ibig::{ibig, ubig, IBig, UBig};
@@ -529,7 +530,7 @@ impl VmTerm {
         Some(())
     }
 
-    /// Substracts `rhs` from the value of the term
+    /// Subtracts `rhs` from the value of the term
     pub fn sub(&mut self, rhs: &VmTerm) -> Option<()> {
         match (self, rhs) {
             (Self::Unsigned8(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
@@ -1578,6 +1579,66 @@ impl VmTerm {
             Self::DecimalArray(arr) => arr.len(),
             _ => 0,
         }
+    }
+
+    /// Returns the last element of the array
+    #[must_use]
+    pub fn peek(&self) -> Option<VmTerm> {
+        let len = self.len();
+
+        if len == 0 {
+            return None;
+        }
+
+        match self {
+            Self::Hash160Array(arr) => Some(VmTerm::Hash160(arr[len - 1])),
+            Self::Hash256Array(arr) => Some(VmTerm::Hash256(arr[len - 1])),
+            Self::Hash512Array(arr) => Some(VmTerm::Hash512(arr[len - 1])),
+            Self::Unsigned8Array(arr) => Some(VmTerm::Unsigned8(arr[len - 1])),
+            Self::Unsigned16Array(arr) => Some(VmTerm::Unsigned16(arr[len - 1])),
+            Self::Unsigned32Array(arr) => Some(VmTerm::Unsigned32(arr[len - 1])),
+            Self::Unsigned64Array(arr) => Some(VmTerm::Unsigned64(arr[len - 1])),
+            Self::Unsigned128Array(arr) => Some(VmTerm::Unsigned128(arr[len - 1])),
+            Self::UnsignedBigArray(arr) => Some(VmTerm::UnsignedBig(arr[len - 1].clone())),
+            Self::Signed8Array(arr) => Some(VmTerm::Signed8(arr[len - 1])),
+            Self::Signed16Array(arr) => Some(VmTerm::Signed16(arr[len - 1])),
+            Self::Signed32Array(arr) => Some(VmTerm::Signed32(arr[len - 1])),
+            Self::Signed64Array(arr) => Some(VmTerm::Signed64(arr[len - 1])),
+            Self::Signed128Array(arr) => Some(VmTerm::Signed128(arr[len - 1])),
+            Self::SignedBigArray(arr) => Some(VmTerm::SignedBig(arr[len - 1].clone())),
+            Self::Float32Array(arr) => Some(VmTerm::Float32(arr[len - 1])),
+            Self::Float64Array(arr) => Some(VmTerm::Float64(arr[len - 1])),
+            Self::DecimalArray(arr) => Some(VmTerm::Decimal(arr[len - 1])),
+            _ => None,
+        }
+    }
+
+    /// Clears the array
+    #[must_use]
+    pub fn clear(&mut self) -> Option<()> {
+        match self {
+            Self::Hash160Array(ref mut arr) => arr.clear(),
+            Self::Hash256Array(ref mut arr) => arr.clear(),
+            Self::Hash512Array(ref mut arr) => arr.clear(),
+            Self::Unsigned8Array(ref mut arr) => arr.clear(),
+            Self::Unsigned16Array(ref mut arr) => arr.clear(),
+            Self::Unsigned32Array(ref mut arr) => arr.clear(),
+            Self::Unsigned64Array(ref mut arr) => arr.clear(),
+            Self::Unsigned128Array(ref mut arr) => arr.clear(),
+            Self::UnsignedBigArray(ref mut arr) => arr.clear(),
+            Self::Signed8Array(ref mut arr) => arr.clear(),
+            Self::Signed16Array(ref mut arr) => arr.clear(),
+            Self::Signed32Array(ref mut arr) => arr.clear(),
+            Self::Signed64Array(ref mut arr) => arr.clear(),
+            Self::Signed128Array(ref mut arr) => arr.clear(),
+            Self::SignedBigArray(ref mut arr) => arr.clear(),
+            Self::Float32Array(ref mut arr) => arr.clear(),
+            Self::Float64Array(ref mut arr) => arr.clear(),
+            Self::DecimalArray(ref mut arr) => arr.clear(),
+            _ => return None,
+        }
+
+        Some(())
     }
 
     /// Returns a clone of the element at position `index`

@@ -78,3 +78,11 @@ All dependencies used by Purplecoin are vendored under the ./vendor directory. I
 ```
 cargo vendor --versioned-dirs ./vendor/crates
 ```
+
+### Cargo Clippy & Format
+Before merging any changes into the `main` branch, the Clippy lints must be checked and applied, followed by a code format. In order to achieve this, the following commands must be run:
+```
+cargo +nightly clippy --workspace --fix
+
+cargo +nightly fmt --all
+```

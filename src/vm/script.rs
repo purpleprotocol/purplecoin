@@ -1769,85 +1769,117 @@ impl<'a> ScriptExecutor<'a> {
                     );
                 }
 
-                ScriptEntry::Opcode(OP::PushOut) => {
-                    if exec_stack.len() < 3 {
-                        self.state = ScriptExecutorState::Error(
-                            ExecutionResult::InvalidArgs,
-                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                        );
-                        return;
-                    }
+                ScriptEntry::Opcode(
+                    OP::PushOut
+                    | OP::PushOutIf
+                    | OP::PushOutIfEq
+                    | OP::PushOutIfNeq
+                    | OP::PushOutIfLt
+                    | OP::PushOutIfGt
+                    | OP::PushOutIfLeq
+                    | OP::PushOutIfGeq,
+                ) => {
+                    match Self::check_condition_push_out(exec_stack, memory_size, op.clone()) {
+                        Ok(val) => {
+                            if val {
+                                if exec_stack.len() < 3 {
+                                    self.state = ScriptExecutorState::Error(
+                                        ExecutionResult::InvalidArgs,
+                                        (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                    );
+                                    return;
+                                }
 
-                    let amount = exec_stack.pop().unwrap();
-                    *memory_size -= amount.size();
-                    let address = exec_stack.pop().unwrap();
-                    *memory_size -= address.size();
-                    let script_hash = exec_stack.pop().unwrap();
-                    *memory_size -= script_hash.size();
+                                let amount = exec_stack.pop().unwrap();
+                                *memory_size -= amount.size();
+                                let address = exec_stack.pop().unwrap();
+                                *memory_size -= address.size();
+                                let script_hash = exec_stack.pop().unwrap();
+                                *memory_size -= script_hash.size();
 
-                    match (amount, address, script_hash) {
-                        (
-                            VmTerm::Signed128(amount),
-                            VmTerm::Hash160(addr),
-                            VmTerm::Hash160(script_hash),
-                        ) if amount > 0 => {
-                            let address = Address(addr);
-                            let script_hash = Hash160(script_hash);
+                                match (amount, address, script_hash) {
+                                    (
+                                        VmTerm::Signed128(amount),
+                                        VmTerm::Hash160(addr),
+                                        VmTerm::Hash160(script_hash),
+                                    ) if amount > 0 => {
+                                        let address = Address(addr);
+                                        let script_hash = Hash160(script_hash);
 
-                            if let Some(idx) =
-                                output_stack_idx_map.get(&(address.clone(), script_hash.clone()))
-                            {
-                                // Re-hash inputs
-                                let inputs_hashes: Vec<u8> = [
-                                    output_stack[*idx as usize].inputs_hash.clone(),
-                                    inputs_hash.clone(),
-                                ]
-                                .iter()
-                                .fold(vec![], |mut acc, hash| {
-                                    acc.extend(hash.0);
-                                    acc
-                                });
+                                        if let Some(idx) = output_stack_idx_map
+                                            .get(&(address.clone(), script_hash.clone()))
+                                        {
+                                            // Re-hash inputs
+                                            let inputs_hashes: Vec<u8> = [
+                                                output_stack[*idx as usize].inputs_hash.clone(),
+                                                inputs_hash.clone(),
+                                            ]
+                                            .iter()
+                                            .fold(vec![], |mut acc, hash| {
+                                                acc.extend(hash.0);
+                                                acc
+                                            });
 
-                                let inputs_hash = Hash160::hash_from_slice(inputs_hashes, key);
+                                            let inputs_hash =
+                                                Hash160::hash_from_slice(inputs_hashes, key);
 
-                                output_stack[*idx as usize].amount += amount;
-                                output_stack[*idx as usize].inputs_hash = inputs_hash;
-                                output_stack[*idx as usize].compute_hash(key);
-                                output_stack[*idx as usize].script_outs = script_outputs.clone();
+                                            output_stack[*idx as usize].amount += amount;
+                                            output_stack[*idx as usize].inputs_hash = inputs_hash;
+                                            output_stack[*idx as usize].compute_hash(key);
+                                            output_stack[*idx as usize].script_outs =
+                                                script_outputs.clone();
 
-                                *script_outputs = vec![];
-                            } else {
-                                let mut output = Output {
-                                    amount,
-                                    address: Some(address.clone()),
-                                    script_hash: script_hash.clone(),
-                                    coinbase_height: None,
-                                    coloured_address: None,
-                                    inputs_hash: inputs_hash.clone(),
-                                    idx: output_stack.len() as u16,
-                                    script_outs: script_outputs.clone(),
-                                    hash: None,
-                                };
+                                            *script_outputs = vec![];
+                                        } else {
+                                            let mut output = Output {
+                                                amount,
+                                                address: Some(address.clone()),
+                                                script_hash: script_hash.clone(),
+                                                coinbase_height: None,
+                                                coloured_address: None,
+                                                inputs_hash: inputs_hash.clone(),
+                                                idx: output_stack.len() as u16,
+                                                script_outs: script_outputs.clone(),
+                                                hash: None,
+                                            };
 
-                                output.compute_hash(key);
-                                output_stack_idx_map
-                                    .insert((address, script_hash), output_stack.len() as u16);
-                                output_stack.push(output);
-                                *script_outputs = vec![];
+                                            output.compute_hash(key);
+                                            output_stack_idx_map.insert(
+                                                (address, script_hash),
+                                                output_stack.len() as u16,
+                                            );
+                                            output_stack.push(output);
+                                            *script_outputs = vec![];
+                                        }
+
+                                        if output_stack.len() > MAX_OUT_STACK {
+                                            self.state = ScriptExecutorState::Error(
+                                                ExecutionResult::OutStackOverflow,
+                                                (
+                                                    i_ptr,
+                                                    func_idx,
+                                                    op.clone(),
+                                                    exec_stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                            return;
+                                        }
+
+                                        self.state = ScriptExecutorState::ExpectingInitialOP;
+                                    }
+
+                                    _ => {
+                                        self.state = ScriptExecutorState::Error(
+                                            ExecutionResult::InvalidArgs,
+                                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice())
+                                                .into(),
+                                        );
+                                    }
+                                }
                             }
-
-                            if output_stack.len() > MAX_OUT_STACK {
-                                self.state = ScriptExecutorState::Error(
-                                    ExecutionResult::OutStackOverflow,
-                                    (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                                );
-                                return;
-                            }
-
-                            self.state = ScriptExecutorState::ExpectingInitialOP;
                         }
-
-                        _ => {
+                        Err(()) => {
                             self.state = ScriptExecutorState::Error(
                                 ExecutionResult::InvalidArgs,
                                 (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
@@ -4136,6 +4168,61 @@ impl<'a> ScriptExecutor<'a> {
                     self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::TrapIfNeqType);
                 }
 
+                ScriptEntry::Opcode(OP::PeekArray) => {
+                    let len: usize = exec_stack.len();
+
+                    if len == 0 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    match exec_stack[len - 1].peek() {
+                        Some(val) => {
+                            *memory_size += val.size();
+                            exec_stack.push(val);
+                        }
+                        None => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::ClearArray) => {
+                    let len: usize = exec_stack.len();
+
+                    if len == 0 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let size = exec_stack[len - 1].size();
+
+                    match exec_stack[len - 1].clear() {
+                        Some(()) => {
+                            *memory_size -= size;
+
+                            // Because the array was cleared, but 'size' contains HEAP_SIZE as well,
+                            // we only have to add the HEAP_SIZE back to the 'memory_size'
+                            *memory_size += crate::vm::internal::EMPTY_VEC_HEAP_SIZE;
+                        }
+                        None => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
+                }
+
                 ScriptEntry::Opcode(OP::GhostRider) => {
                     if exec_stack.len() < 2 {
                         self.state = ScriptExecutorState::Error(
@@ -4631,6 +4718,52 @@ impl<'a> ScriptExecutor<'a> {
             ScriptExecutorState::OkVerify => Some(Ok(ExecutionResult::OkVerify)),
             ScriptExecutorState::Error(res, trace) => Some(Err((*res, trace.clone()))),
             _ => None,
+        }
+    }
+
+    #[inline]
+    #[must_use]
+    fn check_condition_push_out(
+        exec_stack: &mut Vec<VmTerm>,
+        memory_size: &mut usize,
+        op: ScriptEntry,
+    ) -> Result<bool, ()> {
+        match op {
+            ScriptEntry::Opcode(OP::PushOut) => Ok(true),
+            ScriptEntry::Opcode(OP::PushOutIf) => {
+                if exec_stack.is_empty() {
+                    return Err(());
+                }
+
+                let top = exec_stack.pop().unwrap();
+                *memory_size -= top.size();
+
+                Ok(top.equals_1())
+            }
+            _ => {
+                if exec_stack.len() < 2 {
+                    return Err(());
+                }
+
+                let e1 = exec_stack.pop().unwrap();
+                *memory_size -= e1.size();
+                let e2 = exec_stack.pop().unwrap();
+                *memory_size -= e2.size();
+
+                if !e1.is_comparable(&e2) {
+                    return Err(());
+                }
+
+                match op {
+                    ScriptEntry::Opcode(OP::PushOutIfEq) => Ok(e1 == e2),
+                    ScriptEntry::Opcode(OP::PushOutIfNeq) => Ok(e1 != e2),
+                    ScriptEntry::Opcode(OP::PushOutIfLt) => Ok(e1 < e2),
+                    ScriptEntry::Opcode(OP::PushOutIfGt) => Ok(e1 > e2),
+                    ScriptEntry::Opcode(OP::PushOutIfLeq) => Ok(e1 <= e2),
+                    ScriptEntry::Opcode(OP::PushOutIfGeq) => Ok(e1 >= e2),
+                    _ => unreachable!(),
+                }
+            }
         }
     }
 }
@@ -17270,5 +17403,630 @@ mod tests {
         let mut script_output: Vec<VmTerm> = vec![];
 
         assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
+    }
+
+    #[test]
+    fn it_peeks_array() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::PeekArray),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(0x04),
+            VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03, 0x04]),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_fails_to_peek_array() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PeekArray),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![];
+
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
+    }
+
+    #[test]
+    fn it_clears_array() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::ClearArray),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8Array(vec![]),
+            VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03, 0x04]),
+        ];
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_fails_to_clear_array() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::ClearArray),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![];
+
+        assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
+    }
+
+    #[test]
+    fn it_pushes_out_if_value_equals_1() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00), // stack: [out, out, out, 0, 0, 0, 1, 0]
+                ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments, stack: [out, out, out, 0, 0, 0, 1, 0, out, out, out]
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::PushOutIf), // 0 == 1 false, continue
+                ScriptEntry::Opcode(OP::Roll),      // roll the next value to the top
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Opcode(OP::PushOutIf), // 0 == 1 false, continue
+                ScriptEntry::Opcode(OP::Roll),      // roll the next value to the top
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Opcode(OP::PushOutIf), // 0 == 1 false, continue
+                ScriptEntry::Opcode(OP::Roll),      // roll the next value to the top
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::PushOutIf), // 1 == 1 true, will push out, stack: [out, out, out, 0]
+                ScriptEntry::Opcode(OP::PushOutIf), // one last false check, 0 == 1 false, will not push out, stack: [out, out, out]
+                ScriptEntry::Opcode(OP::Drop),      // drop original arguments
+                ScriptEntry::Opcode(OP::Drop2),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_pushes_out_if_values_equal() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x04), // stack: [out, out, out, 0, 1, 2, 3, 4]
+                ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments, stack: [out, out, out, 0, 1, 2, 3, 4, out, out, out]
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOutIfEq), // 0 == 3 false, continue
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOutIfEq), // 1 == 3 false, continue
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOutIfEq), // 2 == 3 false, continue
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOutIfEq), // 3 == 3 true, will push out, stack: [out, out, out, 4]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // add one last false check
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::PushOutIfEq), // 10 == 4 false, will not push out, stack: [out, out, out]
+                ScriptEntry::Opcode(OP::Drop),        // drop original arguments
+                ScriptEntry::Opcode(OP::Drop2),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_pushes_out_if_values_not_equal() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00), // stack: [out, out, out, 0, 0, 0, 10, 0]
+                ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments, stack: [out, out, out, 0, 0, 0, 10, 0, out, out, out]
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PushOutIfNeq), // 0 != 0 false, continue
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PushOutIfNeq), // 0 != 0 false, continue
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PushOutIfNeq), // 0 != 0 false, continue
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Opcode(OP::PushOutIfNeq), // 10 != 11 true, will push out, stack: [out, out, out, 0]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // add one last false check
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PushOutIfNeq), // 0 != 0 false, will not push out, stack: [out, out, out]
+                ScriptEntry::Opcode(OP::Drop),         // drop original arguments
+                ScriptEntry::Opcode(OP::Drop2),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_pushes_out_if_value_is_less() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01), // stack: [out, out, out, 1, 1, 1, 1, 1]
+                ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments, stack: [out, out, out, 1, 1, 1, 1, 1, out, out, out]
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::PushOutIfLt), // 1 < 1 false, continue
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::PushOutIfLt), // 2 < 1 false, continue
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::PushOutIfLt), // 3 < 1 false, continue
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PushOutIfLt), // 0 < 1 true, will push out, stack: [out, out, out, 1]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // add one last false check
+                ScriptEntry::Byte(0x0a),
+                ScriptEntry::Opcode(OP::PushOutIfLt), // 10 < 1 false, will not push out, stack: [out, out, out]
+                ScriptEntry::Opcode(OP::Drop),        // drop original arguments
+                ScriptEntry::Opcode(OP::Drop2),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_pushes_out_if_value_is_greater() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01), // stack: [out, out, out, 1, 1, 1, 1, 1]
+                ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments, stack: [out, out, out, 1, 1, 1, 1, 1, out, out, out]
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PushOutIfGt), // 0 > 1 false, continue
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PushOutIfGt), // 0 > 1 false, continue
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::PushOutIfGt), // 1 > 1 false, continue
+                ScriptEntry::Opcode(OP::Roll),        // roll the next value to the top
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::PushOutIfGt), // 2 > 1 true, will push out, stack: [out, out, out, 1]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // add one last false check
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::PushOutIfGt), // 1 > 1 false, will not push out, stack: [out, out, out]
+                ScriptEntry::Opcode(OP::Drop),        // drop original arguments
+                ScriptEntry::Opcode(OP::Drop2),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_pushes_out_if_value_is_less_or_equal() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01), // stack: [out, out, out, 1, 1, 1, 1, 1]
+                ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments, stack: [out, out, out, 1, 1, 1, 1, 1, out, out, out]
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::PushOutIfLeq), // 2 <= 1 false, continue
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::PushOutIfLeq), // 2 <= 1 false, continue
+                ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments because we will push out, stack: [out, out, out, 1, 1, 1, out, out, out, out, out, out]
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PushOutIfLeq), // 0 <= 1 true, will push out, stack: [out, out, out, 1, 1, out, out, out]
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::PushOutIfLeq), // 1 <= 1 true, will push out, stack: [out, out, out, 1]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // add one last false check
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::PushOutIfLeq), // 2 <= 1 false, will not push out, stack: [out, out, out]
+                ScriptEntry::Opcode(OP::Drop),         // drop original arguments
+                ScriptEntry::Opcode(OP::Drop2),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_pushes_out_if_value_is_greater_or_equal() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01), // stack: [out, out, out, 1, 1, 1, 1, 1]
+                ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments, stack: [out, out, out, 1, 1, 1, 1, 1, out, out, out]
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Roll), // start rolling the values to the top
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PushOutIfGeq), // 0 >= 1 false, continue
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PushOutIfGeq), // 0 >= 1 false, continue
+                ScriptEntry::Opcode(OP::Pick), // duplicate the 3 arguments because we will push out, stack: [out, out, out, 1, 1, 1, out, out, out, out, out, out]
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Roll), // roll the next value to the top
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::PushOutIfGeq), // 1 >= 1 true, will push out, stack: [out, out, out, 1, 1, out, out, out]
+                ScriptEntry::Opcode(OP::Roll),         // roll the next value to the top
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::PushOutIfGeq), // 2 >= 1 true, will push out, stack: [out, out, out, 1]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // add one last false check
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PushOutIfGeq), // 0 >= 1 false, will not push out, stack: [out, out, out]
+                ScriptEntry::Opcode(OP::Drop),         // drop original arguments
+                ScriptEntry::Opcode(OP::Drop2),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                [0; 32],
+                key,
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
     }
 }
