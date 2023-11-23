@@ -1123,6 +1123,9 @@ impl Block {
             [0; 32],
             key,
             VmFlags {
+                chain_id: prev.chain_id,
+                chain_height: prev.height + 1,
+                chain_timestamp: prev.timestamp,
                 build_stacktrace: false,
                 validate_output_amounts: true,
             },
@@ -1269,6 +1272,9 @@ impl BlockData {
                                 [0; 32], // TODO: Inject seed here
                                 key,
                                 VmFlags {
+                                    chain_id: prev.chain_id,
+                                    chain_height: prev.height + 1,
+                                    chain_timestamp: prev.timestamp,
                                     build_stacktrace: false,
                                     validate_output_amounts: true,
                                 },
