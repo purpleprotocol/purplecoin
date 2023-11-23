@@ -217,6 +217,7 @@ impl TransactionWithFee {
         self.tx.hash()
     }
 
+    #[must_use]
     pub fn from_transaction(other: Transaction, height: u64, timestamp: i64) -> Self {
         let ins = other.get_ins();
         let outs = other.get_outs(height, timestamp);

@@ -329,6 +329,7 @@ impl Script {
 
                     // Execute opcode
                     frame.executor.push_op(
+                        &flags,
                         i,
                         frame.i_ptr,
                         frame.func_idx,
@@ -1627,6 +1628,7 @@ impl<'a> ScriptExecutor<'a> {
     #[inline]
     pub fn push_op(
         &mut self,
+        flags: &VmFlags,
         op: &ScriptEntry,
         i_ptr: usize,
         func_idx: Option<usize>,
@@ -1779,6 +1781,24 @@ impl<'a> ScriptExecutor<'a> {
                         ExecutionResult::BadFormat,
                         (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                     );
+                }
+
+                ScriptEntry::Opcode(OP::ChainHeight) => {
+                    let term = VmTerm::Unsigned8(flags.chain_id);
+                    *memory_size += 1;
+                    exec_stack.push(term);
+                }
+
+                ScriptEntry::Opcode(OP::ChainTimestamp) => {
+                    let term = VmTerm::Signed64(flags.chain_timestamp);
+                    *memory_size += 8;
+                    exec_stack.push(term);
+                }
+
+                ScriptEntry::Opcode(OP::ChainHeight) => {
+                    let term = VmTerm::Unsigned64(flags.chain_height);
+                    *memory_size += 8;
+                    exec_stack.push(term);
                 }
 
                 ScriptEntry::Opcode(

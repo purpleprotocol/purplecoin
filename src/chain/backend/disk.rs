@@ -438,7 +438,7 @@ impl ShardBackend for DiskBackend {
     }
 
     fn tip_pow(&self) -> Result<PowBlockHeader, ShardBackendErr> {
-        PowChainBackend::tip(self).map_err(|err| err.into())
+        PowChainBackend::tip(self).map_err(std::convert::Into::into)
     }
 }
 
