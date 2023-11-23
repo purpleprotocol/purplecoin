@@ -53,6 +53,7 @@ fn bench_coinbase(c: &mut Criterion) {
                 VmFlags {
                     build_stacktrace: false,
                     validate_output_amounts: false,
+                    ..Default::default()
                 },
             )
         })
@@ -81,6 +82,7 @@ fn bench_coinbase(c: &mut Criterion) {
                             VmFlags {
                                 build_stacktrace: false,
                                 validate_output_amounts: false,
+                                ..Default::default()
                             },
                         )
                     })
@@ -112,6 +114,7 @@ fn bench_coinbase(c: &mut Criterion) {
                                 VmFlags {
                                     build_stacktrace: false,
                                     validate_output_amounts: false,
+                                    ..Default::default()
                                 },
                             )
                         })
@@ -185,7 +188,8 @@ fn bench_vm_abuse(c: &mut Criterion) {
                             key,
                             VmFlags {
                                 build_stacktrace: false,
-                                validate_output_amounts: false
+                                validate_output_amounts: false,
+                                ..Default::default()
                             }
                         ),
                         Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
@@ -322,7 +326,8 @@ fn bench_vm_load_var(c: &mut Criterion) {
                             key,
                             VmFlags {
                                 build_stacktrace: false,
-                                validate_output_amounts: false
+                                validate_output_amounts: false,
+                                ..Default::default()
                             }
                         ),
                         Ok(ExecutionResult::OkVerify).into()
