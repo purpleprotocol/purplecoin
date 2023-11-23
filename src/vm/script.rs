@@ -1783,7 +1783,7 @@ impl<'a> ScriptExecutor<'a> {
                     );
                 }
 
-                ScriptEntry::Opcode(OP::ChainHeight) => {
+                ScriptEntry::Opcode(OP::ChainId) => {
                     let term = VmTerm::Unsigned8(flags.chain_id);
                     *memory_size += 1;
                     exec_stack.push(term);
