@@ -340,7 +340,9 @@ pub trait ShardBackend: Sized + Clone {
     /// Attempts to append a block to the latest tip of the chain. Assumes block header is valid
     fn append_block(&self, block: &Block) -> Result<(), ShardBackendErr> {
         let tip = self.tip()?;
-        let (outs, _) = block.validate_against_current(&tip, self.shard_config().key())?;
+        let tip_pow: PowBlockHeader = self.tip_pow()?;
+        let (outs, _) =
+            block.validate_against_current(&tip_pow, &tip, self.shard_config().key())?;
         self.write_block(block, outs)
     }
 
@@ -395,6 +397,9 @@ pub trait ShardBackend: Sized + Clone {
                 .ok_or(ShardBackendErr::CorruptData),
         }
     }
+
+    /// Returns the current tip of the pow chain
+    fn tip_pow(&self) -> Result<PowBlockHeader, ShardBackendErr>;
 
     /// Overrides the current shard config
     fn set_shard_config(&mut self, config: ShardConfig);
@@ -470,6 +475,18 @@ impl From<BincodeEncodeErr> for PowChainBackendErr {
 impl From<BlockVerifyErr> for PowChainBackendErr {
     fn from(other: BlockVerifyErr) -> Self {
         Self::Block(other)
+    }
+}
+
+impl From<PowChainBackendErr> for ShardBackendErr {
+    fn from(other: PowChainBackendErr) -> Self {
+        match other {
+            PowChainBackendErr::CorruptData => Self::CorruptData,
+            PowChainBackendErr::RocksDB(err) => Self::RocksDB(err),
+            PowChainBackendErr::BincodeEncode(err) => Self::BincodeEncode(err),
+            PowChainBackendErr::Error(err) => Self::Error(err),
+            _ => unreachable!(),
+        }
     }
 }
 

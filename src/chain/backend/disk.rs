@@ -436,6 +436,10 @@ impl ShardBackend for DiskBackend {
     ) -> Result<(), ShardBackendErr> {
         unimplemented!()
     }
+
+    fn tip_pow(&self) -> Result<PowBlockHeader, ShardBackendErr> {
+        PowChainBackend::tip(self).map_err(|err| err.into())
+    }
 }
 
 impl MMRBackend<Vec<u8>> for DiskBackend {
