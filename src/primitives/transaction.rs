@@ -49,7 +49,7 @@ impl Transaction {
     }
 
     #[must_use]
-    pub fn get_outs(&self) -> Vec<Output> {
+    pub fn get_outs(&self, height: u64, timestamp: i64) -> Vec<Output> {
         let key = format!("{}.shard.{}", SETTINGS.node.network_name, self.chain_id);
         let mut out_stack = vec![];
         let mut idx_map = HashMap::new();
@@ -64,6 +64,9 @@ impl Transaction {
                 [0; 32], // TODO: Inject seed here
                 &key,
                 VmFlags {
+                    chain_height: height,
+                    chain_timestamp: timestamp,
+                    chain_id: self.chain_id,
                     validate_output_amounts: true,
                     build_stacktrace: false,
                 },
@@ -213,24 +216,10 @@ impl TransactionWithFee {
     pub fn hash(&self) -> Option<&Hash256> {
         self.tx.hash()
     }
-}
 
-impl PartialEq for TransactionWithFee {
-    fn eq(&self, other: &Self) -> bool {
-        self.fee_per_byte == other.fee_per_byte
-    }
-}
-
-impl PartialOrd for TransactionWithFee {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.fee_per_byte.cmp(&other.fee_per_byte))
-    }
-}
-
-impl From<Transaction> for TransactionWithFee {
-    fn from(other: Transaction) -> Self {
+    pub fn from_transaction(other: Transaction, height: u64, timestamp: i64) -> Self {
         let ins = other.get_ins();
-        let outs = other.get_outs();
+        let outs = other.get_outs(height, timestamp);
         let ins_amount = ins
             .iter()
             .filter_map(|i| {
@@ -261,6 +250,18 @@ impl From<Transaction> for TransactionWithFee {
             fee_per_byte: raw_fee / i128::from(tx_size),
             tx_size,
         }
+    }
+}
+
+impl PartialEq for TransactionWithFee {
+    fn eq(&self, other: &Self) -> bool {
+        self.fee_per_byte == other.fee_per_byte
+    }
+}
+
+impl PartialOrd for TransactionWithFee {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.fee_per_byte.cmp(&other.fee_per_byte))
     }
 }
 

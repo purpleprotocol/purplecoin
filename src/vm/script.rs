@@ -78,6 +78,15 @@ impl<'a> Frame<'a> {
 
 #[derive(Debug, Clone)]
 pub struct VmFlags {
+    /// Chain id
+    pub chain_id: u8,
+
+    /// Chain height
+    pub chain_height: u64,
+
+    /// Chain timestamp (last block)
+    pub chain_timestamp: i64,
+
     /// Whether or not to build a stacktrace
     pub build_stacktrace: bool,
 
@@ -88,6 +97,9 @@ pub struct VmFlags {
 impl Default for VmFlags {
     fn default() -> Self {
         Self {
+            chain_id: 0,
+            chain_height: 0,
+            chain_timestamp: 0,
             build_stacktrace: true,
             validate_output_amounts: false,
         }
