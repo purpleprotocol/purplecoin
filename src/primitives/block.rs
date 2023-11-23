@@ -695,12 +695,13 @@ impl BlockHeader {
     ///
     /// Checks the validity of the tx set first. Panics if previous header's hash is not computed.
     pub fn new(
+        prev_pow: &PowBlockHeader,
         prev: &BlockHeader,
         runnerup: Option<&BlockHeader>,
         data: &BlockData,
         key: &str,
     ) -> Result<Self, BlockVerifyErr> {
-        let (to_add, to_delete) = data.validate_txs(prev, key)?;
+        let (to_add, to_delete) = data.validate_txs(prev_pow, prev, key)?;
         let to_add: Vec<Output> = to_add.iter().map(|(o, _)| o.clone()).collect();
 
         Self::new_unsafe(
@@ -1078,6 +1079,7 @@ pub struct Block {
 impl Block {
     /// Creates a new block for mining with the given transaction with a coinbase to address
     pub fn new(
+        prev_pow: &PowBlockHeader,
         prev: &BlockHeader,
         runnerup: Option<&BlockHeader>,
         coinbase: &Address,
@@ -1125,7 +1127,7 @@ impl Block {
             VmFlags {
                 chain_id: prev.chain_id,
                 chain_height: prev.height + 1,
-                chain_timestamp: prev.timestamp,
+                chain_timestamp: prev_pow.timestamp,
                 build_stacktrace: false,
                 validate_output_amounts: true,
             },
@@ -1143,7 +1145,7 @@ impl Block {
 
         Ok((
             Self {
-                header: BlockHeader::new(prev, runnerup, &body, key)?,
+                header: BlockHeader::new(prev_pow, prev, runnerup, &body, key)?,
                 body,
             },
             out_stack,
@@ -1153,29 +1155,34 @@ impl Block {
     /// Run full header and body validations
     pub fn validate(
         &self,
+        prev_pow: &PowBlockHeader,
         prev: &BlockHeader,
         key: &str,
     ) -> Result<(OutWitnessVec, OutWitnessVec), BlockVerifyErr> {
         self.header.validate(prev)?;
-        self.body.validate_against_current(&self.header, prev, key)
+        self.body
+            .validate_against_current(&self.header, prev_pow, prev, key)
     }
 
     /// Run full body validations. Assumes initial header validations passed
     pub fn validate_against_current(
         &self,
+        prev_pow: &PowBlockHeader,
         prev: &BlockHeader,
         key: &str,
     ) -> Result<(OutWitnessVec, OutWitnessVec), BlockVerifyErr> {
-        self.body.validate_against_current(&self.header, prev, key)
+        self.body
+            .validate_against_current(&self.header, prev_pow, prev, key)
     }
 
     /// Validates only the body against the previous header
     pub fn validate_body(
         &self,
+        prev_pow: &PowBlockHeader,
         prev: &BlockHeader,
         key: &str,
     ) -> Result<(OutWitnessVec, OutWitnessVec), BlockVerifyErr> {
-        self.body.validate_txs(prev, key)
+        self.body.validate_txs(prev_pow, prev, key)
     }
 }
 
@@ -1213,6 +1220,7 @@ impl BlockData {
     /// Validates the transactions in the body against the previous header
     pub fn validate_txs(
         &self,
+        prev_pow: &PowBlockHeader,
         prev: &BlockHeader,
         key: &str,
     ) -> Result<(OutWitnessVec, OutWitnessVec), BlockVerifyErr> {
@@ -1274,7 +1282,7 @@ impl BlockData {
                                 VmFlags {
                                     chain_id: prev.chain_id,
                                     chain_height: prev.height + 1,
-                                    chain_timestamp: prev.timestamp,
+                                    chain_timestamp: prev_pow.timestamp,
                                     build_stacktrace: false,
                                     validate_output_amounts: true,
                                 },
@@ -1327,10 +1335,11 @@ impl BlockData {
     pub fn validate_against_current(
         &self,
         current: &BlockHeader,
+        prev_pow: &PowBlockHeader,
         prev: &BlockHeader,
         key: &str,
     ) -> Result<(OutWitnessVec, OutWitnessVec), BlockVerifyErr> {
-        let (outs, to_delete) = self.validate_txs(prev, key)?;
+        let (outs, to_delete) = self.validate_txs(prev_pow, prev, key)?;
 
         Ok((outs, to_delete))
     }
