@@ -92,6 +92,9 @@ pub struct VmFlags {
 
     /// Wheter or not to validate output amounts based on inputs
     pub validate_output_amounts: bool,
+
+    /// Whether we are processing a coinbase input or not
+    pub is_coinbase: bool,
 }
 
 impl Default for VmFlags {
@@ -102,6 +105,7 @@ impl Default for VmFlags {
             chain_timestamp: 0,
             build_stacktrace: true,
             validate_output_amounts: false,
+            is_coinbase: false,
         }
     }
 }
@@ -1798,6 +1802,16 @@ impl<'a> ScriptExecutor<'a> {
                 ScriptEntry::Opcode(OP::ChainHeight) => {
                     let term = VmTerm::Unsigned64(flags.chain_height);
                     *memory_size += 8;
+                    exec_stack.push(term);
+                }
+
+                ScriptEntry::Opcode(OP::IsCoinbase) => {
+                    let term = if flags.is_coinbase {
+                        VmTerm::Signed8(1)
+                    } else {
+                        VmTerm::Signed8(0)
+                    };
+                    *memory_size += 1;
                     exec_stack.push(term);
                 }
 

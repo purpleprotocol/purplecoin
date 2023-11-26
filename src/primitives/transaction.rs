@@ -64,6 +64,7 @@ impl Transaction {
                 [0; 32], // TODO: Inject seed here
                 &key,
                 VmFlags {
+                    is_coinbase: input.is_coinbase(),
                     chain_height: height,
                     chain_timestamp: timestamp,
                     chain_id: self.chain_id,

@@ -1125,6 +1125,7 @@ impl Block {
             [0; 32],
             key,
             VmFlags {
+                is_coinbase: input.is_coinbase(),
                 chain_id: prev.chain_id,
                 chain_height: prev.height + 1,
                 chain_timestamp: prev_pow.timestamp,
@@ -1280,6 +1281,7 @@ impl BlockData {
                                 [0; 32], // TODO: Inject seed here
                                 key,
                                 VmFlags {
+                                    is_coinbase: true,
                                     chain_id: prev.chain_id,
                                     chain_height: prev.height + 1,
                                     chain_timestamp: prev_pow.timestamp,
