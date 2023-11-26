@@ -49,7 +49,7 @@ impl Transaction {
     }
 
     #[must_use]
-    pub fn get_outs(&self, height: u64, timestamp: i64) -> Vec<Output> {
+    pub fn get_outs(&self, height: u64, timestamp: i64, prev_block_hash: [u8; 32]) -> Vec<Output> {
         let key = format!("{}.shard.{}", SETTINGS.node.network_name, self.chain_id);
         let mut out_stack = vec![];
         let mut idx_map = HashMap::new();
@@ -70,6 +70,7 @@ impl Transaction {
                     chain_id: self.chain_id,
                     validate_output_amounts: true,
                     build_stacktrace: false,
+                    prev_block_hash,
                 },
             );
         }
@@ -219,9 +220,14 @@ impl TransactionWithFee {
     }
 
     #[must_use]
-    pub fn from_transaction(other: Transaction, height: u64, timestamp: i64) -> Self {
+    pub fn from_transaction(
+        other: Transaction,
+        height: u64,
+        timestamp: i64,
+        prev_block_hash: [u8; 32],
+    ) -> Self {
         let ins = other.get_ins();
-        let outs = other.get_outs(height, timestamp);
+        let outs = other.get_outs(height, timestamp, prev_block_hash);
         let ins_amount = ins
             .iter()
             .filter_map(|i| {

@@ -1131,6 +1131,7 @@ impl Block {
                 chain_timestamp: prev_pow.timestamp,
                 build_stacktrace: false,
                 validate_output_amounts: true,
+                prev_block_hash: prev.hash().unwrap().0,
             },
         );
 
@@ -1287,6 +1288,7 @@ impl BlockData {
                                     chain_timestamp: prev_pow.timestamp,
                                     build_stacktrace: false,
                                     validate_output_amounts: true,
+                                    prev_block_hash: prev.hash().unwrap().0,
                                 },
                             );
                         }

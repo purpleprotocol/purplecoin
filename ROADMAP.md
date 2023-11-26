@@ -34,7 +34,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x08` ChainHeight - Pushes the current `chain_height` onto the stack
     - [x] OP `0x09` ChainTimestamp - Pushes the current timestamp of the chain onto the stack as a `Signed64`
     - [x] OP `0x0a` IsCoinbase - Pushes `1` as an `Signed8` onto the stack if the current input is a coinbase otherwise pushes `0`
-    - [ ] OP `0x0b` PrevBlockHash - Pushes the previous block hash onto the stack as a `Hash256`
+    - [x] OP `0x0b` PrevBlockHash - Pushes the previous block hash onto the stack as a `Hash256`
     - [x] OP `0x0d` RandomHash160Var - Pushes a random `Hash160` onto the stack
     - [x] OP `0x0e` RandomHash256Var - Pushes a random `Hash256` onto the stack
     - [x] OP `0x0f` RandomHash512Var - Pushes a random `Hash512` onto the stack

@@ -130,6 +130,6 @@ mod tests {
             hash: None,
         };
         tx.compute_hash(key);
-        TransactionWithFee::from_transaction(tx, 0, 0)
+        TransactionWithFee::from_transaction(tx, 0, 0, [0; 32])
     }
 }

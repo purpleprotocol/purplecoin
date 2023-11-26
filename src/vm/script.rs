@@ -95,6 +95,9 @@ pub struct VmFlags {
 
     /// Whether we are processing a coinbase input or not
     pub is_coinbase: bool,
+
+    /// The previous block hash
+    pub prev_block_hash: [u8; 32],
 }
 
 impl Default for VmFlags {
@@ -106,6 +109,7 @@ impl Default for VmFlags {
             build_stacktrace: true,
             validate_output_amounts: false,
             is_coinbase: false,
+            prev_block_hash: [0; 32],
         }
     }
 }
@@ -1812,6 +1816,12 @@ impl<'a> ScriptExecutor<'a> {
                         VmTerm::Signed8(0)
                     };
                     *memory_size += 1;
+                    exec_stack.push(term);
+                }
+
+                ScriptEntry::Opcode(OP::PrevBlockHash) => {
+                    let term = VmTerm::Hash256(flags.prev_block_hash);
+                    *memory_size += 32;
                     exec_stack.push(term);
                 }
 
