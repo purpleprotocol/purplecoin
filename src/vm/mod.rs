@@ -8,6 +8,8 @@ mod bifs;
 pub mod internal;
 mod opcodes;
 mod script;
+mod sig_verification;
 
 pub use opcodes::*;
 pub use script::*;
+pub use sig_verification::*;

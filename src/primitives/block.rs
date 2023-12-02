@@ -17,7 +17,7 @@ use crate::primitives::{
 };
 use crate::settings::SETTINGS;
 use crate::vm::internal::VmTerm;
-use crate::vm::{Script, VmFlags};
+use crate::vm::{Script, SigVerificationErr, VmFlags};
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::{Accumulator, ProofOfCorrectness, Witness};
 use arrayvec::ArrayVec;
@@ -892,6 +892,7 @@ impl BlockHeader {
         let inputs = Self::read_genesis_inputs(chain_id, config);
         let key = config.get_chain_key(chain_id);
         let mut out_stack = vec![];
+        let mut ver_stack = vec![];
         let mut idx_map = HashMap::new();
 
         // Compute outputs
@@ -902,6 +903,7 @@ impl BlockHeader {
                 &[in_clone],
                 &mut out_stack,
                 &mut idx_map,
+                &mut ver_stack,
                 [0; 32],
                 key,
                 VmFlags::default(),
@@ -1093,6 +1095,7 @@ impl Block {
         let ss = Script::new_simple_spend();
         let sh = ss.to_script_hash(key);
         let mut out_stack = vec![];
+        let mut ver_stack = vec![];
         let mut idx_map = HashMap::new();
         let coinbase_height = prev.height + 1;
         let mut input = Input {
@@ -1122,6 +1125,7 @@ impl Block {
             &[in_clone],
             &mut out_stack,
             &mut idx_map,
+            &mut ver_stack,
             [0; 32],
             key,
             VmFlags {
@@ -1238,6 +1242,7 @@ impl BlockData {
         let mut coloured_coinbase_count = 0;
         let mut to_add: Vec<Output> = vec![];
         let mut to_delete: OutWitnessVec = vec![];
+        let mut ver_stack = vec![];
         let iter = self.txs.iter().flat_map(|tx| tx.ins.iter());
 
         for input in iter {
@@ -1279,6 +1284,7 @@ impl BlockData {
                                 &[input.clone()],
                                 &mut to_add,
                                 &mut idx_map,
+                                &mut ver_stack,
                                 [0; 32], // TODO: Inject seed here
                                 key,
                                 VmFlags {
@@ -1317,6 +1323,9 @@ impl BlockData {
                 _ => unimplemented!(),
             }
         }
+
+        // Verify all signatures
+        crate::vm::verify_batch(ver_stack)?;
 
         let to_add = to_add
             .iter()
@@ -1518,7 +1527,14 @@ pub enum BlockVerifyErr {
     InvalidOuts,
     InvalidCoinbase,
     InvalidRunnerupTimestamp,
+    SigVerificationErr,
     Tx(TxVerifyErr),
+}
+
+impl From<SigVerificationErr> for BlockVerifyErr {
+    fn from(_other: SigVerificationErr) -> Self {
+        BlockVerifyErr::SigVerificationErr
+    }
 }
 
 #[cfg(test)]
@@ -1667,6 +1683,7 @@ mod tests {
         let mut next_to_delete = vec![];
         let mut outs_vec: Vec<(Hash256, Witness<Rsa2048, Hash256>)> = vec![];
         let mut outs_vec2: Vec<(Hash256, Witness<Rsa2048, Hash256>)> = vec![];
+        let mut ver_stack = vec![];
 
         for batch_size in &batch_sizes {
             let in_clone = input.clone();
@@ -1675,6 +1692,7 @@ mod tests {
                 &[in_clone],
                 &mut out_stack,
                 &mut idx_map,
+                &mut ver_stack,
                 [0; 32],
                 key,
                 VmFlags::default(),

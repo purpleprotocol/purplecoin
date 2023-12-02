@@ -53,6 +53,7 @@ impl Transaction {
         let key = format!("{}.shard.{}", SETTINGS.node.network_name, self.chain_id);
         let mut out_stack = vec![];
         let mut idx_map = HashMap::new();
+        let mut ver_stack = vec![];
 
         // Compute outputs
         for input in &self.ins {
@@ -61,6 +62,7 @@ impl Transaction {
                 &self.ins,
                 &mut out_stack,
                 &mut idx_map,
+                &mut ver_stack,
                 [0; 32], // TODO: Inject seed here
                 &key,
                 VmFlags {
