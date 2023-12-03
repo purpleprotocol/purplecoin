@@ -24,7 +24,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
     let ss = Script::new_simple_spend();
     let sh = ss.to_script_hash(key);
     let mut out_stack = vec![];
-    let mut ver_stack = vec![];
+    let mut ver_stack = VerificationStack::new();
     let mut idx_map = HashMap::new();
     let script_args = vec![
         VmTerm::Signed128(INITIAL_BLOCK_REWARD),

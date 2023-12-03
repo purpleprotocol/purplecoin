@@ -4,39 +4,92 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-/// A sig verification enum for different signature schemes, to be used
-/// for both batch and single verification, for vm verification.
-pub enum SigVerification {
-    Schnor(
-        SigVerificationPubKey,
-        SigVerificationSignature,
-        SigVerificationMessage,
-    ),
-    Ed25519(
-        SigVerificationPubKey,
-        SigVerificationSignature,
-        SigVerificationMessage,
-    ),
-    Ecdsa(
-        SigVerificationSignature,
-        SigVerificationMessage,
-        EcdsaRecoveryId,
-    ),
-    BIP340(
-        SigVerificationPubKey,
-        SigVerificationSignature,
-        SigVerificationMessage,
-    ),
+use ed25519_dalek::{
+    verify_batch as verify_batch_ed25519, Signature as Ed25519Signature,
+    SigningKey as Ed25519SigningKey, VerifyingKey as Ed25519VerifyingKey,
+};
+use schnorrkel::{
+    signing_context, verify_batch as verify_batch_schnor, PublicKey as SchnorPK,
+    Signature as SchnorSig,
+};
+
+pub fn verify_single_schnor(
+    ctx: &str,
+    pub_key: &SigVerificationPubKey,
+    sig: &SigVerificationSignature,
+    message: &SigVerificationMessage,
+) -> Result<(), SigVerificationErr> {
+    unimplemented!();
 }
 
-impl SigVerification {
-    pub fn verify_single(&self) -> Result<(), SigVerificationErr> {
-        unimplemented!()
+pub fn verify_single_ed25519(
+    pub_key: &SigVerificationPubKey,
+    sig: &SigVerificationSignature,
+    message: &SigVerificationMessage,
+) -> Result<(), SigVerificationErr> {
+    unimplemented!();
+}
+
+pub fn verify_single_ecdsa(
+    rec_id: &EcdsaRecoveryId,
+    sig: &SigVerificationSignature,
+    message: &SigVerificationMessage,
+) -> Result<(), SigVerificationErr> {
+    unimplemented!();
+}
+
+pub fn verify_single_bip340(
+    pub_key: &SigVerificationPubKey,
+    sig: &SigVerificationSignature,
+    message: &SigVerificationMessage,
+) -> Result<(), SigVerificationErr> {
+    unimplemented!();
+}
+
+pub fn verify_batch(ver_stack: &VerificationStack) -> Result<(), SigVerificationErr> {
+    unimplemented!();
+}
+
+#[derive(Default)]
+pub struct VerificationStack {
+    schnor: SchnorVerStack,
+    ed25519: Ed25519VerStack,
+    ecdsa: EcdsaVerStack,
+    bip340: BIP340VerStack,
+}
+
+impl VerificationStack {
+    #[must_use]
+    pub fn new() -> Self {
+        Default::default()
     }
 }
 
-pub fn verify_batch(ver_stack: Vec<SigVerification>) -> Result<(), SigVerificationErr> {
-    unimplemented!();
+#[derive(Default)]
+struct SchnorVerStack {
+    transcripts: Vec<SigVerificationMessage>,
+    signatures: Vec<SchnorSig>,
+    public_keys: Vec<SchnorPK>,
+}
+
+#[derive(Default)]
+struct Ed25519VerStack {
+    transcripts: Vec<SigVerificationMessage>,
+    signatures: Vec<Ed25519Signature>,
+    public_keys: Vec<Ed25519VerifyingKey>,
+}
+
+#[derive(Default)]
+struct EcdsaVerStack {
+    transcripts: Vec<SigVerificationMessage>,
+    signatures: Vec<SigVerificationSignature>,
+}
+
+#[derive(Default)]
+struct BIP340VerStack {
+    transcripts: Vec<SigVerificationMessage>,
+    signatures: Vec<SigVerificationSignature>,
+    public_keys: Vec<SigVerificationPubKey>,
 }
 
 pub struct SigVerificationPubKey([u8; 32]);

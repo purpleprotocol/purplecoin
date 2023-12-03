@@ -8,7 +8,7 @@ use crate::chain::{Shard, ShardBackend};
 use crate::consensus::Money;
 use crate::primitives::{Hash256, Input, Output};
 use crate::settings::SETTINGS;
-use crate::vm::VmFlags;
+use crate::vm::{VerificationStack, VmFlags};
 use bincode::{Decode, Encode};
 use schnorrkel::{signing_context, verify_batch, PublicKey as SchnorPK, Signature as SchnorSig};
 use std::cmp::Ordering;
@@ -53,7 +53,7 @@ impl Transaction {
         let key = format!("{}.shard.{}", SETTINGS.node.network_name, self.chain_id);
         let mut out_stack = vec![];
         let mut idx_map = HashMap::new();
-        let mut ver_stack = vec![];
+        let mut ver_stack = VerificationStack::new();
 
         // Compute outputs
         for input in &self.ins {
