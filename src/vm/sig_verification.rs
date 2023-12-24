@@ -27,7 +27,14 @@ pub fn verify_single_ed25519(
     sig: &SigVerificationSignature,
     message: &SigVerificationMessage,
 ) -> Result<(), SigVerificationErr> {
-    unimplemented!();
+    let mut ver_stack = VerificationStack::new();
+    ver_stack.push_ed25519(
+        message.clone(),
+        sig.into(),
+        Ed25519VerifyingKey::from_bytes(pub_key)
+            .map_err(|_| SigVerificationErr::InvalidPublicKey)?,
+    );
+    ver_stack.ed25519.verify_batch()
 }
 
 pub fn verify_single_ecdsa(
@@ -124,6 +131,7 @@ pub type EcdsaRecoveryId = u8;
 #[derive(Clone, Debug)]
 pub enum SigVerificationErr {
     InvalidSignature,
+    InvalidPublicKey,
 }
 
 #[cfg(test)]
@@ -175,5 +183,25 @@ mod tests {
         }
 
         assert!(verify_batch(&ver_stack).is_err());
+    }
+
+    #[test]
+    fn verify_ed25519_single() {
+        let batch = (0..200_u8)
+            .map(|i| {
+                let mut csprng = OsRng;
+                let message = vec![i];
+                let signing_key = Ed25519SigningKey::generate(&mut csprng);
+                let pkey = signing_key.verifying_key();
+                let signature = signing_key.sign(&message);
+                (message, pkey, signature)
+            })
+            .collect::<Vec<_>>();
+
+        for (message, pkey, signature) in batch {
+            assert!(
+                verify_single_ed25519(&pkey.to_bytes(), &signature.to_bytes(), &message).is_ok()
+            );
+        }
     }
 }
