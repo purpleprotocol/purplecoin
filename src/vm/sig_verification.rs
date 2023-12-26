@@ -387,6 +387,31 @@ mod tests {
         assert!(verify_batch(&ver_stack).is_err());
     }
 
+    #[test]
+    fn verify_ecdsa_batch_fail_case_2() {
+        let mut ver_stack = VerificationStack::new();
+        let batch = (0..50_u8)
+            .map(|i| {
+                let mut csprng = OsRng;
+                let mut m = quick_sha256(vec![i].as_slice());
+                let signing_key = SecretKey::random(&mut csprng);
+                let pkey = PublicKey::from_secret_key(&signing_key);
+                let message = Message::parse(&m);
+                let (signature, rec_id) = sign(&message, &signing_key);
+                if i == 47 {
+                    m = quick_sha256(vec![0xff].as_slice());
+                }
+                (m, pkey.serialize_compressed(), signature.serialize())
+            })
+            .collect::<Vec<_>>();
+
+        for (message, pkey, signature) in batch {
+            ver_stack.push_ecdsa(message, signature, pkey);
+        }
+
+        assert!(verify_batch(&ver_stack).is_err());
+    }
+
     fn quick_sha256(bytes: &[u8]) -> [u8; 32] {
         use sha2::Digest;
         let mut hasher = sha2::Sha256::new();
