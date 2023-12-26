@@ -65,6 +65,7 @@ pub fn verify_single_bip340(
 }
 
 pub fn verify_batch(ver_stack: &VerificationStack) -> Result<(), SigVerificationErr> {
+    // TODO: Bench and parallelise this finely for mainnet. Shortcircuiting needed.
     ver_stack.ed25519.verify_batch()?;
     ver_stack.ecdsa.verify_batch()?;
     Ok(())
@@ -142,6 +143,7 @@ pub(crate) struct EcdsaVerStack {
 
 impl EcdsaVerStack {
     pub fn verify_batch(&self) -> Result<(), SigVerificationErr> {
+        // TODO: Bench and parallelise this finely for mainnet. Shortcircuiting needed.
         let mut counter = 0;
         let mut iter = izip!(
             self.transcripts.iter(),
