@@ -14,6 +14,8 @@ use schnorrkel::{
     signing_context, verify_batch as verify_batch_schnor, PublicKey as SchnorPK,
     Signature as SchnorSig,
 };
+use secp256k1::schnorr::Signature as Bip340Signature;
+use secp256k1::{Message as Secp256k1Message, Secp256k1, XOnlyPublicKey};
 
 pub fn verify_single_schnor(
     ctx: &str,
@@ -59,15 +61,24 @@ pub fn verify_single_ecdsa(
 pub fn verify_single_bip340(
     pub_key: &SigVerificationPubKey,
     sig: &SigVerificationSignature,
-    message: &SigVerificationMessage,
+    message: &EcdsaSigVerificationMessage,
 ) -> Result<(), SigVerificationErr> {
-    unimplemented!();
+    let pub_key =
+        XOnlyPublicKey::from_slice(pub_key).map_err(|_| SigVerificationErr::InvalidPublicKey)?;
+    let signature =
+        Bip340Signature::from_slice(sig).map_err(|_| SigVerificationErr::InvalidSignature)?;
+    let message = Secp256k1Message::from_digest_slice(message)
+        .map_err(|_| SigVerificationErr::InvalidMessage)?;
+    let ctx = Secp256k1::new();
+    ctx.verify_schnorr(&signature, &message, &pub_key)
+        .map_err(|_| SigVerificationErr::InvalidSignature)
 }
 
 pub fn verify_batch(ver_stack: &VerificationStack) -> Result<(), SigVerificationErr> {
     // TODO: Bench and parallelise this finely for mainnet. Shortcircuiting needed.
     ver_stack.ed25519.verify_batch()?;
     ver_stack.ecdsa.verify_batch()?;
+    ver_stack.bip340.verify_batch()?;
     Ok(())
 }
 
@@ -105,6 +116,17 @@ impl VerificationStack {
         self.ecdsa.transcripts.push(message);
         self.ecdsa.signatures.push(signature);
         self.ecdsa.public_keys.push(public_key);
+    }
+
+    pub fn push_bip340(
+        &mut self,
+        message: EcdsaSigVerificationMessage,
+        signature: SigVerificationSignature,
+        public_key: Bip340PublicKey,
+    ) {
+        self.bip340.transcripts.push(message);
+        self.bip340.signatures.push(signature);
+        self.bip340.public_keys.push(public_key);
     }
 }
 
@@ -166,9 +188,32 @@ impl EcdsaVerStack {
 
 #[derive(Default)]
 pub(crate) struct BIP340VerStack {
-    transcripts: Vec<SigVerificationMessage>,
+    transcripts: Vec<EcdsaSigVerificationMessage>,
     signatures: Vec<SigVerificationSignature>,
-    public_keys: Vec<SigVerificationPubKey>,
+    public_keys: Vec<Bip340PublicKey>,
+}
+
+impl BIP340VerStack {
+    pub fn verify_batch(&self) -> Result<(), SigVerificationErr> {
+        // TODO: Bench and parallelise this finely for mainnet. Shortcircuiting needed.
+        let mut counter = 0;
+        let mut iter = izip!(
+            self.transcripts.iter(),
+            self.signatures.iter(),
+            self.public_keys.iter()
+        )
+        .take_while(|(m, s, pk)| verify_single_bip340(pk, s, m).is_ok());
+
+        for _ in iter {
+            counter += 1;
+        }
+
+        if counter == self.transcripts.len() {
+            Ok(())
+        } else {
+            Err(SigVerificationErr::InvalidSignature)
+        }
+    }
 }
 
 pub type SigVerificationPubKey = [u8; 32];
@@ -176,6 +221,7 @@ pub type SigVerificationSignature = [u8; 64];
 pub type SigVerificationMessage = Vec<u8>;
 pub type EcdsaSigVerificationMessage = [u8; 32];
 pub type EcdsaPublicKey = [u8; 33];
+pub type Bip340PublicKey = [u8; 32];
 
 #[derive(Clone, Debug)]
 pub enum SigVerificationErr {
@@ -201,6 +247,7 @@ mod tests {
     use ed25519_dalek::{Signer, SigningKey as Ed25519SigningKey};
     use libsecp256k1::*;
     use rand::rngs::OsRng;
+    use secp256k1::Keypair;
 
     #[test]
     fn verify_ed25519() {
@@ -409,6 +456,84 @@ mod tests {
 
         for (message, pkey, signature) in batch {
             ver_stack.push_ecdsa(message, signature, pkey);
+        }
+
+        assert!(verify_batch(&ver_stack).is_err());
+    }
+
+    #[test]
+    fn verify_bip340_batch() {
+        let mut ver_stack = VerificationStack::new();
+        let batch = (0..50_u8)
+            .map(|i| {
+                let mut csprng = OsRng;
+                let mut m = quick_sha256(vec![i].as_slice());
+                let ctx = Secp256k1::new();
+                let (signing_key, _) = ctx.generate_keypair(&mut csprng);
+                let (pub_key, _) = signing_key.x_only_public_key(&ctx);
+                let message = Secp256k1Message::from_digest_slice(&m).unwrap();
+                let keypair = Keypair::from_secret_key(&ctx, &signing_key);
+                let signature = ctx.sign_schnorr(&message, &keypair);
+                (m, pub_key.serialize(), signature.serialize())
+            })
+            .collect::<Vec<_>>();
+
+        for (message, pkey, signature) in batch {
+            ver_stack.push_bip340(message, signature, pkey);
+        }
+
+        assert!(verify_batch(&ver_stack).is_ok());
+    }
+
+    #[test]
+    fn verify_bip340_batch_fail_case() {
+        let mut ver_stack = VerificationStack::new();
+        let batch = (0..50_u8)
+            .map(|i| {
+                let mut csprng = OsRng;
+                let mut m = quick_sha256(vec![i].as_slice());
+                let ctx = Secp256k1::new();
+                let (signing_key, _) = ctx.generate_keypair(&mut csprng);
+                let (pub_key, _) = signing_key.x_only_public_key(&ctx);
+                let message = Secp256k1Message::from_digest_slice(&m).unwrap();
+                let keypair = Keypair::from_secret_key(&ctx, &signing_key);
+                let signature = ctx.sign_schnorr(&message, &keypair);
+                if i == 0 {
+                    m = quick_sha256(vec![0xff].as_slice());
+                }
+                (m, pub_key.serialize(), signature.serialize())
+            })
+            .collect::<Vec<_>>();
+
+        for (message, pkey, signature) in batch {
+            ver_stack.push_bip340(message, signature, pkey);
+        }
+
+        assert!(verify_batch(&ver_stack).is_err());
+    }
+
+    #[test]
+    fn verify_bip340_batch_fail_case_2() {
+        let mut ver_stack = VerificationStack::new();
+        let batch = (0..50_u8)
+            .map(|i| {
+                let mut csprng = OsRng;
+                let mut m = quick_sha256(vec![i].as_slice());
+                let ctx = Secp256k1::new();
+                let (signing_key, _) = ctx.generate_keypair(&mut csprng);
+                let (pub_key, _) = signing_key.x_only_public_key(&ctx);
+                let message = Secp256k1Message::from_digest_slice(&m).unwrap();
+                let keypair = Keypair::from_secret_key(&ctx, &signing_key);
+                let signature = ctx.sign_schnorr(&message, &keypair);
+                if i == 47 {
+                    m = quick_sha256(vec![0xff].as_slice());
+                }
+                (m, pub_key.serialize(), signature.serialize())
+            })
+            .collect::<Vec<_>>();
+
+        for (message, pkey, signature) in batch {
+            ver_stack.push_bip340(message, signature, pkey);
         }
 
         assert!(verify_batch(&ver_stack).is_err());
