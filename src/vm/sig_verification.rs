@@ -8,6 +8,7 @@ use ed25519_dalek::{
     verify_batch as verify_batch_ed25519, Signature as Ed25519Signature,
     SigningKey as Ed25519SigningKey, VerifyingKey as Ed25519VerifyingKey,
 };
+use itertools::izip;
 use libsecp256k1::{verify as verify_ecdsa, Message, PublicKey, Signature};
 use schnorrkel::{
     signing_context, verify_batch as verify_batch_schnor, PublicKey as SchnorPK,
@@ -65,6 +66,7 @@ pub fn verify_single_bip340(
 
 pub fn verify_batch(ver_stack: &VerificationStack) -> Result<(), SigVerificationErr> {
     ver_stack.ed25519.verify_batch()?;
+    ver_stack.ecdsa.verify_batch()?;
     Ok(())
 }
 
@@ -91,6 +93,17 @@ impl VerificationStack {
         self.ed25519.transcripts.push(message);
         self.ed25519.signatures.push(signature);
         self.ed25519.public_keys.push(public_key);
+    }
+
+    pub fn push_ecdsa(
+        &mut self,
+        message: EcdsaSigVerificationMessage,
+        signature: SigVerificationSignature,
+        public_key: EcdsaPublicKey,
+    ) {
+        self.ecdsa.transcripts.push(message);
+        self.ecdsa.signatures.push(signature);
+        self.ecdsa.public_keys.push(public_key);
     }
 }
 
@@ -122,8 +135,31 @@ impl Ed25519VerStack {
 
 #[derive(Default)]
 pub(crate) struct EcdsaVerStack {
-    transcripts: Vec<SigVerificationMessage>,
+    transcripts: Vec<EcdsaSigVerificationMessage>,
     signatures: Vec<SigVerificationSignature>,
+    public_keys: Vec<EcdsaPublicKey>,
+}
+
+impl EcdsaVerStack {
+    pub fn verify_batch(&self) -> Result<(), SigVerificationErr> {
+        let mut counter = 0;
+        let mut iter = izip!(
+            self.transcripts.iter(),
+            self.signatures.iter(),
+            self.public_keys.iter()
+        )
+        .take_while(|(m, s, pk)| verify_single_ecdsa(pk, s, m).is_ok());
+
+        for _ in iter {
+            counter += 1;
+        }
+
+        if counter == self.transcripts.len() {
+            Ok(())
+        } else {
+            Err(SigVerificationErr::InvalidSignature)
+        }
+    }
 }
 
 #[derive(Default)]
@@ -302,6 +338,53 @@ mod tests {
                 assert!(verify_single_ecdsa(pkey, signature, message).is_ok());
             }
         }
+    }
+
+    #[test]
+    fn verify_ecdsa_batch() {
+        let mut ver_stack = VerificationStack::new();
+        let batch = (0..50_u8)
+            .map(|i| {
+                let mut csprng = OsRng;
+                let mut m = quick_sha256(vec![i].as_slice());
+                let signing_key = SecretKey::random(&mut csprng);
+                let pkey = PublicKey::from_secret_key(&signing_key);
+                let message = Message::parse(&m);
+                let (signature, rec_id) = sign(&message, &signing_key);
+                (m, pkey.serialize_compressed(), signature.serialize())
+            })
+            .collect::<Vec<_>>();
+
+        for (message, pkey, signature) in batch {
+            ver_stack.push_ecdsa(message, signature, pkey);
+        }
+
+        assert!(verify_batch(&ver_stack).is_ok());
+    }
+
+    #[test]
+    fn verify_ecdsa_batch_fail_case() {
+        let mut ver_stack = VerificationStack::new();
+        let batch = (0..50_u8)
+            .map(|i| {
+                let mut csprng = OsRng;
+                let mut m = quick_sha256(vec![i].as_slice());
+                let signing_key = SecretKey::random(&mut csprng);
+                let pkey = PublicKey::from_secret_key(&signing_key);
+                let message = Message::parse(&m);
+                let (signature, rec_id) = sign(&message, &signing_key);
+                if i == 0 {
+                    m = quick_sha256(vec![0xff].as_slice());
+                }
+                (m, pkey.serialize_compressed(), signature.serialize())
+            })
+            .collect::<Vec<_>>();
+
+        for (message, pkey, signature) in batch {
+            ver_stack.push_ecdsa(message, signature, pkey);
+        }
+
+        assert!(verify_batch(&ver_stack).is_err());
     }
 
     fn quick_sha256(bytes: &[u8]) -> [u8; 32] {
