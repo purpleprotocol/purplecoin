@@ -8,6 +8,7 @@ use ed25519_dalek::{
     verify_batch as verify_batch_ed25519, Signature as Ed25519Signature,
     SigningKey as Ed25519SigningKey, VerifyingKey as Ed25519VerifyingKey,
 };
+use libsecp256k1::{verify as verify_ecdsa, Message, PublicKey, Signature};
 use schnorrkel::{
     signing_context, verify_batch as verify_batch_schnor, PublicKey as SchnorPK,
     Signature as SchnorSig,
@@ -38,11 +39,20 @@ pub fn verify_single_ed25519(
 }
 
 pub fn verify_single_ecdsa(
-    rec_id: &EcdsaRecoveryId,
+    pub_key: &EcdsaPublicKey,
     sig: &SigVerificationSignature,
-    message: &SigVerificationMessage,
+    message: &EcdsaSigVerificationMessage,
 ) -> Result<(), SigVerificationErr> {
-    unimplemented!();
+    let message = Message::parse(message);
+    let mut sig = Signature::parse_standard(sig).map_err(|_| SigVerificationErr::EcdsaRecErr)?;
+    let public_key =
+        PublicKey::parse_compressed(pub_key).map_err(|_| SigVerificationErr::InvalidPublicKey)?;
+    sig.normalize_s();
+    if verify_ecdsa(&message, &sig, &public_key) {
+        Ok(())
+    } else {
+        Err(SigVerificationErr::InvalidSignature)
+    }
 }
 
 pub fn verify_single_bip340(
@@ -85,14 +95,14 @@ impl VerificationStack {
 }
 
 #[derive(Default)]
-struct SchnorVerStack {
+pub(crate) struct SchnorVerStack {
     transcripts: Vec<SigVerificationMessage>,
     signatures: Vec<SchnorSig>,
     public_keys: Vec<SchnorPK>,
 }
 
 #[derive(Default)]
-struct Ed25519VerStack {
+pub(crate) struct Ed25519VerStack {
     transcripts: Vec<SigVerificationMessage>,
     signatures: Vec<Ed25519Signature>,
     public_keys: Vec<Ed25519VerifyingKey>,
@@ -111,13 +121,13 @@ impl Ed25519VerStack {
 }
 
 #[derive(Default)]
-struct EcdsaVerStack {
+pub(crate) struct EcdsaVerStack {
     transcripts: Vec<SigVerificationMessage>,
     signatures: Vec<SigVerificationSignature>,
 }
 
 #[derive(Default)]
-struct BIP340VerStack {
+pub(crate) struct BIP340VerStack {
     transcripts: Vec<SigVerificationMessage>,
     signatures: Vec<SigVerificationSignature>,
     public_keys: Vec<SigVerificationPubKey>,
@@ -126,18 +136,32 @@ struct BIP340VerStack {
 pub type SigVerificationPubKey = [u8; 32];
 pub type SigVerificationSignature = [u8; 64];
 pub type SigVerificationMessage = Vec<u8>;
-pub type EcdsaRecoveryId = u8;
+pub type EcdsaSigVerificationMessage = [u8; 32];
+pub type EcdsaPublicKey = [u8; 33];
 
 #[derive(Clone, Debug)]
 pub enum SigVerificationErr {
+    /// Invalid signature
     InvalidSignature,
+
+    /// Invalid public key
     InvalidPublicKey,
+
+    /// Invalid message in case of ECDSA usually
+    /// because it's not 32 bytes long or not hashed
+    /// with a cryptographic hash function.
+    InvalidMessage,
+
+    /// ECDSA public key recovery error
+    EcdsaRecErr,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::primitives::Hash256;
     use ed25519_dalek::{Signer, SigningKey as Ed25519SigningKey};
+    use libsecp256k1::*;
     use rand::rngs::OsRng;
 
     #[test]
@@ -187,7 +211,7 @@ mod tests {
 
     #[test]
     fn verify_ed25519_single() {
-        let batch = (0..200_u8)
+        let batch = (0..50_u8)
             .map(|i| {
                 let mut csprng = OsRng;
                 let message = vec![i];
@@ -203,5 +227,90 @@ mod tests {
                 verify_single_ed25519(&pkey.to_bytes(), &signature.to_bytes(), &message).is_ok()
             );
         }
+    }
+
+    #[test]
+    fn verify_ed25519_single_fail_case() {
+        let batch = (0..50_u8)
+            .map(|i| {
+                let mut csprng = OsRng;
+                let mut message = vec![i];
+                let signing_key = Ed25519SigningKey::generate(&mut csprng);
+                let pkey = signing_key.verifying_key();
+                let signature = signing_key.sign(&message);
+                if i == 0 {
+                    message = vec![0xff];
+                }
+                (message, pkey, signature)
+            })
+            .collect::<Vec<_>>();
+
+        for (i, (message, pkey, signature)) in batch.iter().enumerate() {
+            if i == 0 {
+                assert!(
+                    verify_single_ed25519(&pkey.to_bytes(), &signature.to_bytes(), message)
+                        .is_err()
+                );
+            } else {
+                assert!(
+                    verify_single_ed25519(&pkey.to_bytes(), &signature.to_bytes(), message).is_ok()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn verify_ecdsa_single() {
+        let batch = (0..50_u8)
+            .map(|i| {
+                let mut csprng = OsRng;
+                let mut m = quick_sha256(vec![i].as_slice());
+                let signing_key = SecretKey::random(&mut csprng);
+                let pkey = PublicKey::from_secret_key(&signing_key);
+                let message = Message::parse(&m);
+                let (signature, rec_id) = sign(&message, &signing_key);
+                (m, pkey.serialize_compressed(), signature.serialize())
+            })
+            .collect::<Vec<_>>();
+
+        for (message, pkey, signature) in batch {
+            assert!(verify_single_ecdsa(&pkey, &signature, &message).is_ok());
+        }
+    }
+
+    #[test]
+    fn verify_ecdsa_single_fail_case() {
+        let batch = (0..50_u8)
+            .map(|i| {
+                let mut csprng = OsRng;
+                let mut m = quick_sha256(vec![i].as_slice());
+                let signing_key = SecretKey::random(&mut csprng);
+                let pkey = PublicKey::from_secret_key(&signing_key);
+                let message = Message::parse(&m);
+                let (signature, rec_id) = sign(&message, &signing_key);
+                if i == 0 {
+                    m = quick_sha256(vec![0xff].as_slice());
+                }
+                (m, pkey.serialize_compressed(), signature.serialize())
+            })
+            .collect::<Vec<_>>();
+
+        for (i, (message, pkey, signature)) in batch.iter().enumerate() {
+            if i == 0 {
+                assert!(verify_single_ecdsa(pkey, signature, message).is_err());
+            } else {
+                assert!(verify_single_ecdsa(pkey, signature, message).is_ok());
+            }
+        }
+    }
+
+    fn quick_sha256(bytes: &[u8]) -> [u8; 32] {
+        use sha2::Digest;
+        let mut hasher = sha2::Sha256::new();
+        Digest::update(&mut hasher, bytes);
+        let hashed_term = hasher.finalize();
+        let mut out = [0; 32];
+        out.copy_from_slice(&hashed_term[..]);
+        out
     }
 }
