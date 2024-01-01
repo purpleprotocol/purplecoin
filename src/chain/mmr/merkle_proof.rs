@@ -84,7 +84,7 @@ impl MMRMerkleProof {
 
     /// Consumes the Merkle proof while verifying it.
     /// The proof can no longer be used by the caller after dong this.
-    /// Caller must clone() the proof first.
+    /// Caller must `clone()` the proof first.
     fn verify_consume<T: PMMRIndexHashable>(
         &mut self,
         root: Hash256,

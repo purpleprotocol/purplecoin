@@ -43,11 +43,13 @@ fn bench_coinbase(c: &mut Criterion) {
     c.bench_function("verify coinbase script", |b| {
         b.iter(|| {
             let mut idx_map = HashMap::new();
+            let mut ver_stack = VerificationStack::new();
             input.script.execute(
                 &input.script_args,
                 &[input.clone()],
                 &mut out_stack,
                 &mut idx_map,
+                &mut ver_stack,
                 [0; 32],
                 key,
                 VmFlags {
@@ -72,11 +74,13 @@ fn bench_coinbase(c: &mut Criterion) {
                     .map(|i| {
                         let mut idx_map = HashMap::new();
                         let mut out_stack = vec![];
+                        let mut ver_stack = VerificationStack::new();
                         i.script.execute(
                             &input.script_args,
                             &[input.clone()],
                             &mut out_stack,
                             &mut idx_map,
+                            &mut ver_stack,
                             [0; 32],
                             key,
                             VmFlags {
@@ -104,11 +108,13 @@ fn bench_coinbase(c: &mut Criterion) {
                         .map(|i| {
                             let mut idx_map = HashMap::new();
                             let mut out_stack = vec![];
+                            let mut ver_stack = VerificationStack::new();
                             i.script.execute(
                                 &input.script_args,
                                 &[input.clone()],
                                 &mut out_stack,
                                 &mut idx_map,
+                                &mut ver_stack,
                                 [0; 32],
                                 key,
                                 VmFlags {
@@ -178,12 +184,14 @@ fn bench_vm_abuse(c: &mut Criterion) {
                 (0..batch_size).into_par_iter().for_each(|_| {
                     let mut outs = vec![];
                     let mut idx_map = HashMap::new();
+                    let mut ver_stack = VerificationStack::new();
                     assert_eq!(
                         ss.execute(
                             &args,
                             ins.as_slice(),
                             &mut outs,
                             &mut idx_map,
+                            &mut ver_stack,
                             [0; 32],
                             key,
                             VmFlags {
@@ -316,12 +324,14 @@ fn bench_vm_load_var(c: &mut Criterion) {
                 (0..batch_size).into_par_iter().for_each(|_| {
                     let mut outs = vec![];
                     let mut idx_map = HashMap::new();
+                    let mut ver_stack = VerificationStack::new();
                     assert_eq!(
                         ss.execute(
                             &args,
                             ins.as_slice(),
                             &mut outs,
                             &mut idx_map,
+                            &mut ver_stack,
                             [0; 32],
                             key,
                             VmFlags {
