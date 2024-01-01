@@ -23,7 +23,12 @@ pub fn verify_single_schnor(
     sig: &SigVerificationSignature,
     message: &SigVerificationMessage,
 ) -> Result<(), SigVerificationErr> {
-    unimplemented!();
+    let ctx = signing_context(ctx.as_bytes());
+    let pub_key = SchnorPK::from_bytes(pub_key.as_slice()).unwrap();
+    let sig = SchnorSig::from_bytes(sig.as_slice()).unwrap();
+    pub_key
+        .verify(ctx.bytes(message), &sig)
+        .map_err(|_| SigVerificationErr::InvalidSignature)
 }
 
 pub fn verify_single_ed25519(
@@ -135,6 +140,12 @@ pub(crate) struct SchnorVerStack {
     transcripts: Vec<SigVerificationMessage>,
     signatures: Vec<SchnorSig>,
     public_keys: Vec<SchnorPK>,
+}
+
+impl SchnorVerStack {
+    pub fn verify_batch(&self) -> Result<(), SigVerificationErr> {
+        unimplemented!();
+    }
 }
 
 #[derive(Default)]
