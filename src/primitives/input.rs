@@ -6,7 +6,7 @@
 
 use crate::chain::Shard;
 use crate::chain::ShardBackend;
-use crate::consensus::Money;
+use crate::consensus::{Money, BLOCK_HORIZON};
 use crate::primitives::{Hash160, Hash256, Output, PublicKey, TxVerifyErr};
 use crate::vm::internal::VmTerm;
 use crate::vm::Script;
@@ -112,19 +112,17 @@ impl Input {
         height: u64,
         sum: &mut Money,
         transcripts: &mut Vec<&'a [u8]>,
-        signatures: &mut Vec<SchnorSig>,
         public_keys: &mut Vec<SchnorPK>,
         shard: &Shard<B>,
     ) -> Result<(), TxVerifyErr> {
         if self.is_coinbase() {
-            // if height < out_height + BLOCK_HORIZON {
-            //     return Err(TxVerifyErr::CoinbaseOutSpentBeforeMaturation);
-            // }
+            let out_height = self.out.as_ref().unwrap().coinbase_height().unwrap();
 
-            unimplemented!()
+            if height < out_height + BLOCK_HORIZON {
+                return Err(TxVerifyErr::CoinbaseOutSpentBeforeMaturation);
+            }
         }
 
-        //self.out.verify(sum)?;
         let key = shard.shard_config().key();
 
         // Get script hash according to spend proof, address and script hash
@@ -163,7 +161,9 @@ impl Input {
 
         *sum += self.out().unwrap().amount();
         transcripts.push(self.out().unwrap().hash().unwrap().as_bytes());
-        //public_keys.push(out.pub_key());
+        if let Some(ref public_key) = self.spending_pkey {
+            public_keys.push(public_key.0);
+        }
         Ok(())
     }
 

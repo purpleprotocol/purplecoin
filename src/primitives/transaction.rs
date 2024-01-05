@@ -94,7 +94,6 @@ impl Transaction {
                 .as_bytes(),
         );
         let mut transcripts: Vec<&[u8]> = Vec::with_capacity(self.ins.len());
-        let mut signatures: Vec<SchnorSig> = Vec::with_capacity(self.ins.len());
         let mut public_keys: Vec<SchnorPK> = Vec::with_capacity(self.ins.len());
         let mut ins_sum: Money = 0;
         let mut outs_sum: Money = 0;
@@ -106,7 +105,6 @@ impl Transaction {
                 shard_height,
                 &mut ins_sum,
                 &mut transcripts,
-                &mut signatures,
                 &mut public_keys,
                 shard,
             )?;
@@ -117,17 +115,19 @@ impl Transaction {
             return Err(TxVerifyErr::InvalidAmount);
         }
 
-        // Verify all signatures against transcripts and public keys
-        if verify_batch(
-            transcripts.iter().map(|m| ctx.bytes(m)),
-            &signatures,
-            &public_keys,
-            false,
-        )
-        .is_err()
-        {
-            return Err(TxVerifyErr::InvalidSignature);
-        }
+        // TODO: Validate signatures another way for a single transaction
+        // and validate aggregated signature in the block validation pipeline.
+        //
+        // // Verify all signatures against transcripts and public keys
+        // if verify_batch(
+        //     transcripts.iter().map(|m| ctx.bytes(m)),
+        //     &public_keys,
+        //     false,
+        // )
+        // .is_err()
+        // {
+        //     return Err(TxVerifyErr::InvalidSignature);
+        // }
 
         Ok(ins_sum - outs_sum)
     }
@@ -139,7 +139,6 @@ impl Transaction {
     pub fn verify_batch<'a, B: ShardBackend>(
         &'a self,
         transcripts: &mut Vec<&'a [u8]>,
-        signatures: &mut Vec<SchnorSig>,
         public_keys: &mut Vec<SchnorPK>,
         shard: &Shard<B>,
     ) -> Result<Money, TxVerifyErr> {
@@ -149,14 +148,7 @@ impl Transaction {
 
         // Verify inputs
         for i in &self.ins {
-            i.verify(
-                shard_height,
-                &mut ins_sum,
-                transcripts,
-                signatures,
-                public_keys,
-                shard,
-            )?;
+            i.verify(shard_height, &mut ins_sum, transcripts, public_keys, shard)?;
         }
 
         // Check that the sum of inputs is greater than that of the outputs
