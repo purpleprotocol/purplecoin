@@ -89,7 +89,6 @@ pub fn verify_batch(ver_stack: &VerificationStack) -> Result<(), SigVerification
 
 #[derive(Default)]
 pub struct VerificationStack {
-    pub(crate) schnor: SchnorVerStack,
     pub(crate) ed25519: Ed25519VerStack,
     pub(crate) ecdsa: EcdsaVerStack,
     pub(crate) bip340: BIP340VerStack,
@@ -132,19 +131,6 @@ impl VerificationStack {
         self.bip340.transcripts.push(message);
         self.bip340.signatures.push(signature);
         self.bip340.public_keys.push(public_key);
-    }
-}
-
-#[derive(Default)]
-pub(crate) struct SchnorVerStack {
-    transcripts: Vec<SigVerificationMessage>,
-    signatures: Vec<SchnorSig>,
-    public_keys: Vec<SchnorPK>,
-}
-
-impl SchnorVerStack {
-    pub fn verify_batch(&self) -> Result<(), SigVerificationErr> {
-        unimplemented!();
     }
 }
 
