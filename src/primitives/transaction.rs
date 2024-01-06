@@ -200,8 +200,16 @@ pub enum TxVerifyErr {
 }
 
 #[derive(Clone, Debug)]
-pub struct TransactionWithFee {
+/// Transaction with signatures used at the p2p layer for initial propagation.
+pub struct TransactionWithSignatures {
     pub(crate) tx: Transaction,
+    pub(crate) signatures: Vec<Option<SchnorSig>>,
+}
+
+#[derive(Clone, Debug)]
+/// `TransactionWithFee` struct used for the mempool.
+pub struct TransactionWithFee {
+    pub(crate) tx: TransactionWithSignatures,
     pub(crate) raw_fee: Money,
     pub(crate) fee_per_byte: Money,
     pub(crate) tx_size: u32,
@@ -210,18 +218,18 @@ pub struct TransactionWithFee {
 impl TransactionWithFee {
     #[must_use]
     pub fn hash(&self) -> Option<&Hash256> {
-        self.tx.hash()
+        self.tx.tx.hash()
     }
 
     #[must_use]
     pub fn from_transaction(
-        other: Transaction,
+        other: TransactionWithSignatures,
         height: u64,
         timestamp: i64,
         prev_block_hash: [u8; 32],
     ) -> Self {
-        let ins = other.get_ins();
-        let outs = other.get_outs(height, timestamp, prev_block_hash);
+        let ins = other.tx.get_ins();
+        let outs = other.tx.get_outs(height, timestamp, prev_block_hash);
         let ins_amount = ins
             .iter()
             .filter_map(|i| {
@@ -244,7 +252,7 @@ impl TransactionWithFee {
             .fold(0, |acc, x| acc + x.amount);
 
         let raw_fee = ins_amount - outs_amount;
-        let tx_size = other.to_bytes().len() as u32;
+        let tx_size = other.tx.to_bytes().len() as u32;
 
         Self {
             tx: other,
@@ -269,6 +277,6 @@ impl PartialOrd for TransactionWithFee {
 
 impl From<TransactionWithFee> for Transaction {
     fn from(other: TransactionWithFee) -> Self {
-        other.tx
+        other.tx.tx
     }
 }

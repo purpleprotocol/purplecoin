@@ -1086,7 +1086,6 @@ impl Block {
         runnerup: Option<&BlockHeader>,
         coinbase: &Address,
         mut txs: Vec<Transaction>,
-        public_keys: Vec<PublicKey>,
         aggregated_signature: Option<AggregatedSignature>,
         key: &str,
         witnesses: &[Witness<Rsa2048, Output>],
@@ -1147,7 +1146,7 @@ impl Block {
         tx.compute_hash(key);
         txs.push(tx);
 
-        let body = BlockData::new(txs, public_keys, aggregated_signature);
+        let body = BlockData::new(txs, aggregated_signature);
 
         Ok((
             Self {
@@ -1202,7 +1201,6 @@ pub struct PowBlockData {
 /// Block body. Includes transactions, public keys and aggregated signature
 pub struct BlockData {
     pub txs: Vec<Transaction>,
-    pub public_keys: Vec<PublicKey>,
     pub aggregated_signature: Option<AggregatedSignature>,
 }
 
@@ -1213,12 +1211,10 @@ impl BlockData {
     #[must_use]
     pub fn new(
         mut txs: Vec<Transaction>,
-        public_keys: Vec<PublicKey>,
         aggregated_signature: Option<AggregatedSignature>,
     ) -> Self {
         Self {
             txs,
-            public_keys,
             aggregated_signature,
         }
     }
@@ -1243,9 +1239,18 @@ impl BlockData {
         let mut to_add: Vec<Output> = vec![];
         let mut to_delete: OutWitnessVec = vec![];
         let mut ver_stack = VerificationStack::new();
+        let mut public_keys = vec![];
+        let mut transcripts = vec![];
+        let mut ctx = schnorrkel::signing_context(key.as_bytes());
         let iter = self.txs.iter().flat_map(|tx| tx.ins.iter());
 
         for input in iter {
+            // Push public key and input binary format if we have a spending pkey
+            if let Some(public_key) = &input.spending_pkey {
+                public_keys.push(public_key.0);
+                transcripts.push(ctx.bytes(&input.to_bytes()));
+            }
+
             match input.get_flags().unwrap() {
                 InputFlags::IsCoinbase => {
                     coinbase_count += 1;
@@ -1325,6 +1330,16 @@ impl BlockData {
         }
 
         // Verify all signatures
+        if let Some(signature) = &self.aggregated_signature {
+            if transcripts.is_empty() {
+                return Err(BlockVerifyErr::InvalidSignature);
+            }
+
+            signature
+                .0
+                .verify(transcripts, public_keys.as_slice(), true)
+                .map_err(|_| BlockVerifyErr::SigVerificationErr)?;
+        }
         crate::vm::verify_batch(&ver_stack)?;
 
         let to_add = to_add
@@ -1528,6 +1543,7 @@ pub enum BlockVerifyErr {
     InvalidCoinbase,
     InvalidRunnerupTimestamp,
     SigVerificationErr,
+    InvalidSignature,
     Tx(TxVerifyErr),
 }
 

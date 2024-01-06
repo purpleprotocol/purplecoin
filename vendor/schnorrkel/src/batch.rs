@@ -287,6 +287,7 @@ fn verify_batch_equation(
 /// François Garillot, Yashvanth Kondi, and Valeria Nikolaenko
 /// available from https://eprint.iacr.org/2021/350.pdf
 #[allow(non_snake_case)]
+#[derive(PartialEq)]
 pub struct PreparedBatch {
     bs: Scalar,
     Rs: Vec<CompressedRistretto>,

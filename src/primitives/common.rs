@@ -576,7 +576,7 @@ impl fmt::Debug for Hash512 {
     }
 }
 
-pub struct AggregatedSignature(PreparedBatch);
+pub struct AggregatedSignature(pub(crate) PreparedBatch);
 
 impl AggregatedSignature {
     #[must_use]
