@@ -5036,6 +5036,65 @@ impl<'a> ScriptExecutor<'a> {
                     }
                 }
 
+                ScriptEntry::Opcode(OP::VerifyBIP340) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let public_key = exec_stack.pop().unwrap();
+                    *memory_size -= public_key.size();
+                    let mut pub_key_buf = [0; 32];
+
+                    // Check type and length of public key
+                    match &public_key {
+                        VmTerm::Unsigned8Array(val) if val.len() == 32 => {
+                            // Transfer contents to buffer if the validation is successful
+                            pub_key_buf.copy_from_slice(val.as_slice());
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                            return;
+                        }
+                    }
+
+                    let signature = exec_stack.pop().unwrap();
+                    *memory_size -= signature.size();
+                    let mut sig_buf = [0; 64];
+
+                    // Check type and length of signature
+                    match &signature {
+                        VmTerm::Unsigned8Array(val) if val.len() == 64 => {
+                            // Transfer contents to buffer if the validation is successful
+                            sig_buf.copy_from_slice(val.as_slice());
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                            return;
+                        }
+                    }
+
+                    // Hash input binary with blake3
+                    let mut message_buf = [0u8; 32];
+                    let mut hasher = blake3::Hasher::new();
+                    hasher.update(&flags.in_binary);
+                    let mut out = hasher.finalize_xof();
+                    out.fill(&mut message_buf);
+
+                    // Push to verification stack and stop script execution
+                    verification_stack.push_bip340(message_buf, sig_buf, pub_key_buf);
+                    self.state = ScriptExecutorState::OkVerify;
+                }
+
                 ScriptEntry::Opcode(OP::VerifyBIP340Inline) => {
                     if exec_stack.len() < 3 {
                         self.state = ScriptExecutorState::Error(
