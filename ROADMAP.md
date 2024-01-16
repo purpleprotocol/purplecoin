@@ -177,7 +177,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xa0` VerifyEd25519 - Takes the given public key and signature, and pushes them along with the current output's binary format to the Ed25519 signature verification stack and stops script execution.
     - [x] OP `0xa1` VerifyEd25519Inline - Takes the given public key, signature, and message and verifies with Ed25519. Pushes `1` on top of the stack if verification is successful.
     - [ ] OP `0xa2` VerifyEcdsa - Takes the given public key, signature, and the binary format of the current output, verifies and stops script execution. Can be used for compatibility with Bitcoin/Ethereum or any other blockchain using ECDSA.
-    - [ ] OP `0xa3` VerifyEcdsaInline - Takes the given public key, signature, and message and verifies with ecdsa. Pushes `1` on top of the stack if verification is successful.
+    - [x] OP `0xa3` VerifyEcdsaInline - Takes the given public key, signature, and message and verifies with ecdsa. Pushes `1` on top of the stack if verification is successful.
     - [ ] OP `0xa4` VerifyBIP340 - Takes the given public key and signature, and pushes them along with the current output's binary format to the BIP340 signature verification stack and stops script execution. For direct compatibility with Bitcoin Taproot.
     - [ ] OP `0xa5` VerifyBIP340Inline - Takes the given public key, signature, and message and verifies according to BIP340. Pushes `1` on top of the stack if verification is successful. For direct compatibility with Bitcoin Taproot.
     - [ ] OP `0xa6` GetOutAmount - Receives and index and pushes the amount of the output at the given index on the output stack to the top of the stack
