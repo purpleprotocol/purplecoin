@@ -101,6 +101,9 @@ pub struct VmFlags {
 
     /// The previous block hash
     pub prev_block_hash: [u8; 32],
+
+    /// The binary format of the current input
+    pub in_binary: Vec<u8>,
 }
 
 impl Default for VmFlags {
@@ -113,6 +116,7 @@ impl Default for VmFlags {
             validate_output_amounts: false,
             is_coinbase: false,
             prev_block_hash: [0; 32],
+            in_binary: vec![],
         }
     }
 }
@@ -4757,6 +4761,69 @@ impl<'a> ScriptExecutor<'a> {
                         );
                     }
                 },
+
+                ScriptEntry::Opcode(OP::VerifyEd25519) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let public_key = exec_stack.pop().unwrap();
+                    *memory_size -= public_key.size();
+                    let mut pub_key_buf = [0; 32];
+
+                    // Check type and length of public key
+                    match &public_key {
+                        VmTerm::Unsigned8Array(val) if val.len() == 32 => {
+                            // Transfer contents to buffer if the validation is successful
+                            pub_key_buf.copy_from_slice(val.as_slice());
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                            return;
+                        }
+                    }
+
+                    let signature = exec_stack.pop().unwrap();
+                    *memory_size -= signature.size();
+                    let mut sig_buf = [0; 64];
+
+                    // Check type and length of signature
+                    match &signature {
+                        VmTerm::Unsigned8Array(val) if val.len() == 64 => {
+                            // Transfer contents to buffer if the validation is successful
+                            sig_buf.copy_from_slice(val.as_slice());
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                            return;
+                        }
+                    }
+
+                    let vk = match ed25519_dalek::VerifyingKey::from_bytes(&pub_key_buf) {
+                        Ok(vk) => vk,
+                        Err(_) => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                            return;
+                        }
+                    };
+
+                    // Push to verification stack and stop script execution
+                    verification_stack.push_ed25519(flags.in_binary.clone(), sig_buf.into(), vk);
+                    self.state = ScriptExecutorState::OkVerify;
+                }
 
                 ScriptEntry::Opcode(OP::VerifyEd25519Inline) => {
                     if exec_stack.len() < 3 {

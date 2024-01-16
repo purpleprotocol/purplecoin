@@ -73,6 +73,7 @@ impl Transaction {
                     validate_output_amounts: true,
                     build_stacktrace: false,
                     prev_block_hash,
+                    in_binary: input.to_bytes_for_signing(),
                 },
             );
         }

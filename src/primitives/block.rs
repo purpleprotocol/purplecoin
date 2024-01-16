@@ -1135,6 +1135,7 @@ impl Block {
                 build_stacktrace: false,
                 validate_output_amounts: true,
                 prev_block_hash: prev.hash().unwrap().0,
+                in_binary: input.to_bytes_for_signing(),
             },
         );
 
@@ -1300,6 +1301,7 @@ impl BlockData {
                                     build_stacktrace: false,
                                     validate_output_amounts: true,
                                     prev_block_hash: prev.hash().unwrap().0,
+                                    in_binary: input.to_bytes_for_signing(),
                                 },
                             );
                         }
