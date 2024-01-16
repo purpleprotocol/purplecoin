@@ -8,7 +8,7 @@ use crate::consensus::SCRIPT_LIMIT_OPCODES;
 use crate::primitives::{Address, Hash160, Input, Output};
 use crate::vm::internal::{Float32Wrapper, Float64Wrapper, VmTerm};
 use crate::vm::opcodes::OP;
-use crate::vm::sig_verification::VerificationStack;
+use crate::vm::sig_verification::{verify_single_ed25519, VerificationStack};
 use bincode::{Decode, Encode};
 use bitvec::prelude::*;
 use ibig::{ibig, ubig};
@@ -4755,6 +4755,90 @@ impl<'a> ScriptExecutor<'a> {
                         );
                     }
                 },
+
+                ScriptEntry::Opcode(OP::VerifyEd25519Inline) => {
+                    if exec_stack.len() < 3 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let public_key = exec_stack.pop().unwrap();
+                    *memory_size -= public_key.size();
+                    let mut pub_key_buf = [0; 32];
+
+                    // Check type and length of public key
+                    match &public_key {
+                        VmTerm::Unsigned8Array(val) if val.len() == 32 => {
+                            // Transfer contents to buffer if the validation is successful
+                            pub_key_buf.copy_from_slice(val.as_slice());
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                            return;
+                        }
+                    }
+
+                    let signature = exec_stack.pop().unwrap();
+                    *memory_size -= signature.size();
+                    let mut sig_buf = [0; 64];
+
+                    // Check type and length of signature
+                    match &signature {
+                        VmTerm::Unsigned8Array(val) if val.len() == 64 => {
+                            // Transfer contents to buffer if the validation is successful
+                            sig_buf.copy_from_slice(val.as_slice());
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                            return;
+                        }
+                    }
+
+                    let message = exec_stack.pop().unwrap();
+                    *memory_size -= message.size();
+
+                    // Check type of message
+                    match &message {
+                        // Validate signature if type validation is successful
+                        VmTerm::Unsigned8Array(val) => {
+                            match verify_single_ed25519(&pub_key_buf, &sig_buf, val) {
+                                Ok(()) => {
+                                    // Signature verification successful, push `1` on the execution stack
+                                    *memory_size += 1;
+                                    exec_stack.push(VmTerm::Unsigned8(1));
+                                }
+                                Err(_) => {
+                                    // Signature verification failed, push `0` on the execution stack
+                                    *memory_size += 1;
+                                    exec_stack.push(VmTerm::Unsigned8(0));
+                                }
+                            }
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::VerifyEcdsaInline) => {
+                    unimplemented!();
+                }
+
+                ScriptEntry::Opcode(OP::VerifyBIP340Inline) => {
+                    unimplemented!();
+                }
 
                 ScriptEntry::Opcode(OP::Nop) => {
                     // do nothing
