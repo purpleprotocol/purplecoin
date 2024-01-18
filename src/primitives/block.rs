@@ -1127,7 +1127,7 @@ impl Block {
         input.compute_hash(key);
         let in_clone = input.clone();
 
-        input.script.execute(
+        let result = input.script.execute(
             &input.script_args,
             &[in_clone],
             &mut out_stack,
@@ -1145,6 +1145,12 @@ impl Block {
                 prev_block_hash: prev.hash().unwrap().0,
                 in_binary: input.to_bytes_for_signing(),
             },
+        );
+
+        assert_eq!(
+            result,
+            VmResult(Ok(ExecutionResult::Ok)),
+            "invalid coinbase transaction"
         );
 
         let mut tx = Transaction {
@@ -1293,7 +1299,7 @@ impl BlockData {
                             VmTerm::Unsigned64(coinbase_height),
                             VmTerm::Unsigned32(_),
                         ) if amount == &block_reward && coinbase_height == &block_height => {
-                            input.script.execute(
+                            let result = input.script.execute(
                                 &input.script_args,
                                 &[input.clone()],
                                 &mut to_add,
@@ -1312,6 +1318,22 @@ impl BlockData {
                                     in_binary: input.to_bytes_for_signing(),
                                 },
                             );
+
+                            // Validate script execution
+                            match result {
+                                VmResult(Ok(ExecutionResult::Ok)) => {
+                                    // Validate input format
+                                    if let Some(public_key) = &input.spending_pkey {
+                                        // We cannot have a spending key on a coinbase input
+                                        return Err(BlockVerifyErr::InvalidInputFormat);
+                                    }
+                                }
+                                VmResult(Ok(ExecutionResult::OkVerify)) => {
+                                    // We cannot hit an OP_Verify or other derivates on a coinbase input
+                                    return Err(BlockVerifyErr::InvalidInputFormat);
+                                }
+                                _ => return Err(BlockVerifyErr::InvalidScriptExecution),
+                            }
                         }
                         _ => return Err(BlockVerifyErr::InvalidCoinbase),
                     }
@@ -1554,6 +1576,8 @@ pub enum BlockVerifyErr {
     InvalidRunnerupTimestamp,
     SigVerificationErr,
     InvalidSignature,
+    InvalidScriptExecution,
+    InvalidInputFormat,
     Tx(TxVerifyErr),
 }
 
