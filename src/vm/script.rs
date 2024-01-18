@@ -2124,6 +2124,16 @@ impl<'a> ScriptExecutor<'a> {
                     }
                 }
 
+                ScriptEntry::Opcode(OP::InputsLen) => {
+                    exec_stack.push(VmTerm::Unsigned16(input_stack.len() as u16));
+                    *memory_size += 2;
+                }
+
+                ScriptEntry::Opcode(OP::OutputsLen) => {
+                    exec_stack.push(VmTerm::Unsigned16(output_stack.len() as u16));
+                    *memory_size += 2;
+                }
+
                 ScriptEntry::Opcode(OP::Concat) => {
                     let mut len = exec_stack.len();
                     if len < 2 {
