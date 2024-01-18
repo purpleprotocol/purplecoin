@@ -13,6 +13,7 @@ use crate::vm::sig_verification::{
 };
 use bincode::{Decode, Encode};
 use bitvec::prelude::*;
+use ibig::ops::Abs;
 use ibig::{ibig, ubig};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::prelude::*;
@@ -3536,6 +3537,94 @@ impl<'a> ScriptExecutor<'a> {
 
                     *memory_size += e.size();
                     exec_stack.push(e);
+                }
+
+                ScriptEntry::Opcode(OP::Abs) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let mut last = exec_stack.last_mut().unwrap();
+
+                    match last {
+                        VmTerm::Signed8(val) => {
+                            *val = val.abs();
+                        }
+                        VmTerm::Signed16(val) => {
+                            *val = val.abs();
+                        }
+                        VmTerm::Signed32(val) => {
+                            *val = val.abs();
+                        }
+                        VmTerm::Signed64(val) => {
+                            *val = val.abs();
+                        }
+                        VmTerm::Signed128(val) => {
+                            *val = val.abs();
+                        }
+                        VmTerm::SignedBig(val) => {
+                            *val = val.clone().abs();
+                        }
+                        VmTerm::Signed8Array(val) => {
+                            for v in val.iter_mut() {
+                                *v = v.abs();
+                            }
+                        }
+                        VmTerm::Float32(val) => {
+                            *val = val.abs();
+                        }
+                        VmTerm::Float64(val) => {
+                            *val = val.abs();
+                        }
+                        VmTerm::Decimal(val) => {
+                            *val = val.abs();
+                        }
+                        VmTerm::Signed16Array(val) => {
+                            for v in val.iter_mut() {
+                                *v = v.abs();
+                            }
+                        }
+                        VmTerm::Signed32Array(val) => {
+                            for v in val.iter_mut() {
+                                *v = v.abs();
+                            }
+                        }
+                        VmTerm::Signed64Array(val) => {
+                            for v in val.iter_mut() {
+                                *v = v.abs();
+                            }
+                        }
+                        VmTerm::Signed128Array(val) => {
+                            for v in val.iter_mut() {
+                                *v = v.abs();
+                            }
+                        }
+                        VmTerm::SignedBigArray(val) => {
+                            for v in val.iter_mut() {
+                                *v = v.clone().abs();
+                            }
+                        }
+                        VmTerm::Float32Array(val) => {
+                            for v in val.iter_mut() {
+                                *v = v.abs();
+                            }
+                        }
+                        VmTerm::Float64Array(val) => {
+                            for v in val.iter_mut() {
+                                *v = v.abs();
+                            }
+                        }
+                        VmTerm::DecimalArray(val) => {
+                            for v in val.iter_mut() {
+                                *v = v.abs();
+                            }
+                        }
+                        _ => {} // Do nothing
+                    }
                 }
 
                 ScriptEntry::Opcode(OP::Add1) => {

@@ -80,6 +80,11 @@ impl Float32Wrapper {
     pub fn is_infinite(&self) -> bool {
         self.0.is_infinite()
     }
+
+    #[must_use]
+    pub fn abs(self) -> Self {
+        Self(self.0.abs())
+    }
 }
 
 impl Eq for Float32Wrapper {}
@@ -115,6 +120,11 @@ impl Float64Wrapper {
     #[must_use]
     pub fn is_infinite(&self) -> bool {
         self.0.is_infinite()
+    }
+
+    #[must_use]
+    pub fn abs(self) -> Self {
+        Self(self.0.abs())
     }
 }
 
@@ -1508,24 +1518,7 @@ impl VmTerm {
             Self::Float32(_) => false,
             Self::Float64(_) => false,
             Self::Decimal(_) => false,
-            Self::Hash160Array(_) => true,
-            Self::Hash256Array(_) => true,
-            Self::Hash512Array(_) => true,
-            Self::Unsigned8Array(_) => true,
-            Self::Unsigned16Array(_) => true,
-            Self::Unsigned32Array(_) => true,
-            Self::Unsigned64Array(_) => true,
-            Self::Unsigned128Array(_) => true,
-            Self::UnsignedBigArray(_) => true,
-            Self::Signed8Array(_) => true,
-            Self::Signed16Array(_) => true,
-            Self::Signed32Array(_) => true,
-            Self::Signed64Array(_) => true,
-            Self::Signed128Array(_) => true,
-            Self::SignedBigArray(_) => true,
-            Self::Float32Array(_) => true,
-            Self::Float64Array(_) => true,
-            Self::DecimalArray(_) => true,
+            _ => true,
         }
     }
 

@@ -154,7 +154,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0x87` BoolAnd - And control operator
     - [ ] OP `0x88` BoolOr - Or control operator
     - [ ] OP `0x89` Negate - If the topmost item on the stack is `1`, turns it into a `0`. If the topmost item on the stack is anything but `1` it turns it into a `1`
-    - [ ] OP `0x8a` Abs - Returns the absolute value of the topmost item on the stack
+    - [x] OP `0x8a` Abs - Returns the absolute value of the topmost item on the stack
     - [ ] OP `0x8b` PushPrevScriptOuts - Pushes previous spend script outs on top of the stack up to `n`
     - [ ] OP `0x8c` PushPrevScriptOutsLen - Pushes the length of previous spend script outs on top of the stack
     - [x] OP `0x8e` PushExecCount - Pushes the current amount of opcodes that have been executed to the top of the stack
