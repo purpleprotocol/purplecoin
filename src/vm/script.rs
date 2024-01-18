@@ -344,7 +344,7 @@ impl Script {
                     pop_frame = true;
                 } else {
                     let i = &f[frame.i_ptr];
-
+                    exec_count += 1;
                     // Execute opcode
                     frame.executor.push_op(
                         &flags,
@@ -360,8 +360,8 @@ impl Script {
                         output_stack_idx_map,
                         &mut script_outputs,
                         key,
+                        exec_count,
                     );
-                    exec_count += 1;
 
                     // Check for new frames or if we should pop one
                     match &frame.executor.state {
@@ -1660,6 +1660,7 @@ impl<'a> ScriptExecutor<'a> {
         output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
         script_outputs: &mut Vec<VmTerm>,
         key: &str,
+        exec_count: u64,
     ) {
         match self.state {
             ScriptExecutorState::ExpectingArgsLen => match op {
@@ -5223,6 +5224,11 @@ impl<'a> ScriptExecutor<'a> {
                             );
                         }
                     }
+                }
+
+                ScriptEntry::Opcode(OP::PushExecCount) => {
+                    exec_stack.push(VmTerm::Unsigned64(exec_count));
+                    *memory_size += 8;
                 }
 
                 ScriptEntry::Opcode(OP::Nop) => {
