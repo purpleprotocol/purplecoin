@@ -3846,6 +3846,13 @@ impl<'a> ScriptExecutor<'a> {
                     }
                 }
 
+                ScriptEntry::Opcode(OP::FlushToScriptOuts) => {
+                    while let Some(e) = exec_stack.pop() {
+                        *memory_size -= e.size();
+                        script_outputs.push(e);
+                    }
+                }
+
                 ScriptEntry::Opcode(OP::PopToScriptOuts) => {
                     if exec_stack.is_empty() {
                         self.state = ScriptExecutorState::Error(
@@ -3858,8 +3865,6 @@ impl<'a> ScriptExecutor<'a> {
                     let e = exec_stack.pop().unwrap();
                     *memory_size -= e.size();
                     script_outputs.push(e);
-
-                    self.state = ScriptExecutorState::ExpectingInitialOP;
                 }
 
                 ScriptEntry::Opcode(OP::PickToScriptOuts) => {
