@@ -199,7 +199,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xb6` End - Ends the current block
     - [x] OP `0xb7` Verify - Pushes the current output's binary format to the signature verification stack and stops script execution
     - [x] OP `0xb8` ReturnFunc - Returns from the current function and moves the terms on the current frame to the parent frame. Behaves the same as `Return` if called from the main function
-    - [ ] OP `0xb9` Return - Stops script execution and succeeds if the topmost item on the stack is `1`
+    - [x] OP `0xb9` Return - Stops script execution and succeeds if the topmost item on the stack is `1`
     - [x] OP `0xba` EqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are equal
     - [x] OP `0xbb` Lt - Pushes `1` on top of the stack if the topmost item on the stack is less than the second item on stack
     - [x] OP `0xbc` Gt - Pushes `1` on top of the stack if the topmost item on the stack is greater than the second item on stack

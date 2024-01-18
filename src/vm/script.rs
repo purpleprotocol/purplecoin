@@ -2099,10 +2099,26 @@ impl<'a> ScriptExecutor<'a> {
                     if func_idx.is_some() {
                         self.state = ScriptExecutorState::ReturnFunc;
                     } else {
-                        self.state = ScriptExecutorState::Error(
-                            ExecutionResult::BadFormat,
-                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                        );
+                        // Behaves the same as `OP_Return` if called from the main function
+                        if exec_stack.is_empty() {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                            return;
+                        }
+
+                        let top = exec_stack.pop().unwrap();
+                        *memory_size -= top.size();
+
+                        if top.equals_1() {
+                            self.state = ScriptExecutorState::Ok;
+                        } else {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::Invalid,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
                     }
                 }
 
@@ -2136,6 +2152,28 @@ impl<'a> ScriptExecutor<'a> {
 
                 ScriptEntry::Opcode(OP::Verify) => {
                     self.state = ScriptExecutorState::OkVerify;
+                }
+
+                ScriptEntry::Opcode(OP::Return) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let top = exec_stack.pop().unwrap();
+                    *memory_size -= top.size();
+
+                    if top.equals_1() {
+                        self.state = ScriptExecutorState::Ok;
+                    } else {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::Invalid,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
                 }
 
                 ScriptEntry::Opcode(OP::EqVerify) => {
@@ -4822,7 +4860,7 @@ impl<'a> ScriptExecutor<'a> {
 
                     // Push to verification stack and stop script execution
                     verification_stack.push_ed25519(flags.in_binary.clone(), sig_buf.into(), vk);
-                    self.state = ScriptExecutorState::OkVerify;
+                    self.state = ScriptExecutorState::Ok;
                 }
 
                 ScriptEntry::Opcode(OP::VerifyEd25519Inline) => {
@@ -4957,7 +4995,7 @@ impl<'a> ScriptExecutor<'a> {
 
                     // Push to verification stack and stop script execution
                     verification_stack.push_ecdsa(message_buf, sig_buf, pub_key_buf);
-                    self.state = ScriptExecutorState::OkVerify;
+                    self.state = ScriptExecutorState::Ok;
                 }
 
                 ScriptEntry::Opcode(OP::VerifyEcdsaInline) => {
@@ -5092,7 +5130,7 @@ impl<'a> ScriptExecutor<'a> {
 
                     // Push to verification stack and stop script execution
                     verification_stack.push_bip340(message_buf, sig_buf, pub_key_buf);
-                    self.state = ScriptExecutorState::OkVerify;
+                    self.state = ScriptExecutorState::Ok;
                 }
 
                 ScriptEntry::Opcode(OP::VerifyBIP340Inline) => {
@@ -5191,6 +5229,7 @@ impl<'a> ScriptExecutor<'a> {
     pub fn done(&self) -> Option<Result<ExecutionResult, (ExecutionResult, StackTrace)>> {
         match &self.state {
             ScriptExecutorState::OkVerify => Some(Ok(ExecutionResult::OkVerify)),
+            ScriptExecutorState::Ok => Some(Ok(ExecutionResult::Ok)),
             ScriptExecutorState::Error(res, trace) => Some(Err((*res, trace.clone()))),
             _ => None,
         }
@@ -5278,8 +5317,11 @@ enum ScriptExecutorState<'a> {
     /// We hit an OP_ReturnFunc
     ReturnFunc,
 
-    /// Return success error code and push message and signature to the verification stack
+    /// Return success code and push message and signature to the verification stack
     OkVerify,
+
+    /// Return success code
+    Ok,
 
     /// Error
     Error(ExecutionResult, StackTrace),
