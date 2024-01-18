@@ -17,7 +17,9 @@ use crate::primitives::{
 };
 use crate::settings::SETTINGS;
 use crate::vm::internal::VmTerm;
-use crate::vm::{Script, SigVerificationErr, VerificationStack, VmFlags};
+use crate::vm::{
+    ExecutionResult, Script, SigVerificationErr, VerificationStack, VmFlags, VmResult,
+};
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::{Accumulator, ProofOfCorrectness, Witness};
 use arrayvec::ArrayVec;
@@ -898,7 +900,7 @@ impl BlockHeader {
         // Compute outputs
         for input in &inputs {
             let in_clone = input.clone();
-            input.script.execute(
+            let result = input.script.execute(
                 &input.script_args,
                 &[in_clone],
                 &mut out_stack,
@@ -907,6 +909,12 @@ impl BlockHeader {
                 [0; 32],
                 key,
                 VmFlags::default(),
+            );
+
+            assert_eq!(
+                result,
+                VmResult(Ok(ExecutionResult::Ok)),
+                "Invalid inputs given to the genesis block"
             );
         }
 
