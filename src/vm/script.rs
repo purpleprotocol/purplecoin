@@ -3539,6 +3539,19 @@ impl<'a> ScriptExecutor<'a> {
                     exec_stack.push(e);
                 }
 
+                ScriptEntry::Opcode(OP::Negate) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let mut last = exec_stack.last_mut().unwrap();
+                    last.negate();
+                }
+
                 ScriptEntry::Opcode(OP::Abs) => {
                     if exec_stack.is_empty() {
                         self.state = ScriptExecutorState::Error(
@@ -3569,11 +3582,6 @@ impl<'a> ScriptExecutor<'a> {
                         VmTerm::SignedBig(val) => {
                             *val = val.clone().abs();
                         }
-                        VmTerm::Signed8Array(val) => {
-                            for v in val.iter_mut() {
-                                *v = v.abs();
-                            }
-                        }
                         VmTerm::Float32(val) => {
                             *val = val.abs();
                         }
@@ -3582,6 +3590,11 @@ impl<'a> ScriptExecutor<'a> {
                         }
                         VmTerm::Decimal(val) => {
                             *val = val.abs();
+                        }
+                        VmTerm::Signed8Array(val) => {
+                            for v in val.iter_mut() {
+                                *v = v.abs();
+                            }
                         }
                         VmTerm::Signed16Array(val) => {
                             for v in val.iter_mut() {

@@ -185,6 +185,32 @@ macro_rules! check_array_values_wrapper {
     }};
 }
 
+macro_rules! check_array_values_negate {
+    ($arr:expr, $val:expr) => {{
+        let mut r = true;
+        for v in $arr.iter() {
+            if *v != $val {
+                r = false;
+                break;
+            }
+        }
+        r
+    }};
+}
+
+macro_rules! check_array_values_wrapper_negate {
+    ($arr:expr, $val:expr) => {{
+        let mut r = true;
+        for v in $arr.iter() {
+            if v.0 != $val {
+                r = false;
+                break;
+            }
+        }
+        r
+    }};
+}
+
 impl fmt::Debug for VmTerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -369,6 +395,332 @@ impl VmTerm {
         }
 
         Some(())
+    }
+
+    pub fn negate(&mut self) {
+        match self {
+            Self::Unsigned8(v) if *v == 1 => {
+                *v = 0;
+            }
+            Self::Unsigned16(v) if *v == 1 => {
+                *v = 0;
+            }
+            Self::Unsigned32(v) if *v == 1 => {
+                *v = 0;
+            }
+            Self::Unsigned64(v) if *v == 1 => {
+                *v = 0;
+            }
+            Self::Unsigned128(v) if *v == 1 => {
+                *v = 0;
+            }
+            Self::UnsignedBig(v) if *v == ubig!(1) => {
+                *v = ubig!(0);
+            }
+            Self::Signed8(v) if *v == 1 => {
+                *v = 0;
+            }
+            Self::Signed16(v) if *v == 1 => {
+                *v = 0;
+            }
+            Self::Signed32(v) if *v == 1 => {
+                *v = 0;
+            }
+            Self::Signed64(v) if *v == 1 => {
+                *v = 0;
+            }
+            Self::Signed128(v) if *v == 1 => {
+                *v = 0;
+            }
+            Self::SignedBig(v) if *v == ibig!(1) => {
+                *v = ibig!(0);
+            }
+            Self::Float32(v) if v.equals_1() => {
+                *v = Float32Wrapper(0.0);
+            }
+            Self::Float64(v) if v.equals_1() => {
+                *v = Float64Wrapper(0.0);
+            }
+            Self::Decimal(v) if *v == dec!(1) => {
+                *v = dec!(0);
+            }
+            Self::Unsigned8(v) => {
+                *v = 1;
+            }
+            Self::Unsigned16(v) => {
+                *v = 1;
+            }
+            Self::Unsigned32(v) => {
+                *v = 1;
+            }
+            Self::Unsigned64(v) => {
+                *v = 1;
+            }
+            Self::Unsigned128(v) => {
+                *v = 1;
+            }
+            Self::UnsignedBig(v) => {
+                *v = ubig!(1);
+            }
+            Self::Signed8(v) => {
+                *v = 1;
+            }
+            Self::Signed16(v) => {
+                *v = 1;
+            }
+            Self::Signed32(v) => {
+                *v = 1;
+            }
+            Self::Signed64(v) => {
+                *v = 1;
+            }
+            Self::Signed128(v) => {
+                *v = 1;
+            }
+            Self::SignedBig(v) => {
+                *v = ibig!(1);
+            }
+            Self::Float32(v) => {
+                *v = Float32Wrapper(1.0);
+            }
+            Self::Float64(v) => {
+                *v = Float64Wrapper(1.0);
+            }
+            Self::Decimal(v) => {
+                *v = dec!(1);
+            }
+            Self::Hash160(val) => {
+                let mut arr: [u8; 20] = [0; 20];
+                arr[0] = 0x01;
+                if *val == arr {
+                    *val = [0; 20];
+                } else {
+                    *val = arr;
+                }
+            }
+            Self::Hash256(val) => {
+                let mut arr: [u8; 32] = [0; 32];
+                arr[0] = 0x01;
+                if *val == arr {
+                    *val = [0; 32];
+                } else {
+                    *val = arr;
+                }
+            }
+            Self::Hash512(val) => {
+                let mut arr: [u8; 64] = [0; 64];
+                arr[0] = 0x01;
+                if *val == arr {
+                    *val = [0; 64];
+                } else {
+                    *val = arr;
+                }
+            }
+            Self::Unsigned8Array(val) => {
+                if check_array_values_negate!(val, 1_u8) {
+                    for v in val.iter_mut() {
+                        *v = 0;
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = 1;
+                    }
+                }
+            }
+            Self::Unsigned16Array(val) => {
+                if check_array_values_negate!(val, 1_u16) {
+                    for v in val.iter_mut() {
+                        *v = 0;
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = 1;
+                    }
+                }
+            }
+            Self::Unsigned32Array(val) => {
+                if check_array_values_negate!(val, 1_u32) {
+                    for v in val.iter_mut() {
+                        *v = 0;
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = 1;
+                    }
+                }
+            }
+            Self::Unsigned64Array(val) => {
+                if check_array_values_negate!(val, 1_u64) {
+                    for v in val.iter_mut() {
+                        *v = 0;
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = 1;
+                    }
+                }
+            }
+            Self::Unsigned128Array(val) => {
+                if check_array_values_negate!(val, 1_u128) {
+                    for v in val.iter_mut() {
+                        *v = 0;
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = 1;
+                    }
+                }
+            }
+            Self::UnsignedBigArray(val) => {
+                if check_array_values_negate!(val, ubig!(1)) {
+                    for v in val.iter_mut() {
+                        *v = ubig!(0);
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = ubig!(1);
+                    }
+                }
+            }
+            Self::Signed8Array(val) => {
+                if check_array_values_negate!(val, 1_i8) {
+                    for v in val.iter_mut() {
+                        *v = 0;
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = 1;
+                    }
+                }
+            }
+            Self::Signed16Array(val) => {
+                if check_array_values_negate!(val, 1_i16) {
+                    for v in val.iter_mut() {
+                        *v = 0;
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = 1;
+                    }
+                }
+            }
+            Self::Signed32Array(val) => {
+                if check_array_values_negate!(val, 1_i32) {
+                    for v in val.iter_mut() {
+                        *v = 0;
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = 1;
+                    }
+                }
+            }
+            Self::Signed64Array(val) => {
+                if check_array_values_negate!(val, 1_i64) {
+                    for v in val.iter_mut() {
+                        *v = 0;
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = 1;
+                    }
+                }
+            }
+            Self::Signed128Array(val) => {
+                if check_array_values_negate!(val, 1_i128) {
+                    for v in val.iter_mut() {
+                        *v = 0;
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = 1;
+                    }
+                }
+            }
+            Self::SignedBigArray(val) => {
+                if check_array_values_negate!(val, ibig!(1)) {
+                    for v in val.iter_mut() {
+                        *v = ibig!(0);
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = ibig!(1);
+                    }
+                }
+            }
+            Self::Float32Array(val) => {
+                if check_array_values_wrapper_negate!(val, 1_f32) {
+                    for v in val.iter_mut() {
+                        *v = Float32Wrapper(0.0);
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = Float32Wrapper(1.0);
+                    }
+                }
+            }
+            Self::Float64Array(val) => {
+                if check_array_values_wrapper_negate!(val, 1_f64) {
+                    for v in val.iter_mut() {
+                        *v = Float64Wrapper(0.0);
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = Float64Wrapper(1.0);
+                    }
+                }
+            }
+            Self::DecimalArray(val) => {
+                if check_array_values_negate!(val, dec!(1)) {
+                    for v in val.iter_mut() {
+                        *v = dec!(0);
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = dec!(1);
+                    }
+                }
+            }
+            Self::Hash160Array(val) => {
+                let mut arr: [u8; 20] = [0; 20];
+                arr[0] = 0x01;
+                if check_array_values_negate!(val, arr) {
+                    for v in val.iter_mut() {
+                        *v = [0x00; 20];
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = [0x01; 20];
+                    }
+                }
+            }
+            Self::Hash256Array(val) => {
+                let mut arr: [u8; 32] = [0; 32];
+                arr[0] = 0x01;
+                if check_array_values_negate!(val, arr) {
+                    for v in val.iter_mut() {
+                        *v = [0x00; 32];
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = [0x01; 32];
+                    }
+                }
+            }
+            Self::Hash512Array(val) => {
+                let mut arr: [u8; 64] = [0; 64];
+                arr[0] = 0x01;
+                if check_array_values_negate!(val, arr) {
+                    for v in val.iter_mut() {
+                        *v = [0x00; 64];
+                    }
+                } else {
+                    for v in val.iter_mut() {
+                        *v = [0x01; 64];
+                    }
+                }
+            }
+        }
     }
 
     /// Adds `rhs` to the value of the term
@@ -1360,24 +1712,24 @@ impl VmTerm {
             Self::Float32(val) => val.equals_0(),
             Self::Float64(val) => val.equals_0(),
             Self::Decimal(val) => *val == dec!(0),
-            Self::Hash160Array(val) => check_array_values!(*val, ZERO_HASH160),
-            Self::Hash256Array(val) => check_array_values!(*val, ZERO_HASH256),
-            Self::Hash512Array(val) => check_array_values!(*val, ZERO_HASH512),
-            Self::Unsigned8Array(val) => check_array_values!(*val, 0_u8),
-            Self::Unsigned16Array(val) => check_array_values!(*val, 0_u16),
-            Self::Unsigned32Array(val) => check_array_values!(*val, 0_u32),
-            Self::Unsigned64Array(val) => check_array_values!(*val, 0_u64),
-            Self::Unsigned128Array(val) => check_array_values!(*val, 0_u128),
-            Self::UnsignedBigArray(val) => check_array_values!(*val, ubig!(0)),
-            Self::Signed8Array(val) => check_array_values!(*val, 0_i8),
-            Self::Signed16Array(val) => check_array_values!(*val, 0_i16),
-            Self::Signed32Array(val) => check_array_values!(*val, 0_i32),
-            Self::Signed64Array(val) => check_array_values!(*val, 0_i64),
-            Self::Signed128Array(val) => check_array_values!(*val, 0_i128),
-            Self::SignedBigArray(val) => check_array_values!(*val, ibig!(0)),
-            Self::Float32Array(val) => check_array_values_wrapper!(*val, 0_f32),
-            Self::Float64Array(val) => check_array_values_wrapper!(*val, 0_f64),
-            Self::DecimalArray(val) => check_array_values!(*val, dec!(0)),
+            Self::Hash160Array(val) => check_array_values!(val, ZERO_HASH160),
+            Self::Hash256Array(val) => check_array_values!(val, ZERO_HASH256),
+            Self::Hash512Array(val) => check_array_values!(val, ZERO_HASH512),
+            Self::Unsigned8Array(val) => check_array_values!(val, 0_u8),
+            Self::Unsigned16Array(val) => check_array_values!(val, 0_u16),
+            Self::Unsigned32Array(val) => check_array_values!(val, 0_u32),
+            Self::Unsigned64Array(val) => check_array_values!(val, 0_u64),
+            Self::Unsigned128Array(val) => check_array_values!(val, 0_u128),
+            Self::UnsignedBigArray(val) => check_array_values!(val, ubig!(0)),
+            Self::Signed8Array(val) => check_array_values!(val, 0_i8),
+            Self::Signed16Array(val) => check_array_values!(val, 0_i16),
+            Self::Signed32Array(val) => check_array_values!(val, 0_i32),
+            Self::Signed64Array(val) => check_array_values!(val, 0_i64),
+            Self::Signed128Array(val) => check_array_values!(val, 0_i128),
+            Self::SignedBigArray(val) => check_array_values!(val, ibig!(0)),
+            Self::Float32Array(val) => check_array_values_wrapper!(val, 0_f32),
+            Self::Float64Array(val) => check_array_values_wrapper!(val, 0_f64),
+            Self::DecimalArray(val) => check_array_values!(val, dec!(0)),
         }
     }
 
@@ -1418,33 +1770,33 @@ impl VmTerm {
             Self::Hash160Array(val) => {
                 let mut arr: [u8; 20] = [0; 20];
                 arr[0] = 0x01;
-                check_array_values!(*val, arr)
+                check_array_values!(val, arr)
             }
             Self::Hash256Array(val) => {
                 let mut arr: [u8; 32] = [0; 32];
                 arr[0] = 0x01;
-                check_array_values!(*val, arr)
+                check_array_values!(val, arr)
             }
             Self::Hash512Array(val) => {
                 let mut arr: [u8; 64] = [0; 64];
                 arr[0] = 0x01;
-                check_array_values!(*val, arr)
+                check_array_values!(val, arr)
             }
-            Self::Unsigned8Array(val) => check_array_values!(*val, 1_u8),
-            Self::Unsigned16Array(val) => check_array_values!(*val, 1_u16),
-            Self::Unsigned32Array(val) => check_array_values!(*val, 1_u32),
-            Self::Unsigned64Array(val) => check_array_values!(*val, 1_u64),
-            Self::Unsigned128Array(val) => check_array_values!(*val, 1_u128),
-            Self::UnsignedBigArray(val) => check_array_values!(*val, ubig!(1)),
-            Self::Signed8Array(val) => check_array_values!(*val, 1_i8),
-            Self::Signed16Array(val) => check_array_values!(*val, 1_i16),
-            Self::Signed32Array(val) => check_array_values!(*val, 1_i32),
-            Self::Signed64Array(val) => check_array_values!(*val, 1_i64),
-            Self::Signed128Array(val) => check_array_values!(*val, 1_i128),
-            Self::SignedBigArray(val) => check_array_values!(*val, ibig!(1)),
-            Self::Float32Array(val) => check_array_values_wrapper!(*val, 1_f32),
-            Self::Float64Array(val) => check_array_values_wrapper!(*val, 1_f64),
-            Self::DecimalArray(val) => check_array_values!(*val, dec!(1)),
+            Self::Unsigned8Array(val) => check_array_values!(val, 1_u8),
+            Self::Unsigned16Array(val) => check_array_values!(val, 1_u16),
+            Self::Unsigned32Array(val) => check_array_values!(val, 1_u32),
+            Self::Unsigned64Array(val) => check_array_values!(val, 1_u64),
+            Self::Unsigned128Array(val) => check_array_values!(val, 1_u128),
+            Self::UnsignedBigArray(val) => check_array_values!(val, ubig!(1)),
+            Self::Signed8Array(val) => check_array_values!(val, 1_i8),
+            Self::Signed16Array(val) => check_array_values!(val, 1_i16),
+            Self::Signed32Array(val) => check_array_values!(val, 1_i32),
+            Self::Signed64Array(val) => check_array_values!(val, 1_i64),
+            Self::Signed128Array(val) => check_array_values!(val, 1_i128),
+            Self::SignedBigArray(val) => check_array_values!(val, ibig!(1)),
+            Self::Float32Array(val) => check_array_values_wrapper!(val, 1_f32),
+            Self::Float64Array(val) => check_array_values_wrapper!(val, 1_f64),
+            Self::DecimalArray(val) => check_array_values!(val, dec!(1)),
         }
     }
 
