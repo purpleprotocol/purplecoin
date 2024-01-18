@@ -237,9 +237,7 @@ impl Script {
             script: vec![
                 ScriptEntry::Byte(0x05), // 5 arguments are pushed onto the stack: out_amount, out_address, out_script_hash, coinbase_height, extra_nonce
                 ScriptEntry::Opcode(OP::PushCoinbaseOut),
-                ScriptEntry::Opcode(OP::Unsigned8Var), // Push 1 to the stack so we can mark the script as successfully executed using OP_Return
-                ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::Return),
+                ScriptEntry::Opcode(OP::Ok),
             ],
             malleable_args: bitvec_from_bools![false, false, false, false, false],
             ..Script::default()
@@ -252,9 +250,7 @@ impl Script {
             script: vec![
                 ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: out_amount, out_script_hash, coinbase_height, extra_nonce
                 ScriptEntry::Opcode(OP::PushCoinbaseOutNoSpendAddress),
-                ScriptEntry::Opcode(OP::Unsigned8Var), // Push 1 to the stack so we can mark the script as successfully executed using OP_Return
-                ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::Return),
+                ScriptEntry::Opcode(OP::Ok),
             ],
             malleable_args: bitvec_from_bools![false, false, false, false],
             ..Script::default()
@@ -2158,6 +2154,10 @@ impl<'a> ScriptExecutor<'a> {
 
                 ScriptEntry::Opcode(OP::Verify) => {
                     self.state = ScriptExecutorState::OkVerify;
+                }
+
+                ScriptEntry::Opcode(OP::Ok) => {
+                    self.state = ScriptExecutorState::Ok;
                 }
 
                 ScriptEntry::Opcode(OP::Return) => {

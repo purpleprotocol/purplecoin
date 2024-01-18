@@ -12,6 +12,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 pub enum OP {
     Func = 0x00,
     Suspend = 0x05,
+    Ok = 0x06,
     ChainId = 0x07,
     ChainHeight = 0x08,
     ChainTimestamp = 0x09,

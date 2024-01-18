@@ -30,6 +30,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   * [ ] Implement VM opcodes
     - [x] OP `0x00` Func - Start a function definition
     - [ ] OP `0x05` Suspend - Suspends execution of the VM and creates an opaque output with the hash of the current execution state i.e. stack frame + input_stack + output_stack. This output can be re-spent to resume execution by anyone who includes it in a new transaction along with another input to pay the transaction fees. The VM must be started with special flags to resume the execution of the opaque output which must receive as arguments in the new transaction the following things: the original spending script, and the VM state binary blob. 
+    - [x] OP `0x06` Ok - Stops script execution and returns the `Ok` code. Equivalent to pushing `1` to the stack then calling `OP_Return`.
     - [x] OP `0x07` ChainId - Pushes the current `chain_id` onto the stack
     - [x] OP `0x08` ChainHeight - Pushes the current `chain_height` onto the stack
     - [x] OP `0x09` ChainTimestamp - Pushes the current timestamp of the chain onto the stack as a `Signed64`
