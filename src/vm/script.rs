@@ -3539,6 +3539,27 @@ impl<'a> ScriptExecutor<'a> {
                     exec_stack.push(e);
                 }
 
+                ScriptEntry::Opcode(OP::ToHex) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let last = exec_stack.pop().unwrap();
+                    *memory_size -= last.size();
+
+                    let bytes = last.to_bytes_raw();
+                    let encoded = hex::encode(bytes);
+                    let hex_bytes = encoded.into_bytes();
+                    let term = VmTerm::Unsigned8Array(hex_bytes);
+
+                    *memory_size += term.size();
+                    exec_stack.push(term);
+                }
+
                 ScriptEntry::Opcode(OP::Negate) => {
                     if exec_stack.is_empty() {
                         self.state = ScriptExecutorState::Error(
