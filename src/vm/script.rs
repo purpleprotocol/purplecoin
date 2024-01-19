@@ -3560,6 +3560,43 @@ impl<'a> ScriptExecutor<'a> {
                     exec_stack.push(term);
                 }
 
+                ScriptEntry::Opcode(OP::FromHex) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let last = exec_stack.pop().unwrap();
+                    *memory_size -= last.size();
+
+                    match last {
+                        VmTerm::Unsigned8Array(val) => match hex::decode(val) {
+                            Ok(decoded) => {
+                                let term = VmTerm::Unsigned8Array(decoded);
+                                *memory_size += term.size();
+                                exec_stack.push(term);
+                            }
+                            Err(_) => {
+                                self.state = ScriptExecutorState::Error(
+                                    ExecutionResult::InvalidArgs,
+                                    (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                );
+                            }
+                        },
+
+                        // Not an `Unsigned8Array`, throw error
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
+                }
+
                 ScriptEntry::Opcode(OP::Negate) => {
                     if exec_stack.is_empty() {
                         self.state = ScriptExecutorState::Error(
