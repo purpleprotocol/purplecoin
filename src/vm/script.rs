@@ -19255,8 +19255,13 @@ mod tests {
             ..Script::default()
         };
 
-        let mut script_output: Vec<VmTerm> =
-            vec![VmTerm::Unsigned8(0x00), VmTerm::Unsigned8(0x00), VmTerm::Unsigned8(0x00), VmTerm::Unsigned8(0x00), VmTerm::Unsigned8(0x01)];
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(0x00),
+            VmTerm::Unsigned8(0x00),
+            VmTerm::Unsigned8(0x00),
+            VmTerm::Unsigned8(0x00),
+            VmTerm::Unsigned8(0x01),
+        ];
         assert_script_ok(ss, script_output, key);
     }
 
@@ -19302,8 +19307,13 @@ mod tests {
             ..Script::default()
         };
 
-        let mut script_output: Vec<VmTerm> =
-            vec![VmTerm::Unsigned8(0x00), VmTerm::Unsigned8(0x00), VmTerm::Unsigned8(0x01), VmTerm::Unsigned8(0x01), VmTerm::Unsigned8(0x01)];
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::Unsigned8(0x00),
+            VmTerm::Unsigned8(0x00),
+            VmTerm::Unsigned8(0x01),
+            VmTerm::Unsigned8(0x01),
+            VmTerm::Unsigned8(0x01),
+        ];
         assert_script_ok(ss, script_output, key);
     }
 }
