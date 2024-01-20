@@ -2697,6 +2697,177 @@ impl VmTerm {
         Some(())
     }
 
+    /// Performs a binary `and` on the term with `rhs` as the second operand
+    pub fn and(&mut self, rhs: &VmTerm) -> Option<()> {
+        if self.is_array() && rhs.is_array() && self.size() != rhs.size() {
+            return None;
+        }
+
+        match (self, rhs) {
+            (Self::Unsigned8(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
+                *lhs_val &= *rhs_val;
+            }
+            (Self::Unsigned16(ref mut lhs_val), Self::Unsigned16(rhs_val)) => {
+                *lhs_val &= *rhs_val;
+            }
+            (Self::Unsigned32(ref mut lhs_val), Self::Unsigned32(rhs_val)) => {
+                *lhs_val &= *rhs_val;
+            }
+            (Self::Unsigned64(ref mut lhs_val), Self::Unsigned64(rhs_val)) => {
+                *lhs_val &= *rhs_val;
+            }
+            (Self::Unsigned128(ref mut lhs_val), Self::Unsigned128(rhs_val)) => {
+                *lhs_val &= *rhs_val;
+            }
+            (Self::UnsignedBig(ref mut lhs_val), Self::UnsignedBig(rhs_val)) => {
+                *lhs_val &= rhs_val;
+            }
+            (Self::Signed8(ref mut lhs_val), Self::Signed8(rhs_val)) => {
+                *lhs_val &= *rhs_val;
+            }
+            (Self::Signed16(ref mut lhs_val), Self::Signed16(rhs_val)) => {
+                *lhs_val &= *rhs_val;
+            }
+            (Self::Signed32(ref mut lhs_val), Self::Signed32(rhs_val)) => {
+                *lhs_val &= *rhs_val;
+            }
+            (Self::Signed64(ref mut lhs_val), Self::Signed64(rhs_val)) => {
+                *lhs_val &= *rhs_val;
+            }
+            (Self::Signed128(ref mut lhs_val), Self::Signed128(rhs_val)) => {
+                *lhs_val &= *rhs_val;
+            }
+            (Self::SignedBig(ref mut lhs_val), Self::SignedBig(rhs_val)) => {
+                *lhs_val &= rhs_val;
+            }
+            (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    *x &= *rhs_val;
+                }
+            }
+            (Self::Unsigned16Array(ref mut lhs_val), Self::Unsigned16(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    *x &= *rhs_val;
+                }
+            }
+            (Self::Unsigned32Array(ref mut lhs_val), Self::Unsigned32(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    *x &= *rhs_val;
+                }
+            }
+            (Self::Unsigned64Array(ref mut lhs_val), Self::Unsigned64(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    *x &= *rhs_val;
+                }
+            }
+            (Self::Unsigned128Array(ref mut lhs_val), Self::Unsigned128(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    *x &= *rhs_val;
+                }
+            }
+            (Self::UnsignedBigArray(ref mut lhs_val), Self::UnsignedBig(rhs_val)) => {
+                *lhs_val = lhs_val.iter().map(|x| x & rhs_val).collect();
+            }
+            (Self::Signed8Array(ref mut lhs_val), Self::Signed8(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    *x &= *rhs_val;
+                }
+            }
+            (Self::Signed16Array(ref mut lhs_val), Self::Signed16(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    *x &= *rhs_val;
+                }
+            }
+            (Self::Signed32Array(ref mut lhs_val), Self::Signed32(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    *x &= *rhs_val;
+                }
+            }
+            (Self::Signed64Array(ref mut lhs_val), Self::Signed64(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    *x &= *rhs_val;
+                }
+            }
+            (Self::Signed128Array(ref mut lhs_val), Self::Signed128(rhs_val)) => {
+                for x in &mut *lhs_val {
+                    *x &= *rhs_val;
+                }
+            }
+            (Self::SignedBigArray(ref mut lhs_val), Self::SignedBig(rhs_val)) => {
+                *lhs_val = lhs_val.iter().map(|x| x & rhs_val).collect();
+            }
+            (Self::Unsigned8Array(ref mut lhs_val), Self::Unsigned8Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x &= *y;
+                }
+            }
+            (Self::Unsigned16Array(ref mut lhs_val), Self::Unsigned16Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x &= *y;
+                }
+            }
+            (Self::Unsigned32Array(ref mut lhs_val), Self::Unsigned32Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x &= *y;
+                }
+            }
+            (Self::Unsigned64Array(ref mut lhs_val), Self::Unsigned64Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x &= *y;
+                }
+            }
+            (Self::Unsigned128Array(ref mut lhs_val), Self::Unsigned128Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x &= *y;
+                }
+            }
+            (Self::UnsignedBigArray(ref mut lhs_val), Self::UnsignedBigArray(rhs_val)) => {
+                *lhs_val = lhs_val
+                    .iter()
+                    .zip(rhs_val.iter())
+                    .map(|(x, y)| x & y)
+                    .collect();
+            }
+            (Self::Signed8Array(ref mut lhs_val), Self::Signed8Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x &= *y;
+                }
+            }
+            (Self::Signed16Array(ref mut lhs_val), Self::Signed16Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x &= *y;
+                }
+            }
+            (Self::Signed32Array(ref mut lhs_val), Self::Signed32Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x &= *y;
+                }
+            }
+            (Self::Signed64Array(ref mut lhs_val), Self::Signed64Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x &= *y;
+                }
+            }
+            (Self::Signed128Array(ref mut lhs_val), Self::Signed128Array(rhs_val)) => {
+                for (x, y) in lhs_val.iter_mut().zip(rhs_val.iter()) {
+                    *x &= *y;
+                }
+            }
+            (Self::SignedBigArray(ref mut lhs_val), Self::SignedBigArray(rhs_val)) => {
+                *lhs_val = lhs_val
+                    .iter()
+                    .zip(rhs_val.iter())
+                    .map(|(x, y)| x & y)
+                    .collect();
+            }
+            _ => {
+                return None;
+            }
+        }
+
+        Some(())
+    }
+
     /// Performs a binary `or` on the term with `rhs` as the second operand
     pub fn or(&mut self, rhs: &VmTerm) -> Option<()> {
         if self.is_array() && rhs.is_array() && self.size() != rhs.size() {

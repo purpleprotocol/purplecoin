@@ -142,17 +142,18 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x7a` Swap2 - Swaps the topmost pairs of terms on top of the stack
     - [x] OP `0x7b` Size - Pushes the size in bytes of the topmost item on the stack
     - [x] OP `0x7c` Substr - Splits the given array at position n and pushes both arrays to the top of the stack
-    - [x] OP `0x7d` BitOR -  Pops the two topmost items on the stack, performs bit OR on the operands and then pushes the result on the stack
-    - [x] OP `0x7e` BitInvert - Inverts all bits of the topmost item on the stack
-    - [x] OP `0x7f` DupAll - Duplicates the whole stack
-    - [x] OP `0x80` IsUTF8 - Pushes `1` on top of the stack if the given `Unsigned8Array` is a valid UTF8 byte sequence
+    - [x] OP `0x7d` BitAND -  Pops the two topmost items on the stack, performs bit AND on the operands and then pushes the result on the stack
+    - [x] OP `0x7e` BitOR -  Pops the two topmost items on the stack, performs bit OR on the operands and then pushes the result on the stack
+    - [x] OP `0x7f` BitInvert - Inverts all bits of the topmost item on the stack
+    - [x] OP `0x80` DupAll - Duplicates the whole stack
+    - [x] OP `0x81` IsUTF8 - Pushes `1` on top of the stack if the given `Unsigned8Array` is a valid UTF8 byte sequence
     - [x] OP `0x82` Add1 - Adds `1` to the topmost item on the stack
     - [x] OP `0x83` Sub1 - Subtracts `1` from the topmost item on the stack
     - [x] OP `0x84` Min - Returns the minimum of the two topmost items on the stack
     - [x] OP `0x85` Max - Returns the maximum of the two topmost items on the stack
     - [x] OP `0x86` Within - Pushes `1` on top of the stack if the topmost item on the stack is between the second and the third, `0` otherwise
-    - [ ] OP `0x87` BoolAnd - And control operator
-    - [ ] OP `0x88` BoolOr - Or control operator
+    - [x] OP `0x87` BoolAnd - And control operator
+    - [x] OP `0x88` BoolOr - Or control operator
     - [x] OP `0x89` Negate - If the topmost item on the stack is `1`, turns it into a `0`. If the topmost item on the stack is anything but `1` it turns it into a `1`
     - [x] OP `0x8a` Abs - Returns the absolute value of the topmost item on the stack
     - [ ] OP `0x8b` PushPrevScriptOuts - Pushes previous spend script outs on top of the stack up to `n`
