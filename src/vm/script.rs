@@ -2145,6 +2145,13 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size += 2;
                 }
 
+                ScriptEntry::Opcode(OP::SpillInputScriptArgs) => {
+                    for t in flags.in_args.iter().rev() {
+                        exec_stack.push(t.clone());
+                        *memory_size += t.size();
+                    }
+                }
+
                 ScriptEntry::Opcode(OP::Concat) => {
                     let mut len = exec_stack.len();
                     if len < 2 {
