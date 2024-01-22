@@ -1144,6 +1144,7 @@ impl Block {
                 validate_output_amounts: true,
                 prev_block_hash: prev.hash().unwrap().0,
                 in_binary: input.to_bytes_for_signing(),
+                in_args: input.script_args.clone(),
             },
         );
 
@@ -1316,6 +1317,7 @@ impl BlockData {
                                     validate_output_amounts: true,
                                     prev_block_hash: prev.hash().unwrap().0,
                                     in_binary: input.to_bytes_for_signing(),
+                                    in_args: input.script_args.clone(),
                                 },
                             );
 

@@ -140,6 +140,7 @@ pub enum OP {
     Abs = 0x8a,
     PushPrevScriptOuts = 0x8b,
     PushPrevScriptOutsLen = 0x8c,
+    PushPrevScriptOutAt = 0x8d,
     PushExecCount = 0x8e,
     FlushToScriptOuts = 0x8f,
     PopToScriptOuts = 0x90,

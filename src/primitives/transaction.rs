@@ -74,6 +74,7 @@ impl Transaction {
                     build_stacktrace: false,
                     prev_block_hash,
                     in_binary: input.to_bytes_for_signing(),
+                    in_args: input.script_args.clone(),
                 },
             );
         }

@@ -158,6 +158,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x8a` Abs - Returns the absolute value of the topmost item on the stack
     - [ ] OP `0x8b` PushPrevScriptOuts - Pushes previous spend script outs on top of the stack up to `n`
     - [ ] OP `0x8c` PushPrevScriptOutsLen - Pushes the length of previous spend script outs on top of the stack
+    - [ ] OP `0x8d` PushPrevScriptOutAt - Receives an index on the previous spend script outs vector and pushes it to the top of the stack.
     - [x] OP `0x8e` PushExecCount - Pushes the current amount of opcodes that have been executed to the top of the stack
     - [x] OP `0x8f` FlushToScriptOuts - Flushes the terms on the current frame to the script outputs stack
     - [x] OP `0x90` PopToScriptOuts - Pops the topmost item on the stack and pushes it to the script outputs stack
@@ -219,7 +220,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xc8` GeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is greater or equal than the second item on the stack
     - [x] OP `0xc9` NeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are not equal
     - [ ] OP `0xca` CastTo - Casts the topmost item on the stack to the type id which is the second item on the stack
-    - [ ] OP `0xcb` InputScriptArgsLen - Pushes the number of script args of the input at the given index to the top of the stack
+    - [x] OP `0xcb` InputScriptArgsLen - Pushes the number of script args of the input at the given index to the top of the stack
     - [ ] OP `0xcc` GetInputScriptArgAt - Pushes the script argument at the first given index of the input at the second given index to the top of the stack
     - [ ] OP `0xcd` SpillInputScriptArgs - Pushes all the script args of the input at the given index to the top of the stack
     - [ ] OP `0xce` ApplyOutputOPToInputOut - Receives an index, and an OP specific to reading outputs from the output stack and applies it to the referenced output by the input at the given index on the inputs stack. Possible OPs are: OP_GetOutAmount, OP_GetOutReceiver, OP_GetOutScriptHash, OP_GetOutScriptOutsLen, OP_GetOutScriptOut, OP_SpillScriptOuts, OP_IsColouredOut, and OP_ColourHash.

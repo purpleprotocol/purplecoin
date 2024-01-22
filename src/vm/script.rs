@@ -105,6 +105,9 @@ pub struct VmFlags {
 
     /// The binary format of the current input
     pub in_binary: Vec<u8>,
+
+    /// Input arguments
+    pub in_args: Vec<VmTerm>,
 }
 
 impl Default for VmFlags {
@@ -118,6 +121,7 @@ impl Default for VmFlags {
             is_coinbase: false,
             prev_block_hash: [0; 32],
             in_binary: vec![],
+            in_args: vec![],
         }
     }
 }
@@ -2124,6 +2128,11 @@ impl<'a> ScriptExecutor<'a> {
                             );
                         }
                     }
+                }
+
+                ScriptEntry::Opcode(OP::InputScriptArgsLen) => {
+                    exec_stack.push(VmTerm::Unsigned16(flags.in_args.len() as u16));
+                    *memory_size += 2;
                 }
 
                 ScriptEntry::Opcode(OP::InputsLen) => {
