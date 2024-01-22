@@ -1415,6 +1415,84 @@ impl Script {
                             }
                         }
 
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::InputScriptArgsLen) => {
+                            let mut idx: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                idx += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                idx += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            if idx as usize >= input_stack.len() {
+                                frame.executor.state = ScriptExecutorState::Error(
+                                    ExecutionResult::IndexOutOfBounds,
+                                    (
+                                        frame.i_ptr,
+                                        frame.func_idx,
+                                        i.clone(),
+                                        frame.stack.as_slice(),
+                                    )
+                                        .into(),
+                                );
+                            } else {
+                                let input = &input_stack[idx as usize];
+                                frame
+                                    .stack
+                                    .push(VmTerm::Unsigned16(input.script_args.len() as u16));
+                                memory_size += 2;
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                frame.i_ptr += 1;
+                            }
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(
+                            OP::SpillInputScriptArgs,
+                        ) => {
+                            let mut idx: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                idx += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                idx += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            if idx as usize >= input_stack.len() {
+                                frame.executor.state = ScriptExecutorState::Error(
+                                    ExecutionResult::IndexOutOfBounds,
+                                    (
+                                        frame.i_ptr,
+                                        frame.func_idx,
+                                        i.clone(),
+                                        frame.stack.as_slice(),
+                                    )
+                                        .into(),
+                                );
+                            } else {
+                                let input = &input_stack[idx as usize];
+                                for t in input.script_args.iter().rev() {
+                                    frame.stack.push(t.clone());
+                                    memory_size += t.size();
+                                }
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                frame.i_ptr += 1;
+                            }
+                        }
+
                         // Extend stack trace
                         ScriptExecutorState::Error(err, stack_trace) => {
                             let mut stack_trace = stack_trace.clone();
@@ -2131,8 +2209,8 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::InputScriptArgsLen) => {
-                    exec_stack.push(VmTerm::Unsigned16(flags.in_args.len() as u16));
-                    *memory_size += 2;
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::InputScriptArgsLen);
                 }
 
                 ScriptEntry::Opcode(OP::InputsLen) => {
@@ -2146,10 +2224,8 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::SpillInputScriptArgs) => {
-                    for t in flags.in_args.iter().rev() {
-                        exec_stack.push(t.clone());
-                        *memory_size += t.size();
-                    }
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::SpillInputScriptArgs);
                 }
 
                 ScriptEntry::Opcode(OP::Concat) => {
@@ -5898,6 +5974,12 @@ impl ScriptParser {
                 }
                 Some(OP::DecimalArrayVar) => {
                     impl_parser_expecting_len!(self, OP::DecimalArrayVar)
+                }
+                Some(OP::InputScriptArgsLen) => {
+                    impl_parser_expecting_bytes!(self, OP::InputScriptArgsLen, 2)
+                }
+                Some(OP::SpillInputScriptArgs) => {
+                    impl_parser_expecting_bytes!(self, OP::SpillInputScriptArgs, 2)
                 }
                 Some(OP::Substr) => impl_parser_expecting_bytes!(self, OP::Substr, 2),
                 Some(OP::TrapIfNeqType) => impl_parser_expecting_bytes!(self, OP::TrapIfNeqType, 1),
