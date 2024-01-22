@@ -1560,6 +1560,113 @@ impl Script {
                             }
                         }
 
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetAtArray) => {
+                            let exec_stack = &mut frame.stack;
+                            let len: usize = exec_stack.len();
+
+                            if len == 0 || !exec_stack[len - 1].is_array() {
+                                frame.executor.state = ScriptExecutorState::Error(
+                                    ExecutionResult::InvalidArgs,
+                                    (
+                                        frame.i_ptr,
+                                        frame.func_idx,
+                                        i.clone(),
+                                        exec_stack.as_slice(),
+                                    )
+                                        .into(),
+                                );
+                            } else {
+                                let mut idx: u16 = 0;
+
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                    idx += u16::from(*byte);
+                                } else {
+                                    unreachable!()
+                                }
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                    idx += u16::from(*byte) << 8;
+                                } else {
+                                    unreachable!()
+                                }
+
+                                let idx: usize = idx as usize;
+                                if idx >= exec_stack[len - 1].len() {
+                                    frame.executor.state = ScriptExecutorState::Error(
+                                        ExecutionResult::IndexOutOfBounds,
+                                        (
+                                            frame.i_ptr,
+                                            frame.func_idx,
+                                            i.clone(),
+                                            exec_stack.as_slice(),
+                                        )
+                                            .into(),
+                                    );
+                                } else {
+                                    let cloned = exec_stack[len - 1].clone_at_unchecked(idx);
+                                    memory_size += cloned.size();
+                                    exec_stack.push(cloned);
+
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                            }
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::DeleteAtArray) => {
+                            let exec_stack = &mut frame.stack;
+                            let len: usize = exec_stack.len();
+
+                            if len == 0 || !exec_stack[len - 1].is_array() {
+                                frame.executor.state = ScriptExecutorState::Error(
+                                    ExecutionResult::InvalidArgs,
+                                    (
+                                        frame.i_ptr,
+                                        frame.func_idx,
+                                        i.clone(),
+                                        exec_stack.as_slice(),
+                                    )
+                                        .into(),
+                                );
+                            } else {
+                                let mut idx: u16 = 0;
+
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                    idx += u16::from(*byte);
+                                } else {
+                                    unreachable!()
+                                }
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                    idx += u16::from(*byte) << 8;
+                                } else {
+                                    unreachable!()
+                                }
+
+                                let idx: usize = idx as usize;
+                                if idx >= exec_stack[len - 1].len() {
+                                    frame.executor.state = ScriptExecutorState::Error(
+                                        ExecutionResult::IndexOutOfBounds,
+                                        (
+                                            frame.i_ptr,
+                                            frame.func_idx,
+                                            i.clone(),
+                                            exec_stack.as_slice(),
+                                        )
+                                            .into(),
+                                    );
+                                } else {
+                                    let removed = exec_stack[len - 1].remove_at_unchecked(idx);
+                                    memory_size -= removed.size();
+
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                            }
+                        }
+
                         // Extend stack trace
                         ScriptExecutorState::Error(err, stack_trace) => {
                             let mut stack_trace = stack_trace.clone();
@@ -1881,59 +1988,6 @@ impl<'a> ScriptExecutor<'a> {
 
                     let cloned = exec_stack[exec_stack.len() - 1 - idx].clone();
                     script_outputs.push(cloned);
-
-                    self.state = ScriptExecutorState::ExpectingInitialOP;
-                }
-
-                (OP::GetAtArray, ScriptEntry::Byte(idx)) => {
-                    let len: usize = exec_stack.len();
-
-                    if len == 0 || !exec_stack[len - 1].is_array() {
-                        self.state = ScriptExecutorState::Error(
-                            ExecutionResult::InvalidArgs,
-                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                        );
-                        return;
-                    }
-
-                    let idx: usize = *idx as usize;
-                    if idx >= exec_stack[len - 1].len() {
-                        self.state = ScriptExecutorState::Error(
-                            ExecutionResult::IndexOutOfBounds,
-                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                        );
-                        return;
-                    }
-
-                    let cloned = exec_stack[len - 1].clone_at_unchecked(idx);
-                    *memory_size += cloned.size();
-                    exec_stack.push(cloned);
-
-                    self.state = ScriptExecutorState::ExpectingInitialOP;
-                }
-
-                (OP::DeleteAtArray, ScriptEntry::Byte(idx)) => {
-                    let len: usize = exec_stack.len();
-
-                    if len == 0 || !exec_stack[len - 1].is_array() {
-                        self.state = ScriptExecutorState::Error(
-                            ExecutionResult::InvalidArgs,
-                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                        );
-                        return;
-                    }
-
-                    let idx: usize = *idx as usize;
-                    if idx >= exec_stack[len - 1].len() {
-                        self.state = ScriptExecutorState::Error(
-                            ExecutionResult::IndexOutOfBounds,
-                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                        );
-                        return;
-                    }
-
-                    let removed = exec_stack[len - 1].remove_at_unchecked(idx);
-                    *memory_size -= removed.size();
 
                     self.state = ScriptExecutorState::ExpectingInitialOP;
                 }
@@ -3598,7 +3652,7 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::GetAtArray) => {
-                    self.state = ScriptExecutorState::ExpectingIndexU8(OP::GetAtArray);
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetAtArray);
                 }
 
                 ScriptEntry::Opcode(OP::PushBackArray) => {
@@ -3700,7 +3754,7 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::DeleteAtArray) => {
-                    self.state = ScriptExecutorState::ExpectingIndexU8(OP::DeleteAtArray);
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::DeleteAtArray);
                 }
 
                 ScriptEntry::Opcode(OP::ArrayLen) => {
@@ -5999,8 +6053,8 @@ impl ScriptParser {
                 Some(OP::PickToScriptOuts) => {
                     impl_parser_expecting_bytes!(self, OP::PickToScriptOuts, 1)
                 }
-                Some(OP::GetAtArray) => impl_parser_expecting_bytes!(self, OP::GetAtArray, 1),
-                Some(OP::DeleteAtArray) => impl_parser_expecting_bytes!(self, OP::DeleteAtArray, 1),
+                Some(OP::GetAtArray) => impl_parser_expecting_bytes!(self, OP::GetAtArray, 2),
+                Some(OP::DeleteAtArray) => impl_parser_expecting_bytes!(self, OP::DeleteAtArray, 2),
                 Some(OP::Hash160ArrayVar) => impl_parser_expecting_len!(self, OP::Hash160ArrayVar),
                 Some(OP::Hash256ArrayVar) => impl_parser_expecting_len!(self, OP::Hash256ArrayVar),
                 Some(OP::Hash512ArrayVar) => impl_parser_expecting_len!(self, OP::Hash512ArrayVar),
@@ -12818,9 +12872,11 @@ mod tests {
                 ScriptEntry::Byte(0x04),
                 ScriptEntry::Opcode(OP::GetAtArray),
                 ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::GetAtArray),
                 ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::Drop),
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
@@ -12832,12 +12888,15 @@ mod tests {
                 ScriptEntry::Byte(0x08),
                 ScriptEntry::Opcode(OP::GetAtArray),
                 ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::GetAtArray),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::GetAtArray),
                 ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::Drop),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -12889,6 +12948,7 @@ mod tests {
                 ScriptEntry::Byte(0x03),
                 ScriptEntry::Opcode(OP::GetAtArray),
                 ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::Drop),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -13207,8 +13267,10 @@ mod tests {
                 ScriptEntry::Byte(0x04),
                 ScriptEntry::Opcode(OP::DeleteAtArray),
                 ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::DeleteAtArray),
                 ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
@@ -13249,6 +13311,7 @@ mod tests {
                 ScriptEntry::Byte(0x0b),
                 ScriptEntry::Opcode(OP::DeleteAtArray),
                 ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
@@ -13276,6 +13339,7 @@ mod tests {
                 ScriptEntry::Byte(0x04),
                 ScriptEntry::Opcode(OP::DeleteAtArray),
                 ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
                 ScriptEntry::Opcode(OP::Verify),
