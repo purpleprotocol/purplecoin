@@ -158,7 +158,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x8a` Abs - Returns the absolute value of the topmost item on the stack
     - [ ] OP `0x8b` PushPrevScriptOuts - Pushes previous spend script outs on top of the stack up to `n`
     - [x] OP `0x8c` PushPrevScriptOutsLen - Pushes the length of previous spend script outs on top of the stack
-    - [ ] OP `0x8d` PushPrevScriptOutAt - Receives an index on the previous spend script outs vector and pushes it to the top of the stack.
+    - [x] OP `0x8d` PushPrevScriptOutAt - Receives an index on the previous spend script outs vector and pushes it to the top of the stack.
     - [x] OP `0x8e` PushExecCount - Pushes the current amount of opcodes that have been executed to the top of the stack
     - [x] OP `0x8f` FlushToScriptOuts - Flushes the terms on the current frame to the script outputs stack
     - [x] OP `0x90` PopToScriptOuts - Pops the topmost item on the stack and pushes it to the script outputs stack
