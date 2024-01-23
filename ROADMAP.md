@@ -187,7 +187,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xa7` GetOutReceiver - Receives and index and pushes the address of the receiver at the given index on the output stack to the top of the stack. Pushes `0` of the output does not have a receiver address. If the output is coloured, pushes a coloured address.
     - [ ] OP `0xa8` GetOutScriptHash - Receives and index and pushes the script hash of the output at the given index on the output stack to the top of the stack.
     - [ ] OP `0xa9` GetOutScriptOutsLen - Pushes the number of script outs the output at the given index has on top of the stack.
-    - [ ] OP `0xaa` GetOutScriptOut - Receives two indexes. Pushes the script output at the first given index of the output at the second given index to the output stack.
+    - [x] OP `0xaa` GetOutScriptOut - Receives two indexes. Pushes the script output at the second given index of the output at the first given index to the output stack.
     - [x] OP `0xab` SpillScriptOuts - Pushes all the script outputs of the output with the given index to the stack.
     - [ ] OP `0xac` IsColouredOut - Receives and index and pushes `1` on top of the stack if the output is coloured, `0` otherwise.
     - [ ] OP `0xad` ColourHash - Pushes to the top of the stack the colour hash of the output at the given index. Pushes a zero hash if the output is an XPU output.
