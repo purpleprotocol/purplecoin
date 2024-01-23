@@ -108,6 +108,9 @@ pub struct VmFlags {
 
     /// Input arguments
     pub in_args: Vec<VmTerm>,
+
+    /// Previous output script outputs
+    pub prev_out_outs: Option<Vec<VmTerm>>,
 }
 
 impl Default for VmFlags {
@@ -122,6 +125,7 @@ impl Default for VmFlags {
             prev_block_hash: [0; 32],
             in_binary: vec![],
             in_args: vec![],
+            prev_out_outs: None,
         }
     }
 }
@@ -2352,6 +2356,18 @@ impl<'a> ScriptExecutor<'a> {
                 ScriptEntry::Opcode(OP::GetInputScriptArgAt) => {
                     self.state =
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetInputScriptArgAt);
+                }
+
+                ScriptEntry::Opcode(OP::PushPrevScriptOutsLen) => {
+                    if let Some(prev_out_outs) = flags.prev_out_outs.as_ref() {
+                        exec_stack.push(VmTerm::Unsigned16(prev_out_outs.len() as u16));
+                        *memory_size += 2;
+                    } else {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidOPForCoinbaseInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
                 }
 
                 ScriptEntry::Opcode(OP::Concat) => {
@@ -6484,6 +6500,9 @@ pub enum ExecutionResult {
 
     /// Invalid arguments on the stack
     InvalidArgs,
+
+    /// The opcode is not valid in a coinbase input
+    InvalidOPForCoinbaseInput,
 
     /// Invalid script format
     BadFormat,

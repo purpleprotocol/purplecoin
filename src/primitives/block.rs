@@ -1145,6 +1145,7 @@ impl Block {
                 prev_block_hash: prev.hash().unwrap().0,
                 in_binary: input.to_bytes_for_signing(),
                 in_args: input.script_args.clone(),
+                prev_out_outs: input.out.as_ref().map(|out| out.script_outs.clone()),
             },
         );
 
@@ -1318,6 +1319,10 @@ impl BlockData {
                                     prev_block_hash: prev.hash().unwrap().0,
                                     in_binary: input.to_bytes_for_signing(),
                                     in_args: input.script_args.clone(),
+                                    prev_out_outs: input
+                                        .out
+                                        .as_ref()
+                                        .map(|out| out.script_outs.clone()),
                                 },
                             );
 
