@@ -63,6 +63,10 @@ pub struct Frame<'a> {
     /// instruction pointer at the beginning of the loop and end_ip at the end.
     pub is_loop: Option<(usize, usize)>,
 
+    /// `true` if the current frame is inside a control operator (if, else),
+    /// `false` otherwise
+    pub is_control_op: bool,
+
     /// Script executor
     pub executor: ScriptExecutor<'a>,
 }
@@ -76,6 +80,7 @@ impl<'a> Frame<'a> {
             func_idx,
             executor: ScriptExecutor::new(),
             is_loop: None,
+            is_control_op: false
         }
     }
 }
@@ -94,7 +99,7 @@ pub struct VmFlags {
     /// Whether or not to build a stacktrace
     pub build_stacktrace: bool,
 
-    /// Wheter or not to validate output amounts based on inputs
+    /// Whether or not to validate output amounts based on inputs
     pub validate_output_amounts: bool,
 
     /// Whether we are processing a coinbase input or not
@@ -428,8 +433,58 @@ impl Script {
                             if let Some((start_i, _)) = frame.is_loop {
                                 frame.i_ptr = start_i;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            } else if frame.is_control_op {
+                                frame.is_control_op = false;
+                                frame.i_ptr += 1;
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             } else {
                                 pop_frame = true;
+                            }
+                        }
+
+                        ScriptExecutorState::ControlOperator(opt) => {
+                            match opt {
+                                Some(true) => {
+                                    frame.is_control_op = true;
+                                    frame.i_ptr += 1;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                }
+                                Some(false) => {
+                                    let mut next_i = frame.i_ptr + 1;
+
+                                    loop {
+                                        if let ScriptEntry::Opcode(OP::Else) = self.script[next_i] {
+                                            frame.is_control_op = true;
+                                            break;
+                                        }
+
+                                        if let ScriptEntry::Opcode(OP::End) = self.script[next_i] {
+                                            frame.is_control_op = false;
+                                            break;
+                                        }
+
+                                        next_i += 1;
+                                    }
+
+                                    frame.i_ptr = next_i + 1;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                }
+                                None => {
+                                    frame.is_control_op = false;
+
+                                    let mut next_i = frame.i_ptr + 1;
+
+                                    loop {
+                                        if let ScriptEntry::Opcode(OP::End) = self.script[next_i] {
+                                            break;
+                                        }
+
+                                        next_i += 1;
+                                    }
+
+                                    frame.i_ptr = next_i + 1;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                }
                             }
                         }
 
@@ -3372,7 +3427,7 @@ impl<'a> ScriptExecutor<'a> {
                     let len = exec_stack.len();
 
                     unsafe {
-                        // Similar implemenetation like in case of Rot2:
+                        // Similar implementation like in case of Rot2:
                         //
                         // Let's suppose we have the following items on the stack:
                         // [0, 1, 2]
@@ -3503,7 +3558,7 @@ impl<'a> ScriptExecutor<'a> {
                     let len = exec_stack.len();
 
                     unsafe {
-                        // Fastest implemenetation I can think of:
+                        // Fastest implementation I can think of:
                         //
                         // Let's suppose we have the following items on the stack:
                         // [0, 1, 2, 3, 4, 5]
@@ -5954,6 +6009,190 @@ impl<'a> ScriptExecutor<'a> {
                     *memory_size += 8;
                 }
 
+                ScriptEntry::Opcode(OP::If) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let top = exec_stack.pop().unwrap();
+                    *memory_size -= top.size();
+
+                    self.state = ScriptExecutorState::ControlOperator(Some(top.equals_1()));
+                }
+
+                ScriptEntry::Opcode(OP::Ifn) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let top = exec_stack.pop().unwrap();
+                    *memory_size -= top.size();
+
+                    self.state = ScriptExecutorState::ControlOperator(Some(!top.equals_1()));
+                }
+
+                ScriptEntry::Opcode(OP::Else) => {
+                    self.state = ScriptExecutorState::ControlOperator(None);
+                }
+
+                ScriptEntry::Opcode(OP::IfLt) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    *memory_size -= e1.size();
+                    let e2 = exec_stack.pop().unwrap();
+                    *memory_size -= e2.size();
+
+                    if !e1.is_comparable(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    self.state = ScriptExecutorState::ControlOperator(Some(e1 < e2));
+                }
+
+                ScriptEntry::Opcode(OP::IfGt) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    *memory_size -= e1.size();
+                    let e2 = exec_stack.pop().unwrap();
+                    *memory_size -= e2.size();
+
+                    if !e1.is_comparable(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    self.state = ScriptExecutorState::ControlOperator(Some(e1 > e2));
+                }
+
+                ScriptEntry::Opcode(OP::IfLeq) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    *memory_size -= e1.size();
+                    let e2 = exec_stack.pop().unwrap();
+                    *memory_size -= e2.size();
+
+                    if !e1.is_comparable(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    self.state = ScriptExecutorState::ControlOperator(Some(e1 <= e2));
+                }
+
+                ScriptEntry::Opcode(OP::IfGeq) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    *memory_size -= e1.size();
+                    let e2 = exec_stack.pop().unwrap();
+                    *memory_size -= e2.size();
+
+                    if !e1.is_comparable(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    self.state = ScriptExecutorState::ControlOperator(Some(e1 >= e2));
+                }
+
+                ScriptEntry::Opcode(OP::IfEq) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    *memory_size -= e1.size();
+                    let e2 = exec_stack.pop().unwrap();
+                    *memory_size -= e2.size();
+
+                    if !e1.is_comparable(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    self.state = ScriptExecutorState::ControlOperator(Some(e1 == e2));
+                }
+
+                ScriptEntry::Opcode(OP::IfNeq) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let e1 = exec_stack.pop().unwrap();
+                    *memory_size -= e1.size();
+                    let e2 = exec_stack.pop().unwrap();
+                    *memory_size -= e2.size();
+
+                    if !e1.is_comparable(&e2) {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    self.state = ScriptExecutorState::ControlOperator(Some(e1 != e2));
+                }
+
                 ScriptEntry::Opcode(OP::Nop) => {
                     // do nothing
                 }
@@ -6058,6 +6297,13 @@ enum ScriptExecutorState<'a> {
 
     /// Continue to the next iteration of the current loop
     ContinueLoop,
+
+    /// A control operator decision has to be made
+    ///
+    /// Some(true), the `If` block will be executed
+    /// Some(false), the `Else` block will be executed if exists, skips the block otherwise
+    /// None, the `If` block was executed and got to its end, block will be exited
+    ControlOperator(Option<bool>),
 
     /// We hit an OP_ReturnFunc
     ReturnFunc,
@@ -18949,7 +19195,7 @@ mod tests {
     }
 
     #[test]
-    fn it_concats_arrays() {
+    fn it_concat_arrays() {
         let key = "test_key";
         let mut ss = Script {
             script: vec![
@@ -19840,6 +20086,615 @@ mod tests {
             VmTerm::Unsigned8(0x01),
             VmTerm::Unsigned8(0x01),
         ];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if() {
+        /*
+        m = 0, n = 1
+        if n == 1 {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 2 = 2
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::If), // true
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x02)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_not() {
+        /*
+        m = 0, n = 0
+        if n != 1 {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 2 = 2
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Ifn), // true
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x02)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_else() {
+        /*
+        m = 0, n = 0
+        if n == 1 {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 4 = 4
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::If), // false
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x04)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_less() {
+        /*
+        m = 0, n = 1, o = 0
+        if o < n {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 2 = 2
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // o = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::IfLt), // true
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x02)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_less_test_2() {
+        /*
+        m = 0, n = 0, o = 1
+        if o < n {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 4 = 4
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // o = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::IfLt), // false
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x04)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_greater() {
+        /*
+        m = 0, n = 0, o = 1
+        if o > n {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 2 = 2
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // o = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::IfGt), // true
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x02)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_greater_test_2() {
+        /*
+        m = 0, n = 1, o = 0
+        if o > n {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 4 = 4
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // o = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::IfGt), // false
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x04)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_less_or_equal() {
+        /*
+        m = 0, n = 1, o = 1
+        if o <= n {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 2 = 2
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // o = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::IfLeq), // true
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x02)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_less_or_equal_test_2() {
+        /*
+        m = 0, n = 0, o = 1
+        if o <= n {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 4 = 4
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // o = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::IfLeq), // false
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x04)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_greater_or_equal() {
+        /*
+        m = 0, n = 0, o = 0
+        if o >= n {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 2 = 2
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // o = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::IfGeq), // true
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x02)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_greater_or_equal_test_2() {
+        /*
+        m = 0, n = 1, o = 0
+        if o >= n {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 4 = 4
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // o = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::IfGeq), // false
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x04)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_equals() {
+        /*
+        m = 0, n = 0, o = 0
+        if o == n {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 2 = 2
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // o = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::IfEq), // true
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x02)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_equals_test_2() {
+        /*
+        m = 0, n = 1, o = 0
+        if o == n {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 4 = 4
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // o = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::IfEq), // false
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x04)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_not_equals() {
+        /*
+        m = 0, n = 0, o = 1
+        if o != n {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 2 = 2
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // o = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::IfNeq), // true
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x02)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_simple_if_not_equals_test_2() {
+        /*
+        m = 0, n = 1, o = 1
+        if o != n {
+            m += 2
+        } else {
+            m += 4
+        }
+        print m -> 0 + 4 = 4
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // m = 0
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // n = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // o = 1
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::IfNeq), // false
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 2
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Else),
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 4
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x04)];
         assert_script_ok(ss, script_output, key);
     }
 }

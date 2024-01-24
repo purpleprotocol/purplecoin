@@ -196,9 +196,9 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xb0` Concat - Concat the two topmost items on the stack
     - [x] OP `0xb1` Eq - Pushes `1` on top of the stack if the two topmost items on the stack are equal
     - [x] OP `0xb2` Neq - Pushes `1` on top of the stack if the two topmost items on the stack are not equal
-    - [ ] OP `0xb3` If - If control operator
-    - [ ] OP `0xb4` Ifn - If not control operator
-    - [ ] OP `0xb5` Else - Else control operator
+    - [x] OP `0xb3` If - If control operator
+    - [x] OP `0xb4` Ifn - If not control operator
+    - [x] OP `0xb5` Else - Else control operator
     - [x] OP `0xb6` End - Ends the current block
     - [x] OP `0xb7` Verify - Pushes the current output's binary format to the signature verification stack and stops script execution
     - [x] OP `0xb8` ReturnFunc - Returns from the current function and moves the terms on the current frame to the parent frame. Behaves the same as `Return` if called from the main function
@@ -208,11 +208,11 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xbc` Gt - Pushes `1` on top of the stack if the topmost item on the stack is greater than the second item on stack
     - [x] OP `0xbd` Leq - Pushes `1` on top of the stack if the topmost item on the stack is less or equal than the second item on stack
     - [x] OP `0xbe` Geq - Pushes `1` on top of the stack if the topmost item on the stack is greater or equal than the second item on stack
-    - [ ] OP `0xbf` IfLt - If less than control operator
-    - [ ] OP `0xc0` IfGt - If greater than control operator
-    - [ ] OP `0xc1` IfLeq - If less or equal control operator
-    - [ ] OP `0xc2` IfGeq - If greater or equal control operator
-    - [ ] OP `0xc3` IfEq - If equal control operator
+    - [x] OP `0xbf` IfLt - If less than control operator
+    - [x] OP `0xc0` IfGt - If greater than control operator
+    - [x] OP `0xc1` IfLeq - If less or equal control operator
+    - [x] OP `0xc2` IfGeq - If greater or equal control operator
+    - [x] OP `0xc3` IfEq - If equal control operator
     - [ ] OP `0xc4` IfNeq - If not equal control operator
     - [x] OP `0xc5` LtVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is less than the second item on the stack
     - [x] OP `0xc6` GtVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is greater than the second item on the stack
