@@ -213,7 +213,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xc1` IfLeq - If less or equal control operator
     - [x] OP `0xc2` IfGeq - If greater or equal control operator
     - [x] OP `0xc3` IfEq - If equal control operator
-    - [ ] OP `0xc4` IfNeq - If not equal control operator
+    - [x] OP `0xc4` IfNeq - If not equal control operator
     - [x] OP `0xc5` LtVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is less than the second item on the stack
     - [x] OP `0xc6` GtVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is greater than the second item on the stack
     - [x] OP `0xc7` LeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is less or equal than the second item on the stack
