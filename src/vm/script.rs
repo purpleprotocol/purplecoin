@@ -80,7 +80,7 @@ impl<'a> Frame<'a> {
             func_idx,
             executor: ScriptExecutor::new(),
             is_loop: None,
-            is_control_op: false
+            is_control_op: false,
         }
     }
 }
@@ -442,51 +442,49 @@ impl Script {
                             }
                         }
 
-                        ScriptExecutorState::ControlOperator(opt) => {
-                            match opt {
-                                Some(true) => {
-                                    frame.is_control_op = true;
-                                    frame.i_ptr += 1;
-                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                }
-                                Some(false) => {
-                                    let mut next_i = frame.i_ptr + 1;
-
-                                    loop {
-                                        if let ScriptEntry::Opcode(OP::Else) = self.script[next_i] {
-                                            frame.is_control_op = true;
-                                            break;
-                                        }
-
-                                        if let ScriptEntry::Opcode(OP::End) = self.script[next_i] {
-                                            frame.is_control_op = false;
-                                            break;
-                                        }
-
-                                        next_i += 1;
-                                    }
-
-                                    frame.i_ptr = next_i + 1;
-                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                }
-                                None => {
-                                    frame.is_control_op = false;
-
-                                    let mut next_i = frame.i_ptr + 1;
-
-                                    loop {
-                                        if let ScriptEntry::Opcode(OP::End) = self.script[next_i] {
-                                            break;
-                                        }
-
-                                        next_i += 1;
-                                    }
-
-                                    frame.i_ptr = next_i + 1;
-                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                }
+                        ScriptExecutorState::ControlOperator(opt) => match opt {
+                            Some(true) => {
+                                frame.is_control_op = true;
+                                frame.i_ptr += 1;
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             }
-                        }
+                            Some(false) => {
+                                let mut next_i = frame.i_ptr + 1;
+
+                                loop {
+                                    if let ScriptEntry::Opcode(OP::Else) = self.script[next_i] {
+                                        frame.is_control_op = true;
+                                        break;
+                                    }
+
+                                    if let ScriptEntry::Opcode(OP::End) = self.script[next_i] {
+                                        frame.is_control_op = false;
+                                        break;
+                                    }
+
+                                    next_i += 1;
+                                }
+
+                                frame.i_ptr = next_i + 1;
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            }
+                            None => {
+                                frame.is_control_op = false;
+
+                                let mut next_i = frame.i_ptr + 1;
+
+                                loop {
+                                    if let ScriptEntry::Opcode(OP::End) = self.script[next_i] {
+                                        break;
+                                    }
+
+                                    next_i += 1;
+                                }
+
+                                frame.i_ptr = next_i + 1;
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            }
+                        },
 
                         ScriptExecutorState::ExpectingRandomTerm(OP::RandomHash160Var) => {
                             frame.stack.push(VmTerm::Hash160(rng.gen::<[u8; 20]>()));
@@ -20108,7 +20106,7 @@ mod tests {
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // n = 1
                 ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::If), // true
+                ScriptEntry::Opcode(OP::If),           // true
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20147,7 +20145,7 @@ mod tests {
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // n = 0
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Opcode(OP::Ifn), // true
+                ScriptEntry::Opcode(OP::Ifn),          // true
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20186,7 +20184,7 @@ mod tests {
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // n = 0
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Opcode(OP::If), // false
+                ScriptEntry::Opcode(OP::If),           // false
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20227,7 +20225,7 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // o = 0
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Opcode(OP::IfLt), // true
+                ScriptEntry::Opcode(OP::IfLt),         // true
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20268,7 +20266,7 @@ mod tests {
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // o = 1
                 ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::IfLt), // false
+                ScriptEntry::Opcode(OP::IfLt),         // false
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20309,7 +20307,7 @@ mod tests {
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // o = 1
                 ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::IfGt), // true
+                ScriptEntry::Opcode(OP::IfGt),         // true
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20350,7 +20348,7 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // o = 0
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Opcode(OP::IfGt), // false
+                ScriptEntry::Opcode(OP::IfGt),         // false
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20391,7 +20389,7 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // o = 1
                 ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::IfLeq), // true
+                ScriptEntry::Opcode(OP::IfLeq),        // true
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20432,7 +20430,7 @@ mod tests {
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // o = 1
                 ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::IfLeq), // false
+                ScriptEntry::Opcode(OP::IfLeq),        // false
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20473,7 +20471,7 @@ mod tests {
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // o = 0
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Opcode(OP::IfGeq), // true
+                ScriptEntry::Opcode(OP::IfGeq),        // true
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20514,7 +20512,7 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // o = 0
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Opcode(OP::IfGeq), // false
+                ScriptEntry::Opcode(OP::IfGeq),        // false
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20555,7 +20553,7 @@ mod tests {
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // o = 0
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Opcode(OP::IfEq), // true
+                ScriptEntry::Opcode(OP::IfEq),         // true
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20596,7 +20594,7 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // o = 0
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Opcode(OP::IfEq), // false
+                ScriptEntry::Opcode(OP::IfEq),         // false
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20637,7 +20635,7 @@ mod tests {
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // o = 1
                 ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::IfNeq), // true
+                ScriptEntry::Opcode(OP::IfNeq),        // true
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
@@ -20678,7 +20676,7 @@ mod tests {
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned8Var), // o = 1
                 ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::IfNeq), // false
+                ScriptEntry::Opcode(OP::IfNeq),        // false
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 2
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Add),
