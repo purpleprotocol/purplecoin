@@ -237,6 +237,14 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xd9` PushOutIfGt - Pushes a new output to the output stack if the topmost item on the stack is greater than the second item on the stack. The following arguments are popped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [x] OP `0xda` PushOutIfLeq - Pushes a new output to the output stack if the topmost item on the stack is less or equal than the second item on the stack. The following arguments are popped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [x] OP `0xdb` PushOutIfGeq - Pushes a new output to the output stack if the topmost item on the stack is greater or equal than the second item on the stack. The following arguments are popped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
+    - [ ] OP `0xdc` GetSpentOutAmount - Pushes the amount of the spent output to the top of the stack
+    - [ ] OP `0xde` GetSpentOutReceiver - Pushes the address of the receiver of the spent output to the top of the stack. Pushes `0` of the output does not have a receiver address. If the output is coloured, pushes a coloured address.
+    - [ ] OP `0xdf` GetSpentOutScriptHash - Pushes the script hash of the spent to the top of the stack.
+    - [ ] OP `0xe0` GetSpentOutScriptOutsLen - Pushes the number of script outs the spent output has on top of the stack.
+    - [ ] OP `0xe1` GetSpentOutScriptOut - Pushes the script output of the spent output at the given index to the top of stack.
+    - [ ] OP `0xe2` SpillSpentOutScriptOuts - Pushes all the script outputs of the spent output.
+    - [ ] OP `0xe6` InputStackSize - Pushes the size of the input stack to the top of the stack. 
+    - [ ] OP `0xe7` OutputStackSize - Pushes the size of the output stack to the top of the stack.
     - [x] OP `0xe8` GhostRider256 - Pops the topmost item on the stack, hashes it with GhostRider and then pushes the result to the stack.
     - [x] OP `0xe9` Fugue256 - Pops the topmost item on the stack, hashes it with Fugue256 and then pushes the result to the stack.
     - [x] OP `0xea` JH256 - Pops the topmost item on the stack, hashes it with JH256 and then pushes the result to the stack.
