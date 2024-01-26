@@ -1786,6 +1786,45 @@ impl Script {
                             }
                         }
 
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetOutAmount) => {
+                            let mut idx: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                idx += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                idx += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            if idx as usize >= output_stack.len() {
+                                frame.executor.state = ScriptExecutorState::Error(
+                                    ExecutionResult::IndexOutOfBounds,
+                                    (
+                                        frame.i_ptr,
+                                        frame.func_idx,
+                                        i.clone(),
+                                        frame.stack.as_slice(),
+                                    )
+                                        .into(),
+                                );
+                            } else {
+                                let output = &output_stack[idx as usize];
+                                let amount = output.amount;
+
+                                frame.stack.push(VmTerm::Signed128(amount));
+                                memory_size += 16;
+
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                frame.i_ptr += 1;
+                            }
+                        }
+
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetAtArray) => {
                             let exec_stack = &mut frame.stack;
                             let len: usize = exec_stack.len();
@@ -2593,6 +2632,10 @@ impl<'a> ScriptExecutor<'a> {
                 ScriptEntry::Opcode(OP::GetOutScriptOut) => {
                     self.state =
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetOutScriptOut);
+                }
+
+                ScriptEntry::Opcode(OP::GetOutAmount) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetOutAmount);
                 }
 
                 ScriptEntry::Opcode(OP::PushPrevScriptOutAt) => {
@@ -6386,6 +6429,9 @@ impl ScriptParser {
                 }
                 Some(OP::GetOutScriptOut) => {
                     impl_parser_expecting_bytes!(self, OP::GetOutScriptOut, 4)
+                }
+                Some(OP::GetOutAmount) => {
+                    impl_parser_expecting_bytes!(self, OP::GetOutAmount, 2)
                 }
                 Some(OP::GetOutScriptOutsLen) => {
                     impl_parser_expecting_bytes!(self, OP::GetOutScriptOutsLen, 2)

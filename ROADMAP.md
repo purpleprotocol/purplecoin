@@ -183,7 +183,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xa3` VerifyEcdsaInline - Takes the given public key, signature, and message and verifies with ecdsa. Pushes `1` on top of the stack if verification is successful.
     - [x] OP `0xa4` VerifyBIP340 - Takes the given public key and signature, and pushes them along with the current input's binary format to the BIP340 signature verification stack and stops script execution. For direct compatibility with Bitcoin Taproot keys.
     - [x] OP `0xa5` VerifyBIP340Inline - Takes the given public key, signature, and message and verifies according to BIP340. Pushes `1` on top of the stack if verification is successful. For direct compatibility with Bitcoin Taproot.
-    - [ ] OP `0xa6` GetOutAmount - Receives and index and pushes the amount of the output at the given index on the output stack to the top of the stack
+    - [x] OP `0xa6` GetOutAmount - Receives and index and pushes the amount of the output at the given index on the output stack to the top of the stack
     - [ ] OP `0xa7` GetOutReceiver - Receives and index and pushes the address of the receiver at the given index on the output stack to the top of the stack. Pushes `0` of the output does not have a receiver address. If the output is coloured, pushes a coloured address.
     - [x] OP `0xa8` GetOutScriptHash - Receives and index and pushes the script hash of the output at the given index on the output stack to the top of the stack.
     - [x] OP `0xa9` GetOutScriptOutsLen - Pushes the number of script outs the output at the given index has on top of the stack.
