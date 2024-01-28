@@ -2606,6 +2606,20 @@ impl<'a> ScriptExecutor<'a> {
                     }
                 }
 
+                ScriptEntry::Opcode(OP::SpillSpentOutScriptOuts) => {
+                    if let Some(outs) = flags.prev_out_outs.as_ref() {
+                        for t in outs.iter().rev() {
+                            exec_stack.push(t.clone());
+                            *memory_size += t.size();
+                        }
+                    } else {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidOPForCoinbaseInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                }
+
                 ScriptEntry::Opcode(OP::InputScriptArgsLen) => {
                     self.state =
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::InputScriptArgsLen);

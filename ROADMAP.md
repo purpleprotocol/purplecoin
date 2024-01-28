@@ -241,7 +241,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xdf` GetSpentOutScriptHash - Pushes the script hash of the spent to the top of the stack.
     - [x] OP `0xe0` GetSpentOutScriptOutsLen - Pushes the number of script outs the spent output has on top of the stack.
     - [ ] OP `0xe1` GetSpentOutScriptOut - Pushes the script output of the spent output at the given index to the top of stack.
-    - [ ] OP `0xe2` SpillSpentOutScriptOuts - Pushes all the script outputs of the spent output.
+    - [x] OP `0xe2` SpillSpentOutScriptOuts - Pushes all the script outputs of the spent output to the top of the stack.
     - [ ] OP `0xe3` SpentOutIsColouredOut - Pushes `1` if the spent output is coloured and `0` otherwise.
     - [ ] OP `0xe4` SpentOutColourHash - Pushes the colour hash of the spent out to the top of the stack. Pushes a zero hash if the output is an XPU output.
     - [x] OP `0xe8` GhostRider256 - Pops the topmost item on the stack, hashes it with GhostRider and then pushes the result to the stack.
