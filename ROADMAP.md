@@ -156,9 +156,6 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x88` BoolOr - Or control operator
     - [x] OP `0x89` Negate - If the topmost item on the stack is `1`, turns it into a `0`. If the topmost item on the stack is anything but `1` it turns it into a `1`
     - [x] OP `0x8a` Abs - Returns the absolute value of the topmost item on the stack
-    - [ ] OP `0x8b` PushPrevScriptOuts - Pushes previous spend script outs on top of the stack up to `n`
-    - [x] OP `0x8c` PushPrevScriptOutsLen - Pushes the length of previous spend script outs on top of the stack
-    - [x] OP `0x8d` PushPrevScriptOutAt - Receives an index on the previous spend script outs vector and pushes it to the top of the stack.
     - [x] OP `0x8e` PushExecCount - Pushes the current amount of opcodes that have been executed to the top of the stack
     - [x] OP `0x8f` FlushToScriptOuts - Flushes the terms on the current frame to the script outputs stack
     - [x] OP `0x90` PopToScriptOuts - Pops the topmost item on the stack and pushes it to the script outputs stack
@@ -240,10 +237,11 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] OP `0xde` GetSpentOutReceiver - Pushes the address of the receiver of the spent output to the top of the stack. Pushes `0` of the output does not have a receiver address. If the output is coloured, pushes a coloured address.
     - [ ] OP `0xdf` GetSpentOutScriptHash - Pushes the script hash of the spent to the top of the stack.
     - [x] OP `0xe0` GetSpentOutScriptOutsLen - Pushes the number of script outs the spent output has on top of the stack.
-    - [ ] OP `0xe1` GetSpentOutScriptOut - Pushes the script output of the spent output at the given index to the top of stack.
+    - [x] OP `0xe1` GetSpentOutScriptOut - Pushes the script output of the spent output at the given index to the top of stack.
     - [x] OP `0xe2` SpillSpentOutScriptOuts - Pushes all the script outputs of the spent output to the top of the stack.
     - [ ] OP `0xe3` SpentOutIsColouredOut - Pushes `1` if the spent output is coloured and `0` otherwise.
     - [ ] OP `0xe4` SpentOutColourHash - Pushes the colour hash of the spent out to the top of the stack. Pushes a zero hash if the output is an XPU output.
+    - [ ] OP `0xe5` PushPrevScriptOuts - Pushes previous spend script outs on top of the stack up to `n`
     - [x] OP `0xe8` GhostRider256 - Pops the topmost item on the stack, hashes it with GhostRider and then pushes the result to the stack.
     - [x] OP `0xe9` Fugue256 - Pops the topmost item on the stack, hashes it with Fugue256 and then pushes the result to the stack.
     - [x] OP `0xea` JH256 - Pops the topmost item on the stack, hashes it with JH256 and then pushes the result to the stack.

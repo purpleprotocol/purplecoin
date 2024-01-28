@@ -1576,7 +1576,7 @@ impl Script {
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(
-                            OP::PushPrevScriptOutAt,
+                            OP::GetSpentOutScriptOut,
                         ) => {
                             let mut idx: u16 = 0;
 
@@ -2664,10 +2664,10 @@ impl<'a> ScriptExecutor<'a> {
                     self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetOutAmount);
                 }
 
-                ScriptEntry::Opcode(OP::PushPrevScriptOutAt) => {
+                ScriptEntry::Opcode(OP::GetSpentOutScriptOut) => {
                     if flags.prev_out_outs.as_ref().is_some() {
                         self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(
-                            OP::PushPrevScriptOutAt,
+                            OP::GetSpentOutScriptOut,
                         );
                     } else {
                         self.state = ScriptExecutorState::Error(
@@ -2677,7 +2677,7 @@ impl<'a> ScriptExecutor<'a> {
                     }
                 }
 
-                ScriptEntry::Opcode(OP::PushPrevScriptOutsLen) => {
+                ScriptEntry::Opcode(OP::GetSpentOutScriptOutsLen) => {
                     if let Some(prev_out_outs) = flags.prev_out_outs.as_ref() {
                         exec_stack.push(VmTerm::Unsigned16(prev_out_outs.len() as u16));
                         *memory_size += 2;
@@ -6465,8 +6465,8 @@ impl ScriptParser {
                 Some(OP::GetOutScriptHash) => {
                     impl_parser_expecting_bytes!(self, OP::GetOutScriptHash, 2)
                 }
-                Some(OP::PushPrevScriptOutAt) => {
-                    impl_parser_expecting_bytes!(self, OP::PushPrevScriptOutAt, 2)
+                Some(OP::GetSpentOutScriptOut) => {
+                    impl_parser_expecting_bytes!(self, OP::GetSpentOutScriptOut, 2)
                 }
                 Some(OP::Substr) => impl_parser_expecting_bytes!(self, OP::Substr, 2),
                 Some(OP::TrapIfNeqType) => impl_parser_expecting_bytes!(self, OP::TrapIfNeqType, 1),
