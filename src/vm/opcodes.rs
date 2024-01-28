@@ -226,8 +226,6 @@ pub enum OP {
     SpillSpentOutScriptOuts = 0xe2,
     SpentOutIsColouredOut = 0xe3,
     SpentOutColourHash = 0xe4,
-    InputStackSize = 0xe6,
-    OutputStackSize = 0xe7,
     GhostRider = 0xe8,
     Fugue = 0xe9,
     JH256 = 0xea,
