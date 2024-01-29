@@ -110,7 +110,7 @@ pub struct VmFlags {
     pub in_args: Vec<VmTerm>,
 
     /// Previous output script outputs
-    pub prev_out_outs: Option<Vec<VmTerm>>,
+    pub spent_out: Option<Output>,
 }
 
 impl Default for VmFlags {
@@ -125,7 +125,7 @@ impl Default for VmFlags {
             prev_block_hash: [0; 32],
             in_binary: vec![],
             in_args: vec![],
-            prev_out_outs: None,
+            spent_out: None,
         }
     }
 }
@@ -1593,7 +1593,8 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let script_outs = flags.prev_out_outs.as_ref().unwrap();
+                            let script_outs =
+                                flags.spent_out.as_ref().map(|o| &o.script_outs).unwrap();
 
                             if idx as usize >= script_outs.len() {
                                 frame.executor.state = ScriptExecutorState::Error(
@@ -2595,7 +2596,7 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::GetSpentOutScriptOutsLen) => {
-                    if let Some(outs) = flags.prev_out_outs.as_ref() {
+                    if let Some(outs) = flags.spent_out.as_ref().map(|o| &o.script_outs) {
                         exec_stack.push(VmTerm::Unsigned16(outs.len() as u16));
                         *memory_size += 2;
                     } else {
@@ -2607,7 +2608,7 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::SpillSpentOutScriptOuts) => {
-                    if let Some(outs) = flags.prev_out_outs.as_ref() {
+                    if let Some(outs) = flags.spent_out.as_ref().map(|o| &o.script_outs) {
                         for t in outs.iter().rev() {
                             exec_stack.push(t.clone());
                             *memory_size += t.size();
@@ -2665,7 +2666,7 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::GetSpentOutScriptOut) => {
-                    if flags.prev_out_outs.as_ref().is_some() {
+                    if flags.spent_out.as_ref().is_some() {
                         self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(
                             OP::GetSpentOutScriptOut,
                         );
@@ -2678,7 +2679,7 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::GetSpentOutScriptOutsLen) => {
-                    if let Some(prev_out_outs) = flags.prev_out_outs.as_ref() {
+                    if let Some(prev_out_outs) = flags.spent_out.as_ref().map(|o| &o.script_outs) {
                         exec_stack.push(VmTerm::Unsigned16(prev_out_outs.len() as u16));
                         *memory_size += 2;
                     } else {
@@ -2692,6 +2693,18 @@ impl<'a> ScriptExecutor<'a> {
                 ScriptEntry::Opcode(OP::GetOutScriptHash) => {
                     self.state =
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetOutScriptHash);
+                }
+
+                ScriptEntry::Opcode(OP::GetSpentOutScriptHash) => {
+                    if let Some(out) = flags.spent_out.as_ref() {
+                        exec_stack.push(VmTerm::Hash160(out.script_hash.0));
+                        *memory_size += 20;
+                    } else {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidOPForCoinbaseInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
                 }
 
                 ScriptEntry::Opcode(OP::Concat) => {
