@@ -342,15 +342,17 @@ impl Script {
             });
         let inputs_hash = Hash160::hash_from_slice(inputs_hashes, key);
 
-        let ops_with_ends = vec![ScriptEntry::Opcode(OP::Loop),
-                                 ScriptEntry::Opcode(OP::If),
-                                 ScriptEntry::Opcode(OP::Ifn),
-                                 ScriptEntry::Opcode(OP::IfLt),
-                                 ScriptEntry::Opcode(OP::IfGt),
-                                 ScriptEntry::Opcode(OP::IfLeq),
-                                 ScriptEntry::Opcode(OP::IfGeq),
-                                 ScriptEntry::Opcode(OP::IfEq),
-                                 ScriptEntry::Opcode(OP::IfNeq)];
+        let ops_with_ends = vec![
+            ScriptEntry::Opcode(OP::Loop),
+            ScriptEntry::Opcode(OP::If),
+            ScriptEntry::Opcode(OP::Ifn),
+            ScriptEntry::Opcode(OP::IfLt),
+            ScriptEntry::Opcode(OP::IfGt),
+            ScriptEntry::Opcode(OP::IfLeq),
+            ScriptEntry::Opcode(OP::IfGeq),
+            ScriptEntry::Opcode(OP::IfEq),
+            ScriptEntry::Opcode(OP::IfNeq),
+        ];
 
         loop {
             let mut new_frame = None;
@@ -385,7 +387,7 @@ impl Script {
                         output_stack_idx_map,
                         &mut script_outputs,
                         key,
-                        exec_count
+                        exec_count,
                     );
 
                     // Check for new frames or if we should pop one
@@ -2281,7 +2283,7 @@ impl<'a> ScriptExecutor<'a> {
         output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
         script_outputs: &mut Vec<VmTerm>,
         key: &str,
-        exec_count: u64
+        exec_count: u64,
     ) {
         let mut aaa = exec_stack.clone();
         // TODO: println!("PUSH_OP i_ptr: {:?}, OP: {:?}, INITIAL exec_stack: {:?}", i_ptr, op, aaa);
@@ -6290,10 +6292,9 @@ impl<'a> ScriptExecutor<'a> {
                     );
                 }
             },
-            _ =>
-                {
-                    unimplemented!();
-                }
+            _ => {
+                unimplemented!();
+            }
         }
 
         let mut aaa = exec_stack.clone();
@@ -20824,7 +20825,7 @@ mod tests {
                 ScriptEntry::Byte(0x01), // 4
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 5 => // o = 1
                 ScriptEntry::Byte(0x01), // 6
-                ScriptEntry::Opcode(OP::IfEq),         // 7 => // if o == n, true, stack [m]
+                ScriptEntry::Opcode(OP::IfEq), // 7 => // if o == n, true, stack [m]
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 8 => // i = 1, stack [m, i]
                 ScriptEntry::Byte(0x01), // 9
                 ScriptEntry::Opcode(OP::Loop), // 10 => // for i = 1...5
@@ -20875,7 +20876,7 @@ mod tests {
                 // END TODO
                 // ScriptEntry::Opcode(OP::PopToScriptOuts), // 48 TODO: uncomment this (if needed) when previous TODO is done
                 ScriptEntry::Opcode(OP::PushOut), // 49
-                ScriptEntry::Opcode(OP::Verify), // 50
+                ScriptEntry::Opcode(OP::Verify),  // 50
             ],
             ..Script::default()
         };
@@ -20917,7 +20918,7 @@ mod tests {
                 ScriptEntry::Byte(0x01), // 4
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 5 => // o = 0
                 ScriptEntry::Byte(0x00), // 6
-                ScriptEntry::Opcode(OP::IfEq),         // 7 => // if o == n, true, stack [m]
+                ScriptEntry::Opcode(OP::IfEq), // 7 => // if o == n, true, stack [m]
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 8 => // i = 1, stack [m, i]
                 ScriptEntry::Byte(0x01), // 9
                 ScriptEntry::Opcode(OP::Loop), // 10 => // for i = 1...5
@@ -21004,7 +21005,7 @@ mod tests {
                 ScriptEntry::Byte(0x01), // 4
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 5 => // o = 0
                 ScriptEntry::Byte(0x00), // 6
-                ScriptEntry::Opcode(OP::IfEq),         // 7 => // if o == n, true, stack [m]
+                ScriptEntry::Opcode(OP::IfEq), // 7 => // if o == n, true, stack [m]
                 ScriptEntry::Opcode(OP::Unsigned8Var), // 8 => // i = 1, stack [m, i]
                 ScriptEntry::Byte(0x01), // 9
                 ScriptEntry::Opcode(OP::Loop), // 10 => // for i = 1...5
