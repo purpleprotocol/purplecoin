@@ -63,9 +63,9 @@ pub struct Frame<'a> {
     /// instruction pointer at the beginning of the loop and end_ip at the end.
     pub is_loop: Option<(usize, usize)>,
 
-    /// `true` if the current frame is inside a control operator (if, else),
-    /// `false` otherwise
-    pub is_control_op: bool,
+    /// An array of (start_ip, end_ip) marking the start and the end of the
+    /// control operator blocks that are currently executed
+    pub is_control_op: Vec<(usize, usize)>,
 
     /// Script executor
     pub executor: ScriptExecutor<'a>,
@@ -80,7 +80,7 @@ impl<'a> Frame<'a> {
             func_idx,
             executor: ScriptExecutor::new(),
             is_loop: None,
-            is_control_op: false,
+            is_control_op: vec![],
         }
     }
 }
@@ -342,6 +342,16 @@ impl Script {
             });
         let inputs_hash = Hash160::hash_from_slice(inputs_hashes, key);
 
+        let ops_with_ends = vec![ScriptEntry::Opcode(OP::Loop),
+                                 ScriptEntry::Opcode(OP::If),
+                                 ScriptEntry::Opcode(OP::Ifn),
+                                 ScriptEntry::Opcode(OP::IfLt),
+                                 ScriptEntry::Opcode(OP::IfGt),
+                                 ScriptEntry::Opcode(OP::IfLeq),
+                                 ScriptEntry::Opcode(OP::IfGeq),
+                                 ScriptEntry::Opcode(OP::IfEq),
+                                 ScriptEntry::Opcode(OP::IfNeq)];
+
         loop {
             let mut new_frame = None;
             let mut pop_frame = false;
@@ -359,6 +369,7 @@ impl Script {
                 } else {
                     let i = &f[frame.i_ptr];
                     exec_count += 1;
+                    // TODO: println!("PUSH_OP i_ptr: {:?}, OP: {:?}, INITIAL is_control_op: {:?}", frame.i_ptr, i, frame.is_control_op);
                     // Execute opcode
                     frame.executor.push_op(
                         &flags,
@@ -374,7 +385,7 @@ impl Script {
                         output_stack_idx_map,
                         &mut script_outputs,
                         key,
-                        exec_count,
+                        exec_count
                     );
 
                     // Check for new frames or if we should pop one
@@ -387,10 +398,26 @@ impl Script {
                             let start_i = nf.i_ptr;
                             let mut end_i = nf.i_ptr + 1;
 
+                            // Used to mark the finding of a new if / loop
+                            let mut other = 0;
+
                             // Find end instruction idx
                             loop {
+                                if ops_with_ends.contains(&self.script[end_i]) {
+                                    // Means we got to another operand that requires a closing OP
+                                    other += 1;
+                                    end_i += 1;
+                                    continue;
+                                }
+
                                 if let ScriptEntry::Opcode(OP::End) = self.script[end_i] {
-                                    break;
+                                    if other > 0 {
+                                        other -= 1;
+                                        end_i += 1;
+                                        continue;
+                                    } else {
+                                        break;
+                                    }
                                 }
 
                                 end_i += 1;
@@ -430,58 +457,116 @@ impl Script {
                         }
 
                         ScriptExecutorState::EndBlock => {
-                            if let Some((start_i, _)) = frame.is_loop {
-                                frame.i_ptr = start_i;
-                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                            } else if frame.is_control_op {
-                                frame.is_control_op = false;
-                                frame.i_ptr += 1;
-                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                            } else {
-                                pop_frame = true;
+                            let len = frame.is_control_op.len();
+                            let mut was_if = false;
+
+                            if len > 0 {
+                                // This means we are inside at least one if,
+                                // so we have to check if it's the over
+                                // of the loop or the over of the if block.
+                                let (_, end_i) = frame.is_control_op[len - 1];
+
+                                if end_i == frame.i_ptr {
+                                    // We reached the end of the last if
+                                    was_if = true;
+                                    frame.is_control_op.pop();
+                                    frame.i_ptr += 1;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                }
+                            }
+
+                            if !was_if {
+                                if let Some((start_i, _)) = frame.is_loop {
+                                    frame.i_ptr = start_i;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                } else {
+                                    pop_frame = true;
+                                }
                             }
                         }
 
                         ScriptExecutorState::ControlOperator(opt) => match opt {
                             Some(true) => {
-                                frame.is_control_op = true;
+                                let start_i = frame.i_ptr;
+                                let mut end_i = frame.i_ptr + 1;
+
+                                // Used to mark the finding of a new if / loop
+                                let mut other = 0;
+
+                                loop {
+                                    if ops_with_ends.contains(&self.script[end_i]) {
+                                        // Means we got to another operand that requires a closing OP
+                                        other += 1;
+                                        end_i += 1;
+                                        continue;
+                                    }
+
+                                    if let ScriptEntry::Opcode(OP::End) = self.script[end_i] {
+                                        if other > 0 {
+                                            other -= 1;
+                                            end_i += 1;
+                                            continue;
+                                        } else {
+                                            break;
+                                        }
+                                    }
+
+                                    end_i += 1;
+                                }
+
+                                frame.is_control_op.push((start_i, end_i));
                                 frame.i_ptr += 1;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             }
                             Some(false) => {
-                                let mut next_i = frame.i_ptr + 1;
+                                let start_i = frame.i_ptr;
+                                let mut end_i = frame.i_ptr + 1;
+                                let mut next_i = 0;
+
+                                // Used to mark the finding of a new if / loop
+                                let mut other = 0;
 
                                 loop {
-                                    if let ScriptEntry::Opcode(OP::Else) = self.script[next_i] {
-                                        frame.is_control_op = true;
-                                        break;
+                                    if ops_with_ends.contains(&self.script[end_i]) {
+                                        // Means we got to another operand that requires a closing OP
+                                        other += 1;
+                                        end_i += 1;
+                                        continue;
                                     }
 
-                                    if let ScriptEntry::Opcode(OP::End) = self.script[next_i] {
-                                        frame.is_control_op = false;
-                                        break;
+                                    if let ScriptEntry::Opcode(OP::Else) = self.script[end_i] {
+                                        if other > 0 {
+                                            // We hit an Else, but not from the current if
+                                            end_i += 1;
+                                            continue;
+                                        } else {
+                                            // Mark the position of the Else statement
+                                            // so the script will continue the execution from here
+                                            next_i = end_i;
+                                        }
                                     }
 
-                                    next_i += 1;
+                                    if let ScriptEntry::Opcode(OP::End) = self.script[end_i] {
+                                        if other > 0 {
+                                            other -= 1;
+                                            end_i += 1;
+                                            continue;
+                                        } else {
+                                            break;
+                                        }
+                                    }
+
+                                    end_i += 1;
                                 }
 
-                                frame.i_ptr = next_i + 1;
+                                frame.is_control_op.push((start_i, end_i));
+                                frame.i_ptr = if next_i == 0 { end_i } else { next_i + 1 };
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             }
                             None => {
-                                frame.is_control_op = false;
+                                let (_, end_i) = frame.is_control_op.pop().unwrap();
 
-                                let mut next_i = frame.i_ptr + 1;
-
-                                loop {
-                                    if let ScriptEntry::Opcode(OP::End) = self.script[next_i] {
-                                        break;
-                                    }
-
-                                    next_i += 1;
-                                }
-
-                                frame.i_ptr = next_i + 1;
+                                frame.i_ptr = end_i + 1;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             }
                         },
@@ -2196,8 +2281,11 @@ impl<'a> ScriptExecutor<'a> {
         output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
         script_outputs: &mut Vec<VmTerm>,
         key: &str,
-        exec_count: u64,
+        exec_count: u64
     ) {
+        let mut aaa = exec_stack.clone();
+        // TODO: println!("PUSH_OP i_ptr: {:?}, OP: {:?}, INITIAL exec_stack: {:?}", i_ptr, op, aaa);
+
         match self.state {
             ScriptExecutorState::ExpectingArgsLen => match op {
                 ScriptEntry::Byte(args_len) => {
@@ -6202,8 +6290,15 @@ impl<'a> ScriptExecutor<'a> {
                     );
                 }
             },
-            _ => unimplemented!(),
+            _ =>
+                {
+                    unimplemented!();
+                }
         }
+
+        let mut aaa = exec_stack.clone();
+        // TODO: println!("PUSH_OP i_ptr: {:?}, OP: {:?}, AFTER exec_stack: {:?}", i_ptr, op, aaa);
+        // TODO: println!("");
     }
 
     #[inline]
@@ -20693,6 +20788,275 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x04)];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_complex_if_equals() {
+        /*
+        m = 1, n = 1, o = 1
+
+        if o == n {
+            for i = 1...5 {
+                if i != 2 {
+                    m *= i
+                }
+
+                if i == 3 {
+                    m *= (i + 1)
+                }
+            }
+        } else {
+            if m == 1 {
+                m = 10
+            }
+        }
+
+        print m -> 240
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 0 => // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 1 => // m = 1
+                ScriptEntry::Byte(0x01), // 2
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 3 => // n = 1
+                ScriptEntry::Byte(0x01), // 4
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 5 => // o = 1
+                ScriptEntry::Byte(0x01), // 6
+                ScriptEntry::Opcode(OP::IfEq),         // 7 => // if o == n, true, stack [m]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 8 => // i = 1, stack [m, i]
+                ScriptEntry::Byte(0x01), // 9
+                ScriptEntry::Opcode(OP::Loop), // 10 => // for i = 1...5
+                ScriptEntry::Opcode(OP::Dup), // 11 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 12
+                ScriptEntry::Byte(0x02), // 13 => // 2, for the first if inside loop, stack [m, i, i, 2]
+                ScriptEntry::Opcode(OP::IfNeq), // 14 => // if i != 2, stack [m, i]
+                ScriptEntry::Opcode(OP::Dup), // 15 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Roll), // 16
+                ScriptEntry::Byte(0x02), // 17 => // stack [i, i, m]
+                ScriptEntry::Opcode(OP::Mult), // 18 => // stack [i, m]
+                ScriptEntry::Opcode(OP::Swap), // 19 => // stack [m, i]
+                ScriptEntry::Opcode(OP::End), // 20 => // end if i != 2
+                ScriptEntry::Opcode(OP::Dup), // 21 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 22
+                ScriptEntry::Byte(0x03), // 23 => // 3, for the second if inside loop, stack [m, i, i, 3]
+                ScriptEntry::Opcode(OP::IfEq), // 24 => // if i == 3, stack [m, i]
+                ScriptEntry::Opcode(OP::Dup), // 25 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Add1), // 26 => // stack [m, i, i + 1]
+                ScriptEntry::Opcode(OP::Roll), // 27
+                ScriptEntry::Byte(0x02), // 28 => // stack [i, i+1, m]
+                ScriptEntry::Opcode(OP::Mult), // 29 => // stack [i, m]
+                ScriptEntry::Opcode(OP::Swap), // 30 => // stack [m, i]
+                ScriptEntry::Opcode(OP::End), // 31 => // end if i == 3
+                ScriptEntry::Opcode(OP::Dup), // 32 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 33
+                ScriptEntry::Byte(0x05), // 34 => // 5, condition for loop to break
+                ScriptEntry::Opcode(OP::BreakIfEq), // 35
+                ScriptEntry::Opcode(OP::Add1), // 36 => // increment for loop counter with 1
+                ScriptEntry::Opcode(OP::End), // 37 => // end for
+                ScriptEntry::Opcode(OP::Else), // 38 => // else, stack [m]
+                ScriptEntry::Opcode(OP::Dup), // 39 => // stack [m, m]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 40 => // i = 1, stack [m, m, 1]
+                ScriptEntry::Byte(0x01), // 41
+                ScriptEntry::Opcode(OP::IfEq), // 42 => // stack [m]
+                ScriptEntry::Opcode(OP::Drop), // 43 => // stack []
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 44 => // 10, stack [10]
+                ScriptEntry::Byte(0x0a), // 45
+                ScriptEntry::Opcode(OP::End), // 46 => // end if m == 1
+                ScriptEntry::Opcode(OP::End), // 47 => // end if o == n
+                // TODO: have to verify with debugging the content of the stack after a frame is removed
+                // For now, just pick the result from the correct position
+                ScriptEntry::Opcode(OP::Drop2),
+                ScriptEntry::Opcode(OP::Drop),
+                ScriptEntry::Opcode(OP::PopToScriptOuts), // here is the result
+                ScriptEntry::Opcode(OP::Drop2),
+                ScriptEntry::Opcode(OP::Drop),
+                // END TODO
+                // ScriptEntry::Opcode(OP::PopToScriptOuts), // 48 TODO: uncomment this (if needed) when previous TODO is done
+                ScriptEntry::Opcode(OP::PushOut), // 49
+                ScriptEntry::Opcode(OP::Verify), // 50
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0xf0)]; // m == 240
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_complex_if_else() {
+        /*
+        m = 1, n = 1, o = 0
+
+        if o == n {
+            for i = 1...5 {
+                if i != 2 {
+                    m *= i
+                }
+
+                if i == 3 {
+                    m *= (i + 1)
+                }
+            }
+        } else {
+            if m == 1 {
+                m = 10
+            }
+        }
+
+        print m -> 10
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 0 => // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 1 => // m = 1
+                ScriptEntry::Byte(0x01), // 2
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 3 => // n = 1
+                ScriptEntry::Byte(0x01), // 4
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 5 => // o = 0
+                ScriptEntry::Byte(0x00), // 6
+                ScriptEntry::Opcode(OP::IfEq),         // 7 => // if o == n, true, stack [m]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 8 => // i = 1, stack [m, i]
+                ScriptEntry::Byte(0x01), // 9
+                ScriptEntry::Opcode(OP::Loop), // 10 => // for i = 1...5
+                ScriptEntry::Opcode(OP::Dup), // 11 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 12
+                ScriptEntry::Byte(0x02), // 13 => // 2, for the first if inside loop, stack [m, i, i, 2]
+                ScriptEntry::Opcode(OP::IfNeq), // 14 => // if i != 2, stack [m, i]
+                ScriptEntry::Opcode(OP::Dup), // 15 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Roll), // 16
+                ScriptEntry::Byte(0x02), // 17 => // stack [i, i, m]
+                ScriptEntry::Opcode(OP::Mult), // 18 => // stack [i, m]
+                ScriptEntry::Opcode(OP::Swap), // 19 => // stack [m, i]
+                ScriptEntry::Opcode(OP::End), // 20 => // end if i != 2
+                ScriptEntry::Opcode(OP::Dup), // 21 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 22
+                ScriptEntry::Byte(0x03), // 23 => // 3, for the second if inside loop, stack [m, i, i, 3]
+                ScriptEntry::Opcode(OP::IfEq), // 24 => // if i == 3, stack [m, i]
+                ScriptEntry::Opcode(OP::Dup), // 25 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Add1), // 26 => // stack [m, i, i + 1]
+                ScriptEntry::Opcode(OP::Roll), // 27
+                ScriptEntry::Byte(0x02), // 28 => // stack [i, i+1, m]
+                ScriptEntry::Opcode(OP::Mult), // 29 => // stack [i, m]
+                ScriptEntry::Opcode(OP::Swap), // 30 => // stack [m, i]
+                ScriptEntry::Opcode(OP::End), // 31 => // end if i == 3
+                ScriptEntry::Opcode(OP::Dup), // 32 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 33
+                ScriptEntry::Byte(0x05), // 34 => // 5, condition for loop to break
+                ScriptEntry::Opcode(OP::BreakIfEq), // 35
+                ScriptEntry::Opcode(OP::Add1), // 36 => // increment for loop counter with 1
+                ScriptEntry::Opcode(OP::End), // 37 => // end for
+                ScriptEntry::Opcode(OP::Else), // 38 => // else, stack [m]
+                ScriptEntry::Opcode(OP::Dup), // 39 => // stack [m, m]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 40 => // i = 1, stack [m, m, 1]
+                ScriptEntry::Byte(0x01), // 41
+                ScriptEntry::Opcode(OP::IfEq), // 42 => // stack [m]
+                ScriptEntry::Opcode(OP::Drop), // 43 => // stack []
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 44 => // 10, stack [10]
+                ScriptEntry::Byte(0x0a), // 45
+                ScriptEntry::Opcode(OP::End), // 46 => // end if m == 1
+                ScriptEntry::Opcode(OP::End), // 47 => // end if o == n
+                ScriptEntry::Opcode(OP::PopToScriptOuts), // 48
+                ScriptEntry::Opcode(OP::PushOut), // 49
+                ScriptEntry::Opcode(OP::Verify), // 50
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x0a)]; // m == 10
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn control_operator_complex_if_else_test_2() {
+        /*
+        m = 1, n = 1, o = 0
+
+        if o == n {
+            for i = 1...5 {
+                if i != 2 {
+                    m *= i
+                }
+
+                if i == 3 {
+                    m *= (i + 1)
+                }
+            }
+        } else {
+            if m == 2 {
+                m = 10
+            } else {
+                m = 20
+            }
+        }
+
+        print m -> 20
+        */
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 0 => // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 1 => // m = 1
+                ScriptEntry::Byte(0x01), // 2
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 3 => // n = 1
+                ScriptEntry::Byte(0x01), // 4
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 5 => // o = 0
+                ScriptEntry::Byte(0x00), // 6
+                ScriptEntry::Opcode(OP::IfEq),         // 7 => // if o == n, true, stack [m]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 8 => // i = 1, stack [m, i]
+                ScriptEntry::Byte(0x01), // 9
+                ScriptEntry::Opcode(OP::Loop), // 10 => // for i = 1...5
+                ScriptEntry::Opcode(OP::Dup), // 11 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 12
+                ScriptEntry::Byte(0x02), // 13 => // 2, for the first if inside loop, stack [m, i, i, 2]
+                ScriptEntry::Opcode(OP::IfNeq), // 14 => // if i != 2, stack [m, i]
+                ScriptEntry::Opcode(OP::Dup), // 15 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Roll), // 16
+                ScriptEntry::Byte(0x02), // 17 => // stack [i, i, m]
+                ScriptEntry::Opcode(OP::Mult), // 18 => // stack [i, m]
+                ScriptEntry::Opcode(OP::Swap), // 19 => // stack [m, i]
+                ScriptEntry::Opcode(OP::End), // 20 => // end if i != 2
+                ScriptEntry::Opcode(OP::Dup), // 21 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 22
+                ScriptEntry::Byte(0x03), // 23 => // 3, for the second if inside loop, stack [m, i, i, 3]
+                ScriptEntry::Opcode(OP::IfEq), // 24 => // if i == 3, stack [m, i]
+                ScriptEntry::Opcode(OP::Dup), // 25 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Add1), // 26 => // stack [m, i, i + 1]
+                ScriptEntry::Opcode(OP::Roll), // 27
+                ScriptEntry::Byte(0x02), // 28 => // stack [i, i+1, m]
+                ScriptEntry::Opcode(OP::Mult), // 29 => // stack [i, m]
+                ScriptEntry::Opcode(OP::Swap), // 30 => // stack [m, i]
+                ScriptEntry::Opcode(OP::End), // 31 => // end if i == 3
+                ScriptEntry::Opcode(OP::Dup), // 32 => // stack [m, i, i]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 33
+                ScriptEntry::Byte(0x05), // 34 => // 5, condition for loop to break
+                ScriptEntry::Opcode(OP::BreakIfEq), // 35
+                ScriptEntry::Opcode(OP::Add1), // 36 => // increment for loop counter with 1
+                ScriptEntry::Opcode(OP::End), // 37 => // end for
+                ScriptEntry::Opcode(OP::Else), // 38 => // else, stack [m]
+                ScriptEntry::Opcode(OP::Dup), // 39 => // stack [m, m]
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 40 => // i = 1, stack [m, m, 1]
+                ScriptEntry::Byte(0x02), // 41
+                ScriptEntry::Opcode(OP::IfEq), // 42 => // stack [m]
+                ScriptEntry::Opcode(OP::Drop), // 43 => // stack []
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 44 => // 10, stack [10]
+                ScriptEntry::Byte(0x0a), // 45
+                ScriptEntry::Opcode(OP::Else), // 46 => // else
+                ScriptEntry::Opcode(OP::Drop), // 47 => // stack []
+                ScriptEntry::Opcode(OP::Unsigned8Var), // 48 => // 20, stack [20]
+                ScriptEntry::Byte(0x14), // 49
+                ScriptEntry::Opcode(OP::End), // 50 => // end if m == 1
+                ScriptEntry::Opcode(OP::End), // 51 => // end if o == n
+                ScriptEntry::Opcode(OP::PopToScriptOuts), // 52
+                ScriptEntry::Opcode(OP::PushOut), // 53
+                ScriptEntry::Opcode(OP::Verify), // 54
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x14)]; // m == 20
         assert_script_ok(ss, script_output, key);
     }
 }
