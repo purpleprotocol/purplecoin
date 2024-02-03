@@ -1912,6 +1912,55 @@ impl Script {
                             }
                         }
 
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetOutReceiver) => {
+                            let mut idx: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                idx += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                idx += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            if idx as usize >= output_stack.len() {
+                                frame.executor.state = ScriptExecutorState::Error(
+                                    ExecutionResult::IndexOutOfBounds,
+                                    (
+                                        frame.i_ptr,
+                                        frame.func_idx,
+                                        i.clone(),
+                                        frame.stack.as_slice(),
+                                    )
+                                        .into(),
+                                );
+                            } else {
+                                let output = &output_stack[idx as usize];
+
+                                if let Some(receiver) = &output.coloured_address {
+                                    let term = VmTerm::Unsigned8Array(receiver.address.to_vec());
+                                    memory_size += term.size();
+                                    frame.stack.push(term);
+                                } else if let Some(receiver) = &output.address {
+                                    let term = VmTerm::Unsigned8Array(receiver.0.to_vec());
+                                    memory_size += term.size();
+                                    frame.stack.push(term);
+                                } else {
+                                    // Push 0 as empty array
+                                    frame.stack.push(VmTerm::Unsigned8Array(vec![]));
+                                    memory_size += EMPTY_VEC_HEAP_SIZE;
+                                }
+
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                frame.i_ptr += 1;
+                            }
+                        }
+
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetAtArray) => {
                             let exec_stack = &mut frame.stack;
                             let len: usize = exec_stack.len();
@@ -2759,6 +2808,11 @@ impl<'a> ScriptExecutor<'a> {
                     self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::ColourHash);
                 }
 
+                ScriptEntry::Opcode(OP::GetOutReceiver) => {
+                    self.state =
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetOutReceiver);
+                }
+
                 ScriptEntry::Opcode(OP::GetSpentOutScriptOut) => {
                     if flags.spent_out.as_ref().is_some() {
                         self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(
@@ -2815,16 +2869,10 @@ impl<'a> ScriptExecutor<'a> {
 
                 ScriptEntry::Opcode(OP::GetSpentOutReceiver) => {
                     if let Some(out) = flags.spent_out.as_ref() {
-                        if out.is_coloured() {
-                            if let Some(receiver) = &out.coloured_address {
-                                let term = VmTerm::Unsigned8Array(receiver.address.to_vec());
-                                *memory_size += term.size();
-                                exec_stack.push(term);
-                            } else {
-                                // Push 0 as empty array
-                                exec_stack.push(VmTerm::Unsigned8Array(vec![]));
-                                *memory_size += EMPTY_VEC_HEAP_SIZE;
-                            }
+                        if let Some(receiver) = &out.coloured_address {
+                            let term = VmTerm::Unsigned8Array(receiver.address.to_vec());
+                            *memory_size += term.size();
+                            exec_stack.push(term);
                         } else if let Some(receiver) = &out.address {
                             let term = VmTerm::Unsigned8Array(receiver.0.to_vec());
                             *memory_size += term.size();
@@ -6646,6 +6694,9 @@ impl ScriptParser {
                 }
                 Some(OP::ColourHash) => {
                     impl_parser_expecting_bytes!(self, OP::ColourHash, 2)
+                }
+                Some(OP::GetOutReceiver) => {
+                    impl_parser_expecting_bytes!(self, OP::GetOutReceiver, 2)
                 }
                 Some(OP::GetOutScriptOutsLen) => {
                     impl_parser_expecting_bytes!(self, OP::GetOutScriptOutsLen, 2)
