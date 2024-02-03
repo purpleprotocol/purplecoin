@@ -6,7 +6,7 @@
 
 use crate::consensus::SCRIPT_LIMIT_OPCODES;
 use crate::primitives::{Address, Hash160, Input, Output};
-use crate::vm::internal::{Float32Wrapper, Float64Wrapper, VmTerm};
+use crate::vm::internal::{Float32Wrapper, Float64Wrapper, VmTerm, EMPTY_VEC_HEAP_SIZE};
 use crate::vm::opcodes::OP;
 use crate::vm::sig_verification::{
     verify_single_bip340, verify_single_ecdsa, verify_single_ed25519, VerificationStack,
@@ -2711,6 +2711,35 @@ impl<'a> ScriptExecutor<'a> {
                     if let Some(out) = flags.spent_out.as_ref() {
                         exec_stack.push(VmTerm::Signed128(out.amount));
                         *memory_size += 16;
+                    } else {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidOPForCoinbaseInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::GetSpentOutReceiver) => {
+                    if let Some(out) = flags.spent_out.as_ref() {
+                        if out.is_coloured() {
+                            if let Some(receiver) = &out.coloured_address {
+                                let term = VmTerm::Unsigned8Array(receiver.address.to_vec());
+                                *memory_size += term.size();
+                                exec_stack.push(term);
+                            } else {
+                                // Push 0 as empty array
+                                exec_stack.push(VmTerm::Unsigned8Array(vec![]));
+                                *memory_size += EMPTY_VEC_HEAP_SIZE;
+                            }
+                        } else if let Some(receiver) = &out.address {
+                            let term = VmTerm::Unsigned8Array(receiver.0.to_vec());
+                            *memory_size += term.size();
+                            exec_stack.push(term);
+                        } else {
+                            // Push 0 as empty array
+                            exec_stack.push(VmTerm::Unsigned8Array(vec![]));
+                            *memory_size += EMPTY_VEC_HEAP_SIZE;
+                        }
                     } else {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidOPForCoinbaseInput,

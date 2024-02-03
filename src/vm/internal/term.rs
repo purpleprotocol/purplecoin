@@ -165,6 +165,10 @@ macro_rules! impl_hash_array_debug {
 
 macro_rules! check_array_values {
     ($arr:expr, $val:expr) => {{
+        if $arr.is_empty() {
+            return false;
+        }
+
         for v in $arr.iter() {
             if *v != $val {
                 return false;
@@ -176,6 +180,10 @@ macro_rules! check_array_values {
 
 macro_rules! check_array_values_wrapper {
     ($arr:expr, $val:expr) => {{
+        if $arr.is_empty() {
+            return false;
+        }
+
         for v in $arr.iter() {
             if v.0 != $val {
                 return false;
@@ -188,12 +196,18 @@ macro_rules! check_array_values_wrapper {
 macro_rules! check_array_values_negate {
     ($arr:expr, $val:expr) => {{
         let mut r = true;
+
+        if $arr.is_empty() {
+            r = false;
+        }
+
         for v in $arr.iter() {
             if *v != $val {
                 r = false;
                 break;
             }
         }
+
         r
     }};
 }
@@ -201,12 +215,18 @@ macro_rules! check_array_values_negate {
 macro_rules! check_array_values_wrapper_negate {
     ($arr:expr, $val:expr) => {{
         let mut r = true;
+
+        if $arr.is_empty() {
+            r = false;
+        }
+
         for v in $arr.iter() {
             if v.0 != $val {
                 r = false;
                 break;
             }
         }
+
         r
     }};
 }

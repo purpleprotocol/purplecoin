@@ -234,7 +234,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xda` PushOutIfLeq - Pushes a new output to the output stack if the topmost item on the stack is less or equal than the second item on the stack. The following arguments are popped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [x] OP `0xdb` PushOutIfGeq - Pushes a new output to the output stack if the topmost item on the stack is greater or equal than the second item on the stack. The following arguments are popped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [x] OP `0xdc` GetSpentOutAmount - Pushes the amount of the spent output to the top of the stack
-    - [ ] OP `0xde` GetSpentOutReceiver - Pushes the address of the receiver of the spent output to the top of the stack. Pushes `0` of the output does not have a receiver address. If the output is coloured, pushes a coloured address.
+    - [x] OP `0xde` GetSpentOutReceiver - Pushes the address of the receiver of the spent output to the top of the stack. Pushes `0` if the output does not have a receiver address. If the output is coloured, pushes a coloured address.
     - [x] OP `0xdf` GetSpentOutScriptHash - Pushes the script hash of the spent output to the top of the stack.
     - [x] OP `0xe0` GetSpentOutScriptOutsLen - Pushes the number of script outs the spent output has on top of the stack.
     - [x] OP `0xe1` GetSpentOutScriptOut - Pushes the script output of the spent output at the given index to the top of stack.
