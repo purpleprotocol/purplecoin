@@ -1826,6 +1826,49 @@ impl Script {
                             }
                         }
 
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::IsColouredOut) => {
+                            let mut idx: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                idx += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                idx += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            if idx as usize >= output_stack.len() {
+                                frame.executor.state = ScriptExecutorState::Error(
+                                    ExecutionResult::IndexOutOfBounds,
+                                    (
+                                        frame.i_ptr,
+                                        frame.func_idx,
+                                        i.clone(),
+                                        frame.stack.as_slice(),
+                                    )
+                                        .into(),
+                                );
+                            } else {
+                                let output = &output_stack[idx as usize];
+
+                                if output.is_coloured() {
+                                    frame.stack.push(VmTerm::Unsigned8(1));
+                                    memory_size += 1;
+                                } else {
+                                    frame.stack.push(VmTerm::Unsigned8(0));
+                                    memory_size += 1;
+                                }
+
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                frame.i_ptr += 1;
+                            }
+                        }
+
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetAtArray) => {
                             let exec_stack = &mut frame.stack;
                             let len: usize = exec_stack.len();
@@ -2663,6 +2706,10 @@ impl<'a> ScriptExecutor<'a> {
 
                 ScriptEntry::Opcode(OP::GetOutAmount) => {
                     self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetOutAmount);
+                }
+
+                ScriptEntry::Opcode(OP::IsColouredOut) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::IsColouredOut);
                 }
 
                 ScriptEntry::Opcode(OP::GetSpentOutScriptOut) => {
@@ -6546,6 +6593,9 @@ impl ScriptParser {
                 }
                 Some(OP::GetOutAmount) => {
                     impl_parser_expecting_bytes!(self, OP::GetOutAmount, 2)
+                }
+                Some(OP::IsColouredOut) => {
+                    impl_parser_expecting_bytes!(self, OP::IsColouredOut, 2)
                 }
                 Some(OP::GetOutScriptOutsLen) => {
                     impl_parser_expecting_bytes!(self, OP::GetOutScriptOutsLen, 2)
