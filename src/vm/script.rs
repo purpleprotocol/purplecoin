@@ -2748,6 +2748,23 @@ impl<'a> ScriptExecutor<'a> {
                     }
                 }
 
+                ScriptEntry::Opcode(OP::SpentOutIsColouredOut) => {
+                    if let Some(out) = flags.spent_out.as_ref() {
+                        if out.is_coloured() {
+                            exec_stack.push(VmTerm::Unsigned8(1));
+                            *memory_size += 1;
+                        } else {
+                            exec_stack.push(VmTerm::Unsigned8(0));
+                            *memory_size += 1;
+                        }
+                    } else {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidOPForCoinbaseInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                }
+
                 ScriptEntry::Opcode(OP::Concat) => {
                     let mut len = exec_stack.len();
                     if len < 2 {
