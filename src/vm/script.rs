@@ -371,7 +371,6 @@ impl Script {
                 } else {
                     let i = &f[frame.i_ptr];
                     exec_count += 1;
-                    // TODO: println!("PUSH_OP i_ptr: {:?}, OP: {:?}, INITIAL is_control_op: {:?}", frame.i_ptr, i, frame.is_control_op);
                     // Execute opcode
                     frame.executor.push_op(
                         &flags,
@@ -2196,7 +2195,7 @@ impl Script {
                     parent_frame.i_ptr += 1;
 
                     // Push terms on the parent stack
-                    for t in frame.stack.iter().rev().cloned() {
+                    for t in frame.stack.iter().cloned() {
                         parent_stack.push(t);
 
                         if parent_stack.len() > STACK_SIZE {
@@ -2285,9 +2284,6 @@ impl<'a> ScriptExecutor<'a> {
         key: &str,
         exec_count: u64,
     ) {
-        let mut aaa = exec_stack.clone();
-        // TODO: println!("PUSH_OP i_ptr: {:?}, OP: {:?}, INITIAL exec_stack: {:?}", i_ptr, op, aaa);
-
         match self.state {
             ScriptExecutorState::ExpectingArgsLen => match op {
                 ScriptEntry::Byte(args_len) => {
@@ -6296,10 +6292,6 @@ impl<'a> ScriptExecutor<'a> {
                 unimplemented!();
             }
         }
-
-        let mut aaa = exec_stack.clone();
-        // TODO: println!("PUSH_OP i_ptr: {:?}, OP: {:?}, AFTER exec_stack: {:?}", i_ptr, op, aaa);
-        // TODO: println!("");
     }
 
     #[inline]
@@ -20866,17 +20858,9 @@ mod tests {
                 ScriptEntry::Byte(0x0a), // 45
                 ScriptEntry::Opcode(OP::End), // 46 => // end if m == 1
                 ScriptEntry::Opcode(OP::End), // 47 => // end if o == n
-                // TODO: have to verify with debugging the content of the stack after a frame is removed
-                // For now, just pick the result from the correct position
-                ScriptEntry::Opcode(OP::Drop2),
                 ScriptEntry::Opcode(OP::Drop),
-                ScriptEntry::Opcode(OP::PopToScriptOuts), // here is the result
-                ScriptEntry::Opcode(OP::Drop2),
-                ScriptEntry::Opcode(OP::Drop),
-                // END TODO
-                // ScriptEntry::Opcode(OP::PopToScriptOuts), // 48 TODO: uncomment this (if needed) when previous TODO is done
-                ScriptEntry::Opcode(OP::PushOut), // 49
-                ScriptEntry::Opcode(OP::Verify),  // 50
+                ScriptEntry::Opcode(OP::PopToScriptOuts), // 48
+                ScriptEntry::Opcode(OP::PushOutVerify), // 49
             ],
             ..Script::default()
         };
