@@ -20860,7 +20860,7 @@ mod tests {
                 ScriptEntry::Opcode(OP::End), // 47 => // end if o == n
                 ScriptEntry::Opcode(OP::Drop),
                 ScriptEntry::Opcode(OP::PopToScriptOuts), // 48
-                ScriptEntry::Opcode(OP::PushOutVerify), // 49
+                ScriptEntry::Opcode(OP::PushOutVerify),   // 49
             ],
             ..Script::default()
         };
