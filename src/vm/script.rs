@@ -7175,31 +7175,31 @@ impl ScriptParser {
                     Ok(())
                 }
                 Some(
-                    OP::If
+                    op @ (OP::If
                     | OP::Ifn
                     | OP::IfLt
                     | OP::IfGt
                     | OP::IfLeq
                     | OP::IfGeq
                     | OP::IfEq
-                    | OP::IfNeq,
+                    | OP::IfNeq),
                 ) if matches!(self.state, ScriptParserState::ExpectingOP) => {
-                    push_out!(self, ScriptEntry::Opcode(OP::If));
+                    push_out!(self, ScriptEntry::Opcode(op));
                     self.state =
                         ScriptParserState::ExpectingOPCF(vec![ControlFlowState::Conditional], true);
                     Ok(())
                 }
                 Some(
-                    OP::If
+                    op @ (OP::If
                     | OP::Ifn
                     | OP::IfLt
                     | OP::IfGt
                     | OP::IfLeq
                     | OP::IfGeq
                     | OP::IfEq
-                    | OP::IfNeq,
+                    | OP::IfNeq),
                 ) if matches!(self.state, ScriptParserState::ExpectingOPButNotFuncOrEnd) => {
-                    push_out!(self, ScriptEntry::Opcode(OP::If));
+                    push_out!(self, ScriptEntry::Opcode(op));
                     self.state = ScriptParserState::ExpectingOPCF(
                         vec![ControlFlowState::Conditional],
                         false,
@@ -7207,16 +7207,16 @@ impl ScriptParser {
                     Ok(())
                 }
                 Some(
-                    OP::If
+                    op @ (OP::If
                     | OP::Ifn
                     | OP::IfLt
                     | OP::IfGt
                     | OP::IfLeq
                     | OP::IfGeq
                     | OP::IfEq
-                    | OP::IfNeq,
+                    | OP::IfNeq),
                 ) if matches!(self.state, ScriptParserState::ExpectingOPCF(_, _)) => {
-                    push_out!(self, ScriptEntry::Opcode(OP::If));
+                    push_out!(self, ScriptEntry::Opcode(op));
                     if let ScriptParserState::ExpectingOPCF(ref mut cf_stack, _) = self.state {
                         cf_stack.push(ControlFlowState::Conditional);
                     } else {
