@@ -1961,6 +1961,35 @@ impl Script {
                             }
                         }
 
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::PushPrevScriptOuts) => {
+                            let mut idx: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                idx += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                idx += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            let script_outs =
+                                flags.spent_out.as_ref().map(|o| &o.script_outs).unwrap();
+                            let terms = script_outs.iter().take(idx as usize).cloned();
+
+                            for t in terms {
+                                memory_size += t.size();
+                                frame.stack.push(t);
+                            }
+
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                        }
+
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetAtArray) => {
                             let exec_stack = &mut frame.stack;
                             let len: usize = exec_stack.len();
@@ -2811,6 +2840,18 @@ impl<'a> ScriptExecutor<'a> {
                 ScriptEntry::Opcode(OP::GetOutReceiver) => {
                     self.state =
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::GetOutReceiver);
+                }
+
+                ScriptEntry::Opcode(OP::PushPrevScriptOuts) => {
+                    if flags.spent_out.as_ref().is_some() {
+                        self.state =
+                            ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::PushPrevScriptOuts);
+                    } else {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidOPForCoinbaseInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
                 }
 
                 ScriptEntry::Opcode(OP::GetSpentOutScriptOut) => {
@@ -6703,6 +6744,9 @@ impl ScriptParser {
                 }
                 Some(OP::GetOutScriptHash) => {
                     impl_parser_expecting_bytes!(self, OP::GetOutScriptHash, 2)
+                }
+                Some(OP::PushPrevScriptOuts) => {
+                    impl_parser_expecting_bytes!(self, OP::PushPrevScriptOuts, 2)
                 }
                 Some(OP::GetSpentOutScriptOut) => {
                     impl_parser_expecting_bytes!(self, OP::GetSpentOutScriptOut, 2)
