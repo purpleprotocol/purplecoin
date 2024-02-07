@@ -75,7 +75,7 @@ impl Transaction {
                     prev_block_hash,
                     in_binary: input.to_bytes_for_signing(),
                     in_args: input.script_args.clone(),
-                    spent_out: input.out.as_ref().cloned(),
+                    spent_out: input.out.clone(),
                 },
             );
         }

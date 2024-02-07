@@ -342,7 +342,7 @@ impl Script {
             });
         let inputs_hash = Hash160::hash_from_slice(inputs_hashes, key);
 
-        let ops_with_ends = vec![
+        let ops_with_ends = [
             ScriptEntry::Opcode(OP::Loop),
             ScriptEntry::Opcode(OP::If),
             ScriptEntry::Opcode(OP::Ifn),
@@ -7133,22 +7133,92 @@ impl ScriptParser {
                     }
                     Ok(())
                 }
+                Some(OP::Else) if !matches!(self.state, ScriptParserState::ExpectingOPCF(_, _)) => {
+                    Err("invalid script, did not expect an else opcode")
+                }
+                Some(OP::Else) if matches!(self.state, ScriptParserState::ExpectingOPCF(_, _)) => {
+                    if let ScriptParserState::ExpectingOPCF(ref mut cf_stack, _) = self.state {
+                        let top = cf_stack.pop();
+
+                        if let Some(ControlFlowState::Conditional) = top {
+                            push_out!(self, ScriptEntry::Opcode(OP::Else));
+                            cf_stack.push(ControlFlowState::Else);
+                        } else {
+                            return Err("invalid script, did not expect an else opcode");
+                        }
+                    } else {
+                        unreachable!();
+                    }
+                    Ok(())
+                }
                 Some(OP::Loop) if matches!(self.state, ScriptParserState::ExpectingOP) => {
                     push_out!(self, ScriptEntry::Opcode(OP::Loop));
-                    self.state = ScriptParserState::ExpectingOPCF(vec![OP::Loop], true);
+                    self.state =
+                        ScriptParserState::ExpectingOPCF(vec![ControlFlowState::Loop], true);
                     Ok(())
                 }
                 Some(OP::Loop)
                     if matches!(self.state, ScriptParserState::ExpectingOPButNotFuncOrEnd) =>
                 {
                     push_out!(self, ScriptEntry::Opcode(OP::Loop));
-                    self.state = ScriptParserState::ExpectingOPCF(vec![OP::Loop], false);
+                    self.state =
+                        ScriptParserState::ExpectingOPCF(vec![ControlFlowState::Loop], false);
                     Ok(())
                 }
                 Some(OP::Loop) if matches!(self.state, ScriptParserState::ExpectingOPCF(_, _)) => {
                     push_out!(self, ScriptEntry::Opcode(OP::Loop));
                     if let ScriptParserState::ExpectingOPCF(ref mut cf_stack, _) = self.state {
-                        cf_stack.push(OP::Loop);
+                        cf_stack.push(ControlFlowState::Loop);
+                    } else {
+                        unreachable!();
+                    }
+                    Ok(())
+                }
+                Some(
+                    OP::If
+                    | OP::Ifn
+                    | OP::IfLt
+                    | OP::IfGt
+                    | OP::IfLeq
+                    | OP::IfGeq
+                    | OP::IfEq
+                    | OP::IfNeq,
+                ) if matches!(self.state, ScriptParserState::ExpectingOP) => {
+                    push_out!(self, ScriptEntry::Opcode(OP::If));
+                    self.state =
+                        ScriptParserState::ExpectingOPCF(vec![ControlFlowState::Conditional], true);
+                    Ok(())
+                }
+                Some(
+                    OP::If
+                    | OP::Ifn
+                    | OP::IfLt
+                    | OP::IfGt
+                    | OP::IfLeq
+                    | OP::IfGeq
+                    | OP::IfEq
+                    | OP::IfNeq,
+                ) if matches!(self.state, ScriptParserState::ExpectingOPButNotFuncOrEnd) => {
+                    push_out!(self, ScriptEntry::Opcode(OP::If));
+                    self.state = ScriptParserState::ExpectingOPCF(
+                        vec![ControlFlowState::Conditional],
+                        false,
+                    );
+                    Ok(())
+                }
+                Some(
+                    OP::If
+                    | OP::Ifn
+                    | OP::IfLt
+                    | OP::IfGt
+                    | OP::IfLeq
+                    | OP::IfGeq
+                    | OP::IfEq
+                    | OP::IfNeq,
+                ) if matches!(self.state, ScriptParserState::ExpectingOPCF(_, _)) => {
+                    push_out!(self, ScriptEntry::Opcode(OP::If));
+                    if let ScriptParserState::ExpectingOPCF(ref mut cf_stack, _) = self.state {
+                        cf_stack.push(ControlFlowState::Conditional);
                     } else {
                         unreachable!();
                     }
@@ -7430,13 +7500,25 @@ enum ScriptParserState {
     ExpectingOPButNotFuncOrEnd,
 
     /// Expecting any OP while also tracking the Control Flow
-    ExpectingOPCF(Vec<OP>, bool),
+    ExpectingOPCF(Vec<ControlFlowState>, bool),
 
     /// Expecting n bytes. The state tuple is (num_bytes, cf_stack, funcs_allowed)
-    ExpectingBytes(usize, Option<Vec<OP>>, bool),
+    ExpectingBytes(usize, Option<Vec<ControlFlowState>>, bool),
 
     /// Expecting length for for OP
-    ExpectingLen(OP, u16, usize, Option<Vec<OP>>, bool),
+    ExpectingLen(OP, u16, usize, Option<Vec<ControlFlowState>>, bool),
+}
+
+#[derive(Clone, Debug)]
+enum ControlFlowState {
+    /// We hit a loop opcode
+    Loop,
+
+    /// We hit a conditional opcode
+    Conditional,
+
+    /// We hit an else opcode
+    Else,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
