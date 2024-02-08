@@ -9095,6 +9095,58 @@ mod tests {
         };
     }
 
+    macro_rules! impl_primitive_to_u8_array_cast_to_test {
+        ($test_name:ident, $cast_type:ident, $val:expr) => {
+            #[test]
+            fn $test_name() {
+                let to_cast = VmTerm::$cast_type($val);
+                let cast_desired = VmTerm::Unsigned8Array($val.to_le_bytes().to_vec());
+
+                let key = "test_key";
+                let mut ss = Script {
+                    script: vec![
+                        ScriptEntry::Byte(0x04),
+                        ScriptEntry::Opcode(OP::CastTo),
+                        ScriptEntry::Byte(0x15),
+                        ScriptEntry::Opcode(OP::PopToScriptOuts),
+                        ScriptEntry::Opcode(OP::PushOutVerify),
+                    ],
+                    ..Script::default()
+                };
+
+                ss.populate_malleable_args_field();
+                let sh = ss.to_script_hash(key);
+                let script_output: Vec<VmTerm> = vec![cast_desired];
+                let args = vec![
+                    to_cast,
+                    VmTerm::Signed128(30),
+                    VmTerm::Hash160([0; 20]),
+                    VmTerm::Hash160(sh.0),
+                ];
+                let base: TestBaseArgs =
+                    get_test_args(&mut ss, 30, script_output.clone(), 0, key, args);
+                let mut idx_map = HashMap::new();
+                let mut outs = vec![];
+                let mut verif_stack = VerificationStack::new();
+
+                assert_eq!(
+                    ss.execute(
+                        &base.args,
+                        &base.ins,
+                        &mut outs,
+                        &mut idx_map,
+                        &mut verif_stack,
+                        [0; 32],
+                        key,
+                        VmFlags::default()
+                    ),
+                    Ok(ExecutionResult::OkVerify).into()
+                );
+                assert_eq!(script_output, outs[0].script_outs.clone());
+            }
+        };
+    }
+
     fn assert_script_ok(mut script: Script, outputs: Vec<VmTerm>, key: &str) {
         script.populate_malleable_args_field();
         let base: TestBaseArgs = get_test_base_args(&mut script, 30, outputs, 0, key);
@@ -9410,6 +9462,17 @@ mod tests {
         0x1f,
         100
     );
+
+    // Cast to primitive to u8 array implementations
+    impl_primitive_to_u8_array_cast_to_test!(cast_to_from_u16_to_u8_array, Unsigned16, 100_u16);
+    impl_primitive_to_u8_array_cast_to_test!(cast_to_from_u32_to_u8_array, Unsigned32, 100_u32);
+    impl_primitive_to_u8_array_cast_to_test!(cast_to_from_u64_to_u8_array, Unsigned64, 100_u64);
+    impl_primitive_to_u8_array_cast_to_test!(cast_to_from_u128_to_u8_array, Unsigned128, 100_u128);
+    impl_primitive_to_u8_array_cast_to_test!(cast_to_from_i8_to_u8_array, Signed8, 100_i8);
+    impl_primitive_to_u8_array_cast_to_test!(cast_to_from_i16_to_u8_array, Signed16, 100_i16);
+    impl_primitive_to_u8_array_cast_to_test!(cast_to_from_i32_to_u8_array, Signed32, 100_i32);
+    impl_primitive_to_u8_array_cast_to_test!(cast_to_from_i64_to_u8_array, Signed64, 100_i64);
+    impl_primitive_to_u8_array_cast_to_test!(cast_to_from_i128_to_u8_array, Signed128, 100_i128);
 
     #[test]
     fn it_parses_script_with_only_main() {
