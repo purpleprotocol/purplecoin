@@ -9043,6 +9043,58 @@ mod tests {
         };
     }
 
+    macro_rules! impl_primitive_cast_to_test_dual_vals {
+        ($test_name:ident, $cast_type:ident, $cast_desired_type:ident, $cast_desired_type_id:expr, $val1:expr, $val2:expr) => {
+            #[test]
+            fn $test_name() {
+                let to_cast = VmTerm::$cast_type($val1);
+                let cast_desired = VmTerm::$cast_desired_type($val2);
+
+                let key = "test_key";
+                let mut ss = Script {
+                    script: vec![
+                        ScriptEntry::Byte(0x04),
+                        ScriptEntry::Opcode(OP::CastTo),
+                        ScriptEntry::Byte($cast_desired_type_id),
+                        ScriptEntry::Opcode(OP::PopToScriptOuts),
+                        ScriptEntry::Opcode(OP::PushOutVerify),
+                    ],
+                    ..Script::default()
+                };
+
+                ss.populate_malleable_args_field();
+                let sh = ss.to_script_hash(key);
+                let script_output: Vec<VmTerm> = vec![cast_desired];
+                let args = vec![
+                    to_cast,
+                    VmTerm::Signed128(30),
+                    VmTerm::Hash160([0; 20]),
+                    VmTerm::Hash160(sh.0),
+                ];
+                let base: TestBaseArgs =
+                    get_test_args(&mut ss, 30, script_output.clone(), 0, key, args);
+                let mut idx_map = HashMap::new();
+                let mut outs = vec![];
+                let mut verif_stack = VerificationStack::new();
+
+                assert_eq!(
+                    ss.execute(
+                        &base.args,
+                        &base.ins,
+                        &mut outs,
+                        &mut idx_map,
+                        &mut verif_stack,
+                        [0; 32],
+                        key,
+                        VmFlags::default()
+                    ),
+                    Ok(ExecutionResult::OkVerify).into()
+                );
+                assert_eq!(script_output, outs[0].script_outs.clone());
+            }
+        };
+    }
+
     macro_rules! impl_primitive_to_array_cast_to_test {
         ($test_name:ident, $cast_type:ident, $cast_desired_type:ident, $cast_desired_type_id:expr, $val:expr) => {
             #[test]
@@ -9294,6 +9346,46 @@ mod tests {
     impl_primitive_cast_to_test!(cast_to_from_u8_to_i32, Unsigned8, Signed32, 0x0b, 100);
     impl_primitive_cast_to_test!(cast_to_from_u8_to_i64, Unsigned8, Signed64, 0x0c, 100);
     impl_primitive_cast_to_test!(cast_to_from_u8_to_i128, Unsigned8, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_to_ubig,
+        Unsigned8,
+        UnsignedBig,
+        0x08,
+        100,
+        ubig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_to_ibig,
+        Unsigned8,
+        SignedBig,
+        0x0e,
+        100,
+        ibig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_to_f32,
+        Unsigned8,
+        Float32,
+        0x0f,
+        100,
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_to_f64,
+        Unsigned8,
+        Float64,
+        0x10,
+        100,
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_to_dec,
+        Unsigned8,
+        Decimal,
+        0x11,
+        100,
+        dec!(100)
+    );
     impl_primitive_cast_to_test!(cast_to_from_i8_to_u8, Signed8, Unsigned8, 0x03, 100);
     impl_primitive_cast_to_test!(cast_to_from_i8_to_u16, Signed8, Unsigned16, 0x04, 100);
     impl_primitive_cast_to_test!(cast_to_from_i8_to_u32, Signed8, Unsigned32, 0x05, 100);
@@ -9304,6 +9396,46 @@ mod tests {
     impl_primitive_cast_to_test!(cast_to_from_i8_to_i32, Signed8, Signed32, 0x0b, 100);
     impl_primitive_cast_to_test!(cast_to_from_i8_to_i64, Signed8, Signed64, 0x0c, 100);
     impl_primitive_cast_to_test!(cast_to_from_i8_to_i128, Signed8, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i8_to_ubig,
+        Signed8,
+        UnsignedBig,
+        0x08,
+        100,
+        ubig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i8_to_ibig,
+        Signed8,
+        SignedBig,
+        0x0e,
+        100,
+        ibig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i8_to_f32,
+        Signed8,
+        Float32,
+        0x0f,
+        100,
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i8_to_f64,
+        Signed8,
+        Float64,
+        0x10,
+        100,
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i8_to_dec,
+        Signed8,
+        Decimal,
+        0x11,
+        100,
+        dec!(100)
+    );
     impl_primitive_cast_to_test!(cast_to_from_u16_to_u8, Unsigned16, Unsigned8, 0x03, 100);
     impl_primitive_cast_to_test!(cast_to_from_u16_to_u16, Unsigned16, Unsigned16, 0x04, 100);
     impl_primitive_cast_to_test!(cast_to_from_u16_to_u32, Unsigned16, Unsigned32, 0x05, 100);
@@ -9314,6 +9446,46 @@ mod tests {
     impl_primitive_cast_to_test!(cast_to_from_u16_to_i32, Unsigned16, Signed32, 0x0b, 100);
     impl_primitive_cast_to_test!(cast_to_from_u16_to_i64, Unsigned16, Signed64, 0x0c, 100);
     impl_primitive_cast_to_test!(cast_to_from_u16_to_i128, Unsigned16, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u16_to_ubig,
+        Unsigned16,
+        UnsignedBig,
+        0x08,
+        100,
+        ubig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u16_to_ibig,
+        Unsigned16,
+        SignedBig,
+        0x0e,
+        100,
+        ibig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u16_to_f32,
+        Unsigned16,
+        Float32,
+        0x0f,
+        100,
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u16_to_f64,
+        Unsigned16,
+        Float64,
+        0x10,
+        100,
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u16_to_dec,
+        Unsigned16,
+        Decimal,
+        0x11,
+        100,
+        dec!(100)
+    );
     impl_primitive_cast_to_test!(cast_to_from_i16_to_u8, Signed16, Unsigned8, 0x03, 100);
     impl_primitive_cast_to_test!(cast_to_from_i16_to_u16, Signed16, Unsigned16, 0x04, 100);
     impl_primitive_cast_to_test!(cast_to_from_i16_to_u32, Signed16, Unsigned32, 0x05, 100);
@@ -9324,6 +9496,46 @@ mod tests {
     impl_primitive_cast_to_test!(cast_to_from_i16_to_i32, Signed16, Signed32, 0x0b, 100);
     impl_primitive_cast_to_test!(cast_to_from_i16_to_i64, Signed16, Signed64, 0x0c, 100);
     impl_primitive_cast_to_test!(cast_to_from_i16_to_i128, Signed16, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i16_to_ubig,
+        Signed16,
+        UnsignedBig,
+        0x08,
+        100,
+        ubig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i16_to_ibig,
+        Signed16,
+        SignedBig,
+        0x0e,
+        100,
+        ibig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i16_to_f32,
+        Signed16,
+        Float32,
+        0x0f,
+        100,
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i16_to_f64,
+        Signed16,
+        Float64,
+        0x10,
+        100,
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i16_to_dec,
+        Signed16,
+        Decimal,
+        0x11,
+        100,
+        dec!(100)
+    );
     impl_primitive_cast_to_test!(cast_to_from_u32_to_u8, Unsigned32, Unsigned8, 0x03, 100);
     impl_primitive_cast_to_test!(cast_to_from_u32_to_u16, Unsigned32, Unsigned16, 0x04, 100);
     impl_primitive_cast_to_test!(cast_to_from_u32_to_u32, Unsigned32, Unsigned32, 0x05, 100);
@@ -9334,6 +9546,46 @@ mod tests {
     impl_primitive_cast_to_test!(cast_to_from_u32_to_i32, Unsigned32, Signed32, 0x0b, 100);
     impl_primitive_cast_to_test!(cast_to_from_u32_to_i64, Unsigned32, Signed64, 0x0c, 100);
     impl_primitive_cast_to_test!(cast_to_from_u32_to_i128, Unsigned32, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u32_to_ubig,
+        Unsigned32,
+        UnsignedBig,
+        0x08,
+        100,
+        ubig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u32_to_ibig,
+        Unsigned32,
+        SignedBig,
+        0x0e,
+        100,
+        ibig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u32_to_f32,
+        Unsigned32,
+        Float32,
+        0x0f,
+        100,
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u32_to_f64,
+        Unsigned32,
+        Float64,
+        0x10,
+        100,
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u32_to_dec,
+        Unsigned32,
+        Decimal,
+        0x11,
+        100,
+        dec!(100)
+    );
     impl_primitive_cast_to_test!(cast_to_from_i32_to_u8, Signed32, Unsigned8, 0x03, 100);
     impl_primitive_cast_to_test!(cast_to_from_i32_to_u16, Signed32, Unsigned16, 0x04, 100);
     impl_primitive_cast_to_test!(cast_to_from_i32_to_u32, Signed32, Unsigned32, 0x05, 100);
@@ -9344,6 +9596,46 @@ mod tests {
     impl_primitive_cast_to_test!(cast_to_from_i32_to_i32, Signed32, Signed32, 0x0b, 100);
     impl_primitive_cast_to_test!(cast_to_from_i32_to_i64, Signed32, Signed64, 0x0c, 100);
     impl_primitive_cast_to_test!(cast_to_from_i32_to_i128, Signed32, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i32_to_ubig,
+        Signed32,
+        UnsignedBig,
+        0x08,
+        100,
+        ubig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i32_to_ibig,
+        Signed32,
+        SignedBig,
+        0x0e,
+        100,
+        ibig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i32_to_f32,
+        Signed32,
+        Float32,
+        0x0f,
+        100,
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i32_to_f64,
+        Signed32,
+        Float64,
+        0x10,
+        100,
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i32_to_dec,
+        Signed32,
+        Decimal,
+        0x11,
+        100,
+        dec!(100)
+    );
     impl_primitive_cast_to_test!(cast_to_from_u64_to_u8, Unsigned64, Unsigned8, 0x03, 100);
     impl_primitive_cast_to_test!(cast_to_from_u64_to_u16, Unsigned64, Unsigned16, 0x04, 100);
     impl_primitive_cast_to_test!(cast_to_from_u64_to_u32, Unsigned64, Unsigned32, 0x05, 100);
@@ -9354,6 +9646,46 @@ mod tests {
     impl_primitive_cast_to_test!(cast_to_from_u64_to_i32, Unsigned64, Signed32, 0x0b, 100);
     impl_primitive_cast_to_test!(cast_to_from_u64_to_i64, Unsigned64, Signed64, 0x0c, 100);
     impl_primitive_cast_to_test!(cast_to_from_u64_to_i128, Unsigned64, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u64_to_ubig,
+        Unsigned64,
+        UnsignedBig,
+        0x08,
+        100,
+        ubig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u64_to_ibig,
+        Unsigned64,
+        SignedBig,
+        0x0e,
+        100,
+        ibig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u64_to_f32,
+        Unsigned64,
+        Float32,
+        0x0f,
+        100,
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u64_to_f64,
+        Unsigned64,
+        Float64,
+        0x10,
+        100,
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u64_to_dec,
+        Unsigned64,
+        Decimal,
+        0x11,
+        100,
+        dec!(100)
+    );
     impl_primitive_cast_to_test!(cast_to_from_i64_to_u8, Signed64, Unsigned8, 0x03, 100);
     impl_primitive_cast_to_test!(cast_to_from_i64_to_u16, Signed64, Unsigned16, 0x04, 100);
     impl_primitive_cast_to_test!(cast_to_from_i64_to_u32, Signed64, Unsigned32, 0x05, 100);
@@ -9364,6 +9696,46 @@ mod tests {
     impl_primitive_cast_to_test!(cast_to_from_i64_to_i32, Signed64, Signed32, 0x0b, 100);
     impl_primitive_cast_to_test!(cast_to_from_i64_to_i64, Signed64, Signed64, 0x0c, 100);
     impl_primitive_cast_to_test!(cast_to_from_i64_to_i128, Signed64, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i64_to_ubig,
+        Signed64,
+        UnsignedBig,
+        0x08,
+        100,
+        ubig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i64_to_ibig,
+        Signed64,
+        SignedBig,
+        0x0e,
+        100,
+        ibig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i64_to_f32,
+        Signed64,
+        Float32,
+        0x0f,
+        100,
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i64_to_f64,
+        Signed64,
+        Float64,
+        0x10,
+        100,
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i64_to_dec,
+        Signed64,
+        Decimal,
+        0x11,
+        100,
+        dec!(100)
+    );
     impl_primitive_cast_to_test!(cast_to_from_u128_to_u8, Unsigned128, Unsigned8, 0x03, 100);
     impl_primitive_cast_to_test!(cast_to_from_u128_to_u16, Unsigned128, Unsigned16, 0x04, 100);
     impl_primitive_cast_to_test!(cast_to_from_u128_to_u32, Unsigned128, Unsigned32, 0x05, 100);
@@ -9380,6 +9752,46 @@ mod tests {
     impl_primitive_cast_to_test!(cast_to_from_u128_to_i32, Unsigned128, Signed32, 0x0b, 100);
     impl_primitive_cast_to_test!(cast_to_from_u128_to_i64, Unsigned128, Signed64, 0x0c, 100);
     impl_primitive_cast_to_test!(cast_to_from_u128_to_i128, Unsigned128, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u128_to_ubig,
+        Unsigned128,
+        UnsignedBig,
+        0x08,
+        100,
+        ubig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u128_to_ibig,
+        Unsigned128,
+        SignedBig,
+        0x0e,
+        100,
+        ibig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u128_to_f32,
+        Unsigned128,
+        Float32,
+        0x0f,
+        100,
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u128_to_f64,
+        Unsigned128,
+        Float64,
+        0x10,
+        100,
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u128_to_dec,
+        Unsigned128,
+        Decimal,
+        0x11,
+        100,
+        dec!(100)
+    );
     impl_primitive_cast_to_test!(cast_to_from_i128_to_u8, Signed128, Unsigned8, 0x03, 100);
     impl_primitive_cast_to_test!(cast_to_from_i128_to_u16, Signed128, Unsigned16, 0x04, 100);
     impl_primitive_cast_to_test!(cast_to_from_i128_to_u32, Signed128, Unsigned32, 0x05, 100);
@@ -9390,6 +9802,46 @@ mod tests {
     impl_primitive_cast_to_test!(cast_to_from_i128_to_i32, Signed128, Signed32, 0x0b, 100);
     impl_primitive_cast_to_test!(cast_to_from_i128_to_i64, Signed128, Signed64, 0x0c, 100);
     impl_primitive_cast_to_test!(cast_to_from_i128_to_i128, Signed128, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i128_to_ubig,
+        Signed128,
+        UnsignedBig,
+        0x08,
+        100,
+        ubig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i128_to_ibig,
+        Signed128,
+        SignedBig,
+        0x0e,
+        100,
+        ibig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i128_to_f32,
+        Signed128,
+        Float32,
+        0x0f,
+        100,
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i128_to_f64,
+        Signed128,
+        Float64,
+        0x10,
+        100,
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_i128_to_dec,
+        Signed128,
+        Decimal,
+        0x11,
+        100,
+        dec!(100)
+    );
 
     // Cast to primitive to array implementations
     impl_primitive_to_array_cast_to_test!(
