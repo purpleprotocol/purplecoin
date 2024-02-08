@@ -2640,7 +2640,7 @@ impl Script {
                                     // U128 casts
                                     //
                                     // Cast u128 to u8.
-                                    (VmTerm::Unsigned64(v), 0x03) => {
+                                    (VmTerm::Unsigned128(v), 0x03) => {
                                         match v.try_into() {
                                             Ok(v) => {
                                                 frame.stack.push(VmTerm::Unsigned8(v));
@@ -3884,8 +3884,11 @@ impl Script {
                                     }
                                 }
 
-                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                frame.i_ptr += 1;
+                                // Check if we've had an exception
+                                if !matches!(frame.executor.state, ScriptExecutorState::Error(..)) {
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
                             }
                         }
 
@@ -9078,6 +9081,57 @@ mod tests {
         out: Vec<Output>,
     }
 
+    macro_rules! impl_primitive_cast_to_test {
+        ($test_name:ident, $cast_type:ident, $cast_desired_type:ident, $cast_desired_type_id:expr, $val:expr) => {
+            #[test]
+            fn $test_name() {
+                let to_cast = VmTerm::$cast_type($val);
+                let cast_desired = VmTerm::$cast_desired_type($val);
+
+                let key = "test_key";
+                let mut ss = Script {
+                    script: vec![
+                        ScriptEntry::Byte(0x04),
+                        ScriptEntry::Opcode(OP::CastTo),
+                        ScriptEntry::Byte($cast_desired_type_id),
+                        ScriptEntry::Opcode(OP::PopToScriptOuts),
+                        ScriptEntry::Opcode(OP::PushOutVerify),
+                    ],
+                    ..Script::default()
+                };
+
+                ss.populate_malleable_args_field();
+                let sh = ss.to_script_hash(key);
+                let script_output: Vec<VmTerm> = vec![cast_desired];
+                let args = vec![
+                    to_cast,
+                    VmTerm::Signed128(30),
+                    VmTerm::Hash160([0; 20]),
+                    VmTerm::Hash160(sh.0),
+                ];
+                let base: TestBaseArgs = get_test_args(&mut ss, 30, script_output.clone(), 0, key, args);
+                let mut idx_map = HashMap::new();
+                let mut outs = vec![];
+                let mut verif_stack = VerificationStack::new();
+
+                assert_eq!(
+                    ss.execute(
+                        &base.args,
+                        &base.ins,
+                        &mut outs,
+                        &mut idx_map,
+                        &mut verif_stack,
+                        [0; 32],
+                        key,
+                        VmFlags::default()
+                    ),
+                    Ok(ExecutionResult::OkVerify).into()
+                );
+                assert_eq!(script_output, outs[0].script_outs.clone());
+            }
+        }
+    }
+
     fn assert_script_ok(mut script: Script, outputs: Vec<VmTerm>, key: &str) {
         script.populate_malleable_args_field();
         let base: TestBaseArgs = get_test_base_args(&mut script, 30, outputs, 0, key);
@@ -9140,6 +9194,20 @@ mod tests {
             VmTerm::Hash160([0; 20]),
             VmTerm::Hash160(sh.0),
         ];
+
+        get_test_args(ss, out_amount, out_script, push_out_cycles, key, args)
+    }
+
+    fn get_test_args(
+        ss: &mut Script,
+        out_amount: Money,
+        out_script: Vec<VmTerm>,
+        push_out_cycles: usize,
+        key: &str,
+        args: Vec<VmTerm>,
+    ) -> TestBaseArgs {
+        ss.populate_malleable_args_field();
+        let sh = ss.to_script_hash(key);
         let mut ins = vec![Input {
             out: None,
             colour_script_args: None,
@@ -9199,6 +9267,108 @@ mod tests {
             out: vec![oracle_out],
         }
     }
+
+    // Cast to implementations
+    impl_primitive_cast_to_test!(cast_to_from_u8_to_u8, Unsigned8, Unsigned8, 0x03, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u8_to_u16, Unsigned8, Unsigned16, 0x04, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u8_to_u32, Unsigned8, Unsigned32, 0x05, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u8_to_u64, Unsigned8, Unsigned64, 0x06, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u8_to_u128, Unsigned8, Unsigned128, 0x07, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u8_to_i8, Unsigned8, Signed8, 0x09, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u8_to_i16, Unsigned8, Signed16, 0x0a, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u8_to_i32, Unsigned8, Signed32, 0x0b, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u8_to_i64, Unsigned8, Signed64, 0x0c, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u8_to_i128, Unsigned8, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i8_to_u8, Signed8, Unsigned8, 0x03, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i8_to_u16, Signed8, Unsigned16, 0x04, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i8_to_u32, Signed8, Unsigned32, 0x05, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i8_to_u64, Signed8, Unsigned64, 0x06, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i8_to_u128, Signed8, Unsigned128, 0x07, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i8_to_i8, Signed8, Signed8, 0x09, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i8_to_i16, Signed8, Signed16, 0x0a, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i8_to_i32, Signed8, Signed32, 0x0b, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i8_to_i64, Signed8, Signed64, 0x0c, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i8_to_i128, Signed8, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u16_to_u8, Unsigned16, Unsigned8, 0x03, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u16_to_u16, Unsigned16, Unsigned16, 0x04, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u16_to_u32, Unsigned16, Unsigned32, 0x05, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u16_to_u64, Unsigned16, Unsigned64, 0x06, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u16_to_u128, Unsigned16, Unsigned128, 0x07, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u16_to_i8, Unsigned16, Signed8, 0x09, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u16_to_i16, Unsigned16, Signed16, 0x0a, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u16_to_i32, Unsigned16, Signed32, 0x0b, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u16_to_i64, Unsigned16, Signed64, 0x0c, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u16_to_i128, Unsigned16, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i16_to_u8, Signed16, Unsigned8, 0x03, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i16_to_u16, Signed16, Unsigned16, 0x04, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i16_to_u32, Signed16, Unsigned32, 0x05, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i16_to_u64, Signed16, Unsigned64, 0x06, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i16_to_u128, Signed16, Unsigned128, 0x07, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i16_to_i8, Signed16, Signed8, 0x09, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i16_to_i16, Signed16, Signed16, 0x0a, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i16_to_i32, Signed16, Signed32, 0x0b, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i16_to_i64, Signed16, Signed64, 0x0c, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i16_to_i128, Signed16, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u32_to_u8, Unsigned32, Unsigned8, 0x03, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u32_to_u16, Unsigned32, Unsigned16, 0x04, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u32_to_u32, Unsigned32, Unsigned32, 0x05, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u32_to_u64, Unsigned32, Unsigned64, 0x06, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u32_to_u128, Unsigned32, Unsigned128, 0x07, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u32_to_i8, Unsigned32, Signed8, 0x09, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u32_to_i16, Unsigned32, Signed16, 0x0a, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u32_to_i32, Unsigned32, Signed32, 0x0b, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u32_to_i64, Unsigned32, Signed64, 0x0c, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u32_to_i128, Unsigned32, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i32_to_u8, Signed32, Unsigned8, 0x03, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i32_to_u16, Signed32, Unsigned16, 0x04, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i32_to_u32, Signed32, Unsigned32, 0x05, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i32_to_u64, Signed32, Unsigned64, 0x06, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i32_to_u128, Signed32, Unsigned128, 0x07, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i32_to_i8, Signed32, Signed8, 0x09, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i32_to_i16, Signed32, Signed16, 0x0a, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i32_to_i32, Signed32, Signed32, 0x0b, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i32_to_i64, Signed32, Signed64, 0x0c, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i32_to_i128, Signed32, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u64_to_u8, Unsigned64, Unsigned8, 0x03, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u64_to_u16, Unsigned64, Unsigned16, 0x04, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u64_to_u32, Unsigned64, Unsigned32, 0x05, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u64_to_u64, Unsigned64, Unsigned64, 0x06, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u64_to_u128, Unsigned64, Unsigned128, 0x07, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u64_to_i8, Unsigned64, Signed8, 0x09, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u64_to_i16, Unsigned64, Signed16, 0x0a, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u64_to_i32, Unsigned64, Signed32, 0x0b, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u64_to_i64, Unsigned64, Signed64, 0x0c, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u64_to_i128, Unsigned64, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i64_to_u8, Signed64, Unsigned8, 0x03, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i64_to_u16, Signed64, Unsigned16, 0x04, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i64_to_u32, Signed64, Unsigned32, 0x05, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i64_to_u64, Signed64, Unsigned64, 0x06, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i64_to_u128, Signed64, Unsigned128, 0x07, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i64_to_i8, Signed64, Signed8, 0x09, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i64_to_i16, Signed64, Signed16, 0x0a, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i64_to_i32, Signed64, Signed32, 0x0b, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i64_to_i64, Signed64, Signed64, 0x0c, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i64_to_i128, Signed64, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u128_to_u8, Unsigned128, Unsigned8, 0x03, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u128_to_u16, Unsigned128, Unsigned16, 0x04, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u128_to_u32, Unsigned128, Unsigned32, 0x05, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u128_to_u64, Unsigned128, Unsigned64, 0x06, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u128_to_u128, Unsigned128, Unsigned128, 0x07, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u128_to_i8, Unsigned128, Signed8, 0x09, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u128_to_i16, Unsigned128, Signed16, 0x0a, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u128_to_i32, Unsigned128, Signed32, 0x0b, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u128_to_i64, Unsigned128, Signed64, 0x0c, 100);
+    impl_primitive_cast_to_test!(cast_to_from_u128_to_i128, Unsigned128, Signed128, 0x0d, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i128_to_u8, Signed128, Unsigned8, 0x03, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i128_to_u16, Signed128, Unsigned16, 0x04, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i128_to_u32, Signed128, Unsigned32, 0x05, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i128_to_u64, Signed128, Unsigned64, 0x06, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i128_to_u128, Signed128, Unsigned128, 0x07, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i128_to_i8, Signed128, Signed8, 0x09, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i128_to_i16, Signed128, Signed16, 0x0a, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i128_to_i32, Signed128, Signed32, 0x0b, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i128_to_i64, Signed128, Signed64, 0x0c, 100);
+    impl_primitive_cast_to_test!(cast_to_from_i128_to_i128, Signed128, Signed128, 0x0d, 100);
 
     #[test]
     fn it_parses_script_with_only_main() {
