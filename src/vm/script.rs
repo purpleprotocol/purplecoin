@@ -9043,6 +9043,58 @@ mod tests {
         };
     }
 
+    macro_rules! impl_primitive_to_array_cast_to_test {
+        ($test_name:ident, $cast_type:ident, $cast_desired_type:ident, $cast_desired_type_id:expr, $val:expr) => {
+            #[test]
+            fn $test_name() {
+                let to_cast = VmTerm::$cast_type($val);
+                let cast_desired = VmTerm::$cast_desired_type(vec![$val]);
+
+                let key = "test_key";
+                let mut ss = Script {
+                    script: vec![
+                        ScriptEntry::Byte(0x04),
+                        ScriptEntry::Opcode(OP::CastTo),
+                        ScriptEntry::Byte($cast_desired_type_id),
+                        ScriptEntry::Opcode(OP::PopToScriptOuts),
+                        ScriptEntry::Opcode(OP::PushOutVerify),
+                    ],
+                    ..Script::default()
+                };
+
+                ss.populate_malleable_args_field();
+                let sh = ss.to_script_hash(key);
+                let script_output: Vec<VmTerm> = vec![cast_desired];
+                let args = vec![
+                    to_cast,
+                    VmTerm::Signed128(30),
+                    VmTerm::Hash160([0; 20]),
+                    VmTerm::Hash160(sh.0),
+                ];
+                let base: TestBaseArgs =
+                    get_test_args(&mut ss, 30, script_output.clone(), 0, key, args);
+                let mut idx_map = HashMap::new();
+                let mut outs = vec![];
+                let mut verif_stack = VerificationStack::new();
+
+                assert_eq!(
+                    ss.execute(
+                        &base.args,
+                        &base.ins,
+                        &mut outs,
+                        &mut idx_map,
+                        &mut verif_stack,
+                        [0; 32],
+                        key,
+                        VmFlags::default()
+                    ),
+                    Ok(ExecutionResult::OkVerify).into()
+                );
+                assert_eq!(script_output, outs[0].script_outs.clone());
+            }
+        };
+    }
+
     fn assert_script_ok(mut script: Script, outputs: Vec<VmTerm>, key: &str) {
         script.populate_malleable_args_field();
         let base: TestBaseArgs = get_test_base_args(&mut script, 30, outputs, 0, key);
@@ -9179,7 +9231,7 @@ mod tests {
         }
     }
 
-    // Cast to implementations
+    // Cast to primitive implementations
     impl_primitive_cast_to_test!(cast_to_from_u8_to_u8, Unsigned8, Unsigned8, 0x03, 100);
     impl_primitive_cast_to_test!(cast_to_from_u8_to_u16, Unsigned8, Unsigned16, 0x04, 100);
     impl_primitive_cast_to_test!(cast_to_from_u8_to_u32, Unsigned8, Unsigned32, 0x05, 100);
@@ -9286,6 +9338,78 @@ mod tests {
     impl_primitive_cast_to_test!(cast_to_from_i128_to_i32, Signed128, Signed32, 0x0b, 100);
     impl_primitive_cast_to_test!(cast_to_from_i128_to_i64, Signed128, Signed64, 0x0c, 100);
     impl_primitive_cast_to_test!(cast_to_from_i128_to_i128, Signed128, Signed128, 0x0d, 100);
+
+    // Cast to primitive to array implementations
+    impl_primitive_to_array_cast_to_test!(
+        cast_to_from_u8_to_u8_array,
+        Unsigned8,
+        Unsigned8Array,
+        0x15,
+        100
+    );
+    impl_primitive_to_array_cast_to_test!(
+        cast_to_from_u16_to_u16_array,
+        Unsigned16,
+        Unsigned16Array,
+        0x16,
+        100
+    );
+    impl_primitive_to_array_cast_to_test!(
+        cast_to_from_u32_to_u32_array,
+        Unsigned32,
+        Unsigned32Array,
+        0x17,
+        100
+    );
+    impl_primitive_to_array_cast_to_test!(
+        cast_to_from_u64_to_u64_array,
+        Unsigned64,
+        Unsigned64Array,
+        0x18,
+        100
+    );
+    impl_primitive_to_array_cast_to_test!(
+        cast_to_from_u128_to_u128_array,
+        Unsigned128,
+        Unsigned128Array,
+        0x19,
+        100
+    );
+    impl_primitive_to_array_cast_to_test!(
+        cast_to_from_i8_to_i8_array,
+        Signed8,
+        Signed8Array,
+        0x1b,
+        100
+    );
+    impl_primitive_to_array_cast_to_test!(
+        cast_to_from_i16_to_i16_array,
+        Signed16,
+        Signed16Array,
+        0x1c,
+        100
+    );
+    impl_primitive_to_array_cast_to_test!(
+        cast_to_from_i32_to_i32_array,
+        Signed32,
+        Signed32Array,
+        0x1d,
+        100
+    );
+    impl_primitive_to_array_cast_to_test!(
+        cast_to_from_i64_to_i64_array,
+        Signed64,
+        Signed64Array,
+        0x1e,
+        100
+    );
+    impl_primitive_to_array_cast_to_test!(
+        cast_to_from_i128_to_i128_array,
+        Signed128,
+        Signed128Array,
+        0x1f,
+        100
+    );
 
     #[test]
     fn it_parses_script_with_only_main() {
