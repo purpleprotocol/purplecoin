@@ -9925,6 +9925,56 @@ mod tests {
     impl_primitive_to_u8_array_cast_to_test!(cast_to_from_i32_to_u8_array, Signed32, 100_i32);
     impl_primitive_to_u8_array_cast_to_test!(cast_to_from_i64_to_u8_array, Signed64, 100_i64);
     impl_primitive_to_u8_array_cast_to_test!(cast_to_from_i128_to_u8_array, Signed128, 100_i128);
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_hash160_to_u8_array,
+        Hash160,
+        Unsigned8Array,
+        0x15,
+        [0; 20],
+        vec![0; 20]
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_hash256_to_u8_array,
+        Hash256,
+        Unsigned8Array,
+        0x15,
+        [0; 32],
+        vec![0; 32]
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_hash512_to_u8_array,
+        Hash512,
+        Unsigned8Array,
+        0x15,
+        [0; 64],
+        vec![0; 64]
+    );
+
+    // Cast to hash to hash implementations
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_hash256_to_hash160,
+        Hash256,
+        Hash160,
+        0x00,
+        [0; 32],
+        [0; 20]
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_hash512_to_hash160,
+        Hash512,
+        Hash160,
+        0x00,
+        [0; 64],
+        [0; 20]
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_hash512_to_hash256,
+        Hash512,
+        Hash256,
+        0x01,
+        [0; 64],
+        [0; 32]
+    );
 
     #[test]
     fn it_parses_script_with_only_main() {
