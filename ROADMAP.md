@@ -216,7 +216,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xc7` LeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is less or equal than the second item on the stack
     - [x] OP `0xc8` GeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the topmost item on the stack is greater or equal than the second item on the stack
     - [x] OP `0xc9` NeqVerify - Pushes the current output's binary format to the signature verification stack and stops script execution if the two topmost items on the stack are not equal
-    - [ ] OP `0xca` CastTo - Casts the topmost item on the stack to the type id which is the second item on the stack
+    - [x] OP `0xca` CastTo - Casts the topmost item on the stack to the type id which is the second item on the stack
     - [x] OP `0xcb` InputScriptArgsLen - Pushes the number of script args of the input at the given index to the top of the stack
     - [x] OP `0xcc` GetInputScriptArgAt - Pushes the script argument at the second given index of the input at the first given index to the top of the stack
     - [x] OP `0xcd` SpillInputScriptArgs - Pushes all the script args of the input at the given index to the top of the stack
