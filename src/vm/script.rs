@@ -14,7 +14,7 @@ use crate::vm::sig_verification::{
 use bincode::{Decode, Encode};
 use bitvec::prelude::*;
 use ibig::ops::Abs;
-use ibig::{ibig, ubig, UBig};
+use ibig::{ibig, ubig, IBig, UBig};
 use num_traits::{FromPrimitive, ToPrimitive};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
@@ -2395,8 +2395,27 @@ impl Script {
                                     }
                                     // Cast u32 to f32
                                     (VmTerm::Unsigned32(v), 0x0f) => {
-                                        frame.stack.push(VmTerm::Float32(Float32Wrapper(v as f32)));
-                                        memory_size += 4;
+                                        let v: Decimal = v.into();
+                                        match v.try_into() {
+                                            Ok(v) => {
+                                                frame
+                                                    .stack
+                                                    .push(VmTerm::Float32(Float32Wrapper(v)));
+                                                memory_size += 4;
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
                                     }
                                     // Cast u32 to f64
                                     (VmTerm::Unsigned32(v), 0x10) => {
@@ -2588,13 +2607,51 @@ impl Script {
                                     }
                                     // Cast u64 to f32
                                     (VmTerm::Unsigned64(v), 0x0f) => {
-                                        frame.stack.push(VmTerm::Float32(Float32Wrapper(v as f32)));
-                                        memory_size += 4;
+                                        let v: Decimal = v.into();
+                                        match v.try_into() {
+                                            Ok(v) => {
+                                                frame
+                                                    .stack
+                                                    .push(VmTerm::Float32(Float32Wrapper(v)));
+                                                memory_size += 4;
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
                                     }
                                     // Cast u64 to f64
                                     (VmTerm::Unsigned64(v), 0x10) => {
-                                        frame.stack.push(VmTerm::Float64(Float64Wrapper(v as f64)));
-                                        memory_size += 8;
+                                        let v: Decimal = v.into();
+                                        match v.try_into() {
+                                            Ok(v) => {
+                                                frame
+                                                    .stack
+                                                    .push(VmTerm::Float64(Float64Wrapper(v)));
+                                                memory_size += 4;
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
                                     }
                                     // Cast u64 to Decimal
                                     (VmTerm::Unsigned64(v), 0x11) => {
@@ -2807,13 +2864,51 @@ impl Script {
                                     }
                                     // Cast u128 to f32
                                     (VmTerm::Unsigned128(v), 0x0f) => {
-                                        frame.stack.push(VmTerm::Float32(Float32Wrapper(v as f32)));
-                                        memory_size += 4;
+                                        let v: Decimal = v.into();
+                                        match v.try_into() {
+                                            Ok(v) => {
+                                                frame
+                                                    .stack
+                                                    .push(VmTerm::Float32(Float32Wrapper(v)));
+                                                memory_size += 4;
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
                                     }
                                     // Cast u128 to f64
                                     (VmTerm::Unsigned128(v), 0x10) => {
-                                        frame.stack.push(VmTerm::Float64(Float64Wrapper(v as f64)));
-                                        memory_size += 8;
+                                        let v: Decimal = v.into();
+                                        match v.try_into() {
+                                            Ok(v) => {
+                                                frame
+                                                    .stack
+                                                    .push(VmTerm::Float64(Float64Wrapper(v)));
+                                                memory_size += 8;
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
                                     }
                                     // Cast u128 to Decimal
                                     (VmTerm::Unsigned128(v), 0x11) => {
@@ -3037,6 +3132,110 @@ impl Script {
                                         let term = VmTerm::SignedBig(v.into());
                                         memory_size += term.size();
                                         frame.stack.push(term);
+                                    }
+                                    // Cast ubig to f32
+                                    (VmTerm::UnsignedBig(v), 0x0f) => {
+                                        match TryInto::<u128>::try_into(v) {
+                                            Ok(v) => {
+                                                let v: Decimal = v.into();
+                                                match v.try_into() {
+                                                    Ok(v) => {
+                                                        let term =
+                                                            VmTerm::Float32(Float32Wrapper(v));
+                                                        memory_size += 4;
+                                                        frame.stack.push(term);
+                                                    }
+                                                    _ => {
+                                                        frame.executor.state =
+                                                            ScriptExecutorState::Error(
+                                                                ExecutionResult::InvalidCast,
+                                                                (
+                                                                    frame.i_ptr,
+                                                                    frame.func_idx,
+                                                                    i.clone(),
+                                                                    frame.stack.as_slice(),
+                                                                )
+                                                                    .into(),
+                                                            );
+                                                    }
+                                                }
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
+                                    }
+                                    // Cast ubig to f64
+                                    (VmTerm::UnsignedBig(v), 0x10) => {
+                                        match TryInto::<u128>::try_into(v) {
+                                            Ok(v) => {
+                                                let v: Decimal = v.into();
+                                                match v.try_into() {
+                                                    Ok(v) => {
+                                                        let term =
+                                                            VmTerm::Float64(Float64Wrapper(v));
+                                                        memory_size += 8;
+                                                        frame.stack.push(term);
+                                                    }
+                                                    _ => {
+                                                        frame.executor.state =
+                                                            ScriptExecutorState::Error(
+                                                                ExecutionResult::InvalidCast,
+                                                                (
+                                                                    frame.i_ptr,
+                                                                    frame.func_idx,
+                                                                    i.clone(),
+                                                                    frame.stack.as_slice(),
+                                                                )
+                                                                    .into(),
+                                                            );
+                                                    }
+                                                }
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
+                                    }
+                                    // Cast ubig to decimal
+                                    (VmTerm::UnsignedBig(v), 0x11) => {
+                                        match TryInto::<u128>::try_into(v) {
+                                            Ok(v) => {
+                                                let term = VmTerm::Decimal(v.into());
+                                                memory_size += term.size();
+                                                frame.stack.push(term);
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
                                     }
                                     // Cast ubig to u8 array
                                     (VmTerm::UnsignedBig(v), 0x15) => {
@@ -3479,8 +3678,27 @@ impl Script {
                                     }
                                     // Cast i32 to f32
                                     (VmTerm::Signed32(v), 0x0f) => {
-                                        frame.stack.push(VmTerm::Float32(Float32Wrapper(v as f32)));
-                                        memory_size += 4;
+                                        let v: Decimal = v.into();
+                                        match v.try_into() {
+                                            Ok(v) => {
+                                                frame
+                                                    .stack
+                                                    .push(VmTerm::Float32(Float32Wrapper(v)));
+                                                memory_size += 4;
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
                                     }
                                     // Cast i32 to f64
                                     (VmTerm::Signed32(v), 0x10) => {
@@ -3686,13 +3904,51 @@ impl Script {
                                     }
                                     // Cast i64 to f32
                                     (VmTerm::Signed64(v), 0x0f) => {
-                                        frame.stack.push(VmTerm::Float32(Float32Wrapper(v as f32)));
-                                        memory_size += 4;
+                                        let v: Decimal = v.into();
+                                        match v.try_into() {
+                                            Ok(v) => {
+                                                frame
+                                                    .stack
+                                                    .push(VmTerm::Float32(Float32Wrapper(v)));
+                                                memory_size += 4;
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
                                     }
                                     // Cast i64 to f64
                                     (VmTerm::Signed64(v), 0x10) => {
-                                        frame.stack.push(VmTerm::Float64(Float64Wrapper(v as f64)));
-                                        memory_size += 8;
+                                        let v: Decimal = v.into();
+                                        match v.try_into() {
+                                            Ok(v) => {
+                                                frame
+                                                    .stack
+                                                    .push(VmTerm::Float64(Float64Wrapper(v)));
+                                                memory_size += 8;
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
                                     }
                                     // Cast i64 to Decimal
                                     (VmTerm::Signed64(v), 0x11) => {
@@ -3919,13 +4175,51 @@ impl Script {
                                     }
                                     // Cast i128 to f32
                                     (VmTerm::Signed128(v), 0x0f) => {
-                                        frame.stack.push(VmTerm::Float32(Float32Wrapper(v as f32)));
-                                        memory_size += 4;
+                                        let v: Decimal = v.into();
+                                        match v.try_into() {
+                                            Ok(v) => {
+                                                frame
+                                                    .stack
+                                                    .push(VmTerm::Float32(Float32Wrapper(v)));
+                                                memory_size += 4;
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
                                     }
                                     // Cast i128 to f64
                                     (VmTerm::Signed128(v), 0x10) => {
-                                        frame.stack.push(VmTerm::Float64(Float64Wrapper(v as f64)));
-                                        memory_size += 8;
+                                        let v: Decimal = v.into();
+                                        match v.try_into() {
+                                            Ok(v) => {
+                                                frame
+                                                    .stack
+                                                    .push(VmTerm::Float64(Float64Wrapper(v)));
+                                                memory_size += 8;
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
                                     }
                                     // Cast i128 to Decimal
                                     (VmTerm::Signed128(v), 0x11) => {
@@ -4164,6 +4458,110 @@ impl Script {
                                         memory_size += term.size();
                                         frame.stack.push(term);
                                     }
+                                    // Cast ibig to f32
+                                    (VmTerm::SignedBig(v), 0x0f) => {
+                                        match TryInto::<i128>::try_into(v) {
+                                            Ok(v) => {
+                                                let v: Decimal = v.into();
+                                                match v.try_into() {
+                                                    Ok(v) => {
+                                                        let term =
+                                                            VmTerm::Float32(Float32Wrapper(v));
+                                                        memory_size += 4;
+                                                        frame.stack.push(term);
+                                                    }
+                                                    _ => {
+                                                        frame.executor.state =
+                                                            ScriptExecutorState::Error(
+                                                                ExecutionResult::InvalidCast,
+                                                                (
+                                                                    frame.i_ptr,
+                                                                    frame.func_idx,
+                                                                    i.clone(),
+                                                                    frame.stack.as_slice(),
+                                                                )
+                                                                    .into(),
+                                                            );
+                                                    }
+                                                }
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
+                                    }
+                                    // Cast ibig to f64
+                                    (VmTerm::SignedBig(v), 0x10) => {
+                                        match TryInto::<i128>::try_into(v) {
+                                            Ok(v) => {
+                                                let v: Decimal = v.into();
+                                                match v.try_into() {
+                                                    Ok(v) => {
+                                                        let term =
+                                                            VmTerm::Float64(Float64Wrapper(v));
+                                                        memory_size += 8;
+                                                        frame.stack.push(term);
+                                                    }
+                                                    _ => {
+                                                        frame.executor.state =
+                                                            ScriptExecutorState::Error(
+                                                                ExecutionResult::InvalidCast,
+                                                                (
+                                                                    frame.i_ptr,
+                                                                    frame.func_idx,
+                                                                    i.clone(),
+                                                                    frame.stack.as_slice(),
+                                                                )
+                                                                    .into(),
+                                                            );
+                                                    }
+                                                }
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
+                                    }
+                                    // Cast ibig to decimal
+                                    (VmTerm::SignedBig(v), 0x11) => {
+                                        match TryInto::<i128>::try_into(v) {
+                                            Ok(v) => {
+                                                let term = VmTerm::Decimal(v.into());
+                                                memory_size += term.size();
+                                                frame.stack.push(term);
+                                            }
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
+                                    }
                                     // Cast ibig to u8 array
                                     (VmTerm::SignedBig(v), 0x15) => {
                                         let sign = v.signum().to_f32() as i8;
@@ -4200,6 +4598,329 @@ impl Script {
                                     // Cast ibig to ibig array
                                     (VmTerm::SignedBig(v), 0x20) => {
                                         let term = VmTerm::SignedBigArray(vec![v]);
+                                        memory_size += term.size();
+                                        frame.stack.push(term);
+                                    }
+
+                                    // Decimal casts
+                                    //
+                                    // Cast decimal to u8.
+                                    (VmTerm::Decimal(v), 0x03) => match v.try_into() {
+                                        Ok(v) => {
+                                            frame.stack.push(VmTerm::Unsigned8(v));
+                                            memory_size += 1;
+                                        }
+                                        _ => {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidCast,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    },
+                                    // Cast decimal to u16
+                                    (VmTerm::Decimal(v), 0x04) => match v.try_into() {
+                                        Ok(v) => {
+                                            frame.stack.push(VmTerm::Unsigned16(v));
+                                            memory_size += 2;
+                                        }
+                                        _ => {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidCast,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    },
+                                    // Cast decimal to u32
+                                    (VmTerm::Decimal(v), 0x05) => match v.try_into() {
+                                        Ok(v) => {
+                                            frame.stack.push(VmTerm::Unsigned32(v));
+                                            memory_size += 4;
+                                        }
+                                        _ => {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidCast,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    },
+                                    // Cast decimal to u64
+                                    (VmTerm::Decimal(v), 0x06) => match v.try_into() {
+                                        Ok(v) => {
+                                            frame.stack.push(VmTerm::Unsigned64(v));
+                                            memory_size += 8;
+                                        }
+                                        _ => {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidCast,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    },
+                                    // Cast decimal to u128
+                                    (VmTerm::Decimal(v), 0x07) => match v.try_into() {
+                                        Ok(v) => {
+                                            frame.stack.push(VmTerm::Unsigned128(v));
+                                            memory_size += 16;
+                                        }
+                                        _ => {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidCast,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    },
+                                    // Cast decimal to ubig
+                                    (VmTerm::Decimal(v), 0x08) => {
+                                        match TryInto::<u128>::try_into(v) {
+                                            Ok(v) => match v.try_into() {
+                                                Ok(v) => {
+                                                    let term = VmTerm::UnsignedBig(v);
+                                                    memory_size += term.size();
+                                                    frame.stack.push(term);
+                                                }
+                                                _ => {
+                                                    frame.executor.state =
+                                                        ScriptExecutorState::Error(
+                                                            ExecutionResult::InvalidCast,
+                                                            (
+                                                                frame.i_ptr,
+                                                                frame.func_idx,
+                                                                i.clone(),
+                                                                frame.stack.as_slice(),
+                                                            )
+                                                                .into(),
+                                                        );
+                                                }
+                                            },
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
+                                    }
+                                    // Cast decimal to i8
+                                    (VmTerm::Decimal(v), 0x09) => match v.try_into() {
+                                        Ok(v) => {
+                                            frame.stack.push(VmTerm::Signed8(v));
+                                            memory_size += 1;
+                                        }
+                                        _ => {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidCast,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    },
+                                    // Cast decimal to i16
+                                    (VmTerm::Decimal(v), 0x0a) => match v.try_into() {
+                                        Ok(v) => {
+                                            frame.stack.push(VmTerm::Signed16(v));
+                                            memory_size += 2;
+                                        }
+                                        _ => {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidCast,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    },
+                                    // Cast decimal to i32
+                                    (VmTerm::Decimal(v), 0x0b) => match v.try_into() {
+                                        Ok(v) => {
+                                            frame.stack.push(VmTerm::Signed32(v));
+                                            memory_size += 4;
+                                        }
+                                        _ => {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidCast,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    },
+                                    // Cast decimal to i64
+                                    (VmTerm::Decimal(v), 0x0c) => match v.try_into() {
+                                        Ok(v) => {
+                                            frame.stack.push(VmTerm::Signed64(v));
+                                            memory_size += 8;
+                                        }
+                                        _ => {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidCast,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    },
+                                    // Cast decimal to i128
+                                    (VmTerm::Decimal(v), 0x0d) => match v.try_into() {
+                                        Ok(v) => {
+                                            frame.stack.push(VmTerm::Signed128(v));
+                                            memory_size += 16;
+                                        }
+                                        _ => {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidCast,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    },
+                                    // Cast decimal to ibig
+                                    (VmTerm::Decimal(v), 0x0e) => {
+                                        match TryInto::<i128>::try_into(v) {
+                                            Ok(v) => match v.try_into() {
+                                                Ok(v) => {
+                                                    let term = VmTerm::SignedBig(v);
+                                                    memory_size += term.size();
+                                                    frame.stack.push(term);
+                                                }
+                                                _ => {
+                                                    frame.executor.state =
+                                                        ScriptExecutorState::Error(
+                                                            ExecutionResult::InvalidCast,
+                                                            (
+                                                                frame.i_ptr,
+                                                                frame.func_idx,
+                                                                i.clone(),
+                                                                frame.stack.as_slice(),
+                                                            )
+                                                                .into(),
+                                                        );
+                                                }
+                                            },
+                                            _ => {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            }
+                                        }
+                                    }
+                                    // Cast Decimal to f32
+                                    (VmTerm::Decimal(v), 0x0f) => match v.try_into() {
+                                        Ok(v) => {
+                                            frame.stack.push(VmTerm::Float32(Float32Wrapper(v)));
+                                            memory_size += 4;
+                                        }
+                                        _ => {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidCast,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    },
+                                    // Cast Decimal to f64
+                                    (VmTerm::Decimal(v), 0x10) => match v.try_into() {
+                                        Ok(v) => {
+                                            frame.stack.push(VmTerm::Float64(Float64Wrapper(v)));
+                                            memory_size += 8;
+                                        }
+                                        _ => {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidCast,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    },
+                                    // Cast Decimal to Decimal
+                                    (VmTerm::Decimal(v), 0x11) => {
+                                        let term = VmTerm::Decimal(v);
+                                        memory_size += term.size();
+                                        frame.stack.push(term);
+                                    }
+                                    // Cast decimal to u8 array
+                                    (VmTerm::Decimal(v), 0x15) => {
+                                        let term = VmTerm::Unsigned8Array(v.serialize().to_vec());
+                                        memory_size += term.size();
+                                        frame.stack.push(term);
+                                    }
+                                    // Cast decimal to decimal array
+                                    (VmTerm::Decimal(v), 0x23) => {
+                                        let term = VmTerm::DecimalArray(vec![v]);
                                         memory_size += term.size();
                                         frame.stack.push(term);
                                     }
@@ -10363,6 +11084,30 @@ mod tests {
         ubig!(100),
         ibig!(100)
     );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_ubig_to_float32,
+        UnsignedBig,
+        Float32,
+        0x0f,
+        ubig!(100),
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_ubig_to_float64,
+        UnsignedBig,
+        Float64,
+        0x10,
+        ubig!(100),
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_ubig_to_decimal,
+        UnsignedBig,
+        Decimal,
+        0x11,
+        ubig!(100),
+        dec!(100)
+    );
     impl_primitive_cast_to_test!(cast_to_from_i128_to_u8, Signed128, Unsigned8, 0x03, 100);
     impl_primitive_cast_to_test!(cast_to_from_i128_to_u16, Signed128, Unsigned16, 0x04, 100);
     impl_primitive_cast_to_test!(cast_to_from_i128_to_u32, Signed128, Unsigned32, 0x05, 100);
@@ -10509,6 +11254,150 @@ mod tests {
         ibig!(100),
         ibig!(100)
     );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_ibig_to_float32,
+        SignedBig,
+        Float32,
+        0x0f,
+        ibig!(100),
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_ibig_to_float64,
+        SignedBig,
+        Float64,
+        0x10,
+        ibig!(100),
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_ibig_to_decimal,
+        SignedBig,
+        Decimal,
+        0x11,
+        ibig!(100),
+        dec!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_u8,
+        Decimal,
+        Unsigned8,
+        0x03,
+        dec!(100),
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_u16,
+        Decimal,
+        Unsigned16,
+        0x04,
+        dec!(100),
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_u32,
+        Decimal,
+        Unsigned32,
+        0x05,
+        dec!(100),
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_u64,
+        Decimal,
+        Unsigned64,
+        0x06,
+        dec!(100),
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_u128,
+        Decimal,
+        Unsigned128,
+        0x07,
+        dec!(100),
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_ubig,
+        Decimal,
+        UnsignedBig,
+        0x08,
+        dec!(100),
+        ubig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_i8,
+        Decimal,
+        Signed8,
+        0x09,
+        dec!(100),
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_i16,
+        Decimal,
+        Signed16,
+        0x0a,
+        dec!(100),
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_i32,
+        Decimal,
+        Signed32,
+        0x0b,
+        dec!(100),
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_i64,
+        Decimal,
+        Signed64,
+        0x0c,
+        dec!(100),
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_i128,
+        Decimal,
+        Signed128,
+        0x0d,
+        dec!(100),
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_ibig,
+        Decimal,
+        SignedBig,
+        0x0e,
+        dec!(100),
+        ibig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_float32,
+        Decimal,
+        Float32,
+        0x0f,
+        dec!(100),
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_float64,
+        Decimal,
+        Float64,
+        0x10,
+        dec!(100),
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_decimal,
+        Decimal,
+        Decimal,
+        0x11,
+        dec!(100),
+        dec!(100)
+    );
 
     // Cast to primitive to array implementations
     impl_primitive_to_array_cast_to_test!(
@@ -10595,6 +11484,13 @@ mod tests {
         0x20,
         ibig!(100)
     );
+    impl_primitive_to_array_cast_to_test!(
+        cast_to_from_decimal_to_decimal_array,
+        Decimal,
+        DecimalArray,
+        0x23,
+        dec!(100)
+    );
 
     // Cast to primitive to u8 array implementations
     impl_primitive_to_u8_array_cast_to_test!(cast_to_from_u16_to_u8_array, Unsigned16, 100_u16);
@@ -10637,6 +11533,30 @@ mod tests {
         0x15,
         ibig!(0),
         vec![0x10]
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_u8_array_pos,
+        Decimal,
+        Unsigned8Array,
+        0x15,
+        dec!(100),
+        vec![0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_u8_array_neg,
+        Decimal,
+        Unsigned8Array,
+        0x15,
+        dec!(-100),
+        vec![0, 0, 0, 128, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_decimal_to_u8_array_zero,
+        Decimal,
+        Unsigned8Array,
+        0x15,
+        dec!(0),
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     );
     impl_primitive_cast_to_test_dual_vals!(
         cast_to_from_hash160_to_u8_array,
