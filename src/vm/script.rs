@@ -6031,6 +6031,236 @@ impl Script {
                                         frame.stack.push(term);
                                     }
 
+                                    // Unsigned8Array casts
+                                    //
+                                    // Cast Unsigned8Array to Hash160
+                                    (VmTerm::Unsigned8Array(v), 0x00) if v.len() == 20 => {
+                                        let mut bytes = [0; 20];
+                                        bytes.copy_from_slice(&v);
+                                        frame.stack.push(VmTerm::Hash160(bytes));
+                                        memory_size += 20;
+                                    }
+                                    // Cast Unsigned8Array to Hash256
+                                    (VmTerm::Unsigned8Array(v), 0x01) if v.len() == 32 => {
+                                        let mut bytes = [0; 32];
+                                        bytes.copy_from_slice(&v);
+                                        frame.stack.push(VmTerm::Hash256(bytes));
+                                        memory_size += 32;
+                                    }
+                                    // Cast Unsigned8Array to Hash512
+                                    (VmTerm::Unsigned8Array(v), 0x02) if v.len() == 64 => {
+                                        let mut bytes = [0; 64];
+                                        bytes.copy_from_slice(&v);
+                                        frame.stack.push(VmTerm::Hash512(bytes));
+                                        memory_size += 64;
+                                    }
+                                    // Cast Unsigned8Array to u8
+                                    (VmTerm::Unsigned8Array(v), 0x03) if v.len() == 1 => {
+                                        frame.stack.push(VmTerm::Unsigned8(v[0]));
+                                        memory_size += 1;
+                                    }
+                                    // Cast Unsigned8Array to u16
+                                    (VmTerm::Unsigned8Array(v), 0x04) if v.len() == 2 => {
+                                        let mut bytes = [0; 2];
+                                        bytes.copy_from_slice(&v);
+                                        frame
+                                            .stack
+                                            .push(VmTerm::Unsigned16(u16::from_le_bytes(bytes)));
+                                        memory_size += 2;
+                                    }
+                                    // Cast Unsigned8Array to u32
+                                    (VmTerm::Unsigned8Array(v), 0x05) if v.len() == 4 => {
+                                        let mut bytes = [0; 4];
+                                        bytes.copy_from_slice(&v);
+                                        frame
+                                            .stack
+                                            .push(VmTerm::Unsigned32(u32::from_le_bytes(bytes)));
+                                        memory_size += 4;
+                                    }
+                                    // Cast Unsigned8Array to u64
+                                    (VmTerm::Unsigned8Array(v), 0x06) if v.len() == 8 => {
+                                        let mut bytes = [0; 8];
+                                        bytes.copy_from_slice(&v);
+                                        frame
+                                            .stack
+                                            .push(VmTerm::Unsigned64(u64::from_le_bytes(bytes)));
+                                        memory_size += 8;
+                                    }
+                                    // Cast Unsigned8Array to u128
+                                    (VmTerm::Unsigned8Array(v), 0x07) if v.len() == 16 => {
+                                        let mut bytes = [0; 16];
+                                        bytes.copy_from_slice(&v);
+                                        frame
+                                            .stack
+                                            .push(VmTerm::Unsigned128(u128::from_le_bytes(bytes)));
+                                        memory_size += 16;
+                                    }
+                                    // Cast Unsigned8Array to ubig
+                                    (VmTerm::Unsigned8Array(v), 0x08) => {
+                                        let term = VmTerm::UnsignedBig(UBig::from_le_bytes(&v));
+                                        memory_size += term.size();
+                                        frame.stack.push(term);
+                                    }
+                                    // Cast Unsigned8Array to i8
+                                    (VmTerm::Unsigned8Array(v), 0x09) if v.len() == 1 => {
+                                        let mut bytes = [0; 1];
+                                        bytes[0] = v[0];
+                                        frame.stack.push(VmTerm::Signed8(i8::from_le_bytes(bytes)));
+                                        memory_size += 1;
+                                    }
+                                    // Cast Unsigned8Array to i16
+                                    (VmTerm::Unsigned8Array(v), 0x0a) if v.len() == 2 => {
+                                        let mut bytes = [0; 2];
+                                        bytes.copy_from_slice(&v);
+                                        frame
+                                            .stack
+                                            .push(VmTerm::Signed16(i16::from_le_bytes(bytes)));
+                                        memory_size += 2;
+                                    }
+                                    // Cast Unsigned8Array to i32
+                                    (VmTerm::Unsigned8Array(v), 0x0b) if v.len() == 4 => {
+                                        let mut bytes = [0; 4];
+                                        bytes.copy_from_slice(&v);
+                                        frame
+                                            .stack
+                                            .push(VmTerm::Signed32(i32::from_le_bytes(bytes)));
+                                        memory_size += 4;
+                                    }
+                                    // Cast Unsigned8Array to i64
+                                    (VmTerm::Unsigned8Array(v), 0x0c) if v.len() == 8 => {
+                                        let mut bytes = [0; 8];
+                                        bytes.copy_from_slice(&v);
+                                        frame
+                                            .stack
+                                            .push(VmTerm::Signed64(i64::from_le_bytes(bytes)));
+                                        memory_size += 8;
+                                    }
+                                    // Cast Unsigned8Array to i128
+                                    (VmTerm::Unsigned8Array(v), 0x0d) if v.len() == 16 => {
+                                        let mut bytes = [0; 16];
+                                        bytes.copy_from_slice(&v);
+                                        frame
+                                            .stack
+                                            .push(VmTerm::Signed128(i128::from_le_bytes(bytes)));
+                                        memory_size += 16;
+                                    }
+                                    // Cast Unsigned8Array to ibig
+                                    (VmTerm::Unsigned8Array(v), 0x0e) => {
+                                        if !v.is_empty() {
+                                            let sign = v[0];
+
+                                            // Zero must be a single byte
+                                            if sign == 0x10 && v.len() > 1 {
+                                                frame.executor.state = ScriptExecutorState::Error(
+                                                    ExecutionResult::InvalidCast,
+                                                    (
+                                                        frame.i_ptr,
+                                                        frame.func_idx,
+                                                        i.clone(),
+                                                        frame.stack.as_slice(),
+                                                    )
+                                                        .into(),
+                                                );
+                                            } else {
+                                                let v = UBig::from_le_bytes(&v[1..]);
+
+                                                match sign {
+                                                    // Negative
+                                                    0x0e => match v.try_into() {
+                                                        Ok(v) => {
+                                                            let mut v: IBig = v;
+                                                            v = v * ibig!(-1);
+                                                            let term = VmTerm::SignedBig(v);
+                                                            memory_size += term.size();
+                                                            frame.stack.push(term);
+                                                        }
+                                                        _ => {
+                                                            frame.executor.state =
+                                                                ScriptExecutorState::Error(
+                                                                    ExecutionResult::InvalidCast,
+                                                                    (
+                                                                        frame.i_ptr,
+                                                                        frame.func_idx,
+                                                                        i.clone(),
+                                                                        frame.stack.as_slice(),
+                                                                    )
+                                                                        .into(),
+                                                                );
+                                                        }
+                                                    },
+                                                    // Positive
+                                                    0x0f => match v.try_into() {
+                                                        Ok(v) => {
+                                                            let term = VmTerm::SignedBig(v);
+                                                            memory_size += term.size();
+                                                            frame.stack.push(term);
+                                                        }
+                                                        _ => {
+                                                            frame.executor.state =
+                                                                ScriptExecutorState::Error(
+                                                                    ExecutionResult::InvalidCast,
+                                                                    (
+                                                                        frame.i_ptr,
+                                                                        frame.func_idx,
+                                                                        i.clone(),
+                                                                        frame.stack.as_slice(),
+                                                                    )
+                                                                        .into(),
+                                                                );
+                                                        }
+                                                    },
+                                                    // Zero
+                                                    0x10 => {
+                                                        let term = VmTerm::SignedBig(ibig!(0));
+                                                        memory_size += term.size();
+                                                        frame.stack.push(term);
+                                                    }
+                                                    _ => {
+                                                        frame.executor.state =
+                                                            ScriptExecutorState::Error(
+                                                                ExecutionResult::InvalidCast,
+                                                                (
+                                                                    frame.i_ptr,
+                                                                    frame.func_idx,
+                                                                    i.clone(),
+                                                                    frame.stack.as_slice(),
+                                                                )
+                                                                    .into(),
+                                                            );
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    // Cast Unsigned8Array to f32
+                                    (VmTerm::Unsigned8Array(v), 0x0f) if v.len() == 4 => {
+                                        let mut bytes = [0; 4];
+                                        bytes.copy_from_slice(&v);
+                                        let term = VmTerm::Float32(Float32Wrapper(
+                                            f32::from_le_bytes(bytes),
+                                        ));
+                                        frame.stack.push(term);
+                                        memory_size += 4;
+                                    }
+                                    // Cast Unsigned8Array to f64
+                                    (VmTerm::Unsigned8Array(v), 0x10) if v.len() == 8 => {
+                                        let mut bytes = [0; 8];
+                                        bytes.copy_from_slice(&v);
+                                        let term = VmTerm::Float64(Float64Wrapper(
+                                            f64::from_le_bytes(bytes),
+                                        ));
+                                        frame.stack.push(term);
+                                        memory_size += 8;
+                                    }
+                                    // Cast Unsigned8Array to decimal
+                                    (VmTerm::Unsigned8Array(v), 0x11) if v.len() == 16 => {
+                                        let mut bytes = [0; 16];
+                                        bytes.copy_from_slice(&v);
+                                        let term = VmTerm::Decimal(Decimal::deserialize(bytes));
+                                        memory_size += term.size();
+                                        frame.stack.push(term);
+                                    }
+
                                     _ => {
                                         frame.executor.state = ScriptExecutorState::Error(
                                             ExecutionResult::InvalidCast,
@@ -12799,6 +13029,216 @@ mod tests {
         DecimalArray,
         0x23,
         dec!(100)
+    );
+
+    // Cast to u8 array to primitives implementations
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_hash160,
+        Unsigned8Array,
+        Hash160,
+        0x00,
+        vec![0; 20],
+        [0; 20]
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_hash256,
+        Unsigned8Array,
+        Hash256,
+        0x01,
+        vec![0; 32],
+        [0; 32]
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_hash512,
+        Unsigned8Array,
+        Hash512,
+        0x02,
+        vec![0; 64],
+        [0; 64]
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_u8,
+        Unsigned8Array,
+        Unsigned8,
+        0x03,
+        vec![100],
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_u16,
+        Unsigned8Array,
+        Unsigned16,
+        0x04,
+        vec![100, 0],
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_u32,
+        Unsigned8Array,
+        Unsigned32,
+        0x05,
+        vec![100, 0, 0, 0],
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_u64,
+        Unsigned8Array,
+        Unsigned64,
+        0x06,
+        vec![100, 0, 0, 0, 0, 0, 0, 0],
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_u128,
+        Unsigned8Array,
+        Unsigned128,
+        0x07,
+        vec![100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_ubig,
+        Unsigned8Array,
+        UnsignedBig,
+        0x08,
+        vec![100],
+        ubig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_i8,
+        Unsigned8Array,
+        Signed8,
+        0x09,
+        vec![100],
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_i16,
+        Unsigned8Array,
+        Signed16,
+        0x0a,
+        vec![100, 0],
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_i32,
+        Unsigned8Array,
+        Signed32,
+        0x0b,
+        vec![100, 0, 0, 0],
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_i64,
+        Unsigned8Array,
+        Signed64,
+        0x0c,
+        vec![100, 0, 0, 0, 0, 0, 0, 0],
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_i128,
+        Unsigned8Array,
+        Signed128,
+        0x0d,
+        vec![100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        100
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_ibig_pos,
+        Unsigned8Array,
+        SignedBig,
+        0x0e,
+        vec![0x0f, 100],
+        ibig!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_ibig_neg,
+        Unsigned8Array,
+        SignedBig,
+        0x0e,
+        vec![0x0e, 100],
+        ibig!(-100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_ibig_zero,
+        Unsigned8Array,
+        SignedBig,
+        0x0e,
+        vec![0x10],
+        ibig!(0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_decimal_pos,
+        Unsigned8Array,
+        Decimal,
+        0x11,
+        vec![0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        dec!(100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_decimal_neg,
+        Unsigned8Array,
+        Decimal,
+        0x11,
+        vec![0, 0, 0, 128, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        dec!(-100)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_decimal_zero,
+        Unsigned8Array,
+        Decimal,
+        0x11,
+        vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        dec!(0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_f32_pos,
+        Unsigned8Array,
+        Float32,
+        0x0f,
+        vec![0, 0, 200, 66],
+        Float32Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_f32_neg,
+        Unsigned8Array,
+        Float32,
+        0x0f,
+        vec![0, 0, 200, 194],
+        Float32Wrapper(-100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_f32_zero,
+        Unsigned8Array,
+        Float32,
+        0x0f,
+        vec![0, 0, 0, 0],
+        Float32Wrapper(0.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_f64_pos,
+        Unsigned8Array,
+        Float64,
+        0x10,
+        vec![0, 0, 0, 0, 0, 0, 89, 64],
+        Float64Wrapper(100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_f64_neg,
+        Unsigned8Array,
+        Float64,
+        0x10,
+        vec![0, 0, 0, 0, 0, 0, 89, 192],
+        Float64Wrapper(-100.0)
+    );
+    impl_primitive_cast_to_test_dual_vals!(
+        cast_to_from_u8_array_to_f64_zero,
+        Unsigned8Array,
+        Float64,
+        0x10,
+        vec![0, 0, 0, 0, 0, 0, 0, 0],
+        Float64Wrapper(0.0)
     );
 
     // Cast to primitive to u8 array implementations
