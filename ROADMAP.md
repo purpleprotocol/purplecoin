@@ -161,7 +161,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x89` Negate - If the topmost item on the stack is `1`, turns it into a `0`. If the topmost item on the stack is anything but `1` it turns it into a `1`
     - [x] OP `0x8a` Abs - Returns the absolute value of the topmost item on the stack
     - [ ] OP `0x8b` Pow - Raises the first item popped from the stack to the power of the second item popped from the stack.
-    - [ ] OP `0x8c` Rem - Returns the remainder of the division of the first item popped from the stack with the second item popped from the stack.
+    - [x] OP `0x8c` Rem - Returns the remainder of the division of the first item popped from the stack with the second item popped from the stack.
     - [ ] OP `0x8d` Round - Rounds the second item popped from the stack to the number decimal points which is the first item popped from the stack. 
     - [x] OP `0x8e` PushExecCount - Pushes the current amount of opcodes that have been executed to the top of the stack.
     - [x] OP `0x8f` FlushToScriptOuts - Flushes the terms on the current frame to the script outputs stack
