@@ -9292,6 +9292,42 @@ impl<'a> ScriptExecutor<'a> {
                     }
                 }
 
+                ScriptEntry::Opcode(OP::Floor) => match exec_stack.pop() {
+                    Some(VmTerm::Float32(v)) => {
+                        exec_stack.push(VmTerm::Float32(Float32Wrapper(v.0.floor())));
+                    }
+                    Some(VmTerm::Float64(v)) => {
+                        exec_stack.push(VmTerm::Float64(Float64Wrapper(v.0.floor())));
+                    }
+                    Some(VmTerm::Decimal(v)) => {
+                        exec_stack.push(VmTerm::Decimal(v.floor()));
+                    }
+                    _ => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
+
+                ScriptEntry::Opcode(OP::Ceil) => match exec_stack.pop() {
+                    Some(VmTerm::Float32(v)) => {
+                        exec_stack.push(VmTerm::Float32(Float32Wrapper(v.0.ceil())));
+                    }
+                    Some(VmTerm::Float64(v)) => {
+                        exec_stack.push(VmTerm::Float64(Float64Wrapper(v.0.ceil())));
+                    }
+                    Some(VmTerm::Decimal(v)) => {
+                        exec_stack.push(VmTerm::Decimal(v.ceil()));
+                    }
+                    _ => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
+
                 ScriptEntry::Opcode(OP::BitSHLeft) => {
                     if exec_stack.len() < 2 {
                         self.state = ScriptExecutorState::Error(

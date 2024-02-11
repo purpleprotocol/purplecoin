@@ -52,8 +52,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x1a` RandomFloat32Var - Pushes a random `Float32` onto the stack
     - [x] OP `0x1b` RandomFloat64Var - Pushes a random `Float64` onto the stack
     - [x] OP `0x1c` RandomDecimalVar - Pushes a random `Decimal` onto the stack
-    - [ ] OP `0x1d` Floor - Returns the largest integer less than or equal to the float/decimal.
-    - [ ] OP `0x1e` Ceil - Returns the smallest integer less than or equal to the float/decimal.
+    - [x] OP `0x1d` Floor - Returns the largest integer less than or equal to the float/decimal.
+    - [x] OP `0x1e` Ceil - Returns the smallest integer less than or equal to the float/decimal.
     - [ ] OP `0x1f` IsNaN - Pushes `1` to the top of the stack if the float is NaN. Otherwise pushes `0`.
     - [ ] OP `0x20` IsInfinite - Pushes `1` to the top of the stack if the float is infinite. Otherwise pushes `0`.
     - [x] OP `0x23` Hash160Var - Pushes a `Hash160` onto the stack
