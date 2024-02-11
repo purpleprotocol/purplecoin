@@ -19,7 +19,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, RoundingStrategy};
 use rust_decimal_macros::dec;
 use simdutf8::basic::from_utf8;
 use std::collections::HashMap;
@@ -9417,6 +9417,49 @@ impl<'a> ScriptExecutor<'a> {
                         );
                     }
                 },
+
+                ScriptEntry::Opcode(OP::Round) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+
+                    let mut last = exec_stack.pop().unwrap();
+                    *memory_size -= last.size();
+                    let mut second = exec_stack.pop().unwrap();
+                    *memory_size -= second.size();
+
+                    match (second, last) {
+                        (VmTerm::Float32(v), VmTerm::Unsigned8(dec)) => {
+                            let y = 10i32.pow(dec as u32) as f32;
+                            let rounded = (v.0 * y).round() / y;
+                            exec_stack.push(VmTerm::Float32(Float32Wrapper(rounded)));
+                            *memory_size += 4;
+                        }
+                        (VmTerm::Float64(v), VmTerm::Unsigned8(dec)) => {
+                            let y = 10i32.pow(dec as u32) as f64;
+                            let rounded = (v.0 * y).round() / y;
+                            exec_stack.push(VmTerm::Float64(Float64Wrapper(rounded)));
+                            *memory_size += 8;
+                        }
+                        (VmTerm::Decimal(v), VmTerm::Unsigned8(dec)) => {
+                            let rounded = v.round_dp_with_strategy(
+                                dec as u32,
+                                RoundingStrategy::MidpointTowardZero,
+                            );
+                            exec_stack.push(VmTerm::Decimal(rounded));
+                            *memory_size += 16;
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
+                }
 
                 ScriptEntry::Opcode(OP::BitSHLeft) => {
                     if exec_stack.len() < 2 {
