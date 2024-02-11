@@ -49,9 +49,13 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x17` RandomSigned32Var - Pushes a random `Signed32` onto the stack
     - [x] OP `0x18` RandomSigned64Var - Pushes a random `Signed64` onto the stack
     - [x] OP `0x19` RandomSigned128Var - Pushes a random `Signed128` onto the stack
-    - [x] OP `0x20` RandomFloat32Var - Pushes a random `Float32` onto the stack
-    - [x] OP `0x21` RandomFloat64Var - Pushes a random `Float64` onto the stack
-    - [x] OP `0x22` RandomDecimalVar - Pushes a random `Decimal` onto the stack
+    - [x] OP `0x1a` RandomFloat32Var - Pushes a random `Float32` onto the stack
+    - [x] OP `0x1b` RandomFloat64Var - Pushes a random `Float64` onto the stack
+    - [x] OP `0x1c` RandomDecimalVar - Pushes a random `Decimal` onto the stack
+    - [ ] OP `0x1d` Floor - Returns the largest integer less than or equal to the float/decimal.
+    - [ ] OP `0x1e` Ceil - Returns the smallest integer less than or equal to the float/decimal.
+    - [ ] OP `0x1f` IsNaN - Pushes `1` to the top of the stack if the float is NaN. Otherwise pushes `0`.
+    - [ ] OP `0x20` IsInfinite - Pushes `1` to the top of the stack if the float is infinite. Otherwise pushes `0`.
     - [x] OP `0x23` Hash160Var - Pushes a `Hash160` onto the stack
     - [x] OP `0x24` Hash256Var - Pushes a `Hash256` onto the stack
     - [x] OP `0x25` Hash512Var - Pushes a `Hash512` onto the stack
@@ -156,7 +160,10 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x88` BoolOr - Or control operator
     - [x] OP `0x89` Negate - If the topmost item on the stack is `1`, turns it into a `0`. If the topmost item on the stack is anything but `1` it turns it into a `1`
     - [x] OP `0x8a` Abs - Returns the absolute value of the topmost item on the stack
-    - [x] OP `0x8e` PushExecCount - Pushes the current amount of opcodes that have been executed to the top of the stack
+    - [ ] OP `0x8b` Pow - Raises the first item popped from the stack to the power of the second item popped from the stack.
+    - [ ] OP `0x8c` Rem - Returns the remainder of the division of the first item popped from the stack with the second item popped from the stack.
+    - [ ] OP `0x8d` Round - Rounds the second item popped from the stack to the number decimal points which is the first item popped from the stack. 
+    - [x] OP `0x8e` PushExecCount - Pushes the current amount of opcodes that have been executed to the top of the stack.
     - [x] OP `0x8f` FlushToScriptOuts - Flushes the terms on the current frame to the script outputs stack
     - [x] OP `0x90` PopToScriptOuts - Pops the topmost item on the stack and pushes it to the script outputs stack
     - [x] OP `0x91` PickToScriptOuts - Duplicates the `n`th item on the stack and pushes it to the script outputs stack
@@ -242,6 +249,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xe3` SpentOutIsColouredOut - Pushes `1` if the spent output is coloured and `0` otherwise.
     - [x] OP `0xe4` SpentOutColourHash - Pushes the colour hash of the spent out to the top of the stack. Pushes a zero hash if the output is an XPU output.
     - [x] OP `0xe5` PushPrevScriptOuts - Pushes previous spend script outs on top of the stack up to `n`
+    - [ ] OP `0xe6` Trunc - Returns the integer part of a float/decimal.
+    - [ ] OP `0xe7` Frac - Returns the fractionary part of a float/decimal.
     - [x] OP `0xe8` GhostRider256 - Pops the topmost item on the stack, hashes it with GhostRider and then pushes the result to the stack.
     - [x] OP `0xe9` Fugue256 - Pops the topmost item on the stack, hashes it with Fugue256 and then pushes the result to the stack.
     - [x] OP `0xea` JH256 - Pops the topmost item on the stack, hashes it with JH256 and then pushes the result to the stack.
