@@ -9,7 +9,7 @@ Official implementation of Purplecoin, the first stateless sharded cryptocurrenc
 Check out the [build instructions](https://github.com/purpleprotocol/purplecoin/blob/main/BUILDING.md) for each platform.
 
 ## Features
-* **Scalable**: Purplecoin is made up of 256 shards, each representing a different blockchain that processes transactions concurrently. The average transaction size is `450 bytes`, with a maximum block size of `380kb`, and a production rate of 256 blocks per 30 seconds we can achieve **~12000 transactions per second** on a blockchain system that has roughly the same safety guarantees as Bitcoin. Shards are processed in groups, called "shard sectors" in order to stabilise the required hashrate to successfuly attack the system.
+* **Scalable**: Purplecoin is made up of 256 shards, each representing a different blockchain that processes transactions concurrently. The average transaction size is `450 bytes`, with a maximum block size of `380kb`, and a production rate of 256 blocks per 30 seconds we can achieve **~12000 transactions per second** on a blockchain system that has roughly the same safety guarantees as Bitcoin. Shards are processed in groups, called "shard sectors" in order to stabilise the required hashrate to successfully attack the system.
 * **Decentralized & Secure**: Scalability usually comes at the cost of centralization. For example Proof of Stake consensus is scalable and green but brings the security of the network in the hands of the few. Purplecoin fully uses Proof of Work, the most secure and decentralized consensus algorithm. Miners secure the network as is the case of Bitcoin
 * **Stateless**: Nodes are not required to store all past transactions in order to validate new blocks. **A miner only requires storing the latest 50 block headers of each shard, which total a size of 20mb, in order to start mining and fully validating new blocks across all shards**. This means that miners and ultra-light nodes **can run in memory only mode and and still be able to fully validate blocks**.
 * **Fast Sync**: Due to the stateless design, nodes without a transaction history do not have to download all of the blocks from genesis and can synchronize with the network **in seconds**. Furthermore, we can still validate new blocks while querying for past transactions. For comparison, synchronizing with the Bitcoin network, regardless of the number and timespan of transactions, takes several days using the same internet speed. When using a trusted bridge, there is no need to query past blocks as the bridge stores and manages the UTXO set.
@@ -47,7 +47,7 @@ Check out the [build instructions](https://github.com/purpleprotocol/purplecoin/
 * Can be mined on a smartphone
 
 ### Disadvantages when compared to Ethereum v1.0
-* Contracts are cannot have a global state as they are encoded as input spending conditions. While this is better performance wise as it allows us to parallelise contract execution, state modeling is much harder. State can only be passed from an input to the next output.
+* Contracts cannot have a global state as they are encoded as input spending conditions. While this is better performance wise as it allows us to parallelise contract execution, state modeling is much harder. State can only be passed from an input to the next output.
 * Contracts can only interact with contracts found in the same transaction
 
 ### Advantages when compared to Ethereum v2.0
@@ -59,7 +59,7 @@ Check out the [build instructions](https://github.com/purpleprotocol/purplecoin/
 * While the Green PoW mining model used in Purplecoin is 50% energy efficient, Proof of Stake is 98% energy efficient
 
 ## Donations
-While the development of Purplecoin initially happened in the sphere of Purple Technologies, it is not backed in any way by it or any other company. Purple Technologies is a for-profit company while Purplecoin is a decentralized project. Therefore, the decisions and development happens at the community level. As such, the project also relies on the community at a funding level. 
+While the development of Purplecoin initially happened in the sphere of Purple Technologies, it is not backed in any way by it or any other company. Purple Technologies is a for-profit company while Purplecoin is a decentralized project. Therefore, the decisions and development happen at the community level. As such, the project also relies on the community at a funding level. 
 
 If you wish to support the development of Purplecoin, donations can be sent to the following BTC address:
 ```
