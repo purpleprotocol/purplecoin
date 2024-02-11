@@ -9328,6 +9328,42 @@ impl<'a> ScriptExecutor<'a> {
                     }
                 },
 
+                ScriptEntry::Opcode(OP::Trunc) => match exec_stack.pop() {
+                    Some(VmTerm::Float32(v)) => {
+                        exec_stack.push(VmTerm::Float32(Float32Wrapper(v.0.trunc())));
+                    }
+                    Some(VmTerm::Float64(v)) => {
+                        exec_stack.push(VmTerm::Float64(Float64Wrapper(v.0.trunc())));
+                    }
+                    Some(VmTerm::Decimal(v)) => {
+                        exec_stack.push(VmTerm::Decimal(v.trunc()));
+                    }
+                    _ => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
+
+                ScriptEntry::Opcode(OP::Frac) => match exec_stack.pop() {
+                    Some(VmTerm::Float32(v)) => {
+                        exec_stack.push(VmTerm::Float32(Float32Wrapper(v.0.fract())));
+                    }
+                    Some(VmTerm::Float64(v)) => {
+                        exec_stack.push(VmTerm::Float64(Float64Wrapper(v.0.fract())));
+                    }
+                    Some(VmTerm::Decimal(v)) => {
+                        exec_stack.push(VmTerm::Decimal(v.fract()));
+                    }
+                    _ => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
+
                 ScriptEntry::Opcode(OP::IsNaN) => match exec_stack.last() {
                     Some(VmTerm::Float32(v)) => {
                         if v.0.is_nan() {
