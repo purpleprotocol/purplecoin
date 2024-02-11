@@ -119,7 +119,7 @@ version = "0.8.6"
 features = ["xxh3", "const_xxh3"]
 
 [dependencies.rocksdb]
-git = "https://github.com/rust-rocksdb/rust-rocksdb.git"
+version = "0.21.0"
 
 [target.'cfg(not(windows))'.dependencies]
 signal-hook = "0.3.4"
