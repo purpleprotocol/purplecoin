@@ -9328,6 +9328,60 @@ impl<'a> ScriptExecutor<'a> {
                     }
                 },
 
+                ScriptEntry::Opcode(OP::IsNaN) => match exec_stack.last() {
+                    Some(VmTerm::Float32(v)) => {
+                        if v.0.is_nan() {
+                            exec_stack.push(VmTerm::Unsigned8(1));
+                            *memory_size += 1;
+                        } else {
+                            exec_stack.push(VmTerm::Unsigned8(0));
+                            *memory_size += 1;
+                        }
+                    }
+                    Some(VmTerm::Float64(v)) => {
+                        if v.0.is_nan() {
+                            exec_stack.push(VmTerm::Unsigned8(1));
+                            *memory_size += 1;
+                        } else {
+                            exec_stack.push(VmTerm::Unsigned8(0));
+                            *memory_size += 1;
+                        }
+                    }
+                    _ => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
+
+                ScriptEntry::Opcode(OP::IsInfinite) => match exec_stack.last() {
+                    Some(VmTerm::Float32(v)) => {
+                        if v.0.is_infinite() {
+                            exec_stack.push(VmTerm::Unsigned8(1));
+                            *memory_size += 1;
+                        } else {
+                            exec_stack.push(VmTerm::Unsigned8(0));
+                            *memory_size += 1;
+                        }
+                    }
+                    Some(VmTerm::Float64(v)) => {
+                        if v.0.is_infinite() {
+                            exec_stack.push(VmTerm::Unsigned8(1));
+                            *memory_size += 1;
+                        } else {
+                            exec_stack.push(VmTerm::Unsigned8(0));
+                            *memory_size += 1;
+                        }
+                    }
+                    _ => {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                },
+
                 ScriptEntry::Opcode(OP::BitSHLeft) => {
                     if exec_stack.len() < 2 {
                         self.state = ScriptExecutorState::Error(
