@@ -7398,8 +7398,7 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::Concat) => {
-                    let mut len = exec_stack.len();
-                    if len < 2 {
+                    if exec_stack.len() < 2 {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
@@ -7407,10 +7406,9 @@ impl<'a> ScriptExecutor<'a> {
                         return;
                     }
 
-                    let mut second = exec_stack.remove(len - 2);
-                    len -= 1;
+                    let mut top = exec_stack.pop().unwrap();
 
-                    match exec_stack[len - 1].append(&mut second) {
+                    match exec_stack.last_mut().unwrap().append(&mut top) {
                         Some(()) => {
                             // The items size is already added to the memory_size of the VM,
                             // we only have to substract the HEAP_SIZE for the removed vector
@@ -8351,9 +8349,9 @@ impl<'a> ScriptExecutor<'a> {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match last.and(&mut second) {
+                    match second.and(&mut last) {
                         Some(()) => {
-                            exec_stack.push(last);
+                            exec_stack.push(second);
                         }
                         None => {
                             self.state = ScriptExecutorState::Error(
@@ -8376,9 +8374,9 @@ impl<'a> ScriptExecutor<'a> {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match last.or(&mut second) {
+                    match second.or(&mut last) {
                         Some(()) => {
-                            exec_stack.push(last);
+                            exec_stack.push(second);
                         }
                         None => {
                             self.state = ScriptExecutorState::Error(
@@ -9197,10 +9195,10 @@ impl<'a> ScriptExecutor<'a> {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match last.sub(&mut second) {
+                    match second.sub(&mut last) {
                         Some(()) => {
-                            *memory_size += last.size();
-                            exec_stack.push(last);
+                            *memory_size += second.size();
+                            exec_stack.push(second);
                         }
                         None => {
                             self.state = ScriptExecutorState::Error(
@@ -9251,10 +9249,37 @@ impl<'a> ScriptExecutor<'a> {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match last.div(&mut second) {
+                    match second.div(&mut last) {
                         Some(()) => {
-                            *memory_size += last.size();
-                            exec_stack.push(last);
+                            *memory_size += second.size();
+                            exec_stack.push(second);
+                        }
+                        None => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::Pow) => {
+                    if exec_stack.len() < 2 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+
+                    let mut last = exec_stack.pop().unwrap();
+                    *memory_size -= last.size();
+                    let mut second = exec_stack.pop().unwrap();
+                    *memory_size -= second.size();
+
+                    match second.pow(&mut last) {
+                        Some(()) => {
+                            *memory_size += second.size();
+                            exec_stack.push(second);
                         }
                         None => {
                             self.state = ScriptExecutorState::Error(
@@ -9278,10 +9303,10 @@ impl<'a> ScriptExecutor<'a> {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match last.rem(&mut second) {
+                    match second.rem(&mut last) {
                         Some(()) => {
-                            *memory_size += last.size();
-                            exec_stack.push(last);
+                            *memory_size += second.size();
+                            exec_stack.push(second);
                         }
                         None => {
                             self.state = ScriptExecutorState::Error(
@@ -23528,21 +23553,21 @@ mod tests {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x02),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Sub),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0xFF),
                 ScriptEntry::Opcode(OP::Signed8Var),
                 ScriptEntry::Byte(0xFE),
-                ScriptEntry::Opcode(OP::Signed8Var),
-                ScriptEntry::Byte(0xFF),
                 ScriptEntry::Opcode(OP::Sub),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::Signed8Var),
-                ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::Signed8Var),
                 ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Sub),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -23565,13 +23590,13 @@ mod tests {
         let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Sub),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -23592,13 +23617,13 @@ mod tests {
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x02),
-                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x0A),
+                ScriptEntry::Byte(0x14),
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x0A),
-                ScriptEntry::Byte(0x14),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
                 ScriptEntry::Opcode(OP::Sub),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -23786,21 +23811,21 @@ mod tests {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
                 ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x02),
-                ScriptEntry::Opcode(OP::Unsigned8Var),
                 ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Div),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::Signed8Var),
-                ScriptEntry::Byte(0xFE),
                 ScriptEntry::Opcode(OP::Signed8Var),
                 ScriptEntry::Byte(0xFC),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0xFE),
                 ScriptEntry::Opcode(OP::Div),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::Signed8Var),
-                ScriptEntry::Byte(0x01),
-                ScriptEntry::Opcode(OP::Signed8Var),
                 ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0x01),
                 ScriptEntry::Opcode(OP::Div),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -23823,13 +23848,13 @@ mod tests {
         let mut ss = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0x05),
                 ScriptEntry::Byte(0x08),
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Div),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -23843,13 +23868,13 @@ mod tests {
         let ss_2 = Script {
             script: vec![
                 ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
-                ScriptEntry::Opcode(OP::Signed8Var),
-                ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Signed8ArrayVar),
                 ScriptEntry::Byte(0x02),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0xFE),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0x02),
                 ScriptEntry::Opcode(OP::Div),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -23883,11 +23908,11 @@ mod tests {
                 ScriptEntry::Opcode(OP::Signed8ArrayVar),
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0xFE),
+                ScriptEntry::Byte(0xFC),
                 ScriptEntry::Opcode(OP::Signed8ArrayVar),
                 ScriptEntry::Byte(0x01),
                 ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0xFC),
+                ScriptEntry::Byte(0xFE),
                 ScriptEntry::Opcode(OP::Div),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
@@ -26035,13 +26060,24 @@ mod tests {
                 ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
                 ScriptEntry::Byte(0x06),
                 ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x05),
+                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0xa0),
                 ScriptEntry::Byte(0xa1),
                 ScriptEntry::Byte(0xa2),
                 ScriptEntry::Byte(0xa3),
                 ScriptEntry::Byte(0xa4),
                 ScriptEntry::Byte(0xa5),
-                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
+                ScriptEntry::Opcode(OP::Concat),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Signed8ArrayVar),
                 ScriptEntry::Byte(0x06),
                 ScriptEntry::Byte(0x00),
                 ScriptEntry::Byte(0x00),
@@ -26050,8 +26086,6 @@ mod tests {
                 ScriptEntry::Byte(0x03),
                 ScriptEntry::Byte(0x04),
                 ScriptEntry::Byte(0x05),
-                ScriptEntry::Opcode(OP::Concat),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::Signed8ArrayVar),
                 ScriptEntry::Byte(0x06),
                 ScriptEntry::Byte(0x00),
@@ -26061,15 +26095,6 @@ mod tests {
                 ScriptEntry::Byte(0x06),
                 ScriptEntry::Byte(0x05),
                 ScriptEntry::Byte(0x04),
-                ScriptEntry::Opcode(OP::Signed8ArrayVar),
-                ScriptEntry::Byte(0x06),
-                ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x01),
-                ScriptEntry::Byte(0x02),
-                ScriptEntry::Byte(0x03),
-                ScriptEntry::Byte(0x04),
-                ScriptEntry::Byte(0x05),
                 ScriptEntry::Opcode(OP::Concat),
                 ScriptEntry::Opcode(OP::PopToScriptOuts),
                 ScriptEntry::Opcode(OP::PushOut),
