@@ -21,6 +21,8 @@ use rand_pcg::Pcg64;
 use rand_seeder::Seeder;
 use rust_decimal::{Decimal, RoundingStrategy};
 use rust_decimal_macros::dec;
+use schnorrkel::cert::AdaptorCertPublic;
+use schnorrkel::{signing_context, PublicKey};
 use simdutf8::basic::from_utf8;
 use std::collections::HashMap;
 use std::mem;
@@ -41,6 +43,12 @@ pub const MAX_OUT_STACK: usize = 300;
 
 /// Return only the last n frames or top stack frame items
 pub const TRACE_SIZE: usize = 10;
+
+/// Context for adaptor cert operations
+pub const ADAPTOR_CERT_CTX: &str = ".ac";
+
+/// Context for inline signature verification
+pub const INLINE_VERIFICATION_CTX: &str = ".iv";
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ScriptEntry {
@@ -116,6 +124,9 @@ pub struct VmFlags {
 
     /// Previous output script outputs
     pub spent_out: Option<Output>,
+
+    /// Base context for cryptographic operations
+    pub base_ctx: String,
 }
 
 impl Default for VmFlags {
@@ -131,6 +142,7 @@ impl Default for VmFlags {
             in_binary: vec![],
             in_args: vec![],
             spent_out: None,
+            base_ctx: "".to_string(),
         }
     }
 }
@@ -6896,6 +6908,80 @@ impl<'a> ScriptExecutor<'a> {
                     };
                     *memory_size += 1;
                     exec_stack.push(term);
+                }
+
+                ScriptEntry::Opcode(OP::OpenImplicitCert) => {
+                    if exec_stack.len() < 3 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let t1 = exec_stack.pop().unwrap();
+                    *memory_size -= t1.size();
+                    let t2 = exec_stack.pop().unwrap();
+                    *memory_size -= t2.size();
+                    let t3 = exec_stack.pop().unwrap();
+                    *memory_size -= t3.size();
+
+                    match (t1, t2, t3) {
+                        (
+                            VmTerm::Unsigned8Array(issuer_pub_key),
+                            VmTerm::Unsigned8Array(transcript),
+                            VmTerm::Unsigned8Array(cert),
+                        ) if issuer_pub_key.len() == 32 && cert.len() == 32 => {
+                            match PublicKey::from_bytes(&issuer_pub_key) {
+                                Ok(issuer_pub_key) => {
+                                    // Create the context string and context
+                                    let mut ctx_buf = flags.base_ctx.clone();
+                                    ctx_buf.push_str(ADAPTOR_CERT_CTX);
+                                    let ctx = signing_context(ctx_buf.as_str().as_bytes());
+
+                                    let mut cert_buf = [0; 32];
+                                    cert_buf.copy_from_slice(cert.as_slice());
+                                    let cert = AdaptorCertPublic(cert_buf);
+
+                                    match issuer_pub_key
+                                        .open_adaptor_cert(ctx.bytes(transcript.as_slice()), &cert)
+                                    {
+                                        Ok(cert_pub_key) => {
+                                            let cert_pub_key_bytes = cert_pub_key.to_bytes();
+                                            let cert_pub_key =
+                                                VmTerm::Unsigned8Array(cert_pub_key_bytes.to_vec());
+                                            *memory_size += cert_pub_key.size();
+                                            exec_stack.push(cert_pub_key);
+                                        }
+                                        _ => {
+                                            self.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidArgs,
+                                                (
+                                                    i_ptr,
+                                                    func_idx,
+                                                    op.clone(),
+                                                    exec_stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    self.state = ScriptExecutorState::Error(
+                                        ExecutionResult::InvalidArgs,
+                                        (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                    );
+                                }
+                            }
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
                 }
 
                 ScriptEntry::Opcode(OP::PrevBlockHash) => {

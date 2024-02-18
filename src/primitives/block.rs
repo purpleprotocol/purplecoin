@@ -1146,6 +1146,7 @@ impl Block {
                 in_binary: input.to_bytes_for_signing(),
                 in_args: input.script_args.clone(),
                 spent_out: input.out.clone(),
+                base_ctx: "".to_owned(), // TODO: Inject base context here
             },
         );
 
@@ -1320,6 +1321,7 @@ impl BlockData {
                                     in_binary: input.to_bytes_for_signing(),
                                     in_args: input.script_args.clone(),
                                     spent_out: input.out.clone(),
+                                    base_ctx: "".to_owned(), // TODO: Inject base context here
                                 },
                             );
 
