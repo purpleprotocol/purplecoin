@@ -29,7 +29,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [ ] Implement optimal atomic asset exchange script and use it as a default script
   * [ ] Implement VM opcodes
     - [x] OP `0x00` Func - Start a function definition
-    - [ ] OP `0x05` Suspend - Suspends execution of the VM and creates an opaque output with the hash of the current execution state i.e. stack frame + input_stack + output_stack. This output can be re-spent to resume execution by anyone who includes it in a new transaction along with another input to pay the transaction fees. The VM must be started with special flags to resume the execution of the opaque output which must receive as arguments in the new transaction the following things: the original spending script, and the VM state binary blob. 
+    - [ ] OP `0x04` OpenImplicitCert - Pops a public key, transcript, and an implicit certificate from the top of the stack and extracts the public key from the certificate. If successful, pushes the public key to the top of the stack.
+    - [ ] OP `0x05` VerifyInline - Pops a transcript, signature, public key, and message, then verifies inline. Pushes `1` to the top of the stack if successful, and `0` otherwise. 
     - [x] OP `0x06` Ok - Stops script execution and returns the `Ok` code. Equivalent to pushing `1` to the stack then calling `OP_Return`.
     - [x] OP `0x07` ChainId - Pushes the current `chain_id` onto the stack
     - [x] OP `0x08` ChainHeight - Pushes the current `chain_height` onto the stack
@@ -195,7 +196,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xab` SpillScriptOuts - Pushes all the script outputs of the output with the given index to the stack.
     - [x] OP `0xac` IsColouredOut - Receives and index and pushes `1` on top of the stack if the output is coloured, `0` otherwise.
     - [x] OP `0xad` ColourHash - Pushes to the top of the stack the colour hash of the output at the given index. Pushes a zero hash if the output is an XPU output.
-    - [ ] OP `0xae` CallBody - Interprets the top `Unsigned8Array` on the stack as a Func body and executes it
+    - [ ] OP `0xae` CallBody - Parses the top `Unsigned8Array` on the stack as a script, and if successful executes it. Pops from the top of the stack the number of terms the script specifies. Traps if the script doesn't have enough terms on the top of the stack to take.
     - [x] OP `0xaf` Call - Calls the function with the given index.
     - [x] OP `0xb0` Concat - Concat the two topmost items on the stack
     - [x] OP `0xb1` Eq - Pushes `1` on top of the stack if the two topmost items on the stack are equal
