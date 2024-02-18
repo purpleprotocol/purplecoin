@@ -24,8 +24,10 @@ pub fn verify_single_schnor(
     message: &SigVerificationMessage,
 ) -> Result<(), SigVerificationErr> {
     let ctx = signing_context(ctx.as_bytes());
-    let pub_key = SchnorPK::from_bytes(pub_key.as_slice()).unwrap();
-    let sig = SchnorSig::from_bytes(sig.as_slice()).unwrap();
+    let pub_key = SchnorPK::from_bytes(pub_key.as_slice())
+        .map_err(|_| SigVerificationErr::InvalidPublicKey)?;
+    let sig =
+        SchnorSig::from_bytes(sig.as_slice()).map_err(|_| SigVerificationErr::InvalidSignature)?;
     pub_key
         .verify(ctx.bytes(message), &sig)
         .map_err(|_| SigVerificationErr::InvalidSignature)

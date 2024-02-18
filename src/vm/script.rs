@@ -9,8 +9,10 @@ use crate::primitives::{Address, Hash160, Input, Output};
 use crate::vm::internal::{Float32Wrapper, Float64Wrapper, VmTerm, EMPTY_VEC_HEAP_SIZE};
 use crate::vm::opcodes::OP;
 use crate::vm::sig_verification::{
-    verify_single_bip340, verify_single_ecdsa, verify_single_ed25519, VerificationStack,
+    verify_single_bip340, verify_single_ecdsa, verify_single_ed25519, verify_single_schnor,
+    VerificationStack,
 };
+use crate::vm::SigVerificationErr;
 use bincode::{Decode, Encode};
 use bitvec::prelude::*;
 use ibig::ops::Abs;
@@ -6975,6 +6977,77 @@ impl<'a> ScriptExecutor<'a> {
                                 }
                             }
                         }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::VerifyInline) => {
+                    if exec_stack.len() < 4 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let t1 = exec_stack.pop().unwrap();
+                    *memory_size -= t1.size();
+                    let t2 = exec_stack.pop().unwrap();
+                    *memory_size -= t2.size();
+                    let t3 = exec_stack.pop().unwrap();
+                    *memory_size -= t3.size();
+                    let t4 = exec_stack.pop().unwrap();
+                    *memory_size -= t4.size();
+
+                    match (t1, t2, t3, t4) {
+                        (
+                            VmTerm::Unsigned8Array(pub_key),
+                            VmTerm::Unsigned8Array(transcript),
+                            VmTerm::Unsigned8Array(signature),
+                            VmTerm::Unsigned8Array(message),
+                        ) if pub_key.len() == 32 && signature.len() == 64 => {
+                            // Create the context string and context
+                            let mut ctx_str = flags.base_ctx.clone();
+                            ctx_str.push_str(INLINE_VERIFICATION_CTX);
+
+                            let mut pub_key_buf = [0; 32];
+                            let mut sig_buf = [0; 64];
+                            pub_key_buf.copy_from_slice(&pub_key);
+                            sig_buf.copy_from_slice(&signature);
+
+                            match verify_single_schnor(
+                                ctx_str.as_str(),
+                                &pub_key_buf,
+                                &sig_buf,
+                                &message,
+                            ) {
+                                Ok(()) => {
+                                    exec_stack.push(VmTerm::Unsigned8(1));
+                                    *memory_size += 1;
+                                }
+
+                                Err(
+                                    SigVerificationErr::InvalidPublicKey
+                                    | SigVerificationErr::InvalidSignature,
+                                ) => {
+                                    self.state = ScriptExecutorState::Error(
+                                        ExecutionResult::InvalidArgs,
+                                        (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                    );
+                                }
+
+                                _ => {
+                                    exec_stack.push(VmTerm::Unsigned8(0));
+                                    *memory_size += 1;
+                                }
+                            }
+                        }
+
                         _ => {
                             self.state = ScriptExecutorState::Error(
                                 ExecutionResult::InvalidArgs,

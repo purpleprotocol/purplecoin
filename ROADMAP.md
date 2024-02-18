@@ -30,7 +30,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   * [ ] Implement VM opcodes
     - [x] OP `0x00` Func - Start a function definition
     - [x] OP `0x04` OpenImplicitCert - Pops a public key, transcript, and an implicit certificate from the top of the stack and extracts the public key from the certificate. If successful, pushes the public key to the top of the stack.
-    - [ ] OP `0x05` VerifyInline - Pops a transcript, signature, public key, and message, then verifies inline. Pushes `1` to the top of the stack if successful, and `0` otherwise. 
+    - [x] OP `0x05` VerifyInline - Pops a transcript, signature, public key, and message, then verifies inline. Pushes `1` to the top of the stack if successful, and `0` otherwise. 
     - [x] OP `0x06` Ok - Stops script execution and returns the `Ok` code. Equivalent to pushing `1` to the stack then calling `OP_Return`.
     - [x] OP `0x07` ChainId - Pushes the current `chain_id` onto the stack
     - [x] OP `0x08` ChainHeight - Pushes the current `chain_height` onto the stack
