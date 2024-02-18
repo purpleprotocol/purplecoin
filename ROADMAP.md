@@ -29,6 +29,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [ ] Implement optimal atomic asset exchange script and use it as a default script
   * [ ] Implement VM opcodes
     - [x] OP `0x00` Func - Start a function definition
+    - [x] OP `0x03` BaseContext - Pushes to the top of the stack the base cryptographic context, which can be used to create application specific contexts by appending other contexts to it before being passed to cryptographic opcodes. The base context is specific to the current shard.
     - [x] OP `0x04` OpenImplicitCert - Pops a public key, transcript, and an implicit certificate from the top of the stack and extracts the public key from the certificate. If successful, pushes the public key to the top of the stack.
     - [x] OP `0x05` VerifyInline - Pops a transcript, signature, public key, and message, then verifies inline. Pushes `1` to the top of the stack if successful, and `0` otherwise. 
     - [x] OP `0x06` Ok - Stops script execution and returns the `Ok` code. Equivalent to pushing `1` to the stack then calling `OP_Return`.

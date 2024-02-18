@@ -11,6 +11,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 #[repr(u8)]
 pub enum OP {
     Func = 0x00,
+    BaseContext = 0x03,
     OpenImplicitCert = 0x04,
     VerifyInline = 0x05,
     Ok = 0x06,

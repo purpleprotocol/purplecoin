@@ -6986,6 +6986,12 @@ impl<'a> ScriptExecutor<'a> {
                     }
                 }
 
+                ScriptEntry::Opcode(OP::BaseContext) => {
+                    let term = VmTerm::Unsigned8Array(flags.base_ctx.as_bytes().to_vec());
+                    *memory_size += term.size();
+                    exec_stack.push(term);
+                }
+
                 ScriptEntry::Opcode(OP::VerifyInline) => {
                     if exec_stack.len() < 4 {
                         self.state = ScriptExecutorState::Error(
