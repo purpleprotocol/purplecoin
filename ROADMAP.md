@@ -31,7 +31,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x00` Func - Start a function definition
     - [x] OP `0x03` BaseContext - Pushes to the top of the stack the base cryptographic context, which can be used to create application specific contexts by appending other contexts to it before being passed to cryptographic opcodes. The base context is specific to the current shard.
     - [x] OP `0x04` OpenImplicitCert - Pops a public key, transcript, and an implicit certificate from the top of the stack and extracts the public key from the certificate. If successful, pushes the public key to the top of the stack.
-    - [x] OP `0x05` VerifyInline - Pops a transcript, signature, public key, and message, then verifies inline. Pushes `1` to the top of the stack if successful, and `0` otherwise. 
+    - [x] OP `0x05` VerifyInline - Pops a transcript, signature, public key, and message, then verifies inline. Pushes `1` to the top of the stack if successful, and `0` otherwise.
     - [x] OP `0x06` Ok - Stops script execution and returns the `Ok` code. Equivalent to pushing `1` to the stack then calling `OP_Return`.
     - [x] OP `0x07` ChainId - Pushes the current `chain_id` onto the stack
     - [x] OP `0x08` ChainHeight - Pushes the current `chain_height` onto the stack
@@ -164,7 +164,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x8a` Abs - Returns the absolute value of the topmost item on the stack
     - [x] OP `0x8b` Pow - Raises the second item popped from the stack to the power of the first item popped from the stack.
     - [x] OP `0x8c` Rem - Returns the remainder of the division of the first item popped from the stack with the second item popped from the stack.
-    - [x] OP `0x8d` Round - Rounds the second item popped from the stack to the number decimal points which is the first item popped from the stack. 
+    - [x] OP `0x8d` Round - Rounds the second item popped from the stack to the number decimal points which is the first item popped from the stack.
     - [x] OP `0x8e` PushExecCount - Pushes the current amount of opcodes that have been executed to the top of the stack.
     - [x] OP `0x8f` FlushToScriptOuts - Flushes the terms on the current frame to the script outputs stack
     - [x] OP `0x90` PopToScriptOuts - Pops the topmost item on the stack and pushes it to the script outputs stack
@@ -197,7 +197,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xab` SpillScriptOuts - Pushes all the script outputs of the output with the given index to the stack.
     - [x] OP `0xac` IsColouredOut - Receives and index and pushes `1` on top of the stack if the output is coloured, `0` otherwise.
     - [x] OP `0xad` ColourHash - Pushes to the top of the stack the colour hash of the output at the given index. Pushes a zero hash if the output is an XPU output.
-    - [ ] OP `0xae` CallBody - Parses the top `Unsigned8Array` on the stack as a script, and if successful executes it. Pops from the top of the stack the number of terms the script specifies. Traps if the script doesn't have enough terms on the top of the stack to take.
+    - [x] OP `0xae` CallBody - Parses the top `Unsigned8Array` on the stack as a script, and if successful executes it. Pops from the top of the stack the number of terms the script specifies. Traps if the script doesn't have enough terms on the top of the stack to take.
     - [x] OP `0xaf` Call - Calls the function with the given index.
     - [x] OP `0xb0` Concat - Concat the two topmost items on the stack
     - [x] OP `0xb1` Eq - Pushes `1` on top of the stack if the two topmost items on the stack are equal

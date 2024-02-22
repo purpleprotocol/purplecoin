@@ -34,6 +34,9 @@ use super::bifs;
 /// Max frame stack size
 pub const MAX_FRAMES: usize = 512;
 
+/// Max scripts
+pub const MAX_SCRIPTS: usize = 5;
+
 /// Max stack size
 pub const STACK_SIZE: usize = 256;
 
@@ -66,6 +69,9 @@ pub struct Frame<'a> {
     /// Instruction pointer
     pub i_ptr: usize,
 
+    /// The index of the script on the script stack
+    pub script_idx: usize,
+
     /// Func index. This is `None` if the current function is the main function
     pub func_idx: Option<usize>,
 
@@ -83,11 +89,12 @@ pub struct Frame<'a> {
 
 impl<'a> Frame<'a> {
     #[must_use]
-    pub fn new(func_idx: Option<usize>) -> Self {
+    pub fn new(script_idx: usize, func_idx: Option<usize>) -> Self {
         Self {
             stack: Vec::with_capacity(STACK_SIZE),
             i_ptr: 0,
             func_idx,
+            script_idx,
             executor: ScriptExecutor::new(),
             is_loop: None,
             is_control_op: vec![],
@@ -298,6 +305,7 @@ impl Script {
     }
 
     /// Utility to populate `malleable_args` field in tests.
+    #[cfg(test)]
     pub fn populate_malleable_args_field(&mut self) {
         if self.malleable_args.is_empty() {
             assert!(!self.script.is_empty());
@@ -308,6 +316,11 @@ impl Script {
                 unreachable!();
             }
         }
+    }
+
+    #[must_use]
+    pub fn args_len(&self) -> usize {
+        self.malleable_args.len()
     }
 
     pub fn execute(
@@ -321,9 +334,10 @@ impl Script {
         key: &str,
         flags: VmFlags,
     ) -> VmResult {
-        if args.len() > STACK_SIZE {
+        // The length of the inputs must match the length defined in the script
+        if args.len() != self.args_len() {
             return Err((
-                ExecutionResult::TooManyArgs,
+                ExecutionResult::InvalidArgsLen,
                 StackTrace {
                     trace: vec![(0_usize, None, self.script[0].clone()).into()],
                     top_frame_stack: vec![],
@@ -339,9 +353,15 @@ impl Script {
         let mut memory_size = 0;
         let mut exec_count = 0;
         let mut frame_stack: Vec<Frame> = Vec::with_capacity(MAX_FRAMES);
-        let mut frame = Frame::new(None);
+        let mut script_storage = HashMap::with_capacity(MAX_SCRIPTS - 1);
+        let mut script_stack: Vec<&Script> = Vec::with_capacity(MAX_SCRIPTS);
+        let mut frame = Frame::new(0, None);
         let mut script_outputs = vec![];
 
+        // The main script is always the last item in the script stack
+        script_stack.push(&self);
+
+        // Push args on the first frame
         for a in args.iter().rev().cloned() {
             memory_size += a.size();
             frame.stack.push(a);
@@ -376,8 +396,8 @@ impl Script {
 
             if let Some(frame) = frame_stack.last_mut() {
                 let f = match frame.func_idx {
-                    Some(func_idx) => &self.functions[func_idx],
-                    None => &self.script,
+                    Some(func_idx) => &script_stack[frame.script_idx].functions[func_idx],
+                    None => &script_stack[frame.script_idx].script,
                 };
 
                 if frame.i_ptr >= f.len() {
@@ -400,7 +420,9 @@ impl Script {
                         output_stack_idx_map,
                         &mut script_outputs,
                         key,
-                        exec_count,
+                        &mut exec_count,
+                        &mut script_storage,
+                        &mut script_stack,
                     );
 
                     // Check for new frames or if we should pop one
@@ -447,6 +469,10 @@ impl Script {
                             }
 
                             new_frame = Some(nf);
+                        }
+
+                        ScriptExecutorState::NewCallBodyFrame => {
+                            unimplemented!();
                         }
 
                         ScriptExecutorState::BreakLoop => {
@@ -521,9 +547,9 @@ impl Script {
                                             other -= 1;
                                             end_i += 1;
                                             continue;
-                                        } else {
-                                            break;
                                         }
+
+                                        break;
                                     }
 
                                     end_i += 1;
@@ -554,11 +580,11 @@ impl Script {
                                             // We hit an Else, but not from the current if
                                             end_i += 1;
                                             continue;
-                                        } else {
-                                            // Mark the position of the Else statement
-                                            // so the script will continue the execution from here
-                                            next_i = end_i;
                                         }
+
+                                        // Mark the position of the Else statement
+                                        // so the script will continue the execution from here
+                                        next_i = end_i;
                                     }
 
                                     if let ScriptEntry::Opcode(OP::End) = self.script[end_i] {
@@ -566,9 +592,9 @@ impl Script {
                                             other -= 1;
                                             end_i += 1;
                                             continue;
-                                        } else {
-                                            break;
                                         }
+
+                                        break;
                                     }
 
                                     end_i += 1;
@@ -714,7 +740,8 @@ impl Script {
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
                                 let func_idx = *byte;
                                 let func = &self.functions[func_idx as usize];
-                                let mut nf = Frame::new(Some(func_idx as usize));
+                                let mut nf =
+                                    Frame::new(script_stack.len() - 1, Some(func_idx as usize));
                                 let args_len = &func[0];
 
                                 if let ScriptEntry::Byte(args_len) = args_len {
@@ -6793,7 +6820,9 @@ impl<'a> ScriptExecutor<'a> {
         output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
         script_outputs: &mut Vec<VmTerm>,
         key: &str,
-        exec_count: u64,
+        exec_count: &mut u64,
+        script_storage: &mut HashMap<crate::primitives::Hash256, Script>,
+        script_stack: &mut Vec<&Script>,
     ) {
         match self.state {
             ScriptExecutorState::ExpectingArgsLen => match op {
@@ -11112,7 +11141,7 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::PushExecCount) => {
-                    exec_stack.push(VmTerm::Unsigned64(exec_count));
+                    exec_stack.push(VmTerm::Unsigned64(*exec_count));
                     *memory_size += 8;
                 }
 
@@ -11300,6 +11329,61 @@ impl<'a> ScriptExecutor<'a> {
                     self.state = ScriptExecutorState::ControlOperator(Some(e1 != e2));
                 }
 
+                ScriptEntry::Opcode(OP::CallBody) => {
+                    match exec_stack.pop() {
+                        Some(VmTerm::Unsigned8Array(val)) => {
+                            let script_hash = crate::primitives::Hash256::hash_from_slice(&val, "");
+
+                            if script_stack.len() >= MAX_SCRIPTS {
+                                self.state = ScriptExecutorState::Error(
+                                    ExecutionResult::TooManyScripts,
+                                    (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                );
+                            }
+
+                            // Check if we loaded the script yet
+                            match script_storage.get(&script_hash) {
+                                Some(script_ref) => {
+                                    // Push script ref to the script stack
+                                    script_stack.push(&script_ref);
+
+                                    // Signal to push a new frame
+                                    self.state = ScriptExecutorState::NewCallBodyFrame;
+                                }
+                                None => match crate::codec::decode::<Script>(&val) {
+                                    Ok(script) => {
+                                        // Load the script
+                                        script_storage.insert(script_hash.clone(), script);
+
+                                        // Push script ref to the script stack
+                                        let script_ref = script_storage.get(&script_hash).unwrap();
+                                        script_stack.push(&script_ref);
+
+                                        // Increment gas with the length of the script
+                                        *exec_count += val.len() as u64;
+
+                                        // Signal to push a new frame
+                                        self.state = ScriptExecutorState::NewCallBodyFrame;
+                                    }
+                                    _ => {
+                                        self.state = ScriptExecutorState::Error(
+                                            ExecutionResult::InvalidArgs,
+                                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice())
+                                                .into(),
+                                        );
+                                    }
+                                },
+                            }
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
+                }
+
                 ScriptEntry::Opcode(OP::Nop) => {
                     // do nothing
                 }
@@ -11397,6 +11481,9 @@ enum ScriptExecutorState<'a> {
 
     /// A new frame should be pushed to the stack and marked as loop
     NewLoopFrame,
+
+    /// A new frame should be pushed to the stack with a dynamic script
+    NewCallBodyFrame,
 
     /// The current block has reached the final execution state
     EndBlock,
@@ -12224,6 +12311,12 @@ pub enum ExecutionResult {
     /// Invalid arguments on the stack
     InvalidArgs,
 
+    /// The number of received arguments is invalid.
+    InvalidArgsLen,
+
+    /// Too many scripts on the script stack
+    TooManyScripts,
+
     /// The opcode is not valid in a coinbase input
     InvalidOPForCoinbaseInput,
 
@@ -12247,9 +12340,6 @@ pub enum ExecutionResult {
 
     /// VM Term overflow
     TermOverflow,
-
-    /// Too many arguments given
-    TooManyArgs,
 
     /// The provided index is out of bounds
     IndexOutOfBounds,
