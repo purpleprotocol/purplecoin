@@ -5,6 +5,7 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use crate::consensus::SCRIPT_LIMIT_OPCODES;
+use crate::primitives::Hash256;
 use crate::primitives::{Address, Hash160, Input, Output};
 use crate::vm::internal::{Float32Wrapper, Float64Wrapper, VmTerm, EMPTY_VEC_HEAP_SIZE};
 use crate::vm::opcodes::OP;
@@ -28,11 +29,15 @@ use schnorrkel::{signing_context, PublicKey};
 use simdutf8::basic::from_utf8;
 use std::collections::HashMap;
 use std::mem;
+use std::rc::Rc;
 
 use super::bifs;
 
 /// Max frame stack size
 pub const MAX_FRAMES: usize = 512;
+
+/// Max scripts
+pub const MAX_SCRIPTS: usize = 5;
 
 /// Max stack size
 pub const STACK_SIZE: usize = 256;
@@ -59,12 +64,15 @@ pub enum ScriptEntry {
 }
 
 #[derive(Debug, Clone)]
-pub struct Frame<'a> {
+pub struct Frame {
     /// Stack storing the terms on the current frame
     pub stack: Vec<VmTerm>,
 
     /// Instruction pointer
     pub i_ptr: usize,
+
+    /// The index of the script on the script stack. This is `None` if the current script is the main script
+    pub script_idx: Option<usize>,
 
     /// Func index. This is `None` if the current function is the main function
     pub func_idx: Option<usize>,
@@ -78,16 +86,17 @@ pub struct Frame<'a> {
     pub is_control_op: Vec<(usize, usize)>,
 
     /// Script executor
-    pub executor: ScriptExecutor<'a>,
+    pub executor: ScriptExecutor,
 }
 
-impl<'a> Frame<'a> {
+impl Frame {
     #[must_use]
-    pub fn new(func_idx: Option<usize>) -> Self {
+    pub fn new(script_idx: Option<usize>, func_idx: Option<usize>) -> Self {
         Self {
             stack: Vec::with_capacity(STACK_SIZE),
             i_ptr: 0,
             func_idx,
+            script_idx,
             executor: ScriptExecutor::new(),
             is_loop: None,
             is_control_op: vec![],
@@ -298,6 +307,7 @@ impl Script {
     }
 
     /// Utility to populate `malleable_args` field in tests.
+    #[cfg(test)]
     pub fn populate_malleable_args_field(&mut self) {
         if self.malleable_args.is_empty() {
             assert!(!self.script.is_empty());
@@ -308,6 +318,11 @@ impl Script {
                 unreachable!();
             }
         }
+    }
+
+    #[must_use]
+    pub fn args_len(&self) -> usize {
+        self.malleable_args.len()
     }
 
     pub fn execute(
@@ -321,9 +336,10 @@ impl Script {
         key: &str,
         flags: VmFlags,
     ) -> VmResult {
-        if args.len() > STACK_SIZE {
+        // The length of the inputs must match the length defined in the script
+        if args.len() != self.args_len() {
             return Err((
-                ExecutionResult::TooManyArgs,
+                ExecutionResult::InvalidArgsLen,
                 StackTrace {
                     trace: vec![(0_usize, None, self.script[0].clone()).into()],
                     top_frame_stack: vec![],
@@ -339,9 +355,12 @@ impl Script {
         let mut memory_size = 0;
         let mut exec_count = 0;
         let mut frame_stack: Vec<Frame> = Vec::with_capacity(MAX_FRAMES);
-        let mut frame = Frame::new(None);
+        let mut script_storage = HashMap::with_capacity(MAX_SCRIPTS - 1);
+        let mut script_stack: Vec<Rc<Script>> = Vec::with_capacity(MAX_SCRIPTS);
+        let mut frame = Frame::new(None, None);
         let mut script_outputs = vec![];
 
+        // Push args on the first frame
         for a in args.iter().rev().cloned() {
             memory_size += a.size();
             frame.stack.push(a);
@@ -370,14 +389,19 @@ impl Script {
 
         loop {
             let mut new_frame = None;
+            let mut new_script = None;
             let mut pop_frame = false;
             let mut set_ip = None;
             let fs_len = frame_stack.len();
 
             if let Some(frame) = frame_stack.last_mut() {
-                let f = match frame.func_idx {
-                    Some(func_idx) => &self.functions[func_idx],
-                    None => &self.script,
+                let f = match (frame.script_idx, frame.func_idx) {
+                    (None, None) => &self.script,
+                    (None, Some(func_idx)) => &self.functions[func_idx],
+                    (Some(script_idx), Some(func_idx)) => {
+                        &script_stack[script_idx].functions[func_idx]
+                    }
+                    (Some(script_idx), None) => &script_stack[script_idx].script,
                 };
 
                 if frame.i_ptr >= f.len() {
@@ -400,7 +424,9 @@ impl Script {
                         output_stack_idx_map,
                         &mut script_outputs,
                         key,
-                        exec_count,
+                        &mut exec_count,
+                        &script_storage,
+                        &script_stack,
                     );
 
                     // Check for new frames or if we should pop one
@@ -430,9 +456,9 @@ impl Script {
                                         other -= 1;
                                         end_i += 1;
                                         continue;
-                                    } else {
-                                        break;
                                     }
+
+                                    break;
                                 }
 
                                 end_i += 1;
@@ -447,6 +473,70 @@ impl Script {
                             }
 
                             new_frame = Some(nf);
+                        }
+
+                        ScriptExecutorState::NewCallBodyFrame(script_hash, script) => {
+                            let script_hash = script_hash.clone();
+                            let script_clone = script.clone();
+
+                            // Load the script and push script ref to the script stack
+                            script_storage.insert(script_hash.clone(), script_clone.clone());
+                            new_script = Some(script_clone);
+
+                            // Create new frame
+                            let mut nf = Frame::new(Some(script_stack.len()), None);
+
+                            // Push required amount of args from the parent frame
+                            let args_len = script.args_len();
+                            if frame.stack.len() < args_len {
+                                frame.executor.state = ScriptExecutorState::Error(
+                                    ExecutionResult::NotEnoughTerms,
+                                    (
+                                        frame.i_ptr,
+                                        frame.func_idx,
+                                        i.clone(),
+                                        frame.stack.as_slice(),
+                                    )
+                                        .into(),
+                                );
+                            } else {
+                                for _ in 0..args_len {
+                                    nf.stack.push(frame.stack.pop().unwrap());
+                                }
+
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                new_frame = Some(nf);
+                            }
+                        }
+
+                        ScriptExecutorState::NewCallBodyFrameCached(script) => {
+                            // Push script ref to the script stack
+                            new_script = Some(script.clone());
+
+                            // Create new frame
+                            let mut nf = Frame::new(Some(script_stack.len()), None);
+
+                            // Push required amount of args from the parent frame
+                            let args_len = script.args_len();
+                            if frame.stack.len() < args_len {
+                                frame.executor.state = ScriptExecutorState::Error(
+                                    ExecutionResult::NotEnoughTerms,
+                                    (
+                                        frame.i_ptr,
+                                        frame.func_idx,
+                                        i.clone(),
+                                        frame.stack.as_slice(),
+                                    )
+                                        .into(),
+                                );
+                            } else {
+                                for _ in 0..args_len {
+                                    nf.stack.push(frame.stack.pop().unwrap());
+                                }
+
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                new_frame = Some(nf);
+                            }
                         }
 
                         ScriptExecutorState::BreakLoop => {
@@ -521,9 +611,9 @@ impl Script {
                                             other -= 1;
                                             end_i += 1;
                                             continue;
-                                        } else {
-                                            break;
                                         }
+
+                                        break;
                                     }
 
                                     end_i += 1;
@@ -554,11 +644,11 @@ impl Script {
                                             // We hit an Else, but not from the current if
                                             end_i += 1;
                                             continue;
-                                        } else {
-                                            // Mark the position of the Else statement
-                                            // so the script will continue the execution from here
-                                            next_i = end_i;
                                         }
+
+                                        // Mark the position of the Else statement
+                                        // so the script will continue the execution from here
+                                        next_i = end_i;
                                     }
 
                                     if let ScriptEntry::Opcode(OP::End) = self.script[end_i] {
@@ -566,9 +656,9 @@ impl Script {
                                             other -= 1;
                                             end_i += 1;
                                             continue;
-                                        } else {
-                                            break;
                                         }
+
+                                        break;
                                     }
 
                                     end_i += 1;
@@ -712,22 +802,56 @@ impl Script {
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Call) => {
                             frame.i_ptr += 1;
                             if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
-                                let func_idx = *byte;
-                                let func = &self.functions[func_idx as usize];
-                                let mut nf = Frame::new(Some(func_idx as usize));
-                                let args_len = &func[0];
+                                let func_idx = *byte as usize;
+                                let funcs_ptr = match frame.script_idx {
+                                    Some(script_idx) => &script_stack[script_idx].functions,
+                                    None => &self.functions,
+                                };
 
-                                if let ScriptEntry::Byte(args_len) = args_len {
-                                    if frame.stack.len() < *args_len as usize {
-                                        unimplemented!();
+                                if func_idx >= funcs_ptr.len() {
+                                    frame.executor.state = ScriptExecutorState::Error(
+                                        ExecutionResult::IndexOutOfBounds,
+                                        (
+                                            frame.i_ptr,
+                                            frame.func_idx,
+                                            i.clone(),
+                                            frame.stack.as_slice(),
+                                        )
+                                            .into(),
+                                    );
+                                } else {
+                                    let func = &funcs_ptr[func_idx];
+                                    let mut nf = Frame::new(frame.script_idx, Some(func_idx));
+                                    let args_len = &func[0];
+
+                                    if let ScriptEntry::Byte(args_len) = args_len {
+                                        if frame.stack.len() < *args_len as usize {
+                                            frame.executor.state = ScriptExecutorState::Error(
+                                                ExecutionResult::NotEnoughTerms,
+                                                (
+                                                    frame.i_ptr,
+                                                    frame.func_idx,
+                                                    i.clone(),
+                                                    frame.stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        } else {
+                                            for _ in 0..*args_len {
+                                                nf.stack.push(frame.stack.pop().unwrap());
+                                            }
+                                        }
                                     }
 
-                                    for _ in 0..*args_len {
-                                        nf.stack.push(frame.stack.pop().unwrap());
+                                    if !matches!(
+                                        frame.executor.state,
+                                        ScriptExecutorState::Error(_, _)
+                                    ) {
+                                        frame.executor.state =
+                                            ScriptExecutorState::ExpectingInitialOP;
+                                        new_frame = Some(nf);
                                     }
                                 }
-                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
-                                new_frame = Some(nf);
                             } else {
                                 unreachable!()
                             }
@@ -6729,6 +6853,10 @@ impl Script {
                 }
             }
 
+            if let Some(new_script) = new_script {
+                script_stack.push(new_script);
+            }
+
             if let Some(new_frame) = new_frame {
                 if frame_stack.len() > MAX_FRAMES {
                     let frame = frame_stack.last().unwrap();
@@ -6759,17 +6887,17 @@ impl Script {
 }
 
 #[derive(Debug, Clone)]
-pub struct ScriptExecutor<'a> {
-    state: ScriptExecutorState<'a>,
+pub struct ScriptExecutor {
+    state: ScriptExecutorState,
 }
 
-impl<'a> Default for ScriptExecutor<'a> {
+impl Default for ScriptExecutor {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a> ScriptExecutor<'a> {
+impl ScriptExecutor {
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -6793,7 +6921,9 @@ impl<'a> ScriptExecutor<'a> {
         output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
         script_outputs: &mut Vec<VmTerm>,
         key: &str,
-        exec_count: u64,
+        exec_count: &mut u64,
+        script_storage: &HashMap<Hash256, Rc<Script>>,
+        script_stack: &Vec<Rc<Script>>,
     ) {
         match self.state {
             ScriptExecutorState::ExpectingArgsLen => match op {
@@ -11112,7 +11242,7 @@ impl<'a> ScriptExecutor<'a> {
                 }
 
                 ScriptEntry::Opcode(OP::PushExecCount) => {
-                    exec_stack.push(VmTerm::Unsigned64(exec_count));
+                    exec_stack.push(VmTerm::Unsigned64(*exec_count));
                     *memory_size += 8;
                 }
 
@@ -11300,6 +11430,56 @@ impl<'a> ScriptExecutor<'a> {
                     self.state = ScriptExecutorState::ControlOperator(Some(e1 != e2));
                 }
 
+                ScriptEntry::Opcode(OP::CallBody) => {
+                    match exec_stack.pop() {
+                        Some(VmTerm::Unsigned8Array(val)) => {
+                            let script_hash = Hash256::hash_from_slice(&val, "");
+
+                            if script_stack.len() >= MAX_SCRIPTS {
+                                self.state = ScriptExecutorState::Error(
+                                    ExecutionResult::TooManyScripts,
+                                    (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                );
+                            }
+
+                            // Check if we loaded the script yet
+                            match script_storage.get(&script_hash) {
+                                Some(script_ref) => {
+                                    // Signal to push a new frame
+                                    self.state = ScriptExecutorState::NewCallBodyFrameCached(
+                                        script_ref.clone(),
+                                    );
+                                }
+                                None => match crate::codec::decode::<Script>(&val) {
+                                    Ok(script) => {
+                                        // Increment gas with the length of the script
+                                        *exec_count += val.len() as u64;
+
+                                        // Signal to push a new frame
+                                        self.state = ScriptExecutorState::NewCallBodyFrame(
+                                            script_hash,
+                                            Rc::new(script),
+                                        );
+                                    }
+                                    _ => {
+                                        self.state = ScriptExecutorState::Error(
+                                            ExecutionResult::InvalidArgs,
+                                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice())
+                                                .into(),
+                                        );
+                                    }
+                                },
+                            }
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
+                }
+
                 ScriptEntry::Opcode(OP::Nop) => {
                     // do nothing
                 }
@@ -11312,7 +11492,7 @@ impl<'a> ScriptExecutor<'a> {
                 }
             },
             _ => {
-                unimplemented!();
+                unreachable!();
             }
         }
     }
@@ -11376,7 +11556,7 @@ impl<'a> ScriptExecutor<'a> {
 }
 
 #[derive(Debug, Clone)]
-enum ScriptExecutorState<'a> {
+enum ScriptExecutorState {
     /// Expecting script arguments length
     ExpectingArgsLen,
 
@@ -11389,14 +11569,17 @@ enum ScriptExecutorState<'a> {
     /// Expecting random term
     ExpectingRandomTerm(OP),
 
-    /// Expecting specific opcodes
-    ExpectingInitialOPorOPs(&'a [OP]),
-
     /// Expecting an u8 index for an opcode
     ExpectingIndexU8(OP),
 
     /// A new frame should be pushed to the stack and marked as loop
     NewLoopFrame,
+
+    /// A new frame should be pushed to the stack with a dynamic script
+    NewCallBodyFrame(Hash256, Rc<Script>),
+
+    /// A new frame should be pushed to the stack with a dynamic script that is cached
+    NewCallBodyFrameCached(Rc<Script>),
 
     /// The current block has reached the final execution state
     EndBlock,
@@ -12067,7 +12250,7 @@ pub struct StackTrace {
 }
 
 impl StackTrace {
-    pub fn extend_from_frame_stack(&mut self, stack: &[Frame<'_>], script: &Script) {
+    pub fn extend_from_frame_stack(&mut self, stack: &[Frame], script: &Script) {
         let trace = stack.iter().rev().take(TRACE_SIZE).map(|frame| TraceItem {
             i_ptr: frame.i_ptr,
             func_idx: frame.func_idx,
@@ -12224,11 +12407,20 @@ pub enum ExecutionResult {
     /// Invalid arguments on the stack
     InvalidArgs,
 
+    /// The number of received arguments is invalid.
+    InvalidArgsLen,
+
+    /// Too many scripts on the script stack
+    TooManyScripts,
+
     /// The opcode is not valid in a coinbase input
     InvalidOPForCoinbaseInput,
 
     /// The term being cast to the desired type is invalid.
     InvalidCast,
+
+    /// Not enough terms on the execution stack for this operation.
+    NotEnoughTerms,
 
     /// Invalid script format
     BadFormat,
@@ -12247,9 +12439,6 @@ pub enum ExecutionResult {
 
     /// VM Term overflow
     TermOverflow,
-
-    /// Too many arguments given
-    TooManyArgs,
 
     /// The provided index is out of bounds
     IndexOutOfBounds,

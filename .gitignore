@@ -2,3 +2,4 @@
 .DS_Store
 .idea
 rustc-ice-*.txt
+.zed
