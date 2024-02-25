@@ -389,6 +389,7 @@ impl Script {
 
         loop {
             let mut new_frame = None;
+            let mut new_script = None;
             let mut pop_frame = false;
             let mut set_ip = None;
             let fs_len = frame_stack.len();
@@ -476,15 +477,66 @@ impl Script {
 
                         ScriptExecutorState::NewCallBodyFrame(script_hash, script) => {
                             let script_hash = script_hash.clone();
-                            let script = script.clone();
+                            let script_clone = script.clone();
+
                             // Load the script and push script ref to the script stack
-                            script_storage.insert(script_hash.clone(), script.clone());
-                            script_stack.push(script);
-                            unimplemented!();
+                            script_storage.insert(script_hash.clone(), script_clone.clone());
+                            new_script = Some(script_clone);
+
+                            // Create new frame
+                            let mut nf = Frame::new(Some(script_stack.len()), None);
+
+                            // Push required amount of args from the parent frame
+                            let args_len = script.args_len();
+                            if frame.stack.len() < args_len {
+                                frame.executor.state = ScriptExecutorState::Error(
+                                    ExecutionResult::NotEnoughTerms,
+                                    (
+                                        frame.i_ptr,
+                                        frame.func_idx,
+                                        i.clone(),
+                                        frame.stack.as_slice(),
+                                    )
+                                        .into(),
+                                );
+                            } else {
+                                for _ in 0..args_len {
+                                    nf.stack.push(frame.stack.pop().unwrap());
+                                }
+
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                new_frame = Some(nf);
+                            }
                         }
 
-                        ScriptExecutorState::NewCallBodyFrameCached(script_ref) => {
-                            unimplemented!();
+                        ScriptExecutorState::NewCallBodyFrameCached(script) => {
+                            // Push script ref to the script stack
+                            new_script = Some(script.clone());
+
+                            // Create new frame
+                            let mut nf = Frame::new(Some(script_stack.len()), None);
+
+                            // Push required amount of args from the parent frame
+                            let args_len = script.args_len();
+                            if frame.stack.len() < args_len {
+                                frame.executor.state = ScriptExecutorState::Error(
+                                    ExecutionResult::NotEnoughTerms,
+                                    (
+                                        frame.i_ptr,
+                                        frame.func_idx,
+                                        i.clone(),
+                                        frame.stack.as_slice(),
+                                    )
+                                        .into(),
+                                );
+                            } else {
+                                for _ in 0..args_len {
+                                    nf.stack.push(frame.stack.pop().unwrap());
+                                }
+
+                                frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                new_frame = Some(nf);
+                            }
                         }
 
                         ScriptExecutorState::BreakLoop => {
@@ -6799,6 +6851,10 @@ impl Script {
                         }
                     }
                 }
+            }
+
+            if let Some(new_script) = new_script {
+                script_stack.push(new_script);
             }
 
             if let Some(new_frame) = new_frame {
