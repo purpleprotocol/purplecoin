@@ -899,6 +899,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 20;
+                            exec_count += 20;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash256Var) => {
@@ -917,6 +918,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 32;
+                            exec_count += 32;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash512Var) => {
@@ -935,6 +937,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 64;
+                            exec_count += 64;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned8Var) => {
@@ -945,6 +948,7 @@ impl Script {
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                                 memory_size += 1;
+                                exec_count += 1;
                             } else {
                                 unreachable!()
                             }
@@ -959,6 +963,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 2;
+                            exec_count += 2;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned32Var) => {
@@ -970,6 +975,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 4;
+                            exec_count += 4;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned64Var) => {
@@ -981,6 +987,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 8;
+                            exec_count += 8;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Unsigned128Var) => {
@@ -995,6 +1002,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 16;
+                            exec_count += 16;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed8Var) => {
@@ -1006,6 +1014,7 @@ impl Script {
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                                 memory_size += 1;
+                                exec_count += 1;
                             } else {
                                 unreachable!()
                             }
@@ -1021,6 +1030,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 2;
+                            exec_count += 2;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed32Var) => {
@@ -1033,6 +1043,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 4;
+                            exec_count += 4;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed64Var) => {
@@ -1045,6 +1056,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 8;
+                            exec_count += 8;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed128Var) => {
@@ -1060,6 +1072,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 16;
+                            exec_count += 16;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float32Var) => {
@@ -1073,6 +1086,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 4;
+                            exec_count += 4;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float64Var) => {
@@ -1086,6 +1100,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 8;
+                            exec_count += 8;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::DecimalVar) => {
@@ -1099,6 +1114,7 @@ impl Script {
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
                             memory_size += 16;
+                            exec_count += 16;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Hash160ArrayVar) => {
@@ -1135,6 +1151,7 @@ impl Script {
 
                             let term = VmTerm::Hash160Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1174,6 +1191,7 @@ impl Script {
 
                             let term = VmTerm::Hash256Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1213,6 +1231,7 @@ impl Script {
 
                             let term = VmTerm::Hash512Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1246,6 +1265,7 @@ impl Script {
 
                             let term = VmTerm::Unsigned8Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1278,6 +1298,7 @@ impl Script {
 
                             let term = VmTerm::Unsigned16Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1310,6 +1331,7 @@ impl Script {
 
                             let term = VmTerm::Unsigned32Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1342,6 +1364,7 @@ impl Script {
 
                             let term = VmTerm::Unsigned64Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1379,6 +1402,7 @@ impl Script {
 
                             let term = VmTerm::Unsigned128Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1413,6 +1437,7 @@ impl Script {
 
                             let term = VmTerm::Signed8Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1446,6 +1471,7 @@ impl Script {
 
                             let term = VmTerm::Signed16Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1479,6 +1505,7 @@ impl Script {
 
                             let term = VmTerm::Signed32Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1512,6 +1539,7 @@ impl Script {
 
                             let term = VmTerm::Signed64Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1548,6 +1576,7 @@ impl Script {
 
                             let term = VmTerm::Signed128Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1580,6 +1609,7 @@ impl Script {
 
                             let term = VmTerm::Float32Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1612,6 +1642,7 @@ impl Script {
 
                             let term = VmTerm::Float64Array(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1647,6 +1678,7 @@ impl Script {
 
                             let term = VmTerm::DecimalArray(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1769,6 +1801,7 @@ impl Script {
                                     frame.stack.push(t.clone());
                                     memory_size += t.size();
                                 }
+                                exec_count += input.script_args.len();
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -1807,6 +1840,7 @@ impl Script {
                                     frame.stack.push(t.clone());
                                     memory_size += t.size();
                                 }
+                                exec_count += output.script_outs.len();
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -2257,6 +2291,8 @@ impl Script {
                             let script_outs =
                                 flags.spent_out.as_ref().map(|o| &o.script_outs).unwrap();
                             let terms = script_outs.iter().take(idx as usize).cloned();
+
+                            exec_count += terms.len();
 
                             for t in terms {
                                 memory_size += t.size();
