@@ -84,7 +84,7 @@ pub const SECTORS: usize = 256 / SHARDS_PER_SECTOR;
 //
 
 /// Max gas per script
-pub const SCRIPT_GAS_LIMIT: u64 = 5_000;
+pub const SCRIPT_GAS_LIMIT: u64 = 50_000;
 
 /// Max frame stack size
 pub const MAX_FRAMES: usize = 512;

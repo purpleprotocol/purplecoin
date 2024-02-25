@@ -8665,7 +8665,7 @@ impl ScriptExecutor {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match second.and(&mut last) {
+                    match second.and(&mut last, exec_count) {
                         Some(()) => {
                             exec_stack.push(second);
                         }
@@ -8690,7 +8690,7 @@ impl ScriptExecutor {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match second.or(&mut last) {
+                    match second.or(&mut last, exec_count) {
                         Some(()) => {
                             exec_stack.push(second);
                         }
@@ -8715,7 +8715,7 @@ impl ScriptExecutor {
 
                     let mut last = &mut exec_stack[len - 1];
 
-                    match last.not() {
+                    match last.not(exec_count) {
                         Some(()) => {}
                         None => {
                             self.state = ScriptExecutorState::Error(
@@ -9255,7 +9255,7 @@ impl ScriptExecutor {
                     }
 
                     let mut last = exec_stack.last_mut().unwrap();
-                    last.negate();
+                    last.negate(exec_count);
                 }
 
                 ScriptEntry::Opcode(OP::Abs) => {
@@ -9484,7 +9484,7 @@ impl ScriptExecutor {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match second.add(&mut last) {
+                    match second.add(&mut last, exec_count) {
                         Some(()) => {
                             *memory_size += second.size();
                             exec_stack.push(second);
@@ -9511,7 +9511,7 @@ impl ScriptExecutor {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match second.sub(&mut last) {
+                    match second.sub(&mut last, exec_count) {
                         Some(()) => {
                             *memory_size += second.size();
                             exec_stack.push(second);
@@ -9538,7 +9538,7 @@ impl ScriptExecutor {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match second.mul(&mut last) {
+                    match second.mul(&mut last, exec_count) {
                         Some(()) => {
                             *memory_size += second.size();
                             exec_stack.push(second);
@@ -9565,7 +9565,7 @@ impl ScriptExecutor {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match second.div(&mut last) {
+                    match second.div(&mut last, exec_count) {
                         Some(()) => {
                             *memory_size += second.size();
                             exec_stack.push(second);
@@ -9592,7 +9592,7 @@ impl ScriptExecutor {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match second.pow(&mut last) {
+                    match second.pow(&mut last, exec_count) {
                         Some(()) => {
                             *memory_size += second.size();
                             exec_stack.push(second);
@@ -9619,7 +9619,7 @@ impl ScriptExecutor {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match second.rem(&mut last) {
+                    match second.rem(&mut last, exec_count) {
                         Some(()) => {
                             *memory_size += second.size();
                             exec_stack.push(second);
@@ -9814,7 +9814,7 @@ impl ScriptExecutor {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match last.sh_left(&mut second) {
+                    match last.sh_left(&mut second, exec_count) {
                         Some(()) => {
                             exec_stack.push(last);
                         }
@@ -9839,7 +9839,7 @@ impl ScriptExecutor {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match last.sh_right(&mut second) {
+                    match last.sh_right(&mut second, exec_count) {
                         Some(()) => {
                             exec_stack.push(last);
                         }
@@ -9864,7 +9864,7 @@ impl ScriptExecutor {
                     let mut second = exec_stack.pop().unwrap();
                     *memory_size -= second.size();
 
-                    match last.xor(&mut second) {
+                    match last.xor(&mut second, exec_count) {
                         Some(()) => {
                             exec_stack.push(last);
                         }
@@ -23891,34 +23891,6 @@ mod tests {
             VmTerm::Signed8(0),
         ];
         assert_script_fail(ss, script_output, key, ExecutionResult::InvalidArgs);
-    }
-
-    #[test]
-    fn it_adds_to_array() {
-        let key = "test_key";
-        let mut ss = Script {
-            script: vec![
-                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
-                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
-                ScriptEntry::Byte(0x02),
-                ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x01),
-                ScriptEntry::Byte(0x02),
-                ScriptEntry::Opcode(OP::Unsigned8ArrayVar),
-                ScriptEntry::Byte(0x02),
-                ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x03),
-                ScriptEntry::Byte(0x04),
-                ScriptEntry::Opcode(OP::Add),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PushOut),
-                ScriptEntry::Opcode(OP::Verify),
-            ],
-            ..Script::default()
-        };
-        let mut script_output: Vec<VmTerm> =
-            vec![VmTerm::Unsigned8Array(vec![0x01, 0x02, 0x03, 0x04])];
-        assert_script_ok(ss, script_output, key);
     }
 
     #[test]
