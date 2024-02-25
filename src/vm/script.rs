@@ -1151,7 +1151,7 @@ impl Script {
 
                             let term = VmTerm::Hash160Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1191,7 +1191,7 @@ impl Script {
 
                             let term = VmTerm::Hash256Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1231,7 +1231,7 @@ impl Script {
 
                             let term = VmTerm::Hash512Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1265,7 +1265,7 @@ impl Script {
 
                             let term = VmTerm::Unsigned8Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1298,7 +1298,7 @@ impl Script {
 
                             let term = VmTerm::Unsigned16Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1331,7 +1331,7 @@ impl Script {
 
                             let term = VmTerm::Unsigned32Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1364,7 +1364,7 @@ impl Script {
 
                             let term = VmTerm::Unsigned64Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1402,7 +1402,7 @@ impl Script {
 
                             let term = VmTerm::Unsigned128Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1437,7 +1437,7 @@ impl Script {
 
                             let term = VmTerm::Signed8Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1471,7 +1471,7 @@ impl Script {
 
                             let term = VmTerm::Signed16Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1505,7 +1505,7 @@ impl Script {
 
                             let term = VmTerm::Signed32Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1539,7 +1539,7 @@ impl Script {
 
                             let term = VmTerm::Signed64Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1576,7 +1576,7 @@ impl Script {
 
                             let term = VmTerm::Signed128Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1609,7 +1609,7 @@ impl Script {
 
                             let term = VmTerm::Float32Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1642,7 +1642,7 @@ impl Script {
 
                             let term = VmTerm::Float64Array(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1678,7 +1678,7 @@ impl Script {
 
                             let term = VmTerm::DecimalArray(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1722,7 +1722,7 @@ impl Script {
                                 // The items size is already added to the memory_size of the VM,
                                 // we only have to add the HEAP_SIZE for the second vector
                                 memory_size += crate::vm::internal::EMPTY_VEC_HEAP_SIZE;
-
+                                exec_count += 2;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -1761,6 +1761,7 @@ impl Script {
                                     .stack
                                     .push(VmTerm::Unsigned16(input.script_args.len() as u16));
                                 memory_size += 2;
+                                exec_count += 2;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -1801,7 +1802,7 @@ impl Script {
                                     frame.stack.push(t.clone());
                                     memory_size += t.size();
                                 }
-                                exec_count += input.script_args.len();
+                                exec_count += input.script_args.len() as u64 + 2;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -1840,7 +1841,7 @@ impl Script {
                                     frame.stack.push(t.clone());
                                     memory_size += t.size();
                                 }
-                                exec_count += output.script_outs.len();
+                                exec_count += output.script_outs.len() as u64;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -1881,6 +1882,7 @@ impl Script {
                                     .stack
                                     .push(VmTerm::Unsigned16(output.script_outs.len() as u16));
                                 memory_size += 2;
+                                exec_count += 2;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -1922,6 +1924,7 @@ impl Script {
                                 let term = &script_outs[idx as usize];
                                 frame.stack.push(term.clone());
                                 memory_size += term.size();
+                                exec_count += 2;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -1988,6 +1991,7 @@ impl Script {
 
                                     frame.stack.push(term.clone());
                                     memory_size += term.size();
+                                    exec_count += 4;
                                     frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                     frame.i_ptr += 1;
                                 }
@@ -2053,6 +2057,7 @@ impl Script {
 
                                     frame.stack.push(term.clone());
                                     memory_size += term.size();
+                                    exec_count += 4;
                                     frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                     frame.i_ptr += 1;
                                 }
@@ -2092,7 +2097,7 @@ impl Script {
 
                                 frame.stack.push(VmTerm::Hash160(script_hash));
                                 memory_size += 20;
-
+                                exec_count += 2;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -2131,7 +2136,7 @@ impl Script {
 
                                 frame.stack.push(VmTerm::Signed128(amount));
                                 memory_size += 16;
-
+                                exec_count += 2;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -2175,6 +2180,7 @@ impl Script {
                                     memory_size += 1;
                                 }
 
+                                exec_count += 2;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -2218,6 +2224,7 @@ impl Script {
                                     memory_size += 20;
                                 }
 
+                                exec_count += 2;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -2267,6 +2274,7 @@ impl Script {
                                     memory_size += EMPTY_VEC_HEAP_SIZE;
                                 }
 
+                                exec_count += 2;
                                 frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                 frame.i_ptr += 1;
                             }
@@ -2292,7 +2300,7 @@ impl Script {
                                 flags.spent_out.as_ref().map(|o| &o.script_outs).unwrap();
                             let terms = script_outs.iter().take(idx as usize).cloned();
 
-                            exec_count += terms.len();
+                            exec_count += terms.len() as u64 + 2;
 
                             for t in terms {
                                 memory_size += t.size();
@@ -2326,6 +2334,7 @@ impl Script {
                             } else {
                                 let top = frame.stack.pop().unwrap();
                                 memory_size -= top.size();
+                                exec_count += 1;
 
                                 match (top, type_id) {
                                     // U8 casts
@@ -6643,7 +6652,7 @@ impl Script {
                                     let cloned = exec_stack[len - 1].clone_at_unchecked(idx);
                                     memory_size += cloned.size();
                                     exec_stack.push(cloned);
-
+                                    exec_count += 2;
                                     frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                     frame.i_ptr += 1;
                                 }
@@ -6696,7 +6705,7 @@ impl Script {
                                 } else {
                                     let removed = exec_stack[len - 1].remove_at_unchecked(idx);
                                     memory_size -= removed.size();
-
+                                    exec_count += 2;
                                     frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                                     frame.i_ptr += 1;
                                 }
