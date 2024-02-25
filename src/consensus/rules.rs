@@ -32,9 +32,6 @@ pub const MAX_BYTES_PER_BLOCK: u64 = 380_000;
 /// Max bytes per transaction
 pub const TRANSACTION_LIMIT_SIZE: u64 = 10_000;
 
-/// Max number of opcodes that can be executed per script
-pub const SCRIPT_LIMIT_OPCODES: u64 = 2_500;
-
 /// Initial block reward, per shard. The miner reward is equal to `INITIAL_BLOCK_REWARD` * `SHARDS_PER_SECTOR`
 pub const INITIAL_BLOCK_REWARD: Money = COIN; // 1 XPU
 
@@ -82,6 +79,36 @@ pub const SHARDS_PER_SECTOR: usize = 16;
 
 /// Number of sectors
 pub const SECTORS: usize = 256 / SHARDS_PER_SECTOR;
+
+// VM Rules
+//
+
+/// Max gas per script
+pub const SCRIPT_GAS_LIMIT: u64 = 5_000;
+
+/// Max frame stack size
+pub const MAX_FRAMES: usize = 512;
+
+/// Max scripts
+pub const MAX_SCRIPTS: usize = 5;
+
+/// Max stack size
+pub const STACK_SIZE: usize = 256;
+
+/// VM max memory size in bytes
+pub const MEMORY_SIZE: usize = 512_000;
+
+/// Max output stack size
+pub const MAX_OUT_STACK: usize = 300;
+
+/// Return only the last n frames or top stack frame items
+pub const TRACE_SIZE: usize = 10;
+
+/// Context for adaptor cert operations
+pub const ADAPTOR_CERT_CTX: &str = ".ac";
+
+/// Context for inline signature verification
+pub const INLINE_VERIFICATION_CTX: &str = ".iv";
 
 /// Money check
 #[must_use]

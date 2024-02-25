@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::consensus::SCRIPT_LIMIT_OPCODES;
+use crate::consensus::*;
 use crate::primitives::Hash256;
 use crate::primitives::{Address, Hash160, Input, Output};
 use crate::vm::internal::{Float32Wrapper, Float64Wrapper, VmTerm, EMPTY_VEC_HEAP_SIZE};
@@ -32,30 +32,6 @@ use std::mem;
 use std::rc::Rc;
 
 use super::bifs;
-
-/// Max frame stack size
-pub const MAX_FRAMES: usize = 512;
-
-/// Max scripts
-pub const MAX_SCRIPTS: usize = 5;
-
-/// Max stack size
-pub const STACK_SIZE: usize = 256;
-
-/// VM max memory size in bytes
-pub const MEMORY_SIZE: usize = 512_000;
-
-/// Max output stack size
-pub const MAX_OUT_STACK: usize = 300;
-
-/// Return only the last n frames or top stack frame items
-pub const TRACE_SIZE: usize = 10;
-
-/// Context for adaptor cert operations
-pub const ADAPTOR_CERT_CTX: &str = ".ac";
-
-/// Context for inline signature verification
-pub const INLINE_VERIFICATION_CTX: &str = ".iv";
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ScriptEntry {
@@ -6744,7 +6720,7 @@ impl Script {
                 },
             }
 
-            if exec_count > SCRIPT_LIMIT_OPCODES {
+            if exec_count > SCRIPT_GAS_LIMIT {
                 let mut stack_trace = StackTrace::default();
                 let i_ptr = frame_stack.last().unwrap().i_ptr;
                 let fs_len = frame_stack.len();
