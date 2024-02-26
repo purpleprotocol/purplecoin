@@ -889,7 +889,7 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut vec: Vec<u8> = Vec::new();
+                            let mut vec: Vec<u8> = Vec::with_capacity(len as usize);
                             for _ in 0..len {
                                 frame.i_ptr += 1;
                                 if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
@@ -901,7 +901,7 @@ impl Script {
 
                             let term = crate::codec::decode::<VmTerm>(&vec).unwrap();
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -988,7 +988,7 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut vec: Vec<u8> = Vec::new();
+                            let mut vec: Vec<u8> = Vec::with_capacity(len as usize);
                             for _ in 0..len {
                                 frame.i_ptr += 1;
                                 if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
@@ -1000,7 +1000,7 @@ impl Script {
 
                             let term = crate::codec::decode::<VmTerm>(&vec).unwrap();
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2;
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1346,7 +1346,7 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut arr: Vec<UBig> = Vec::new();
+                            let mut arr: Vec<UBig> = Vec::with_capacity(len as usize);
                             for _ in 0..len {
                                 let mut term_len: u16 = 0;
 
@@ -1363,7 +1363,7 @@ impl Script {
                                     unreachable!()
                                 }
 
-                                let mut term: Vec<u8> = Vec::new();
+                                let mut term: Vec<u8> = Vec::with_capacity(term_len as usize);
                                 for _ in 0..term_len {
                                     frame.i_ptr += 1;
                                     if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
@@ -1384,7 +1384,7 @@ impl Script {
 
                             let term = VmTerm::UnsignedBigArray(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2*(len as u64 + 1);
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1575,7 +1575,7 @@ impl Script {
                                 unreachable!()
                             }
 
-                            let mut arr: Vec<IBig> = Vec::new();
+                            let mut arr: Vec<IBig> = Vec::with_capacity(len as usize);
                             for _ in 0..len {
                                 let mut term_len: u16 = 0;
 
@@ -1592,7 +1592,7 @@ impl Script {
                                     unreachable!()
                                 }
 
-                                let mut term: Vec<u8> = Vec::new();
+                                let mut term: Vec<u8> = Vec::with_capacity(term_len as usize);
                                 for _ in 0..term_len {
                                     frame.i_ptr += 1;
                                     if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
@@ -1613,7 +1613,7 @@ impl Script {
 
                             let term = VmTerm::SignedBigArray(arr);
                             memory_size += term.size();
-                            exec_count += term.size();
+                            exec_count += term.size() as u64 + 2*(len as u64 + 1);
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
