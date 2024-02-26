@@ -1371,7 +1371,9 @@ impl Script {
                                     }
                                 }
 
-                                if let VmTerm::UnsignedBig(val) = crate::codec::decode::<VmTerm>(&term).unwrap() {
+                                if let VmTerm::UnsignedBig(val) =
+                                    crate::codec::decode::<VmTerm>(&term).unwrap()
+                                {
                                     arr.push(val);
                                 } else {
                                     unreachable!()
@@ -1554,9 +1556,7 @@ impl Script {
                             frame.i_ptr += 1;
                         }
 
-                        ScriptExecutorState::ExpectingBytesOrCachedTerm(
-                            OP::SignedBigArrayVar,
-                        ) => {
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::SignedBigArrayVar) => {
                             let mut len: u16 = 0;
 
                             frame.i_ptr += 1;
@@ -1599,7 +1599,9 @@ impl Script {
                                     }
                                 }
 
-                                if let VmTerm::SignedBig(val) = crate::codec::decode::<VmTerm>(&term).unwrap() {
+                                if let VmTerm::SignedBig(val) =
+                                    crate::codec::decode::<VmTerm>(&term).unwrap()
+                                {
                                     arr.push(val);
                                 } else {
                                     unreachable!()
@@ -28194,7 +28196,8 @@ mod tests {
             ..Script::default()
         };
 
-        let mut script_output: Vec<VmTerm> = vec![VmTerm::UnsignedBig(ubig!(13535335215315315311613663))]; // m == 20
+        let mut script_output: Vec<VmTerm> =
+            vec![VmTerm::UnsignedBig(ubig!(13535335215315315311613663))]; // m == 20
         assert_script_ok(ss, script_output, key);
     }
 
@@ -28241,7 +28244,11 @@ mod tests {
             ..Script::default()
         };
 
-        let mut script_output: Vec<VmTerm> = vec![VmTerm::UnsignedBig(ubig!(13535335215315315311613663)), VmTerm::UnsignedBig(ubig!(3535)), VmTerm::UnsignedBig(ubig!(0))];
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::UnsignedBig(ubig!(13535335215315315311613663)),
+            VmTerm::UnsignedBig(ubig!(3535)),
+            VmTerm::UnsignedBig(ubig!(0)),
+        ];
         assert_script_ok(ss, script_output, key);
     }
 
@@ -28274,7 +28281,8 @@ mod tests {
             ..Script::default()
         };
 
-        let mut script_output: Vec<VmTerm> = vec![VmTerm::SignedBig(ibig!(13535335215315315311613663))]; // m == 20
+        let mut script_output: Vec<VmTerm> =
+            vec![VmTerm::SignedBig(ibig!(13535335215315315311613663))]; // m == 20
         assert_script_ok(ss, script_output, key);
     }
 
@@ -28320,7 +28328,11 @@ mod tests {
             ..Script::default()
         };
 
-        let mut script_output: Vec<VmTerm> = vec![VmTerm::SignedBig(ibig!(13535335215315315311613663)), VmTerm::SignedBig(ibig!(3535)), VmTerm::SignedBig(ibig!(0))];
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::SignedBig(ibig!(13535335215315315311613663)),
+            VmTerm::SignedBig(ibig!(3535)),
+            VmTerm::SignedBig(ibig!(0)),
+        ];
         assert_script_ok(ss, script_output, key);
     }
 
@@ -28365,7 +28377,11 @@ mod tests {
             ..Script::default()
         };
 
-        let mut script_output: Vec<VmTerm> = vec![VmTerm::UnsignedBigArray(vec![ubig!(13535335215315315311613663), ubig!(3535), ubig!(0)])];
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::UnsignedBigArray(vec![
+            ubig!(13535335215315315311613663),
+            ubig!(3535),
+            ubig!(0),
+        ])];
         assert_script_ok(ss, script_output, key);
     }
 
@@ -28409,7 +28425,11 @@ mod tests {
             ..Script::default()
         };
 
-        let mut script_output: Vec<VmTerm> = vec![VmTerm::SignedBigArray(vec![ibig!(13535335215315315311613663), ibig!(3535), ibig!(0)])];
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::SignedBigArray(vec![
+            ibig!(13535335215315315311613663),
+            ibig!(3535),
+            ibig!(0),
+        ])];
         assert_script_ok(ss, script_output, key);
     }
 }
