@@ -981,6 +981,40 @@ impl Script {
                             exec_count += 16;
                         }
 
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::UnsignedBigVar) => {
+                            let mut len: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            let mut vec: Vec<u8> = Vec::with_capacity(len as usize);
+                            for _ in 0..len {
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                    vec.push(*byte);
+                                } else {
+                                    unreachable!()
+                                }
+                            }
+
+                            let term = crate::codec::decode::<VmTerm>(&vec).unwrap();
+                            memory_size += term.size();
+                            exec_count += term.size() as u64 + 2;
+                            frame.stack.push(term);
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                        }
+
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed8Var) => {
                             frame.i_ptr += 1;
 
@@ -1049,6 +1083,40 @@ impl Script {
                             frame.i_ptr += 1;
                             memory_size += 16;
                             exec_count += 16;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::SignedBigVar) => {
+                            let mut len: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            let mut vec: Vec<u8> = Vec::with_capacity(len as usize);
+                            for _ in 0..len {
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                    vec.push(*byte);
+                                } else {
+                                    unreachable!()
+                                }
+                            }
+
+                            let term = crate::codec::decode::<VmTerm>(&vec).unwrap();
+                            memory_size += term.size();
+                            exec_count += term.size() as u64 + 2;
+                            frame.stack.push(term);
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
                         }
 
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Float32Var) => {
@@ -1384,6 +1452,68 @@ impl Script {
                             frame.i_ptr += 1;
                         }
 
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(
+                            OP::UnsignedBigArrayVar,
+                        ) => {
+                            let mut len: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            let mut arr: Vec<UBig> = Vec::with_capacity(len as usize);
+                            for _ in 0..len {
+                                let mut term_len: u16 = 0;
+
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                    term_len += u16::from(*byte);
+                                } else {
+                                    unreachable!()
+                                }
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                    term_len += u16::from(*byte) << 8;
+                                } else {
+                                    unreachable!()
+                                }
+
+                                let mut term: Vec<u8> = Vec::with_capacity(term_len as usize);
+                                for _ in 0..term_len {
+                                    frame.i_ptr += 1;
+                                    if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                        term.push(*byte);
+                                    } else {
+                                        unreachable!()
+                                    }
+                                }
+
+                                if let VmTerm::UnsignedBig(val) =
+                                    crate::codec::decode::<VmTerm>(&term).unwrap()
+                                {
+                                    arr.push(val);
+                                } else {
+                                    unreachable!()
+                                }
+                            }
+
+                            let term = VmTerm::UnsignedBigArray(arr);
+                            memory_size += term.size();
+                            exec_count += term.size() as u64 + 2 * (len as u64 + 1);
+                            frame.stack.push(term);
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                        }
+
                         ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::Signed8ArrayVar) => {
                             let mut len: u16 = 0;
 
@@ -1553,6 +1683,66 @@ impl Script {
                             let term = VmTerm::Signed128Array(arr);
                             memory_size += term.size();
                             exec_count += term.size() as u64 + 2;
+                            frame.stack.push(term);
+                            frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                            frame.i_ptr += 1;
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::SignedBigArrayVar) => {
+                            let mut len: u16 = 0;
+
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte);
+                            } else {
+                                unreachable!()
+                            }
+                            frame.i_ptr += 1;
+                            if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                len += u16::from(*byte) << 8;
+                            } else {
+                                unreachable!()
+                            }
+
+                            let mut arr: Vec<IBig> = Vec::with_capacity(len as usize);
+                            for _ in 0..len {
+                                let mut term_len: u16 = 0;
+
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                    term_len += u16::from(*byte);
+                                } else {
+                                    unreachable!()
+                                }
+                                frame.i_ptr += 1;
+                                if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                    term_len += u16::from(*byte) << 8;
+                                } else {
+                                    unreachable!()
+                                }
+
+                                let mut term: Vec<u8> = Vec::with_capacity(term_len as usize);
+                                for _ in 0..term_len {
+                                    frame.i_ptr += 1;
+                                    if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                        term.push(*byte);
+                                    } else {
+                                        unreachable!()
+                                    }
+                                }
+
+                                if let VmTerm::SignedBig(val) =
+                                    crate::codec::decode::<VmTerm>(&term).unwrap()
+                                {
+                                    arr.push(val);
+                                } else {
+                                    unreachable!()
+                                }
+                            }
+
+                            let term = VmTerm::SignedBigArray(arr);
+                            memory_size += term.size();
+                            exec_count += term.size() as u64 + 2 * (len as u64 + 1);
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -28166,6 +28356,272 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> = vec![VmTerm::Unsigned8(0x14)]; // m == 20
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_loads_unsigned_big_var() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::UnsignedBigVar),
+                ScriptEntry::Byte(0x0d),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Byte(0xdf),
+                ScriptEntry::Byte(0x96),
+                ScriptEntry::Byte(0x15),
+                ScriptEntry::Byte(0xed),
+                ScriptEntry::Byte(0xd0),
+                ScriptEntry::Byte(0x99),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0xfe),
+                ScriptEntry::Byte(0x37),
+                ScriptEntry::Byte(0x32),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> =
+            vec![VmTerm::UnsignedBig(ubig!(13535335215315315311613663))];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_loads_unsigned_big_var_2() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::UnsignedBigVar),
+                ScriptEntry::Byte(0x0d),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Byte(0xdf),
+                ScriptEntry::Byte(0x96),
+                ScriptEntry::Byte(0x15),
+                ScriptEntry::Byte(0xed),
+                ScriptEntry::Byte(0xd0),
+                ScriptEntry::Byte(0x99),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0xfe),
+                ScriptEntry::Byte(0x37),
+                ScriptEntry::Byte(0x32),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::UnsignedBigVar),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0xcf),
+                ScriptEntry::Byte(0x0d),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::UnsignedBigVar),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::UnsignedBig(ubig!(13535335215315315311613663)),
+            VmTerm::UnsignedBig(ubig!(3535)),
+            VmTerm::UnsignedBig(ubig!(0)),
+        ];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_loads_signed_big_var() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::SignedBigVar),
+                ScriptEntry::Byte(0x0d),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x0f),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Byte(0xdf),
+                ScriptEntry::Byte(0x96),
+                ScriptEntry::Byte(0x15),
+                ScriptEntry::Byte(0xed),
+                ScriptEntry::Byte(0xd0),
+                ScriptEntry::Byte(0x99),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0xfe),
+                ScriptEntry::Byte(0x37),
+                ScriptEntry::Byte(0x32),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> =
+            vec![VmTerm::SignedBig(ibig!(13535335215315315311613663))];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_loads_signed_big_var_2() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::SignedBigVar),
+                ScriptEntry::Byte(0x0d),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x0f),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Byte(0xdf),
+                ScriptEntry::Byte(0x96),
+                ScriptEntry::Byte(0x15),
+                ScriptEntry::Byte(0xed),
+                ScriptEntry::Byte(0xd0),
+                ScriptEntry::Byte(0x99),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0xfe),
+                ScriptEntry::Byte(0x37),
+                ScriptEntry::Byte(0x32),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::UnsignedBigVar),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x0f),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0xcf),
+                ScriptEntry::Byte(0x0d),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::UnsignedBigVar),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x10),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![
+            VmTerm::SignedBig(ibig!(13535335215315315311613663)),
+            VmTerm::SignedBig(ibig!(3535)),
+            VmTerm::SignedBig(ibig!(0)),
+        ];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_loads_unsigned_big_array_var() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::UnsignedBigArrayVar),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x0d),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Byte(0xdf),
+                ScriptEntry::Byte(0x96),
+                ScriptEntry::Byte(0x15),
+                ScriptEntry::Byte(0xed),
+                ScriptEntry::Byte(0xd0),
+                ScriptEntry::Byte(0x99),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0xfe),
+                ScriptEntry::Byte(0x37),
+                ScriptEntry::Byte(0x32),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0xcf),
+                ScriptEntry::Byte(0x0d),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x08),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::UnsignedBigArray(vec![
+            ubig!(13535335215315315311613663),
+            ubig!(3535),
+            ubig!(0),
+        ])];
+        assert_script_ok(ss, script_output, key);
+    }
+
+    #[test]
+    fn it_loads_signed_big_array_var_2() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::SignedBigArrayVar),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x0d),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x0f),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Byte(0xdf),
+                ScriptEntry::Byte(0x96),
+                ScriptEntry::Byte(0x15),
+                ScriptEntry::Byte(0xed),
+                ScriptEntry::Byte(0xd0),
+                ScriptEntry::Byte(0x99),
+                ScriptEntry::Byte(0x06),
+                ScriptEntry::Byte(0xfe),
+                ScriptEntry::Byte(0x37),
+                ScriptEntry::Byte(0x32),
+                ScriptEntry::Byte(0x0b),
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x0f),
+                ScriptEntry::Byte(0x02),
+                ScriptEntry::Byte(0xcf),
+                ScriptEntry::Byte(0x0d),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x10),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::SignedBigArray(vec![
+            ibig!(13535335215315315311613663),
+            ibig!(3535),
+            ibig!(0),
+        ])];
         assert_script_ok(ss, script_output, key);
     }
 }
