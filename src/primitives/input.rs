@@ -194,29 +194,9 @@ impl Encode for Input {
             }
 
             InputFlags::IsColouredCoinbase => {
+                bincode::Encode::encode(self.spending_pkey.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(self.colour_script.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(self.colour_script_args.as_ref().unwrap(), encoder)?;
-            }
-
-            InputFlags::IsColouredCoinbaseWithColourProof => {
-                bincode::Encode::encode(&self.script, encoder)?;
-                bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(self.colour_script.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(self.colour_script_args.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(self.colour_proof.as_ref().unwrap(), encoder)?;
-            }
-
-            InputFlags::IsColouredCoinbaseWithColourProofWithoutAddress => {
-                bincode::Encode::encode(&self.script, encoder)?;
-                bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(self.colour_script.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(self.colour_script_args.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(
-                    self.colour_proof_without_address.as_ref().unwrap(),
-                    encoder,
-                )?;
             }
 
             InputFlags::Plain => {
@@ -249,10 +229,6 @@ impl Encode for Input {
             }
 
             InputFlags::IsColouredHasSpendProofAndColourProof => {
-                unimplemented!()
-            }
-
-            InputFlags::IsColouredCoinbaseWithColourProofWithoutAddress => {
                 unimplemented!()
             }
 
@@ -337,15 +313,25 @@ impl Decode for Input {
             }
 
             InputFlags::IsColouredCoinbase => {
-                unimplemented!()
-            }
+                let spending_pkey = Some(bincode::Decode::decode(decoder)?);
+                let script = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
 
-            InputFlags::IsColouredCoinbaseWithColourProof => {
-                unimplemented!()
-            }
-
-            InputFlags::IsColouredCoinbaseWithColourProofWithoutAddress => {
-                unimplemented!()
+                Ok(Self {
+                    script,
+                    script_args,
+                    input_flags,
+                    colour_script: None,
+                    colour_script_args: None,
+                    spending_pkey,
+                    spend_proof: None,
+                    witness: None,
+                    colour_proof: None,
+                    colour_proof_without_address: None,
+                    out: None,
+                    hash: None,
+                })
             }
 
             InputFlags::Plain => {
@@ -395,10 +381,6 @@ impl Decode for Input {
             }
 
             InputFlags::IsColouredHasSpendProofAndColourProof => {
-                unimplemented!()
-            }
-
-            InputFlags::IsColouredCoinbaseWithColourProofWithoutAddress => {
                 unimplemented!()
             }
 
@@ -465,24 +447,22 @@ fn validate_script_args_len_during_decode(
 pub enum InputFlags {
     IsCoinbase = 0x00,
     IsColouredCoinbase = 0x01,
-    IsColouredCoinbaseWithColourProof = 0x02,
-    IsColouredCoinbaseWithColourProofWithoutAddress = 0x03,
-    Plain = 0x04,
-    HasSpendProof = 0x05,
-    IsColoured = 0x06,
-    IsColouredHasColourProof = 0x07,
-    IsColouredHasColourProofWithoutAddress = 0x08,
-    IsColouredHasSpendProof = 0x09,
-    IsColouredHasSpendProofAndColourProof = 0x0a,
-    IsColouredHasSpendProofAndColourProofWithoutAddress = 0x0b,
-    PlainWithoutSpendKey = 0x0c,
-    HasSpendProofWithoutSpendKey = 0x0d,
-    IsColouredWithoutSpendKey = 0x0e,
-    IsColouredHasColourProofWithoutSpendKey = 0x0f,
-    IsColouredHasColourProofWithoutAddressWithoutSpendKey = 0x10,
-    IsColouredHasSpendProofWithoutSpendKey = 0x11,
-    IsColouredHasSpendProofAndColourProofWithoutSpendKey = 0x12,
-    IsColouredHasSpendProofAndColourProofWithoutAddressWithoutSpendKey = 0x13,
+    Plain = 0x02,
+    HasSpendProof = 0x03,
+    IsColoured = 0x04,
+    IsColouredHasColourProof = 0x05,
+    IsColouredHasColourProofWithoutAddress = 0x06,
+    IsColouredHasSpendProof = 0x07,
+    IsColouredHasSpendProofAndColourProof = 0x08,
+    IsColouredHasSpendProofAndColourProofWithoutAddress = 0x09,
+    PlainWithoutSpendKey = 0x0a,
+    HasSpendProofWithoutSpendKey = 0x0b,
+    IsColouredWithoutSpendKey = 0x0c,
+    IsColouredHasColourProofWithoutSpendKey = 0x0d,
+    IsColouredHasColourProofWithoutAddressWithoutSpendKey = 0x1e,
+    IsColouredHasSpendProofWithoutSpendKey = 0x0f,
+    IsColouredHasSpendProofAndColourProofWithoutSpendKey = 0x10,
+    IsColouredHasSpendProofAndColourProofWithoutAddressWithoutSpendKey = 0x11,
 }
 
 impl std::convert::TryFrom<u8> for InputFlags {
@@ -492,24 +472,22 @@ impl std::convert::TryFrom<u8> for InputFlags {
         match num {
             0x00 => Ok(Self::IsCoinbase),
             0x01 => Ok(Self::IsColouredCoinbase),
-            0x02 => Ok(Self::IsColouredCoinbaseWithColourProof),
-            0x03 => Ok(Self::IsColouredCoinbaseWithColourProofWithoutAddress),
-            0x04 => Ok(Self::Plain),
-            0x05 => Ok(Self::HasSpendProof),
-            0x06 => Ok(Self::IsColoured),
-            0x07 => Ok(Self::IsColouredHasColourProof),
-            0x08 => Ok(Self::IsColouredHasColourProofWithoutAddress),
-            0x09 => Ok(Self::IsColouredHasSpendProof),
-            0x0a => Ok(Self::IsColouredHasSpendProofAndColourProof),
-            0x0b => Ok(Self::IsColouredHasSpendProofAndColourProofWithoutAddress),
-            0x0c => Ok(Self::PlainWithoutSpendKey),
-            0x0d => Ok(Self::HasSpendProofWithoutSpendKey),
-            0x0e => Ok(Self::IsColouredWithoutSpendKey),
-            0x0f => Ok(Self::IsColouredHasColourProofWithoutSpendKey),
-            0x10 => Ok(Self::IsColouredHasColourProofWithoutAddressWithoutSpendKey),
-            0x11 => Ok(Self::IsColouredHasSpendProofWithoutSpendKey),
-            0x12 => Ok(Self::IsColouredHasSpendProofAndColourProofWithoutSpendKey),
-            0x13 => Ok(Self::IsColouredHasSpendProofAndColourProofWithoutAddressWithoutSpendKey),
+            0x02 => Ok(Self::Plain),
+            0x03 => Ok(Self::HasSpendProof),
+            0x04 => Ok(Self::IsColoured),
+            0x05 => Ok(Self::IsColouredHasColourProof),
+            0x06 => Ok(Self::IsColouredHasColourProofWithoutAddress),
+            0x07 => Ok(Self::IsColouredHasSpendProof),
+            0x08 => Ok(Self::IsColouredHasSpendProofAndColourProof),
+            0x08 => Ok(Self::IsColouredHasSpendProofAndColourProofWithoutAddress),
+            0x0a => Ok(Self::PlainWithoutSpendKey),
+            0x0b => Ok(Self::HasSpendProofWithoutSpendKey),
+            0x0c => Ok(Self::IsColouredWithoutSpendKey),
+            0x0d => Ok(Self::IsColouredHasColourProofWithoutSpendKey),
+            0x0e => Ok(Self::IsColouredHasColourProofWithoutAddressWithoutSpendKey),
+            0x0f => Ok(Self::IsColouredHasSpendProofWithoutSpendKey),
+            0x10 => Ok(Self::IsColouredHasSpendProofAndColourProofWithoutSpendKey),
+            0x11 => Ok(Self::IsColouredHasSpendProofAndColourProofWithoutAddressWithoutSpendKey),
             _ => Err("invalid bitflags"),
         }
     }
@@ -533,6 +511,34 @@ mod tests {
             colour_script_args: None,
             script: Script::new_coinbase(),
             input_flags: InputFlags::IsCoinbase,
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+                VmTerm::Unsigned64(1_654_654_645_645),
+                VmTerm::Unsigned32(543_543),
+            ],
+            hash: None,
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_coinbase_encode_decode() {
+        let input = Input {
+            out: None,
+            witness: None,
+            spend_proof: None,
+            colour_proof: None,
+            colour_proof_without_address: None,
+            spending_pkey: Some(PublicKey::zero()),
+            colour_script: None,
+            colour_script_args: None,
+            script: Script::new_coinbase(),
+            input_flags: InputFlags::IsColouredCoinbase,
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
