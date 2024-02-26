@@ -24,9 +24,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [x] Script arguments serialization
   - [ ] Headers MMR implementation
   - [ ] Find a way to dynamically determine the minimum fee for acceptance into the mempool
-  - [ ] Find the optimal number of maximum suspends a transaction is allowed to have. With a limit on suspends, nodes can execute the whole chain of transactions and pre-validate them in order to determine if they will all execute whenever they receive a transaction which hits the `Suspend` opcode. By placing the correct upper bound on suspendable transactions, we can run long computations on the blockchain while also mitigating DDOS vectors in the mempool. The idea is that on the first transaction in a chain of these, the whole computation would be run up to either the number of suspends or the limit on suspends to validate the whole chain. Further transactions wouldn't require validating the whole chain as the VM state proves it was validated via a sequence number included in the vm state binary blob via consensus.
-  - [ ] Implement suspendable transactions i.e. transactions that execute over several blocks.
   - [ ] Implement optimal atomic asset exchange script and use it as a default script
+  - [ ] Implement coloured assets
   * [ ] Implement VM opcodes
     - [x] OP `0x00` Func - Start a function definition
     - [x] OP `0x03` BaseContext - Pushes to the top of the stack the base cryptographic context, which can be used to create application specific contexts by appending other contexts to it before being passed to cryptographic opcodes. The base context is specific to the current shard.
