@@ -901,6 +901,7 @@ impl Script {
 
                             let term = crate::codec::decode::<VmTerm>(&vec).unwrap();
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -999,6 +1000,7 @@ impl Script {
 
                             let term = crate::codec::decode::<VmTerm>(&vec).unwrap();
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1382,6 +1384,7 @@ impl Script {
 
                             let term = VmTerm::UnsignedBigArray(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1610,6 +1613,7 @@ impl Script {
 
                             let term = VmTerm::SignedBigArray(arr);
                             memory_size += term.size();
+                            exec_count += term.size();
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
