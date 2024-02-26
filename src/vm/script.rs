@@ -28201,7 +28201,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> =
-            vec![VmTerm::UnsignedBig(ubig!(13535335215315315311613663))]; // m == 20
+            vec![VmTerm::UnsignedBig(ubig!(13535335215315315311613663))];
         assert_script_ok(ss, script_output, key);
     }
 
@@ -28286,7 +28286,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> =
-            vec![VmTerm::SignedBig(ibig!(13535335215315315311613663))]; // m == 20
+            vec![VmTerm::SignedBig(ibig!(13535335215315315311613663))];
         assert_script_ok(ss, script_output, key);
     }
 
