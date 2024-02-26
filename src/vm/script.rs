@@ -1384,7 +1384,7 @@ impl Script {
 
                             let term = VmTerm::UnsignedBigArray(arr);
                             memory_size += term.size();
-                            exec_count += term.size() as u64 + 2*(len as u64 + 1);
+                            exec_count += term.size() as u64 + 2 * (len as u64 + 1);
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1613,7 +1613,7 @@ impl Script {
 
                             let term = VmTerm::SignedBigArray(arr);
                             memory_size += term.size();
-                            exec_count += term.size() as u64 + 2*(len as u64 + 1);
+                            exec_count += term.size() as u64 + 2 * (len as u64 + 1);
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
