@@ -202,9 +202,9 @@ impl PowBlockHeader {
 
                     if timestamp < time {
                         return Err(BlockVerifyErr::InvalidRunnerupTimestamp);
-                    } else {
-                        Some([Hash256::zero(); SECTORS - 1])
                     }
+
+                    Some([Hash256::zero(); SECTORS - 1])
                 }
 
                 2 => None,
@@ -222,9 +222,9 @@ impl PowBlockHeader {
 
                     if timestamp < time {
                         return Err(BlockVerifyErr::InvalidRunnerupTimestamp);
-                    } else {
-                        Some(prev.prev_hash)
                     }
+
+                    Some(prev.prev_hash)
                 }
 
                 2 => None,
@@ -879,6 +879,7 @@ impl BlockHeader {
                     colour_script: None,
                     colour_script_args: None,
                     script: Script::new_coinbase(),
+                    input_flags: InputFlags::IsCoinbase,
                     script_args,
                     hash: None,
                 };
@@ -1115,6 +1116,7 @@ impl Block {
             colour_script: None,
             colour_script_args: None,
             script: Script::new_coinbase(),
+            input_flags: InputFlags::IsCoinbase,
             script_args: vec![
                 VmTerm::Signed128(map_height_to_block_reward(coinbase_height)),
                 VmTerm::Hash160(coinbase.0),
@@ -1269,7 +1271,7 @@ impl BlockData {
                 transcripts.push(ctx.bytes(&input.to_bytes()));
             }
 
-            match input.get_flags().unwrap() {
+            match input.input_flags {
                 InputFlags::IsCoinbase => {
                     coinbase_count += 1;
 
@@ -1723,6 +1725,7 @@ mod tests {
             colour_script: None,
             colour_script_args: None,
             script: Script::new_coinbase(),
+            input_flags: InputFlags::IsCoinbase,
             script_args,
             hash: None,
         };

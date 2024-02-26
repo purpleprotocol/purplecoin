@@ -63,12 +63,14 @@ impl<const VAL_SIZE: usize> IBLT<VAL_SIZE> {
 
                 if entry.empty() {
                     return Some(None);
-                } else if (entry.is_pure()) {
+                }
+
+                if (entry.is_pure()) {
                     if (entry.key_sum == k) {
                         return Some(Some(entry.value_sum));
-                    } else {
-                        return Some(None);
                     }
+
+                    return Some(None);
                 }
             }
 

@@ -43,18 +43,21 @@ pub struct Input {
     /// Otherwise this is the merkle proof of a script hash
     pub spend_proof: Option<Vec<Hash160>>,
 
-    /// Merkle colour spend proof of address + colour script hash. Usage with whitelisted spending public keys.
+    /// Merkle colour spend proof of address + colour script hash.
     ///
     /// This is mutually exclusive with colour_proof_without_address
     pub colour_proof: Option<Vec<Hash160>>,
 
-    /// Merkle colour spend proof of colour script hash. Usage without whitelisted spending public keys
+    /// Merkle colour spend proof of colour script hash.
     ///
     /// This is mutually exclusive with colour_proof
     pub colour_proof_without_address: Option<Vec<Hash160>>,
 
-    /// Input hash. Not serialized
+    /// Input hash. Not serialised
     pub hash: Option<Hash256>,
+
+    /// Input flags. Not serialised
+    pub input_flags: InputFlags,
 }
 
 impl Input {
@@ -73,7 +76,14 @@ impl Input {
         copied.witness = None;
 
         // We also don't sign the script arguments marked as malleable
-        // unimplemented!();
+        let mut i = 0;
+        while i < copied.script_args.len() {
+            if copied.script.malleable_args[i] {
+                copied.script_args.remove(i);
+            } else {
+                i += 1;
+            }
+        }
 
         crate::codec::encode_to_vec(&copied).unwrap()
     }
@@ -166,72 +176,6 @@ impl Input {
         }
         Ok(())
     }
-
-    pub fn get_flags(&self) -> Result<InputFlags, &'static str> {
-        let flags = match (
-            self.is_coinbase(),
-            self.is_coloured(),
-            self.spending_pkey.is_some(),
-            self.witness.is_some(),
-            self.colour_script_args.is_some(),
-            self.spend_proof.is_some(),
-            self.colour_proof.is_some(),
-            self.colour_proof_without_address.is_some(),
-        ) {
-            (true, false, false, false, false, false, false, false) => InputFlags::IsCoinbase,
-            (true, true, false, false, true, false, true, false) => {
-                InputFlags::IsColouredCoinbaseWithColourProof
-            }
-            (true, true, false, false, true, false, false, true) => {
-                InputFlags::IsColouredCoinbaseWithColourProofWithoutAddress
-            }
-            (false, false, true, true, false, false, false, false) => InputFlags::Plain,
-            (false, false, true, true, false, true, false, false) => InputFlags::HasSpendProof,
-            (false, true, true, true, false, false, false, false) => InputFlags::IsColoured,
-            (false, true, true, true, false, false, true, false) => {
-                InputFlags::IsColouredHasColourProof
-            }
-            (false, true, true, true, false, false, false, true) => {
-                InputFlags::IsColouredHasColourProofWithoutAddress
-            }
-            (false, true, true, true, false, true, false, false) => {
-                InputFlags::IsColouredHasSpendProof
-            }
-            (false, true, true, true, false, true, true, false) => {
-                InputFlags::IsColouredHasSpendProofAndColourProof
-            }
-            (false, true, true, true, false, true, false, true) => {
-                InputFlags::IsColouredHasSpendProofAndColourProofWithoutAddress
-            }
-            (false, false, false, true, false, false, false, false) => {
-                InputFlags::PlainWithoutSpendKey
-            }
-            (false, false, false, true, false, true, false, false) => {
-                InputFlags::HasSpendProofWithoutSpendKey
-            }
-            (false, true, false, true, false, false, false, false) => {
-                InputFlags::IsColouredWithoutSpendKey
-            }
-            (false, true, false, true, false, false, true, false) => {
-                InputFlags::IsColouredHasColourProofWithoutSpendKey
-            }
-            (false, true, false, true, false, false, false, true) => {
-                InputFlags::IsColouredHasColourProofWithoutAddressWithoutSpendKey
-            }
-            (false, true, false, true, false, true, false, false) => {
-                InputFlags::IsColouredHasSpendProofWithoutSpendKey
-            }
-            (false, true, false, true, false, true, true, false) => {
-                InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey
-            }
-            (false, true, false, true, false, true, false, true) => {
-                InputFlags::IsColouredHasSpendProofAndColourProofWithoutAddressWithoutSpendKey
-            }
-            _ => return Err("invalid input struct"),
-        };
-
-        Ok(flags)
-    }
 }
 
 impl Encode for Input {
@@ -239,9 +183,7 @@ impl Encode for Input {
         &self,
         encoder: &mut E,
     ) -> core::result::Result<(), bincode::error::EncodeError> {
-        let flags = self
-            .get_flags()
-            .map_err(|err| bincode::error::EncodeError::OtherString(err.to_owned()))?;
+        let flags = self.input_flags;
         let flags_to_write: u8 = flags as u8;
         bincode::Encode::encode(&flags_to_write, encoder)?;
 
@@ -367,19 +309,21 @@ impl Decode for Input {
     fn decode<D: bincode::de::Decoder>(
         decoder: &mut D,
     ) -> core::result::Result<Self, bincode::error::DecodeError> {
-        let flags: u8 = bincode::Decode::decode(decoder)?;
-        let flags: InputFlags = flags.try_into().map_err(|err: &'static str| {
+        let input_flags: u8 = bincode::Decode::decode(decoder)?;
+        let input_flags: InputFlags = input_flags.try_into().map_err(|err: &'static str| {
             bincode::error::DecodeError::OtherString(err.to_owned())
         })?;
 
-        match flags {
+        match input_flags {
             InputFlags::IsCoinbase => {
                 let script = bincode::Decode::decode(decoder)?;
-                let script_args = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
 
                 Ok(Self {
                     script,
                     script_args,
+                    input_flags,
                     colour_script: None,
                     colour_script_args: None,
                     spending_pkey: None,
@@ -415,11 +359,13 @@ impl Decode for Input {
                     )
                 };
                 let script = bincode::Decode::decode(decoder)?;
-                let script_args = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
 
                 Ok(Self {
                     script,
                     script_args,
+                    input_flags,
                     colour_script: None,
                     colour_script_args: None,
                     spending_pkey,
@@ -503,6 +449,17 @@ impl Decode for Input {
     }
 }
 
+fn validate_script_args_len_during_decode(
+    script: &Script,
+    script_args: &[VmTerm],
+) -> Result<(), bincode::error::DecodeError> {
+    if script.malleable_args.len() != script_args.len() {
+        return Err(bincode::error::DecodeError::OtherString(format!("Received more or fewer script arguments than the script requires. Expected: {}, Found: {}", script.malleable_args.len(), script_args.len())));
+    }
+
+    Ok(())
+}
+
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum InputFlags {
@@ -575,6 +532,7 @@ mod tests {
             colour_script: None,
             colour_script_args: None,
             script: Script::new_coinbase(),
+            input_flags: InputFlags::IsCoinbase,
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -607,6 +565,7 @@ mod tests {
             witness: Some(Witness::empty()),
             spend_proof: None,
             colour_proof: None,
+            input_flags: InputFlags::Plain,
             colour_proof_without_address: None,
             spending_pkey: Some(PublicKey::zero()),
             colour_script: None,
@@ -616,8 +575,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(155_645_654_645),
-                VmTerm::Unsigned32(543_543),
             ],
             hash: None,
         };

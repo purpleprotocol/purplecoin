@@ -119,6 +119,7 @@ mod tests {
             colour_script: None,
             colour_script_args: None,
             script: Script::new_coinbase(),
+            input_flags: InputFlags::IsCoinbase,
             script_args,
             hash: None,
         };

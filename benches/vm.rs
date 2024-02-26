@@ -35,6 +35,7 @@ fn bench_coinbase(c: &mut Criterion) {
         colour_script: None,
         colour_script_args: None,
         script: Script::new_coinbase(),
+        input_flags: InputFlags::IsCoinbase,
         script_args,
         hash: None,
     };
@@ -164,6 +165,7 @@ fn bench_vm_abuse(c: &mut Criterion) {
         witness: None,
         script: ss.clone(),
         script_args: args.clone(),
+        input_flags: InputFlags::IsCoinbase,
         colour_proof: None,
         colour_proof_without_address: None,
         colour_script: None,
@@ -272,6 +274,7 @@ fn bench_vm_load_var(c: &mut Criterion) {
         witness: None,
         script: ss.clone(),
         script_args: args.clone(),
+        input_flags: InputFlags::IsCoinbase,
         colour_proof: None,
         colour_proof_without_address: None,
         colour_script: None,

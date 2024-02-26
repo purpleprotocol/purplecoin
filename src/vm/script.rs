@@ -12474,6 +12474,7 @@ mod tests {
 
     use super::*;
     use crate::consensus::Money;
+    use crate::primitives::InputFlags;
     use rayon::prelude::*;
 
     pub struct TestBaseArgs {
@@ -12774,6 +12775,7 @@ mod tests {
             witness: None,
             script: ss.clone(),
             script_args: args.clone(),
+            input_flags: InputFlags::IsCoinbase,
             colour_proof: None,
             colour_proof_without_address: None,
             colour_script: None,
@@ -14650,6 +14652,7 @@ mod tests {
             witness: None,
             script: ss.clone(),
             script_args: args.clone(),
+            input_flags: InputFlags::IsCoinbase,
             colour_proof: None,
             colour_proof_without_address: None,
             colour_script: None,
@@ -15900,6 +15903,7 @@ mod tests {
             witness: None,
             script: ss.clone(),
             script_args: args.clone(),
+            input_flags: InputFlags::IsCoinbase,
             colour_proof: None,
             colour_proof_without_address: None,
             colour_script: None,
@@ -15952,6 +15956,7 @@ mod tests {
             witness: None,
             script: ss.clone(),
             script_args: args.clone(),
+            input_flags: InputFlags::IsCoinbase,
             hash: None,
         }]
         .iter()
@@ -16001,6 +16006,7 @@ mod tests {
             witness: None,
             script: ss.clone(),
             script_args: args.clone(),
+            input_flags: InputFlags::IsCoinbase,
             hash: None,
         }]
         .iter()
