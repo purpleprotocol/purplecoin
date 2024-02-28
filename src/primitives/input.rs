@@ -44,15 +44,8 @@ pub struct Input {
     /// Otherwise this is the merkle proof of a script hash
     pub spend_proof: Option<Vec<Hash160>>,
 
-    /// Merkle colour spend proof of address + colour script hash.
-    ///
-    /// This is mutually exclusive with colour_proof_without_address
+    /// Merkle colour spend proof of colour script hash
     pub colour_proof: Option<Vec<Hash160>>,
-
-    /// Merkle colour spend proof of colour script hash.
-    ///
-    /// This is mutually exclusive with colour_proof
-    pub colour_proof_without_address: Option<Vec<Hash160>>,
 
     /// Block height chosen by the coinbase emitter for coinbase idempotency. Without it,
     /// an attacker can replay the transaction and emit more coins than intended.
@@ -79,7 +72,6 @@ impl Default for Input {
             colour_script_args: None,
             spend_proof: None,
             colour_proof: None,
-            colour_proof_without_address: None,
             coloured_coinbase_block_height: None,
             hash: None,
             input_flags: InputFlags::IsCoinbase,
@@ -104,9 +96,11 @@ impl Input {
 
         // We also don't sign the script arguments marked as malleable
         let mut i = 0;
+        let mut r = 0;
         while i < copied.script_args.len() {
-            if copied.script.malleable_args[i] {
+            if copied.script.malleable_args[i + r] {
                 copied.script_args.remove(i);
+                r += 1; // Account for removed indexes
             } else {
                 i += 1;
             }
@@ -248,63 +242,95 @@ impl Encode for Input {
             }
 
             InputFlags::HasSpendProofWithoutSpendKey => {
-                unimplemented!()
+                bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                bincode::Encode::encode(&self.script, encoder)?;
+                bincode::Encode::encode(&self.script_args, encoder)?;
+                bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColoured => {
-                unimplemented!()
+                bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                bincode::Encode::encode(&self.script, encoder)?;
+                bincode::Encode::encode(&self.script_args, encoder)?;
+                bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredHasSpendProof => {
-                unimplemented!()
+                bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                bincode::Encode::encode(&self.script, encoder)?;
+                bincode::Encode::encode(&self.script_args, encoder)?;
+                bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredHasSpendProofAndColourProof => {
-                unimplemented!()
-            }
-
-            InputFlags::PlainWithoutSpendKey => {
-                unimplemented!()
+                bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                bincode::Encode::encode(&self.script, encoder)?;
+                bincode::Encode::encode(&self.script_args, encoder)?;
+                bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredWithoutSpendKey => {
-                unimplemented!()
+                bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                bincode::Encode::encode(&self.script, encoder)?;
+                bincode::Encode::encode(&self.script_args, encoder)?;
+                bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredHasColourProof => {
-                unimplemented!()
-            }
-
-            InputFlags::HasSpendProof => {
-                unimplemented!()
-            }
-
-            InputFlags::IsColouredHasColourProofWithoutAddress => {
-                unimplemented!()
-            }
-
-            InputFlags::IsColouredHasSpendProofAndColourProofWithoutAddress => {
-                unimplemented!()
+                bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                bincode::Encode::encode(&self.script, encoder)?;
+                bincode::Encode::encode(&self.script_args, encoder)?;
+                bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredHasColourProofWithoutSpendKey => {
-                unimplemented!()
-            }
-
-            InputFlags::IsColouredHasColourProofWithoutAddressWithoutSpendKey => {
-                unimplemented!()
+                bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                bincode::Encode::encode(&self.script, encoder)?;
+                bincode::Encode::encode(&self.script_args, encoder)?;
+                bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredHasSpendProofWithoutSpendKey => {
-                unimplemented!()
+                bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                bincode::Encode::encode(&self.script, encoder)?;
+                bincode::Encode::encode(&self.script_args, encoder)?;
+                bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey => {
-                unimplemented!()
-            }
-
-            InputFlags::IsColouredHasSpendProofAndColourProofWithoutAddressWithoutSpendKey => {
-                unimplemented!()
+                bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                bincode::Encode::encode(&self.script, encoder)?;
+                bincode::Encode::encode(&self.script_args, encoder)?;
+                bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
             }
         }
 
@@ -378,67 +404,343 @@ impl Decode for Input {
             }
 
             InputFlags::HasSpendProof => {
-                unimplemented!()
+                let out = Some(bincode::Decode::decode(decoder)?);
+                let spending_pkey = Some(bincode::Decode::decode(decoder)?);
+                let witness = {
+                    let v: Vec<u8> = bincode::Decode::decode(decoder)?;
+                    Some(
+                        Witness::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    )
+                };
+                let script = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
+                let spend_proof = Some(bincode::Decode::decode(decoder)?);
+
+                Ok(Self {
+                    script,
+                    script_args,
+                    input_flags,
+                    spending_pkey,
+                    witness,
+                    out,
+                    spend_proof,
+                    ..Default::default()
+                })
             }
 
             InputFlags::HasSpendProofWithoutSpendKey => {
-                unimplemented!()
+                let out = Some(bincode::Decode::decode(decoder)?);
+                let witness = {
+                    let v: Vec<u8> = bincode::Decode::decode(decoder)?;
+                    Some(
+                        Witness::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    )
+                };
+                let script = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
+                let spend_proof = Some(bincode::Decode::decode(decoder)?);
+
+                Ok(Self {
+                    script,
+                    script_args,
+                    input_flags,
+                    witness,
+                    out,
+                    spend_proof,
+                    ..Default::default()
+                })
             }
 
             InputFlags::IsColoured => {
-                unimplemented!()
+                let out = Some(bincode::Decode::decode(decoder)?);
+                let spending_pkey = Some(bincode::Decode::decode(decoder)?);
+                let witness = {
+                    let v: Vec<u8> = bincode::Decode::decode(decoder)?;
+                    Some(
+                        Witness::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    )
+                };
+                let script = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
+                let colour_script = bincode::Decode::decode(decoder)?;
+                let colour_script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(
+                    &colour_script,
+                    colour_script_args.as_slice(),
+                )?;
+                let colour_script = Some(colour_script);
+                let colour_script_args = Some(colour_script_args);
+
+                Ok(Self {
+                    script,
+                    script_args,
+                    input_flags,
+                    spending_pkey,
+                    witness,
+                    out,
+                    colour_script,
+                    colour_script_args,
+                    ..Default::default()
+                })
             }
 
             InputFlags::IsColouredHasSpendProof => {
-                unimplemented!()
+                let out = Some(bincode::Decode::decode(decoder)?);
+                let spending_pkey = Some(bincode::Decode::decode(decoder)?);
+                let witness = {
+                    let v: Vec<u8> = bincode::Decode::decode(decoder)?;
+                    Some(
+                        Witness::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    )
+                };
+                let script = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
+                let colour_script = bincode::Decode::decode(decoder)?;
+                let colour_script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(
+                    &colour_script,
+                    colour_script_args.as_slice(),
+                )?;
+                let colour_script = Some(colour_script);
+                let colour_script_args = Some(colour_script_args);
+                let spend_proof = Some(bincode::Decode::decode(decoder)?);
+
+                Ok(Self {
+                    script,
+                    script_args,
+                    input_flags,
+                    spending_pkey,
+                    witness,
+                    out,
+                    colour_script,
+                    colour_script_args,
+                    spend_proof,
+                    ..Default::default()
+                })
             }
 
             InputFlags::IsColouredHasSpendProofAndColourProof => {
-                unimplemented!()
-            }
+                let out = Some(bincode::Decode::decode(decoder)?);
+                let spending_pkey = Some(bincode::Decode::decode(decoder)?);
+                let witness = {
+                    let v: Vec<u8> = bincode::Decode::decode(decoder)?;
+                    Some(
+                        Witness::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    )
+                };
+                let script = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
+                let colour_script = bincode::Decode::decode(decoder)?;
+                let colour_script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(
+                    &colour_script,
+                    colour_script_args.as_slice(),
+                )?;
+                let colour_script = Some(colour_script);
+                let colour_script_args = Some(colour_script_args);
+                let spend_proof = Some(bincode::Decode::decode(decoder)?);
+                let colour_proof = Some(bincode::Decode::decode(decoder)?);
 
-            InputFlags::PlainWithoutSpendKey => {
-                unimplemented!()
+                Ok(Self {
+                    script,
+                    script_args,
+                    input_flags,
+                    spending_pkey,
+                    witness,
+                    out,
+                    colour_script,
+                    colour_script_args,
+                    spend_proof,
+                    colour_proof,
+                    ..Default::default()
+                })
             }
 
             InputFlags::IsColouredWithoutSpendKey => {
-                unimplemented!()
+                let out = Some(bincode::Decode::decode(decoder)?);
+                let witness = {
+                    let v: Vec<u8> = bincode::Decode::decode(decoder)?;
+                    Some(
+                        Witness::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    )
+                };
+                let script = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
+                let colour_script = bincode::Decode::decode(decoder)?;
+                let colour_script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(
+                    &colour_script,
+                    colour_script_args.as_slice(),
+                )?;
+                let colour_script = Some(colour_script);
+                let colour_script_args = Some(colour_script_args);
+
+                Ok(Self {
+                    script,
+                    script_args,
+                    input_flags,
+                    witness,
+                    out,
+                    colour_script,
+                    colour_script_args,
+                    ..Default::default()
+                })
             }
 
             InputFlags::IsColouredHasColourProof => {
-                unimplemented!()
-            }
+                let out = Some(bincode::Decode::decode(decoder)?);
+                let spending_pkey = Some(bincode::Decode::decode(decoder)?);
+                let witness = {
+                    let v: Vec<u8> = bincode::Decode::decode(decoder)?;
+                    Some(
+                        Witness::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    )
+                };
+                let script = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
+                let colour_script = bincode::Decode::decode(decoder)?;
+                let colour_script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(
+                    &colour_script,
+                    colour_script_args.as_slice(),
+                )?;
+                let colour_script = Some(colour_script);
+                let colour_script_args = Some(colour_script_args);
+                let colour_proof = Some(bincode::Decode::decode(decoder)?);
 
-            InputFlags::HasSpendProof => {
-                unimplemented!()
-            }
-
-            InputFlags::IsColouredHasColourProofWithoutAddress => {
-                unimplemented!()
-            }
-
-            InputFlags::IsColouredHasSpendProofAndColourProofWithoutAddress => {
-                unimplemented!()
+                Ok(Self {
+                    script,
+                    script_args,
+                    input_flags,
+                    spending_pkey,
+                    witness,
+                    out,
+                    colour_script,
+                    colour_script_args,
+                    colour_proof,
+                    ..Default::default()
+                })
             }
 
             InputFlags::IsColouredHasColourProofWithoutSpendKey => {
-                unimplemented!()
-            }
+                let out = Some(bincode::Decode::decode(decoder)?);
+                let witness = {
+                    let v: Vec<u8> = bincode::Decode::decode(decoder)?;
+                    Some(
+                        Witness::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    )
+                };
+                let script = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
+                let colour_script = bincode::Decode::decode(decoder)?;
+                let colour_script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(
+                    &colour_script,
+                    colour_script_args.as_slice(),
+                )?;
+                let colour_script = Some(colour_script);
+                let colour_script_args = Some(colour_script_args);
+                let colour_proof = Some(bincode::Decode::decode(decoder)?);
 
-            InputFlags::IsColouredHasColourProofWithoutAddressWithoutSpendKey => {
-                unimplemented!()
+                Ok(Self {
+                    script,
+                    script_args,
+                    input_flags,
+                    witness,
+                    out,
+                    colour_script,
+                    colour_script_args,
+                    colour_proof,
+                    ..Default::default()
+                })
             }
 
             InputFlags::IsColouredHasSpendProofWithoutSpendKey => {
-                unimplemented!()
+                let out = Some(bincode::Decode::decode(decoder)?);
+                let witness = {
+                    let v: Vec<u8> = bincode::Decode::decode(decoder)?;
+                    Some(
+                        Witness::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    )
+                };
+                let script = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
+                let colour_script = bincode::Decode::decode(decoder)?;
+                let colour_script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(
+                    &colour_script,
+                    colour_script_args.as_slice(),
+                )?;
+                let colour_script = Some(colour_script);
+                let colour_script_args = Some(colour_script_args);
+                let spend_proof = Some(bincode::Decode::decode(decoder)?);
+
+                Ok(Self {
+                    script,
+                    script_args,
+                    input_flags,
+                    witness,
+                    out,
+                    colour_script,
+                    colour_script_args,
+                    spend_proof,
+                    ..Default::default()
+                })
             }
 
             InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey => {
-                unimplemented!()
-            }
+                let out = Some(bincode::Decode::decode(decoder)?);
+                let witness = {
+                    let v: Vec<u8> = bincode::Decode::decode(decoder)?;
+                    Some(
+                        Witness::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    )
+                };
+                let script = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
+                let colour_script = bincode::Decode::decode(decoder)?;
+                let colour_script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(
+                    &colour_script,
+                    colour_script_args.as_slice(),
+                )?;
+                let colour_script = Some(colour_script);
+                let colour_script_args = Some(colour_script_args);
+                let spend_proof = Some(bincode::Decode::decode(decoder)?);
+                let colour_proof = Some(bincode::Decode::decode(decoder)?);
 
-            InputFlags::IsColouredHasSpendProofAndColourProofWithoutAddressWithoutSpendKey => {
-                unimplemented!()
+                Ok(Self {
+                    script,
+                    script_args,
+                    input_flags,
+                    witness,
+                    out,
+                    colour_script,
+                    colour_script_args,
+                    spend_proof,
+                    colour_proof,
+                    ..Default::default()
+                })
             }
         }
     }
@@ -464,18 +766,13 @@ pub enum InputFlags {
     HasSpendProof = 0x03,
     IsColoured = 0x04,
     IsColouredHasColourProof = 0x05,
-    IsColouredHasColourProofWithoutAddress = 0x06,
-    IsColouredHasSpendProof = 0x07,
-    IsColouredHasSpendProofAndColourProof = 0x08,
-    IsColouredHasSpendProofAndColourProofWithoutAddress = 0x09,
-    PlainWithoutSpendKey = 0x0a,
-    HasSpendProofWithoutSpendKey = 0x0b,
-    IsColouredWithoutSpendKey = 0x0c,
-    IsColouredHasColourProofWithoutSpendKey = 0x0d,
-    IsColouredHasColourProofWithoutAddressWithoutSpendKey = 0x1e,
-    IsColouredHasSpendProofWithoutSpendKey = 0x0f,
-    IsColouredHasSpendProofAndColourProofWithoutSpendKey = 0x10,
-    IsColouredHasSpendProofAndColourProofWithoutAddressWithoutSpendKey = 0x11,
+    IsColouredHasSpendProof = 0x06,
+    IsColouredHasSpendProofAndColourProof = 0x07,
+    HasSpendProofWithoutSpendKey = 0x08,
+    IsColouredWithoutSpendKey = 0x09,
+    IsColouredHasColourProofWithoutSpendKey = 0x0a,
+    IsColouredHasSpendProofWithoutSpendKey = 0x0b,
+    IsColouredHasSpendProofAndColourProofWithoutSpendKey = 0x0c,
 }
 
 impl std::convert::TryFrom<u8> for InputFlags {
@@ -489,18 +786,13 @@ impl std::convert::TryFrom<u8> for InputFlags {
             0x03 => Ok(Self::HasSpendProof),
             0x04 => Ok(Self::IsColoured),
             0x05 => Ok(Self::IsColouredHasColourProof),
-            0x06 => Ok(Self::IsColouredHasColourProofWithoutAddress),
-            0x07 => Ok(Self::IsColouredHasSpendProof),
-            0x08 => Ok(Self::IsColouredHasSpendProofAndColourProof),
-            0x08 => Ok(Self::IsColouredHasSpendProofAndColourProofWithoutAddress),
-            0x0a => Ok(Self::PlainWithoutSpendKey),
-            0x0b => Ok(Self::HasSpendProofWithoutSpendKey),
-            0x0c => Ok(Self::IsColouredWithoutSpendKey),
-            0x0d => Ok(Self::IsColouredHasColourProofWithoutSpendKey),
-            0x0e => Ok(Self::IsColouredHasColourProofWithoutAddressWithoutSpendKey),
-            0x0f => Ok(Self::IsColouredHasSpendProofWithoutSpendKey),
-            0x10 => Ok(Self::IsColouredHasSpendProofAndColourProofWithoutSpendKey),
-            0x11 => Ok(Self::IsColouredHasSpendProofAndColourProofWithoutAddressWithoutSpendKey),
+            0x06 => Ok(Self::IsColouredHasSpendProof),
+            0x07 => Ok(Self::IsColouredHasSpendProofAndColourProof),
+            0x08 => Ok(Self::HasSpendProofWithoutSpendKey),
+            0x09 => Ok(Self::IsColouredWithoutSpendKey),
+            0x0a => Ok(Self::IsColouredHasColourProofWithoutSpendKey),
+            0x0b => Ok(Self::IsColouredHasSpendProofWithoutSpendKey),
+            0x0c => Ok(Self::IsColouredHasSpendProofAndColourProofWithoutSpendKey),
             _ => Err("invalid bitflags"),
         }
     }
@@ -576,6 +868,369 @@ mod tests {
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
             ],
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn has_spend_proof_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: Some(Address::zero()),
+                coloured_address: None,
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::HasSpendProof,
+            spending_pkey: Some(PublicKey::zero()),
+            script: Script::new_simple_spend(),
+            spend_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn has_spend_proof_without_spend_key_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: Some(Address::zero()),
+                coloured_address: None,
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::HasSpendProofWithoutSpendKey,
+            script: Script::new_simple_spend(),
+            spend_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: Some(Address::zero()),
+                coloured_address: None,
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColoured,
+            spending_pkey: Some(PublicKey::zero()),
+            script: Script::new_simple_spend(),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_has_spend_proof_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: Some(Address::zero()),
+                coloured_address: None,
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredHasSpendProof,
+            spending_pkey: Some(PublicKey::zero()),
+            script: Script::new_simple_spend(),
+            spend_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_has_spend_proof_and_colour_proof_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: Some(Address::zero()),
+                coloured_address: None,
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredHasSpendProofAndColourProof,
+            spending_pkey: Some(PublicKey::zero()),
+            script: Script::new_simple_spend(),
+            spend_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            colour_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_without_spend_key_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: Some(Address::zero()),
+                coloured_address: None,
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredWithoutSpendKey,
+            script: Script::new_simple_spend(),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_has_colour_proof_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: Some(Address::zero()),
+                coloured_address: None,
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredHasColourProof,
+            spending_pkey: Some(PublicKey::zero()),
+            script: Script::new_simple_spend(),
+            colour_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_has_spend_proof_and_colour_proof_without_spend_key_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: Some(Address::zero()),
+                coloured_address: None,
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey,
+            script: Script::new_simple_spend(),
+            spend_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            colour_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_has_spend_proof_without_spend_key_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: Some(Address::zero()),
+                coloured_address: None,
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredHasSpendProofWithoutSpendKey,
+            script: Script::new_simple_spend(),
+            spend_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_has_colour_proof_without_spend_key_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: Some(Address::zero()),
+                coloured_address: None,
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredHasColourProofWithoutSpendKey,
+            script: Script::new_simple_spend(),
+            colour_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
             ..Default::default()
         };
 
