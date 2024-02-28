@@ -870,18 +870,10 @@ impl BlockHeader {
                     VmTerm::Unsigned32(0),
                 ];
                 let mut input = Input {
-                    out: None,
-                    witness: None,
-                    spend_proof: None,
-                    colour_proof: None,
-                    colour_proof_without_address: None,
-                    spending_pkey: None,
-                    colour_script: None,
-                    colour_script_args: None,
                     script: Script::new_coinbase(),
                     input_flags: InputFlags::IsCoinbase,
                     script_args,
-                    hash: None,
+                    ..Default::default()
                 };
                 input.compute_hash(key);
                 input
@@ -1107,14 +1099,6 @@ impl Block {
         let mut idx_map = HashMap::new();
         let coinbase_height = prev.height + 1;
         let mut input = Input {
-            out: None,
-            spending_pkey: None,
-            witness: None,
-            spend_proof: None,
-            colour_proof: None,
-            colour_proof_without_address: None,
-            colour_script: None,
-            colour_script_args: None,
             script: Script::new_coinbase(),
             input_flags: InputFlags::IsCoinbase,
             script_args: vec![
@@ -1124,7 +1108,7 @@ impl Block {
                 VmTerm::Unsigned64(coinbase_height),
                 VmTerm::Unsigned32(extra_nonce),
             ],
-            hash: None,
+            ..Default::default()
         };
         input.compute_hash(key);
         let in_clone = input.clone();
@@ -1716,18 +1700,10 @@ mod tests {
             VmTerm::Unsigned32(0),
         ];
         let mut input = Input {
-            out: None,
-            witness: None,
-            spend_proof: None,
-            colour_proof: None,
-            colour_proof_without_address: None,
-            spending_pkey: None,
-            colour_script: None,
-            colour_script_args: None,
             script: Script::new_coinbase(),
             input_flags: InputFlags::IsCoinbase,
             script_args,
-            hash: None,
+            ..Default::default()
         };
         input.compute_hash(key);
 

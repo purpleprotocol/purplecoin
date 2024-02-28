@@ -26,18 +26,10 @@ fn bench_coinbase(c: &mut Criterion) {
         VmTerm::Unsigned32(0),
     ];
     let mut input = Input {
-        out: None,
-        witness: None,
-        spend_proof: None,
-        colour_proof: None,
-        colour_proof_without_address: None,
-        spending_pkey: None,
-        colour_script: None,
-        colour_script_args: None,
         script: Script::new_coinbase(),
         input_flags: InputFlags::IsCoinbase,
         script_args,
-        hash: None,
+        ..Default::default()
     };
     input.compute_hash(key);
     let mut out_stack = vec![];
@@ -158,18 +150,10 @@ fn bench_vm_abuse(c: &mut Criterion) {
         VmTerm::Hash160(sh.0),
     ];
     let ins = vec![Input {
-        out: None,
-        colour_script_args: None,
-        spending_pkey: None,
-        spend_proof: None,
-        witness: None,
         script: ss.clone(),
         script_args: args.clone(),
         input_flags: InputFlags::IsCoinbase,
-        colour_proof: None,
-        colour_proof_without_address: None,
-        colour_script: None,
-        hash: None,
+        ..Default::default()
     }]
     .iter()
     .cloned()
@@ -267,18 +251,10 @@ fn bench_vm_load_var(c: &mut Criterion) {
         VmTerm::Hash160(sh.0),
     ];
     let mut ins = vec![Input {
-        out: None,
-        colour_script_args: None,
-        spending_pkey: None,
-        spend_proof: None,
-        witness: None,
         script: ss.clone(),
         script_args: args.clone(),
         input_flags: InputFlags::IsCoinbase,
-        colour_proof: None,
-        colour_proof_without_address: None,
-        colour_script: None,
-        hash: None,
+        ..Default::default()
     }]
     .iter()
     .cloned()

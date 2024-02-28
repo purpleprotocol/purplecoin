@@ -12958,18 +12958,10 @@ mod tests {
         ss.populate_malleable_args_field();
         let sh = ss.to_script_hash(key);
         let mut ins = vec![Input {
-            out: None,
-            colour_script_args: None,
-            spending_pkey: None,
-            spend_proof: None,
-            witness: None,
             script: ss.clone(),
             script_args: args.clone(),
             input_flags: InputFlags::IsCoinbase,
-            colour_proof: None,
-            colour_proof_without_address: None,
-            colour_script: None,
-            hash: None,
+            ..Default::default()
         }]
         .iter()
         .cloned()
@@ -14835,18 +14827,10 @@ mod tests {
             VmTerm::Hash160(sh.0),
         ];
         let mut ins = vec![Input {
-            out: None,
-            colour_script_args: None,
-            spending_pkey: None,
-            spend_proof: None,
-            witness: None,
             script: ss.clone(),
             script_args: args.clone(),
             input_flags: InputFlags::IsCoinbase,
-            colour_proof: None,
-            colour_proof_without_address: None,
-            colour_script: None,
-            hash: None,
+            ..Default::default()
         }];
         let mut outs = vec![];
         let mut verif_stack = VerificationStack::new();
@@ -16086,18 +16070,10 @@ mod tests {
             VmTerm::Hash160(sh.0),
         ];
         let ins = vec![Input {
-            out: None,
-            colour_script_args: None,
-            spending_pkey: None,
-            spend_proof: None,
-            witness: None,
             script: ss.clone(),
             script_args: args.clone(),
             input_flags: InputFlags::IsCoinbase,
-            colour_proof: None,
-            colour_proof_without_address: None,
-            colour_script: None,
-            hash: None,
+            ..Default::default()
         }]
         .iter()
         .cloned()
@@ -16136,18 +16112,10 @@ mod tests {
             VmTerm::Hash160(sh.0),
         ];
         let mut ins: Vec<Input> = vec![Input {
-            out: None,
-            spend_proof: None,
-            colour_proof: None,
-            colour_proof_without_address: None,
-            colour_script_args: None,
-            colour_script: None,
-            spending_pkey: None,
-            witness: None,
             script: ss.clone(),
             script_args: args.clone(),
             input_flags: InputFlags::IsCoinbase,
-            hash: None,
+            ..Default::default()
         }]
         .iter()
         .cloned()
@@ -16186,18 +16154,10 @@ mod tests {
             VmTerm::Hash160(sh.0),
         ];
         let mut ins: Vec<Input> = vec![Input {
-            out: None,
-            spend_proof: None,
-            colour_proof: None,
-            colour_proof_without_address: None,
-            colour_script_args: None,
-            colour_script: None,
-            spending_pkey: None,
-            witness: None,
             script: ss.clone(),
             script_args: args.clone(),
             input_flags: InputFlags::IsCoinbase,
-            hash: None,
+            ..Default::default()
         }]
         .iter()
         .cloned()

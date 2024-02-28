@@ -20,7 +20,8 @@ pub struct Input {
     /// Output. Is null if this is a coinbase input
     pub out: Option<Output>,
 
-    /// Spending public key. Is null if no spending public key is required or if this is a coinbase input
+    /// Spending public key. Is null if no spending public key is required or if this is a coinbase input.
+    /// Present in a coloured coinbase input.
     pub spending_pkey: Option<PublicKey>,
 
     /// Output witness. Is null if this is a coinbase input
@@ -53,11 +54,37 @@ pub struct Input {
     /// This is mutually exclusive with colour_proof
     pub colour_proof_without_address: Option<Vec<Hash160>>,
 
+    /// Block height chosen by the coinbase emitter for coinbase idempotency. Without it,
+    /// an attacker can replay the transaction and emit more coins than intended.
+    ///
+    /// Must be greater or equal to `current_height - BLOCK_HORIZON`.
+    pub coloured_coinbase_block_height: Option<u64>,
+
     /// Input hash. Not serialised
     pub hash: Option<Hash256>,
 
     /// Input flags. Not serialised
     pub input_flags: InputFlags,
+}
+
+impl Default for Input {
+    fn default() -> Self {
+        Self {
+            out: None,
+            spending_pkey: None,
+            witness: None,
+            script: Script::default(),
+            colour_script: None,
+            script_args: vec![],
+            colour_script_args: None,
+            spend_proof: None,
+            colour_proof: None,
+            colour_proof_without_address: None,
+            coloured_coinbase_block_height: None,
+            hash: None,
+            input_flags: InputFlags::IsCoinbase,
+        }
+    }
 }
 
 impl Input {
@@ -195,6 +222,10 @@ impl Encode for Input {
 
             InputFlags::IsColouredCoinbase => {
                 bincode::Encode::encode(self.spending_pkey.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(
+                    &self.coloured_coinbase_block_height.as_ref().unwrap(),
+                    encoder,
+                )?;
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
             }
@@ -300,20 +331,13 @@ impl Decode for Input {
                     script,
                     script_args,
                     input_flags,
-                    colour_script: None,
-                    colour_script_args: None,
-                    spending_pkey: None,
-                    spend_proof: None,
-                    witness: None,
-                    colour_proof: None,
-                    colour_proof_without_address: None,
-                    out: None,
-                    hash: None,
+                    ..Default::default()
                 })
             }
 
             InputFlags::IsColouredCoinbase => {
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
+                let coloured_coinbase_block_height = Some(bincode::Decode::decode(decoder)?);
                 let script = bincode::Decode::decode(decoder)?;
                 let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
                 validate_script_args_len_during_decode(&script, script_args.as_slice())?;
@@ -322,15 +346,9 @@ impl Decode for Input {
                     script,
                     script_args,
                     input_flags,
-                    colour_script: None,
-                    colour_script_args: None,
                     spending_pkey,
-                    spend_proof: None,
-                    witness: None,
-                    colour_proof: None,
-                    colour_proof_without_address: None,
-                    out: None,
-                    hash: None,
+                    coloured_coinbase_block_height,
+                    ..Default::default()
                 })
             }
 
@@ -352,15 +370,10 @@ impl Decode for Input {
                     script,
                     script_args,
                     input_flags,
-                    colour_script: None,
-                    colour_script_args: None,
                     spending_pkey,
-                    spend_proof: None,
                     witness,
-                    colour_proof: None,
-                    colour_proof_without_address: None,
                     out,
-                    hash: None,
+                    ..Default::default()
                 })
             }
 
@@ -501,14 +514,6 @@ mod tests {
     #[test]
     fn coinbase_encode_decode() {
         let input = Input {
-            out: None,
-            witness: None,
-            spend_proof: None,
-            colour_proof: None,
-            colour_proof_without_address: None,
-            spending_pkey: None,
-            colour_script: None,
-            colour_script_args: None,
             script: Script::new_coinbase(),
             input_flags: InputFlags::IsCoinbase,
             script_args: vec![
@@ -518,7 +523,7 @@ mod tests {
                 VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
-            hash: None,
+            ..Default::default()
         };
 
         let decoded: Input =
@@ -529,15 +534,9 @@ mod tests {
     #[test]
     fn coloured_coinbase_encode_decode() {
         let input = Input {
-            out: None,
-            witness: None,
-            spend_proof: None,
-            colour_proof: None,
-            colour_proof_without_address: None,
             spending_pkey: Some(PublicKey::zero()),
-            colour_script: None,
-            colour_script_args: None,
             script: Script::new_coinbase(),
+            coloured_coinbase_block_height: Some(342),
             input_flags: InputFlags::IsColouredCoinbase,
             script_args: vec![
                 VmTerm::Signed128(137),
@@ -546,7 +545,7 @@ mod tests {
                 VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
-            hash: None,
+            ..Default::default()
         };
 
         let decoded: Input =
@@ -569,20 +568,15 @@ mod tests {
                 hash: None,
             }),
             witness: Some(Witness::empty()),
-            spend_proof: None,
-            colour_proof: None,
             input_flags: InputFlags::Plain,
-            colour_proof_without_address: None,
             spending_pkey: Some(PublicKey::zero()),
-            colour_script: None,
-            colour_script_args: None,
             script: Script::new_simple_spend(),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
             ],
-            hash: None,
+            ..Default::default()
         };
 
         let decoded: Input =

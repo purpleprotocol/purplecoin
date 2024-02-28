@@ -110,18 +110,10 @@ mod tests {
             VmTerm::Unsigned32(0),
         ];
         let mut input = Input {
-            out: None,
-            witness: None,
-            spend_proof: None,
-            colour_proof: None,
-            colour_proof_without_address: None,
-            spending_pkey: None,
-            colour_script: None,
-            colour_script_args: None,
             script: Script::new_coinbase(),
             input_flags: InputFlags::IsCoinbase,
             script_args,
-            hash: None,
+            ..Default::default()
         };
         input.compute_hash(key);
 
