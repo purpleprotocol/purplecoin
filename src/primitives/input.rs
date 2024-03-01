@@ -9,7 +9,9 @@ use crate::chain::ShardBackend;
 use crate::consensus::{Money, BLOCK_HORIZON};
 use crate::primitives::{Hash160, Hash256, Output, PublicKey, TxVerifyErr};
 use crate::vm::internal::VmTerm;
-use crate::vm::Script;
+use crate::vm::{
+    ExecutionResult, Script, SigVerificationErr, VerificationStack, VmFlags, VmResult,
+};
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::Witness;
 use bincode::{Decode, Encode};
@@ -130,7 +132,7 @@ impl Input {
 
     #[must_use]
     pub fn is_coinbase(&self) -> bool {
-        self.out.is_none()
+        self.input_flags == InputFlags::IsCoinbase
     }
 
     #[must_use]
@@ -140,62 +142,155 @@ impl Input {
 
     pub fn verify<'a, B: ShardBackend>(
         &'a self,
+        key: &'static str,
         height: u64,
+        chain_id: u8,
         sum: &mut Money,
+        timestamp: i64,
+        block_reward: &Money,
+        block_height: &u64,
+        prev_block_hash: Hash256,
         transcripts: &mut Vec<&'a [u8]>,
         public_keys: &mut Vec<SchnorPK>,
         shard: &Shard<B>,
+        coinbase_count: &mut u64,
     ) -> Result<(), TxVerifyErr> {
-        if self.is_coinbase() {
-            let out_height = self.out.as_ref().unwrap().coinbase_height().unwrap();
+        match self.input_flags {
+            InputFlags::IsCoinbase => {
+                *coinbase_count += 1;
 
-            if height < out_height + BLOCK_HORIZON {
-                return Err(TxVerifyErr::CoinbaseOutSpentBeforeMaturation);
-            }
-        }
+                if *coinbase_count != 1 {
+                    return Err(TxVerifyErr::InvalidCoinbase);
+                }
 
-        let key = shard.shard_config().key();
+                let script = Script::new_coinbase();
 
-        // Get script hash according to spend proof, address and script hash
-        let oracle_script_hash = if let Some(ref spend_proof) = self.spend_proof {
-            let mut out = self.script.to_script_hash(key);
-            out.0 = Hash160::hash_from_slice(
-                [
-                    &self.spending_pkey.as_ref().unwrap().0.to_bytes(),
-                    out.0.as_slice(),
-                ]
-                .concat(),
-                key,
-            )
-            .0;
+                let a1 = &self.script_args[0];
+                let a4 = &self.script_args[3];
 
-            for l in spend_proof {
-                let l1 = out.0.as_ref();
-                let l2 = l.0.as_ref();
+                // Validate terms
+                match (a1, a4) {
+                    (VmTerm::Signed128(amount), VmTerm::Unsigned64(coinbase_height))
+                        if amount == block_reward && coinbase_height == block_height =>
+                    {
+                        let result = script.execute(
+                            &self.script_args,
+                            &[],
+                            &mut to_add,
+                            &mut idx_map,
+                            &mut ver_stack,
+                            [0; 32], // TODO: Inject seed here
+                            key,
+                            VmFlags {
+                                is_coinbase: true,
+                                chain_id,
+                                chain_height: height,
+                                chain_timestamp: timestamp,
+                                build_stacktrace: false,
+                                validate_output_amounts: true,
+                                prev_block_hash: prev_block_hash.0,
+                                in_binary: self.to_bytes_for_signing(),
+                                in_args: self.script_args.clone(),
+                                spent_out: None,
+                                base_ctx: "".to_owned(), // TODO: Inject base context here
+                            },
+                        );
 
-                if l1 < l2 {
-                    out.0 = Hash160::hash_from_slice(&[l1, l2].concat(), key).0;
-                } else {
-                    out.0 = Hash160::hash_from_slice(&[l2, l1].concat(), key).0;
+                        // Validate script execution
+                        match result {
+                            VmResult(Ok(ExecutionResult::Ok)) => {
+                                // Validate input format
+                                if let Some(public_key) = &input.spending_pkey {
+                                    // We cannot have a spending key on a coinbase input
+                                    return Err(BlockVerifyErr::InvalidInputFormat);
+                                }
+                            }
+                            VmResult(Ok(ExecutionResult::OkVerify)) => {
+                                // We cannot hit an OP_Verify or other derivates on a coinbase input
+                                return Err(BlockVerifyErr::InvalidInputFormat);
+                            }
+                            _ => return Err(BlockVerifyErr::InvalidScriptExecution),
+                        }
+                    }
+                    _ => return Err(BlockVerifyErr::InvalidCoinbase),
                 }
             }
 
-            out
-        } else {
-            self.script.to_script_hash(key)
-        };
+            InputFlags::IsColouredCoinbase => {
+                coloured_coinbase_count += 1;
 
-        // Verify script hash
-        if oracle_script_hash != self.out().unwrap().script_hash {
-            return Err(TxVerifyErr::InvalidScriptHash);
+                if coloured_coinbase_count > 2 {
+                    return Err(BlockVerifyErr::InvalidCoinbase);
+                }
+
+                unimplemented!()
+            }
+
+            InputFlags::Plain => {
+                let out = self.out.as_ref().unwrap();
+
+                // Validate coinbase height against block horizon as coinbase outputs
+                // can only be spent if they are created beyong the block horizon.
+                if out.is_coinbase() {
+                    let out_height = out.coinbase_height().unwrap();
+
+                    if height < out_height + BLOCK_HORIZON {
+                        return Err(TxVerifyErr::CoinbaseOutSpentBeforeMaturation);
+                    }
+                }
+
+                to_delete.push((
+                    input.out.as_ref().unwrap().clone(),
+                    input.witness.as_ref().unwrap().clone(),
+                ));
+                unimplemented!()
+            }
+
+            _ => unimplemented!(),
         }
 
-        *sum += self.out().unwrap().amount();
-        transcripts.push(self.out().unwrap().hash().unwrap().as_bytes());
-        if let Some(ref public_key) = self.spending_pkey {
-            public_keys.push(public_key.0);
-        }
-        Ok(())
+        // let key = shard.shard_config().key();
+
+        // // Get script hash according to spend proof, address and script hash
+        // let oracle_script_hash = if let Some(ref spend_proof) = self.spend_proof {
+        //     let mut out = self.script.to_script_hash(key);
+        //     out.0 = Hash160::hash_from_slice(
+        //         [
+        //             &self.spending_pkey.as_ref().unwrap().0.to_bytes(),
+        //             out.0.as_slice(),
+        //         ]
+        //         .concat(),
+        //         key,
+        //     )
+        //     .0;
+
+        //     for l in spend_proof {
+        //         let l1 = out.0.as_ref();
+        //         let l2 = l.0.as_ref();
+
+        //         if l1 < l2 {
+        //             out.0 = Hash160::hash_from_slice(&[l1, l2].concat(), key).0;
+        //         } else {
+        //             out.0 = Hash160::hash_from_slice(&[l2, l1].concat(), key).0;
+        //         }
+        //     }
+
+        //     out
+        // } else {
+        //     self.script.to_script_hash(key)
+        // };
+
+        // // Verify script hash
+        // if oracle_script_hash != self.out().unwrap().script_hash {
+        //     return Err(TxVerifyErr::InvalidScriptHash);
+        // }
+
+        // *sum += self.out().unwrap().amount();
+        // transcripts.push(self.out().unwrap().hash().unwrap().as_bytes());
+        // if let Some(ref public_key) = self.spending_pkey {
+        //     public_keys.push(public_key.0);
+        // }
+        // Ok(())
     }
 }
 
@@ -210,7 +305,10 @@ impl Encode for Input {
 
         match flags {
             InputFlags::IsCoinbase => {
-                bincode::Encode::encode(&self.script, encoder)?;
+                bincode::Encode::encode(&self.script_args, encoder)?;
+            }
+
+            InputFlags::IsCoinbaseWithoutSpendKey => {
                 bincode::Encode::encode(&self.script_args, encoder)?;
             }
 
@@ -349,12 +447,41 @@ impl Decode for Input {
 
         match input_flags {
             InputFlags::IsCoinbase => {
-                let script = bincode::Decode::decode(decoder)?;
                 let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
-                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
+
+                // Validate number of coinbase arguments
+                if script_args.len() != 5 {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        format!(
+                            "invalid argument length for coinbase! expected 5, found {}",
+                            script_args.len()
+                        )
+                        .to_owned(),
+                    ));
+                }
 
                 Ok(Self {
-                    script,
+                    script_args,
+                    input_flags,
+                    ..Default::default()
+                })
+            }
+
+            InputFlags::IsCoinbaseWithoutSpendKey => {
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+
+                // Validate number of coinbase arguments
+                if script_args.len() != 4 {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        format!(
+                            "invalid argument length for coinbase! expected 4, found {}",
+                            script_args.len()
+                        )
+                        .to_owned(),
+                    ));
+                }
+
+                Ok(Self {
                     script_args,
                     input_flags,
                     ..Default::default()
@@ -773,6 +900,7 @@ pub enum InputFlags {
     IsColouredHasColourProofWithoutSpendKey = 0x0a,
     IsColouredHasSpendProofWithoutSpendKey = 0x0b,
     IsColouredHasSpendProofAndColourProofWithoutSpendKey = 0x0c,
+    IsCoinbaseWithoutSpendKey = 0x0d,
 }
 
 impl std::convert::TryFrom<u8> for InputFlags {
@@ -793,6 +921,7 @@ impl std::convert::TryFrom<u8> for InputFlags {
             0x0a => Ok(Self::IsColouredHasColourProofWithoutSpendKey),
             0x0b => Ok(Self::IsColouredHasSpendProofWithoutSpendKey),
             0x0c => Ok(Self::IsColouredHasSpendProofAndColourProofWithoutSpendKey),
+            0x0d => Ok(Self::IsCoinbaseWithoutSpendKey),
             _ => Err("invalid bitflags"),
         }
     }
@@ -806,11 +935,28 @@ mod tests {
     #[test]
     fn coinbase_encode_decode() {
         let input = Input {
-            script: Script::new_coinbase(),
             input_flags: InputFlags::IsCoinbase,
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+                VmTerm::Unsigned64(1_654_654_645_645),
+                VmTerm::Unsigned32(543_543),
+            ],
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coinbase_without_spend_key_encode_decode() {
+        let input = Input {
+            input_flags: InputFlags::IsCoinbaseWithoutSpendKey,
+            script_args: vec![
+                VmTerm::Signed128(137),
                 VmTerm::Hash160(Hash160::zero().0),
                 VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
