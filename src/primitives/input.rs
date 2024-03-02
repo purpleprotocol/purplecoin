@@ -140,6 +140,24 @@ impl Input {
         self.colour_script.is_some()
     }
 
+    #[must_use]
+    pub fn is_failable(&self) -> bool {
+        match self.input_flags {
+            InputFlags::FailablePlain
+            | InputFlags::FailableHasSpendProof
+            | InputFlags::FailableIsColoured
+            | InputFlags::FailableIsColouredHasColourProof
+            | InputFlags::FailableIsColouredHasSpendProof
+            | InputFlags::FailableIsColouredHasSpendProofAndColourProof
+            | InputFlags::FailableHasSpendProofWithoutSpendKey
+            | InputFlags::FailableIsColouredWithoutSpendKey
+            | InputFlags::FailableIsColouredHasColourProofWithoutSpendKey
+            | InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey
+            | InputFlags::FailableIsColouredHasSpendProofAndColourProofWithoutSpendKey => true,
+            _ => false,
+        }
+    }
+
     pub fn verify<'a, B: ShardBackend>(
         &'a self,
         key: &'static str,
@@ -308,7 +326,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script_args, encoder)?;
             }
 
-            InputFlags::Plain => {
+            InputFlags::Plain | InputFlags::FailablePlain => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
@@ -316,7 +334,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script_args, encoder)?;
             }
 
-            InputFlags::HasSpendProof => {
+            InputFlags::HasSpendProof | InputFlags::FailableHasSpendProof => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
@@ -325,7 +343,8 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
             }
 
-            InputFlags::HasSpendProofWithoutSpendKey => {
+            InputFlags::HasSpendProofWithoutSpendKey
+            | InputFlags::FailableHasSpendProofWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
                 bincode::Encode::encode(&self.script, encoder)?;
@@ -333,7 +352,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
             }
 
-            InputFlags::IsColoured => {
+            InputFlags::IsColoured | InputFlags::FailableIsColoured => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
@@ -343,7 +362,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
             }
 
-            InputFlags::IsColouredHasSpendProof => {
+            InputFlags::IsColouredHasSpendProof | InputFlags::FailableIsColouredHasSpendProof => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
@@ -354,7 +373,8 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
             }
 
-            InputFlags::IsColouredHasSpendProofAndColourProof => {
+            InputFlags::IsColouredHasSpendProofAndColourProof
+            | InputFlags::FailableIsColouredHasSpendProofAndColourProof => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
@@ -366,7 +386,8 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
             }
 
-            InputFlags::IsColouredWithoutSpendKey => {
+            InputFlags::IsColouredWithoutSpendKey
+            | InputFlags::FailableIsColouredWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
                 bincode::Encode::encode(&self.script, encoder)?;
@@ -375,7 +396,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
             }
 
-            InputFlags::IsColouredHasColourProof => {
+            InputFlags::IsColouredHasColourProof | InputFlags::FailableIsColouredHasColourProof => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
@@ -386,7 +407,8 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
             }
 
-            InputFlags::IsColouredHasColourProofWithoutSpendKey => {
+            InputFlags::IsColouredHasColourProofWithoutSpendKey
+            | InputFlags::FailableIsColouredHasColourProofWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
                 bincode::Encode::encode(&self.script, encoder)?;
@@ -396,7 +418,8 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
             }
 
-            InputFlags::IsColouredHasSpendProofWithoutSpendKey => {
+            InputFlags::IsColouredHasSpendProofWithoutSpendKey
+            | InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
                 bincode::Encode::encode(&self.script, encoder)?;
@@ -406,7 +429,8 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
             }
 
-            InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey => {
+            InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey
+            | InputFlags::FailableIsColouredHasSpendProofAndColourProofWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
                 bincode::Encode::encode(&self.script, encoder)?;
@@ -491,7 +515,7 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::Plain => {
+            InputFlags::Plain | InputFlags::FailablePlain => {
                 let out = Some(bincode::Decode::decode(decoder)?);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
@@ -516,7 +540,7 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::HasSpendProof => {
+            InputFlags::HasSpendProof | InputFlags::FailableHasSpendProof => {
                 let out = Some(bincode::Decode::decode(decoder)?);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
@@ -543,7 +567,8 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::HasSpendProofWithoutSpendKey => {
+            InputFlags::HasSpendProofWithoutSpendKey
+            | InputFlags::FailableHasSpendProofWithoutSpendKey => {
                 let out = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
@@ -568,7 +593,7 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::IsColoured => {
+            InputFlags::IsColoured | InputFlags::FailableIsColoured => {
                 let out = Some(bincode::Decode::decode(decoder)?);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
@@ -603,7 +628,7 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::IsColouredHasSpendProof => {
+            InputFlags::IsColouredHasSpendProof | InputFlags::FailableIsColouredHasSpendProof => {
                 let out = Some(bincode::Decode::decode(decoder)?);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
@@ -640,7 +665,8 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::IsColouredHasSpendProofAndColourProof => {
+            InputFlags::IsColouredHasSpendProofAndColourProof
+            | InputFlags::FailableIsColouredHasSpendProofAndColourProof => {
                 let out = Some(bincode::Decode::decode(decoder)?);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
@@ -679,7 +705,8 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::IsColouredWithoutSpendKey => {
+            InputFlags::IsColouredWithoutSpendKey
+            | InputFlags::FailableIsColouredWithoutSpendKey => {
                 let out = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
@@ -712,7 +739,7 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::IsColouredHasColourProof => {
+            InputFlags::IsColouredHasColourProof | InputFlags::FailableIsColouredHasColourProof => {
                 let out = Some(bincode::Decode::decode(decoder)?);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
@@ -749,7 +776,8 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::IsColouredHasColourProofWithoutSpendKey => {
+            InputFlags::IsColouredHasColourProofWithoutSpendKey
+            | InputFlags::FailableIsColouredHasColourProofWithoutSpendKey => {
                 let out = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
@@ -784,7 +812,8 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::IsColouredHasSpendProofWithoutSpendKey => {
+            InputFlags::IsColouredHasSpendProofWithoutSpendKey
+            | InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey => {
                 let out = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
@@ -819,7 +848,8 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey => {
+            InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey
+            | InputFlags::FailableIsColouredHasSpendProofAndColourProofWithoutSpendKey => {
                 let out = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
@@ -887,6 +917,17 @@ pub enum InputFlags {
     IsColouredHasSpendProofWithoutSpendKey = 0x0b,
     IsColouredHasSpendProofAndColourProofWithoutSpendKey = 0x0c,
     IsCoinbaseWithoutSpendKey = 0x0d,
+    FailablePlain = 0x0e,
+    FailableHasSpendProof = 0x0f,
+    FailableIsColoured = 0x10,
+    FailableIsColouredHasColourProof = 0x11,
+    FailableIsColouredHasSpendProof = 0x12,
+    FailableIsColouredHasSpendProofAndColourProof = 0x13,
+    FailableHasSpendProofWithoutSpendKey = 0x14,
+    FailableIsColouredWithoutSpendKey = 0x15,
+    FailableIsColouredHasColourProofWithoutSpendKey = 0x16,
+    FailableIsColouredHasSpendProofWithoutSpendKey = 0x17,
+    FailableIsColouredHasSpendProofAndColourProofWithoutSpendKey = 0x18,
 }
 
 impl std::convert::TryFrom<u8> for InputFlags {
@@ -908,6 +949,17 @@ impl std::convert::TryFrom<u8> for InputFlags {
             0x0b => Ok(Self::IsColouredHasSpendProofWithoutSpendKey),
             0x0c => Ok(Self::IsColouredHasSpendProofAndColourProofWithoutSpendKey),
             0x0d => Ok(Self::IsCoinbaseWithoutSpendKey),
+            0x0e => Ok(Self::FailablePlain),
+            0x0f => Ok(Self::FailableHasSpendProof),
+            0x10 => Ok(Self::FailableIsColoured),
+            0x11 => Ok(Self::FailableIsColouredHasColourProof),
+            0x12 => Ok(Self::FailableIsColouredHasSpendProof),
+            0x13 => Ok(Self::FailableIsColouredHasSpendProofAndColourProof),
+            0x14 => Ok(Self::FailableHasSpendProofWithoutSpendKey),
+            0x15 => Ok(Self::FailableIsColouredWithoutSpendKey),
+            0x16 => Ok(Self::FailableIsColouredHasColourProofWithoutSpendKey),
+            0x17 => Ok(Self::FailableIsColouredHasSpendProofWithoutSpendKey),
+            0x18 => Ok(Self::FailableIsColouredHasSpendProofAndColourProofWithoutSpendKey),
             _ => Err("invalid bitflags"),
         }
     }
