@@ -491,6 +491,8 @@ impl PowBlockHeader {
             _ => unreachable!(),
         }
 
+        self.validate_pow();
+
         Ok(())
     }
 
@@ -655,11 +657,25 @@ impl PowBlockHeader {
 
     /// Compute hash
     pub fn compute_hash(&mut self) {
+        // Backup vrf out and proof fields
+        let vrf_out_bak = self.vrf_out;
+        let vrf_proof_1_bak = self.vrf_proof_1;
+        let vrf_proof_2_bak = self.vrf_proof_2;
+        // Set vrf out and proof to null for hash computation
+        self.vrf_out = [0; 32];
+        self.vrf_proof_1 = [0; 32];
+        self.vrf_proof_2 = [0; 32];
+        // Compute hash
         let encoded = crate::codec::encode_to_vec(self).unwrap();
         let hash = match self.map_height_to_algo() {
             PowAlgorithm::RandomHash(algo) => algo.hash(&encoded),
             PowAlgorithm::GR => Hash256(hash_arb_bytes_gr(&encoded, self.prev_hash.0)),
         };
+        // Set back the vrf fields from backups
+        self.vrf_out = vrf_out_bak;
+        self.vrf_proof_1 = vrf_proof_1_bak;
+        self.vrf_proof_2 = vrf_proof_2_bak;
+        // Set the hash
         self.hash = Some(hash);
     }
 }
