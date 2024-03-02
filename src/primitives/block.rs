@@ -169,6 +169,18 @@ pub struct PowBlockHeader {
     /// This is null if `block_height % 4 == 0 | 2`.
     pub runnerups_prev_hash: Option<Hash256>,
 
+    /// Public key used to produce the VRF
+    pub vrf_pkey_bytes: [u8; 32],
+
+    /// VRF output.
+    pub vrf_out: [u8; 32],
+
+    /// VRF proof first 32 bytes
+    pub vrf_proof_1: [u8; 32],
+
+    /// VRF proof next 32 bytes
+    pub vrf_proof_2: [u8; 32],
+
     /// Cached block hash
     pub hash: Option<Hash256>,
 }
@@ -183,6 +195,7 @@ impl PowBlockHeader {
         prev_root: Hash256,
         runnerups: Option<[&PowBlockHeader; SECTORS - 1]>,
         blocks: Vec<BlockHeader>,
+        vrf_pkey_bytes: [u8; 32],
         key: &str,
     ) -> Result<Self, BlockVerifyErr> {
         let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
@@ -249,6 +262,10 @@ impl PowBlockHeader {
             runnerup_hashes,
             runnerups_prev_hash,
             timestamp,
+            vrf_pkey_bytes,
+            vrf_out: [0; 32], // Set these as null before the block is being mined
+            vrf_proof_1: [0; 32], // Set these as null before the block is being mined
+            vrf_proof_2: [0; 32], // Set these as null before the block is being mined
             hash: None,
         };
 
@@ -319,6 +336,10 @@ impl PowBlockHeader {
             prev_root: Hash256::zero(),
             runnerup_hashes: Some([Hash256::zero(); SECTORS - 1]),
             runnerups_prev_hash: Some(Hash256::zero()),
+            vrf_pkey_bytes: [0; 32], // These are null in the genesis block
+            vrf_out: [0; 32],        // These are null in the genesis block
+            vrf_proof_1: [0; 32],    // These are null in the genesis block
+            vrf_proof_2: [0; 32],    // These are null in the genesis block
             hash: None,
         };
 
@@ -1316,6 +1337,10 @@ impl Encode for PowBlockHeader {
         bincode::Encode::encode(&self.bt_mean, encoder)?;
         bincode::Encode::encode(&self.diff_heights, encoder)?;
         bincode::Encode::encode(&self.timestamp, encoder)?;
+        bincode::Encode::encode(&self.vrf_pkey_bytes, encoder)?;
+        bincode::Encode::encode(&self.vrf_out, encoder)?;
+        bincode::Encode::encode(&self.vrf_proof_1, encoder)?;
+        bincode::Encode::encode(&self.vrf_proof_2, encoder)?;
 
         match self.height % 4 {
             1 | 3 => {
@@ -1351,6 +1376,10 @@ impl Decode for PowBlockHeader {
             bt_mean: bincode::Decode::decode(decoder)?,
             diff_heights: bincode::Decode::decode(decoder)?,
             timestamp: bincode::Decode::decode(decoder)?,
+            vrf_pkey_bytes: bincode::Decode::decode(decoder)?,
+            vrf_out: bincode::Decode::decode(decoder)?,
+            vrf_proof_1: bincode::Decode::decode(decoder)?,
+            vrf_proof_2: bincode::Decode::decode(decoder)?,
             runnerup_hashes: match m {
                 1 | 3 => Some(bincode::Decode::decode(decoder)?),
                 _ => None,
