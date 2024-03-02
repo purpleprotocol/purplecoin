@@ -4,10 +4,9 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::chain::Shard;
-use crate::chain::ShardBackend;
+use crate::chain::{Shard, ShardBackend};
 use crate::consensus::{Money, BLOCK_HORIZON};
-use crate::primitives::{Hash160, Hash256, Output, PublicKey, TxVerifyErr};
+use crate::primitives::{Address, Hash160, Hash256, OutWitnessVec, Output, PublicKey, TxVerifyErr};
 use crate::vm::internal::VmTerm;
 use crate::vm::{
     ExecutionResult, Script, SigVerificationErr, VerificationStack, VmFlags, VmResult,
@@ -16,6 +15,7 @@ use accumulator::group::{Codec, Rsa2048};
 use accumulator::Witness;
 use bincode::{Decode, Encode};
 use schnorrkel::{PublicKey as SchnorPK, Signature as SchnorSig};
+use std::collections::HashMap;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Input {
@@ -154,6 +154,10 @@ impl Input {
         public_keys: &mut Vec<SchnorPK>,
         shard: &Shard<B>,
         coinbase_count: &mut u64,
+        to_add: &mut Vec<Output>,
+        to_delete: &mut OutWitnessVec,
+        ver_stack: &mut VerificationStack,
+        idx_map: &mut HashMap<(Address, Hash160), u16>,
     ) -> Result<(), TxVerifyErr> {
         match self.input_flags {
             InputFlags::IsCoinbase => {
@@ -176,9 +180,9 @@ impl Input {
                         let result = script.execute(
                             &self.script_args,
                             &[],
-                            &mut to_add,
-                            &mut idx_map,
-                            &mut ver_stack,
+                            to_add,
+                            idx_map,
+                            ver_stack,
                             [0; 32], // TODO: Inject seed here
                             key,
                             VmFlags {
@@ -190,39 +194,21 @@ impl Input {
                                 validate_output_amounts: true,
                                 prev_block_hash: prev_block_hash.0,
                                 in_binary: self.to_bytes_for_signing(),
-                                in_args: self.script_args.clone(),
                                 spent_out: None,
-                                base_ctx: "".to_owned(), // TODO: Inject base context here
                             },
                         );
 
                         // Validate script execution
                         match result {
-                            VmResult(Ok(ExecutionResult::Ok)) => {
-                                // Validate input format
-                                if let Some(public_key) = &input.spending_pkey {
-                                    // We cannot have a spending key on a coinbase input
-                                    return Err(BlockVerifyErr::InvalidInputFormat);
-                                }
-                            }
-                            VmResult(Ok(ExecutionResult::OkVerify)) => {
-                                // We cannot hit an OP_Verify or other derivates on a coinbase input
-                                return Err(BlockVerifyErr::InvalidInputFormat);
-                            }
-                            _ => return Err(BlockVerifyErr::InvalidScriptExecution),
+                            VmResult(Ok(ExecutionResult::Ok)) => Ok(()),
+                            _ => Err(TxVerifyErr::InvalidScriptExecution),
                         }
                     }
-                    _ => return Err(BlockVerifyErr::InvalidCoinbase),
+                    _ => Err(TxVerifyErr::InvalidCoinbase),
                 }
             }
 
             InputFlags::IsColouredCoinbase => {
-                coloured_coinbase_count += 1;
-
-                if coloured_coinbase_count > 2 {
-                    return Err(BlockVerifyErr::InvalidCoinbase);
-                }
-
                 unimplemented!()
             }
 
@@ -240,8 +226,8 @@ impl Input {
                 }
 
                 to_delete.push((
-                    input.out.as_ref().unwrap().clone(),
-                    input.witness.as_ref().unwrap().clone(),
+                    self.out.as_ref().unwrap().clone(),
+                    self.witness.as_ref().unwrap().clone(),
                 ));
                 unimplemented!()
             }

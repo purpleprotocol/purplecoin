@@ -74,9 +74,7 @@ impl Transaction {
                     build_stacktrace: false,
                     prev_block_hash,
                     in_binary: input.to_bytes_for_signing(),
-                    in_args: input.script_args.clone(),
                     spent_out: input.out.clone(),
-                    base_ctx: "".to_owned(), // TODO: Inject base context here
                 },
             );
         }
@@ -89,52 +87,50 @@ impl Transaction {
         &self.ins
     }
 
-    /// Validate single transaction against the chain-state. Returns transaction fee if successful
-    pub fn verify_single<B: ShardBackend>(&self, shard: &Shard<B>) -> Result<Money, TxVerifyErr> {
-        let ctx = signing_context(
-            shard
-                .chain_config()
-                .get_chain_key(shard.chain_id())
-                .as_bytes(),
-        );
-        let mut transcripts: Vec<&[u8]> = Vec::with_capacity(self.ins.len());
-        let mut public_keys: Vec<SchnorPK> = Vec::with_capacity(self.ins.len());
-        let mut ins_sum: Money = 0;
-        let mut outs_sum: Money = 0;
-        let shard_height = shard.height().map_err(|_| TxVerifyErr::BackendErr)?;
+    // /// Validate single transaction against the chain-state. Returns transaction fee if successful
+    // pub fn verify_single<B: ShardBackend>(&self, shard: &Shard<B>) -> Result<Money, TxVerifyErr> {
+    //     let key = shard.chain_config().get_chain_key(shard.chain_id());
+    //     let ctx = signing_context(key.as_bytes());
+    //     let mut transcripts: Vec<&[u8]> = Vec::with_capacity(self.ins.len());
+    //     let mut public_keys: Vec<SchnorPK> = Vec::with_capacity(self.ins.len());
+    //     let mut ins_sum: Money = 0;
+    //     let mut outs_sum: Money = 0;
+    //     let shard_height = shard.height().map_err(|_| TxVerifyErr::BackendErr)?;
 
-        // Verify inputs
-        for i in &self.ins {
-            i.verify(
-                shard_height,
-                &mut ins_sum,
-                &mut transcripts,
-                &mut public_keys,
-                shard,
-            )?;
-        }
+    //     // Verify inputs
+    //     for i in &self.ins {
+    //         i.verify(
+    //             key,
+    //             shard_height,
+    //             shard.chain_id,
+    //             &mut ins_sum,
+    //             &mut transcripts,
+    //             &mut public_keys,
+    //             shard,
+    //         )?;
+    //     }
 
-        // Check that the sum of inputs is greater than that of the outputs
-        if ins_sum < outs_sum {
-            return Err(TxVerifyErr::InvalidAmount);
-        }
+    //     // Check that the sum of inputs is greater than that of the outputs
+    //     if ins_sum < outs_sum {
+    //         return Err(TxVerifyErr::InvalidAmount);
+    //     }
 
-        // TODO: Validate signatures another way for a single transaction
-        // and validate aggregated signature in the block validation pipeline.
-        //
-        // // Verify all signatures against transcripts and public keys
-        // if verify_batch(
-        //     transcripts.iter().map(|m| ctx.bytes(m)),
-        //     &public_keys,
-        //     false,
-        // )
-        // .is_err()
-        // {
-        //     return Err(TxVerifyErr::InvalidSignature);
-        // }
+    //     // TODO: Validate signatures another way for a single transaction
+    //     // and validate aggregated signature in the block validation pipeline.
+    //     //
+    //     // // Verify all signatures against transcripts and public keys
+    //     // if verify_batch(
+    //     //     transcripts.iter().map(|m| ctx.bytes(m)),
+    //     //     &public_keys,
+    //     //     false,
+    //     // )
+    //     // .is_err()
+    //     // {
+    //     //     return Err(TxVerifyErr::InvalidSignature);
+    //     // }
 
-        Ok(ins_sum - outs_sum)
-    }
+    //     Ok(ins_sum - outs_sum)
+    // }
 
     /// Validate transaction against the chain-state and add to batch.
     /// To be used in the context of validating an entire block.
@@ -146,21 +142,22 @@ impl Transaction {
         public_keys: &mut Vec<SchnorPK>,
         shard: &Shard<B>,
     ) -> Result<Money, TxVerifyErr> {
-        let mut ins_sum: Money = 0;
-        let mut outs_sum: Money = 0;
-        let shard_height = shard.height().map_err(|_| TxVerifyErr::BackendErr)?;
+        unimplemented!();
+        // let mut ins_sum: Money = 0;
+        // let mut outs_sum: Money = 0;
+        // let shard_height = shard.height().map_err(|_| TxVerifyErr::BackendErr)?;
 
-        // Verify inputs
-        for i in &self.ins {
-            i.verify(shard_height, &mut ins_sum, transcripts, public_keys, shard)?;
-        }
+        // // Verify inputs
+        // for i in &self.ins {
+        //     i.verify(shard_height, &mut ins_sum, transcripts, public_keys, shard)?;
+        // }
 
-        // Check that the sum of inputs is greater than that of the outputs
-        if ins_sum < outs_sum {
-            return Err(TxVerifyErr::InvalidAmount);
-        }
+        // // Check that the sum of inputs is greater than that of the outputs
+        // if ins_sum < outs_sum {
+        //     return Err(TxVerifyErr::InvalidAmount);
+        // }
 
-        Ok(ins_sum - outs_sum)
+        // Ok(ins_sum - outs_sum)
     }
 }
 
@@ -198,6 +195,7 @@ pub enum TxVerifyErr {
     DuplicateCoinbase,
     DuplicateTxs,
     InvalidScriptHash,
+    InvalidScriptExecution,
     InvalidCoinbase,
     BackendErr,
     Error(&'static str),

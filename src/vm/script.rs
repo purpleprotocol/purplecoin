@@ -106,14 +106,8 @@ pub struct VmFlags {
     /// The binary format of the current input
     pub in_binary: Vec<u8>,
 
-    /// Input arguments
-    pub in_args: Vec<VmTerm>,
-
     /// Previous output script outputs
     pub spent_out: Option<Output>,
-
-    /// Base context for cryptographic operations
-    pub base_ctx: String,
 }
 
 impl Default for VmFlags {
@@ -127,9 +121,7 @@ impl Default for VmFlags {
             is_coinbase: false,
             prev_block_hash: [0; 32],
             in_binary: vec![],
-            in_args: vec![],
             spent_out: None,
-            base_ctx: "".to_string(),
         }
     }
 }
@@ -7278,7 +7270,7 @@ impl ScriptExecutor {
                             match PublicKey::from_bytes(&issuer_pub_key) {
                                 Ok(issuer_pub_key) => {
                                     // Create the context string and context
-                                    let mut ctx_buf = flags.base_ctx.clone();
+                                    let mut ctx_buf = key.to_owned();
                                     ctx_buf.push_str(ADAPTOR_CERT_CTX);
                                     let ctx = signing_context(ctx_buf.as_str().as_bytes());
 
@@ -7328,7 +7320,7 @@ impl ScriptExecutor {
                 }
 
                 ScriptEntry::Opcode(OP::BaseContext) => {
-                    let term = VmTerm::Unsigned8Array(flags.base_ctx.as_bytes().to_vec());
+                    let term = VmTerm::Unsigned8Array(key.as_bytes().to_vec());
                     *memory_size += term.size();
                     exec_stack.push(term);
                 }
@@ -7359,7 +7351,7 @@ impl ScriptExecutor {
                             VmTerm::Unsigned8Array(message),
                         ) if pub_key.len() == 32 && signature.len() == 64 => {
                             // Create the context string and context
-                            let mut ctx_str = flags.base_ctx.clone();
+                            let mut ctx_str = key.to_owned();
                             ctx_str.push_str(INLINE_VERIFICATION_CTX);
 
                             let mut pub_key_buf = [0; 32];

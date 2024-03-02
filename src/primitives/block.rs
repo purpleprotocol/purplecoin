@@ -38,7 +38,7 @@ use std::collections::HashMap;
 use std::io::{self, prelude::*, BufReader, Cursor};
 use triomphe::Arc;
 
-type OutWitnessVec = Vec<(Output, Witness<Rsa2048, Output>)>;
+pub type OutWitnessVec = Vec<(Output, Witness<Rsa2048, Output>)>;
 
 #[cfg(host_family = "windows")]
 macro_rules! psep {
@@ -1130,9 +1130,7 @@ impl Block {
                 validate_output_amounts: true,
                 prev_block_hash: prev.hash().unwrap().0,
                 in_binary: input.to_bytes_for_signing(),
-                in_args: input.script_args.clone(),
                 spent_out: input.out.clone(),
-                base_ctx: "".to_owned(), // TODO: Inject base context here
             },
         );
 
@@ -1236,7 +1234,7 @@ impl BlockData {
 
         let block_height = prev.height + 1;
         let block_reward = map_height_to_block_reward(block_height);
-        let mut idx_map = HashMap::new();
+        //let mut idx_map = HashMap::new();
         let mut coinbase: Option<Input> = None;
         let mut coinbase_count = 0;
         let mut coloured_coinbase_count = 0;
