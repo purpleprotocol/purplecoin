@@ -37,21 +37,24 @@ fn bench_coinbase(c: &mut Criterion) {
         b.iter(|| {
             let mut idx_map = HashMap::new();
             let mut ver_stack = VerificationStack::new();
-            input.script.execute(
-                &input.script_args,
-                &[input.clone()],
-                &mut out_stack,
-                &mut idx_map,
-                &mut ver_stack,
-                [0; 32],
-                key,
-                "",
-                VmFlags {
-                    build_stacktrace: false,
-                    validate_output_amounts: false,
-                    ..Default::default()
-                },
-            )
+            assert_eq!(
+                input.script.execute(
+                    &input.script_args,
+                    &[input.clone()],
+                    &mut out_stack,
+                    &mut idx_map,
+                    &mut ver_stack,
+                    [0; 32],
+                    key,
+                    "",
+                    VmFlags {
+                        build_stacktrace: false,
+                        validate_output_amounts: false,
+                        ..Default::default()
+                    },
+                ),
+                Err((ExecutionResult::Ok, StackTrace::default())).into()
+            );
         })
     });
 
@@ -69,21 +72,25 @@ fn bench_coinbase(c: &mut Criterion) {
                         let mut idx_map = HashMap::new();
                         let mut out_stack = vec![];
                         let mut ver_stack = VerificationStack::new();
-                        i.script.execute(
-                            &input.script_args,
-                            &[input.clone()],
-                            &mut out_stack,
-                            &mut idx_map,
-                            &mut ver_stack,
-                            [0; 32],
-                            key,
-                            "",
-                            VmFlags {
-                                build_stacktrace: false,
-                                validate_output_amounts: false,
-                                ..Default::default()
-                            },
-                        )
+                        assert_eq!(
+                            i.script.execute(
+                                &input.script_args,
+                                &[input.clone()],
+                                &mut out_stack,
+                                &mut idx_map,
+                                &mut ver_stack,
+                                [0; 32],
+                                key,
+                                "",
+                                VmFlags {
+                                    build_stacktrace: false,
+                                    validate_output_amounts: false,
+                                    is_coinbase: true,
+                                    ..Default::default()
+                                },
+                            ),
+                            Err((ExecutionResult::Ok, StackTrace::default())).into()
+                        );
                     })
                     .collect::<Vec<_>>()
             })
@@ -104,21 +111,25 @@ fn bench_coinbase(c: &mut Criterion) {
                             let mut idx_map = HashMap::new();
                             let mut out_stack = vec![];
                             let mut ver_stack = VerificationStack::new();
-                            i.script.execute(
-                                &input.script_args,
-                                &[input.clone()],
-                                &mut out_stack,
-                                &mut idx_map,
-                                &mut ver_stack,
-                                [0; 32],
-                                key,
-                                "",
-                                VmFlags {
-                                    build_stacktrace: false,
-                                    validate_output_amounts: false,
-                                    ..Default::default()
-                                },
-                            )
+                            assert_eq!(
+                                i.script.execute(
+                                    &input.script_args,
+                                    &[input.clone()],
+                                    &mut out_stack,
+                                    &mut idx_map,
+                                    &mut ver_stack,
+                                    [0; 32],
+                                    key,
+                                    "",
+                                    VmFlags {
+                                        build_stacktrace: false,
+                                        validate_output_amounts: false,
+                                        is_coinbase: true,
+                                        ..Default::default()
+                                    },
+                                ),
+                                Err((ExecutionResult::Ok, StackTrace::default())).into()
+                            );
                         })
                         .collect::<Vec<_>>()
                 })

@@ -3,3 +3,6 @@ replace-with = "vendored-sources"
 
 [source.vendored-sources]
 directory = "./vendor/crates"
+
+[env]
+RUST_MIN_STACK = { value = "4194304", force = true }

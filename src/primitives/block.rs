@@ -1591,6 +1591,7 @@ mod tests {
     use super::*;
     use crate::consensus::*;
     use crate::primitives::*;
+    use crate::vm::{StackTrace, VmResult};
     use quickcheck::*;
     use std::collections::{HashMap, HashSet};
     use std::path::PathBuf;
@@ -1729,7 +1730,7 @@ mod tests {
 
         for batch_size in &batch_sizes {
             let in_clone = input.clone();
-            script.execute(
+            let r = script.execute(
                 &input.script_args,
                 &[in_clone],
                 &mut out_stack,
@@ -1743,6 +1744,8 @@ mod tests {
                     ..VmFlags::default()
                 },
             );
+
+            assert_eq!(r, VmResult(Ok(ExecutionResult::Ok)));
 
             let outputs: Vec<Output> = out_stack
                 .iter()
@@ -1850,6 +1853,60 @@ mod tests {
             accumulator = accumulator2;
             proof_added = Some(pa);
             proof_deleted = Some(pd);
+        }
+    }
+
+    #[test]
+    fn it_doesnt_blow_the_stack_when_processing_a_block_full_of_errors() {
+        let batch_sizes = vec![50, 500, 2000, 5000, 10000];
+        let chain_id = 255;
+        let config = ChainConfig::default();
+        let address = Address::from_bech32("pu1wyzgxpzedr24l28ku8nsfwd2h4zrsqas69s3mp").unwrap();
+        let key = config.get_chain_key(chain_id);
+        let ss = Script::new_simple_spend();
+        let sh = ss.to_script_hash(key);
+        let mut out_stack = vec![];
+        let script_args = vec![
+            VmTerm::Signed128(INITIAL_BLOCK_REWARD),
+            VmTerm::Hash160(address.0),
+            VmTerm::Hash160(sh.0),
+            VmTerm::Unsigned64(1),
+            VmTerm::Unsigned32(0),
+        ];
+        let script = Script::new_coinbase();
+        let mut input = Input {
+            input_flags: InputFlags::IsCoinbase,
+            script_args,
+            ..Default::default()
+        };
+        input.compute_hash(key);
+
+        let addresses: Vec<_> = (0..5).map(|_| Address::random()).collect();
+
+        let mut idx_map = HashMap::new();
+        let mut witness_all = Witness(Accumulator::<Rsa2048, Hash256>::empty());
+        let mut witness_all2 = Witness(Accumulator::<Rsa2048, Hash256>::empty());
+        let mut accumulator = Accumulator::<Rsa2048, Hash256>::empty();
+        let mut outs_vec: Vec<(Hash256, Witness<Rsa2048, Hash256>)> = vec![];
+        let mut outs_vec2: Vec<(Hash256, Witness<Rsa2048, Hash256>)> = vec![];
+        let mut ver_stack = VerificationStack::new();
+
+        for batch_size in &batch_sizes {
+            let in_clone = input.clone();
+            let r = script.execute(
+                &input.script_args,
+                &[in_clone],
+                &mut out_stack,
+                &mut idx_map,
+                &mut ver_stack,
+                [0; 32],
+                key,
+                "",
+                VmFlags {
+                    is_coinbase: false, // Deliberately make this error
+                    ..VmFlags::default()
+                },
+            );
         }
     }
 }

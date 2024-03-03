@@ -173,6 +173,7 @@ impl Input {
         public_keys: &mut Vec<SchnorPK>,
         shard: &Shard<B>,
         coinbase_count: &mut u64,
+        coinbase_allowed: bool,
         to_add: &mut Vec<Output>,
         to_delete: &mut OutWitnessVec,
         ver_stack: &mut VerificationStack,
@@ -183,6 +184,10 @@ impl Input {
                 *coinbase_count += 1;
 
                 if *coinbase_count != 1 {
+                    return Err(TxVerifyErr::InvalidCoinbase);
+                }
+
+                if !coinbase_allowed {
                     return Err(TxVerifyErr::InvalidCoinbase);
                 }
 
@@ -236,6 +241,10 @@ impl Input {
                 *coinbase_count += 1;
 
                 if *coinbase_count != 1 {
+                    return Err(TxVerifyErr::InvalidCoinbase);
+                }
+
+                if !coinbase_allowed {
                     return Err(TxVerifyErr::InvalidCoinbase);
                 }
 
