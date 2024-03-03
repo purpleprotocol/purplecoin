@@ -32,6 +32,8 @@ use merkletree::store::VecStore;
 use rand::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use schnorrkel::signing_context;
+use schnorrkel::vrf::{VRFPreOut, VRFProof};
 use serde::{Deserialize, Serialize};
 use std::cmp;
 use std::collections::HashMap;
@@ -491,7 +493,8 @@ impl PowBlockHeader {
             _ => unreachable!(),
         }
 
-        self.validate_pow();
+        self.validate_pow()?;
+        self.validate_vrf_fields()?;
 
         Ok(())
     }
@@ -653,6 +656,33 @@ impl PowBlockHeader {
     #[must_use]
     pub fn hash(&self) -> Option<&Hash256> {
         self.hash.as_ref()
+    }
+
+    pub fn validate_vrf_fields(&self) -> Result<(), BlockVerifyErr> {
+        let pub_key = PublicKey::from_bytes(&self.vrf_pkey_bytes)
+            .map_err(|_| BlockVerifyErr::InvalidVrfFields)?;
+        let vrf_out = VRFPreOut(self.vrf_out);
+        let mut vrf_proof_buf = [0; 64];
+        let mut i = 0;
+        while i < 64 {
+            if i < 32 {
+                vrf_proof_buf[i] = self.vrf_proof_1[i];
+            } else {
+                vrf_proof_buf[i] = self.vrf_proof_2[i - 32];
+            }
+            i += 1;
+        }
+        let vrf_proof =
+            VRFProof::from_bytes(&vrf_proof_buf).map_err(|_| BlockVerifyErr::InvalidVrfFields)?;
+        let ctx = signing_context(&self.prev_hash.0);
+        let transcript = ctx.bytes(&self.hash().unwrap().0);
+
+        pub_key
+            .0
+            .vrf_verify(transcript, &vrf_out, &vrf_proof)
+            .map_err(|_| BlockVerifyErr::InvalidVrfFields)?;
+
+        Ok(())
     }
 
     /// Compute hash
@@ -1519,6 +1549,7 @@ pub enum BlockVerifyErr {
     InvalidSignature,
     InvalidScriptExecution,
     InvalidInputFormat,
+    InvalidVrfFields,
     Tx(TxVerifyErr),
 }
 
