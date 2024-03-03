@@ -190,12 +190,15 @@ impl Input {
 
                 let a1 = &self.script_args[0];
                 let a4 = &self.script_args[3];
+                let a5 = &self.script_args[4];
 
                 // Validate terms
-                match (a1, a4) {
-                    (VmTerm::Signed128(amount), VmTerm::Unsigned64(coinbase_height))
-                        if amount == block_reward && coinbase_height == block_height =>
-                    {
+                match (a1, a4, a5) {
+                    (
+                        VmTerm::Signed128(amount),
+                        VmTerm::Unsigned64(coinbase_height),
+                        VmTerm::Unsigned32(_),
+                    ) if amount == block_reward && coinbase_height == block_height => {
                         let result = script.execute(
                             &self.script_args,
                             &[],
@@ -239,13 +242,16 @@ impl Input {
                 let script = Script::new_coinbase_without_spending_address();
 
                 let a1 = &self.script_args[0];
+                let a3 = &self.script_args[2];
                 let a4 = &self.script_args[3];
 
                 // Validate terms
-                match (a1, a4) {
-                    (VmTerm::Signed128(amount), VmTerm::Unsigned64(coinbase_height))
-                        if amount == block_reward && coinbase_height == block_height =>
-                    {
+                match (a1, a3, a4) {
+                    (
+                        VmTerm::Signed128(amount),
+                        VmTerm::Unsigned64(coinbase_height),
+                        VmTerm::Unsigned32(_),
+                    ) if amount == block_reward && coinbase_height == block_height => {
                         let result = script.execute(
                             &self.script_args,
                             &[],

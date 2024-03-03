@@ -183,6 +183,9 @@ pub struct PowBlockHeader {
     /// VRF proof next 32 bytes
     pub vrf_proof_2: [u8; 32],
 
+    /// An extra data field of max 14 bytes
+    pub extra_data: Vec<u8>,
+
     /// Cached block hash
     pub hash: Option<Hash256>,
 }
@@ -261,6 +264,7 @@ impl PowBlockHeader {
             bits: prev.bits,
             bt_mean: prev.bt_mean,
             diff_heights: prev.diff_heights,
+            extra_data: vec![],
             runnerup_hashes,
             runnerups_prev_hash,
             timestamp,
@@ -342,6 +346,7 @@ impl PowBlockHeader {
             vrf_out: [0; 32],        // These are null in the genesis block
             vrf_proof_1: [0; 32],    // These are null in the genesis block
             vrf_proof_2: [0; 32],    // These are null in the genesis block
+            extra_data: vec![],
             hash: None,
         };
 
@@ -939,7 +944,6 @@ impl BlockHeader {
                     VmTerm::Unsigned32(0),
                 ];
                 let mut input = Input {
-                    script: Script::new_coinbase(),
                     input_flags: InputFlags::IsCoinbase,
                     script_args,
                     ..Default::default()
@@ -958,11 +962,12 @@ impl BlockHeader {
         let mut out_stack = vec![];
         let mut ver_stack = VerificationStack::new();
         let mut idx_map = HashMap::new();
+        let script = Script::new_coinbase();
 
         // Compute outputs
         for input in &inputs {
             let in_clone = input.clone();
-            let result = input.script.execute(
+            let result = script.execute(
                 &input.script_args,
                 &[in_clone],
                 &mut out_stack,
@@ -971,7 +976,10 @@ impl BlockHeader {
                 [0; 32],
                 key,
                 SETTINGS.node.network_name.as_str(),
-                VmFlags::default(),
+                VmFlags {
+                    is_coinbase: true,
+                    ..VmFlags::default()
+                },
             );
 
             assert_eq!(
@@ -1169,7 +1177,6 @@ impl Block {
         let mut idx_map = HashMap::new();
         let coinbase_height = prev.height + 1;
         let mut input = Input {
-            script: Script::new_coinbase(),
             input_flags: InputFlags::IsCoinbase,
             script_args: vec![
                 VmTerm::Signed128(map_height_to_block_reward(coinbase_height)),
@@ -1392,6 +1399,7 @@ impl Encode for PowBlockHeader {
         bincode::Encode::encode(&self.vrf_out, encoder)?;
         bincode::Encode::encode(&self.vrf_proof_1, encoder)?;
         bincode::Encode::encode(&self.vrf_proof_2, encoder)?;
+        bincode::Encode::encode(&self.extra_data, encoder)?;
 
         match self.height % 4 {
             1 | 3 => {
@@ -1431,6 +1439,17 @@ impl Decode for PowBlockHeader {
             vrf_out: bincode::Decode::decode(decoder)?,
             vrf_proof_1: bincode::Decode::decode(decoder)?,
             vrf_proof_2: bincode::Decode::decode(decoder)?,
+            extra_data: {
+                let d: Vec<u8> = bincode::Decode::decode(decoder)?;
+
+                if d.len() > 14 {
+                    return Err(bincode::error::DecodeError::OtherString(format!(
+                        "invalid extra data, max len is 14, received {}",
+                        d.len()
+                    )));
+                }
+                d
+            },
             runnerup_hashes: match m {
                 1 | 3 => Some(bincode::Decode::decode(decoder)?),
                 _ => None,
@@ -1547,6 +1566,7 @@ pub enum BlockVerifyErr {
     InvalidOuts,
     InvalidCoinbase,
     InvalidRunnerupTimestamp,
+    InvalidExtraData,
     SigVerificationErr,
     InvalidSignature,
     InvalidScriptExecution,
@@ -1681,8 +1701,8 @@ mod tests {
             VmTerm::Unsigned64(1),
             VmTerm::Unsigned32(0),
         ];
+        let script = Script::new_coinbase();
         let mut input = Input {
-            script: Script::new_coinbase(),
             input_flags: InputFlags::IsCoinbase,
             script_args,
             ..Default::default()
@@ -1704,7 +1724,7 @@ mod tests {
 
         for batch_size in &batch_sizes {
             let in_clone = input.clone();
-            input.script.execute(
+            script.execute(
                 &input.script_args,
                 &[in_clone],
                 &mut out_stack,
@@ -1713,7 +1733,10 @@ mod tests {
                 [0; 32],
                 key,
                 "",
-                VmFlags::default(),
+                VmFlags {
+                    is_coinbase: true,
+                    ..VmFlags::default()
+                },
             );
 
             let outputs: Vec<Output> = out_stack

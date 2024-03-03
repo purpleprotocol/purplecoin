@@ -6990,24 +6990,24 @@ impl Script {
                         VmTerm::SignedBig(v) => {
                             if v == &ibig!(1) {
                                 return Ok(ExecutionResult::Ok).into();
-                            } else {
-                                let mut stack_trace = StackTrace::default();
-
-                                if flags.build_stacktrace {
-                                    stack_trace.trace.push(
-                                        (
-                                            frame.i_ptr - 1,
-                                            frame.func_idx,
-                                            self.script[frame.i_ptr - 1].clone(),
-                                        )
-                                            .into(),
-                                    );
-                                    stack_trace.top_frame_stack.extend_from_slice(&frame.stack);
-                                    stack_trace.extend_from_frame_stack(&frame_stack, self);
-                                }
-
-                                return Err((ExecutionResult::Invalid, stack_trace)).into();
                             }
+
+                            let mut stack_trace = StackTrace::default();
+
+                            if flags.build_stacktrace {
+                                stack_trace.trace.push(
+                                    (
+                                        frame.i_ptr - 1,
+                                        frame.func_idx,
+                                        self.script[frame.i_ptr - 1].clone(),
+                                    )
+                                        .into(),
+                                );
+                                stack_trace.top_frame_stack.extend_from_slice(&frame.stack);
+                                stack_trace.extend_from_frame_stack(&frame_stack, self);
+                            }
+
+                            return Err((ExecutionResult::Invalid, stack_trace)).into();
                         }
                         _ => {
                             let mut stack_trace = StackTrace::default();
