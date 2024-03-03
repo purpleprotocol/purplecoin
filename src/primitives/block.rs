@@ -201,8 +201,13 @@ impl PowBlockHeader {
         runnerups: Option<[&PowBlockHeader; SECTORS - 1]>,
         blocks: Vec<BlockHeader>,
         vrf_pkey_bytes: [u8; 32],
+        extra_data: Vec<u8>,
         key: &str,
     ) -> Result<Self, BlockVerifyErr> {
+        assert!(
+            extra_data.len() <= 14,
+            "extra data field too large expected max 14 bytes"
+        );
         let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
             MerkleTree::from_data::<Hash256, _>(blocks.iter().map(|b| b.hash().unwrap()).copied())
                 .unwrap();
@@ -264,7 +269,7 @@ impl PowBlockHeader {
             bits: prev.bits,
             bt_mean: prev.bt_mean,
             diff_heights: prev.diff_heights,
-            extra_data: vec![],
+            extra_data,
             runnerup_hashes,
             runnerups_prev_hash,
             timestamp,

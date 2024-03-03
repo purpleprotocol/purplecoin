@@ -247,7 +247,6 @@ impl Script {
             script: vec![
                 ScriptEntry::Byte(0x05), // 5 arguments are pushed onto the stack: out_amount, out_address, out_script_hash, coinbase_height, extra_nonce
                 ScriptEntry::Opcode(OP::PushCoinbaseOut),
-                ScriptEntry::Opcode(OP::Ok),
             ],
             malleable_args: bitvec_from_bools![false, false, false, false, false],
             ..Script::default()
@@ -260,7 +259,6 @@ impl Script {
             script: vec![
                 ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: out_amount, out_script_hash, coinbase_height, extra_nonce
                 ScriptEntry::Opcode(OP::PushCoinbaseOutNoSpendAddress),
-                ScriptEntry::Opcode(OP::Ok),
             ],
             malleable_args: bitvec_from_bools![false, false, false, false],
             ..Script::default()
