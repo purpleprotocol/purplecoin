@@ -45,6 +45,7 @@ fn bench_coinbase(c: &mut Criterion) {
                 &mut ver_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags {
                     build_stacktrace: false,
                     validate_output_amounts: false,
@@ -76,6 +77,7 @@ fn bench_coinbase(c: &mut Criterion) {
                             &mut ver_stack,
                             [0; 32],
                             key,
+                            "",
                             VmFlags {
                                 build_stacktrace: false,
                                 validate_output_amounts: false,
@@ -110,6 +112,7 @@ fn bench_coinbase(c: &mut Criterion) {
                                 &mut ver_stack,
                                 [0; 32],
                                 key,
+                                "",
                                 VmFlags {
                                     build_stacktrace: false,
                                     validate_output_amounts: false,
@@ -180,6 +183,7 @@ fn bench_vm_abuse(c: &mut Criterion) {
                             &mut ver_stack,
                             [0; 32],
                             key,
+                            "",
                             VmFlags {
                                 build_stacktrace: false,
                                 validate_output_amounts: false,
@@ -313,6 +317,7 @@ fn bench_vm_load_var(c: &mut Criterion) {
                             &mut ver_stack,
                             [0; 32],
                             key,
+                            "",
                             VmFlags {
                                 build_stacktrace: false,
                                 validate_output_amounts: false,

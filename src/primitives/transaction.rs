@@ -65,6 +65,7 @@ impl Transaction {
                 &mut ver_stack,
                 [0; 32], // TODO: Inject seed here
                 &key,
+                SETTINGS.node.network_name.as_str(),
                 VmFlags {
                     is_coinbase: input.is_coinbase(),
                     chain_height: height,

@@ -302,6 +302,7 @@ impl Script {
         verification_stack: &mut VerificationStack,
         seed: [u8; 32],
         key: &str,
+        network_name: &str,
         flags: VmFlags,
     ) -> VmResult {
         // The length of the inputs must match the length defined in the script
@@ -392,6 +393,7 @@ impl Script {
                         output_stack_idx_map,
                         &mut script_outputs,
                         key,
+                        network_name,
                         &mut exec_count,
                         &script_storage,
                         &script_stack,
@@ -7124,6 +7126,7 @@ impl ScriptExecutor {
         output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
         script_outputs: &mut Vec<VmTerm>,
         key: &str,
+        network_name: &str,
         exec_count: &mut u64,
         script_storage: &HashMap<Hash256, Rc<Script>>,
         script_stack: &Vec<Rc<Script>>,
@@ -7245,7 +7248,162 @@ impl ScriptExecutor {
                     exec_stack.push(term);
                 }
 
+                ScriptEntry::Opcode(OP::NetworkName) => {
+                    let term = VmTerm::Unsigned8Array(network_name.as_bytes().to_vec());
+                    *memory_size += term.size();
+                    exec_stack.push(term);
+                }
+
                 ScriptEntry::Opcode(OP::OpenImplicitCert) => {
+                    if exec_stack.len() < 4 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let t1 = exec_stack.pop().unwrap();
+                    *memory_size -= t1.size();
+                    let t2 = exec_stack.pop().unwrap();
+                    *memory_size -= t2.size();
+                    let t3 = exec_stack.pop().unwrap();
+                    *memory_size -= t3.size();
+                    let t4 = exec_stack.pop().unwrap();
+                    *memory_size -= t4.size();
+
+                    match (t1, t2, t3, t4) {
+                        (
+                            VmTerm::Unsigned8Array(issuer_pub_key),
+                            VmTerm::Unsigned8Array(transcript),
+                            VmTerm::Unsigned8Array(ctx),
+                            VmTerm::Unsigned8Array(cert),
+                        ) if issuer_pub_key.len() == 32 && cert.len() == 32 => {
+                            match PublicKey::from_bytes(&issuer_pub_key) {
+                                Ok(issuer_pub_key) => {
+                                    // Create context
+                                    let ctx = signing_context(ctx.as_slice());
+
+                                    let mut cert_buf = [0; 32];
+                                    cert_buf.copy_from_slice(cert.as_slice());
+                                    let cert = AdaptorCertPublic(cert_buf);
+
+                                    match issuer_pub_key
+                                        .open_adaptor_cert(ctx.bytes(transcript.as_slice()), &cert)
+                                    {
+                                        Ok(cert_pub_key) => {
+                                            let cert_pub_key_bytes = cert_pub_key.to_bytes();
+                                            let cert_pub_key =
+                                                VmTerm::Unsigned8Array(cert_pub_key_bytes.to_vec());
+                                            *memory_size += cert_pub_key.size();
+                                            exec_stack.push(cert_pub_key);
+                                        }
+                                        _ => {
+                                            self.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidArgs,
+                                                (
+                                                    i_ptr,
+                                                    func_idx,
+                                                    op.clone(),
+                                                    exec_stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    self.state = ScriptExecutorState::Error(
+                                        ExecutionResult::InvalidArgs,
+                                        (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                    );
+                                }
+                            }
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::OpenImplicitCertGlobal) => {
+                    if exec_stack.len() < 3 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let t1 = exec_stack.pop().unwrap();
+                    *memory_size -= t1.size();
+                    let t2 = exec_stack.pop().unwrap();
+                    *memory_size -= t2.size();
+                    let t3 = exec_stack.pop().unwrap();
+                    *memory_size -= t3.size();
+
+                    match (t1, t2, t3) {
+                        (
+                            VmTerm::Unsigned8Array(issuer_pub_key),
+                            VmTerm::Unsigned8Array(transcript),
+                            VmTerm::Unsigned8Array(cert),
+                        ) if issuer_pub_key.len() == 32 && cert.len() == 32 => {
+                            match PublicKey::from_bytes(&issuer_pub_key) {
+                                Ok(issuer_pub_key) => {
+                                    // Create the context string and context
+                                    let mut ctx_buf = network_name.to_owned();
+                                    ctx_buf.push_str(ADAPTOR_CERT_CTX);
+                                    let ctx = signing_context(ctx_buf.as_str().as_bytes());
+
+                                    let mut cert_buf = [0; 32];
+                                    cert_buf.copy_from_slice(cert.as_slice());
+                                    let cert = AdaptorCertPublic(cert_buf);
+
+                                    match issuer_pub_key
+                                        .open_adaptor_cert(ctx.bytes(transcript.as_slice()), &cert)
+                                    {
+                                        Ok(cert_pub_key) => {
+                                            let cert_pub_key_bytes = cert_pub_key.to_bytes();
+                                            let cert_pub_key =
+                                                VmTerm::Unsigned8Array(cert_pub_key_bytes.to_vec());
+                                            *memory_size += cert_pub_key.size();
+                                            exec_stack.push(cert_pub_key);
+                                        }
+                                        _ => {
+                                            self.state = ScriptExecutorState::Error(
+                                                ExecutionResult::InvalidArgs,
+                                                (
+                                                    i_ptr,
+                                                    func_idx,
+                                                    op.clone(),
+                                                    exec_stack.as_slice(),
+                                                )
+                                                    .into(),
+                                            );
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    self.state = ScriptExecutorState::Error(
+                                        ExecutionResult::InvalidArgs,
+                                        (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                    );
+                                }
+                            }
+                        }
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::OpenImplicitCertScoped) => {
                     if exec_stack.len() < 3 {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
@@ -12708,6 +12866,7 @@ mod tests {
                         &mut verif_stack,
                         [0; 32],
                         key,
+                        "",
                         VmFlags::default()
                     ),
                     Ok(ExecutionResult::OkVerify).into()
@@ -12760,6 +12919,7 @@ mod tests {
                         &mut verif_stack,
                         [0; 32],
                         key,
+                        "",
                         VmFlags::default()
                     ),
                     Ok(ExecutionResult::OkVerify).into()
@@ -12812,6 +12972,7 @@ mod tests {
                         &mut verif_stack,
                         [0; 32],
                         key,
+                        "",
                         VmFlags::default()
                     ),
                     Ok(ExecutionResult::OkVerify).into()
@@ -12864,6 +13025,7 @@ mod tests {
                         &mut verif_stack,
                         [0; 32],
                         key,
+                        "",
                         VmFlags::default()
                     ),
                     Ok(ExecutionResult::OkVerify).into()
@@ -12888,6 +13050,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -12915,6 +13078,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((exec_res, StackTrace::default())).into()
@@ -14856,6 +15020,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -14904,6 +15069,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -14951,6 +15117,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -14999,6 +15166,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15046,6 +15214,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15093,6 +15262,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15142,6 +15312,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15191,6 +15362,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15241,6 +15413,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15290,6 +15463,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15340,6 +15514,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15389,6 +15564,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15439,6 +15615,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15488,6 +15665,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15538,6 +15716,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15587,6 +15766,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15637,6 +15817,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15686,6 +15867,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15736,6 +15918,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15785,6 +15968,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15834,6 +16018,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15881,6 +16066,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15928,6 +16114,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -15977,6 +16164,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16026,6 +16214,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16086,6 +16275,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
@@ -16128,6 +16318,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -16170,6 +16361,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -16346,6 +16538,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16402,6 +16595,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16451,6 +16645,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16507,6 +16702,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16552,6 +16748,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16617,6 +16814,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16663,6 +16861,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16725,6 +16924,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16787,6 +16987,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16842,6 +17043,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16890,6 +17092,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16946,6 +17149,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -16996,6 +17200,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -17043,6 +17248,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -17096,6 +17302,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -17157,6 +17364,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -17197,6 +17405,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -17231,6 +17440,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17264,6 +17474,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17299,6 +17510,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17336,6 +17548,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17379,6 +17592,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17414,6 +17628,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17458,6 +17673,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::IndexOutOfBounds, StackTrace::default())).into()
@@ -17493,6 +17709,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17528,6 +17745,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17563,6 +17781,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17598,6 +17817,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17635,6 +17855,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17674,6 +17895,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17713,6 +17935,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17746,6 +17969,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Err((ExecutionResult::InvalidArgs, StackTrace::default())).into()
@@ -17832,6 +18056,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -17945,6 +18170,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18126,6 +18352,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18173,6 +18400,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18223,6 +18451,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18279,6 +18508,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18347,6 +18577,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18420,6 +18651,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18470,6 +18702,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18526,6 +18759,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18594,6 +18828,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18667,6 +18902,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18709,6 +18945,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18755,6 +18992,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18828,6 +19066,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -18945,6 +19184,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -19101,6 +19341,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -19359,6 +19600,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -19414,6 +19656,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -19479,6 +19722,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -19571,6 +19815,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -19708,6 +19953,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -19840,6 +20086,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -19895,6 +20142,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -19960,6 +20208,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -20052,6 +20301,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -20189,6 +20439,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -20321,6 +20572,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -20393,6 +20645,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -20477,6 +20730,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -20593,6 +20847,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -20650,6 +20905,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -20765,6 +21021,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -20841,6 +21098,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -20916,6 +21174,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -20991,6 +21250,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21067,6 +21327,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21137,6 +21398,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21208,6 +21470,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21304,6 +21567,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21348,6 +21612,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21402,6 +21667,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21446,6 +21712,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21490,6 +21757,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21534,6 +21802,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21578,6 +21847,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21622,6 +21892,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21666,6 +21937,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21710,6 +21982,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21754,6 +22027,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21798,6 +22072,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21842,6 +22117,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21886,6 +22162,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21930,6 +22207,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -21974,6 +22252,7 @@ mod tests {
                 &mut verif_stack,
                 seed,
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22041,6 +22320,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22108,6 +22388,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22175,6 +22456,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22242,6 +22524,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22309,6 +22592,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22376,6 +22660,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22500,6 +22785,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22650,6 +22936,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22699,6 +22986,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22748,6 +23036,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22797,6 +23086,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22846,6 +23136,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22907,6 +23198,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -22956,6 +23248,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23005,6 +23298,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23054,6 +23348,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23103,6 +23398,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23180,6 +23476,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23236,6 +23533,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23377,6 +23675,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23446,6 +23745,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23588,6 +23888,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23657,6 +23958,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23772,6 +24074,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23822,6 +24125,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23872,6 +24176,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23922,6 +24227,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -23972,6 +24278,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -25946,6 +26253,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26000,6 +26308,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26055,6 +26364,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26109,6 +26419,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26164,6 +26475,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26218,6 +26530,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26273,6 +26586,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26327,6 +26641,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26382,6 +26697,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26436,6 +26752,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26507,6 +26824,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26620,6 +26938,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26734,6 +27053,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26803,6 +27123,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26886,6 +27207,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -26958,6 +27280,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -27030,6 +27353,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -27102,6 +27426,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -27174,6 +27499,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -27252,6 +27578,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()
@@ -27330,6 +27657,7 @@ mod tests {
                 &mut verif_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default()
             ),
             Ok(ExecutionResult::OkVerify).into()

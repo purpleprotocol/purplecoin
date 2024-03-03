@@ -938,6 +938,7 @@ impl BlockHeader {
                 &mut ver_stack,
                 [0; 32],
                 key,
+                SETTINGS.node.network_name.as_str(),
                 VmFlags::default(),
             );
 
@@ -1158,6 +1159,7 @@ impl Block {
             &mut ver_stack,
             [0; 32],
             key,
+            SETTINGS.node.network_name.as_str(),
             VmFlags {
                 is_coinbase: input.is_coinbase(),
                 chain_id: prev.chain_id,
@@ -1676,6 +1678,7 @@ mod tests {
                 &mut ver_stack,
                 [0; 32],
                 key,
+                "",
                 VmFlags::default(),
             );
 

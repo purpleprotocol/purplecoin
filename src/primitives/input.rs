@@ -7,6 +7,7 @@
 use crate::chain::{Shard, ShardBackend};
 use crate::consensus::{Money, BLOCK_HORIZON};
 use crate::primitives::{Address, Hash160, Hash256, OutWitnessVec, Output, PublicKey, TxVerifyErr};
+use crate::settings::SETTINGS;
 use crate::vm::internal::VmTerm;
 use crate::vm::{
     ExecutionResult, Script, SigVerificationErr, VerificationStack, VmFlags, VmResult,
@@ -203,6 +204,7 @@ impl Input {
                             ver_stack,
                             [0; 32], // TODO: Inject seed here
                             key,
+                            SETTINGS.node.network_name.as_str(),
                             VmFlags {
                                 is_coinbase: true,
                                 chain_id,

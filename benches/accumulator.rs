@@ -54,6 +54,7 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
             &mut ver_stack,
             [0; 32],
             key,
+            "",
             VmFlags::default(),
         );
 

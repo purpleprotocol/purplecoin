@@ -28,8 +28,10 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [ ] Implement coloured assets
   * [ ] Implement VM opcodes
     - [x] OP `0x00` Func - Start a function definition
-    - [x] OP `0x03` BaseContext - Pushes to the top of the stack the base cryptographic context, which can be used to create application specific contexts by appending other contexts to it before being passed to cryptographic opcodes. The base context is specific to the current shard.
-    - [x] OP `0x04` OpenImplicitCert - Pops a public key, transcript, and an implicit certificate from the top of the stack and extracts the public key from the certificate. If successful, pushes the public key to the top of the stack.
+    - [x] OP `0x01` BaseContext - Pushes to the top of the stack the base cryptographic context, which can be used to create application specific contexts by appending other contexts to it before being passed to cryptographic opcodes. The base context is specific to the current shard.
+    - [x] OP `0x02` OpenImplicitCert - Pops a public key, transcript, context, and implicit certificate from the top of the stack and extracts the public key from the certificate.
+    - [x] OP `0x03` OpenImplicitCertGlobal - Pops a public key, transcript, and an implicit certificate from the top of the stack and extracts the public key from the certificate. If successful, pushes the public key to the top of the stack. This receives the global context (network name) and is thus global. Public keys work on all shards. Use `OP_OpenImplicitCertScoped` for public keys which work only on a specific shard.
+    - [x] OP `0x04` OpenImplicitCertScoped - Pops a public key, transcript, and an implicit certificate from the top of the stack and extracts the public key from the certificate. If successful, pushes the public key to the top of the stack. This receives the current context of the shard and is thus scoped to it. Public keys only work for this shard. Use `OP_OpenImplicitCertGlobal` for public keys which work on all shards.
     - [x] OP `0x05` VerifyInline - Pops a transcript, signature, public key, and message, then verifies inline. Pushes `1` to the top of the stack if successful, and `0` otherwise.
     - [x] OP `0x06` Ok - Stops script execution and returns the `Ok` code. Equivalent to pushing `1` to the stack then calling `OP_Return`.
     - [x] OP `0x07` ChainId - Pushes the current `chain_id` onto the stack
@@ -37,6 +39,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x09` ChainTimestamp - Pushes the current timestamp of the chain onto the stack as a `Signed64`
     - [x] OP `0x0a` IsCoinbase - Pushes `1` as an `Signed8` onto the stack if the current input is a coinbase otherwise pushes `0`
     - [x] OP `0x0b` PrevBlockHash - Pushes the previous block hash onto the stack as a `Hash256`
+    - [x] OP `0x0c` NetworkName - Pushes the network name as a `Unsigned8Array` to the top of the stack.
     - [x] OP `0x0d` RandomHash160Var - Pushes a random `Hash160` onto the stack
     - [x] OP `0x0e` RandomHash256Var - Pushes a random `Hash256` onto the stack
     - [x] OP `0x0f` RandomHash512Var - Pushes a random `Hash512` onto the stack
@@ -123,7 +126,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x62` ContinueIf - Moves to the next iteration of the current loop if the topmost item on the stack is equal to `1`
     - [x] OP `0x63` ContinueIfn - Moves to the next iteration of the current loop if the topmost item on the stack is not equal to `1`
     - [x] OP `0x64` ContinueIfEq - Moves to the next iteration of the current loop if the two topmost items on the stack are equal
-    - [x] OP `0x66` ContinueIfNeq - Moves to the next iteration of the current loop if the two topmost items on the stack are not equal
+    - [x] OP `0x65` ContinueIfNeq - Moves to the next iteration of the current loop if the two topmost items on the stack are not equal
     - [x] OP `0x66` ContinueIfLeq - Moves to the next iteration of the current loop if the topmost item on the stack is less or equal than the second
     - [x] OP `0x67` ContinueIfGeq - Moves to the next iteration of the current loop if the topmost item on the stack is greater or equal than the second
     - [x] OP `0x68` ContinueIfLt - Moves to the next iteration of the current loop if the topmost item on the stack is less than the second
@@ -227,7 +230,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xca` CastTo - Casts the topmost item on the stack to the type id which is the second item on the stack
     - [x] OP `0xcb` InputScriptArgsLen - Pushes the number of script args of the input at the given index to the top of the stack
     - [x] OP `0xcc` GetInputScriptArgAt - Pushes the script argument at the second given index of the input at the first given index to the top of the stack
-    - [x] OP `0xcd` SpillInputScriptArgs - Pushes all the script args of the input at the given index to the top of the stack
+    - [x] OP `0xcd` SpillInputScriptArgs - Pushes all the script args of the input at the given index to the top of the stack.
     - [x] OP `0xcf` PushOut - Pushes a new output to the output stack. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [x] OP `0xd0` PushOutVerify - Pushes a new output to the output stack and calls Verify. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [x] OP `0xd1` PushCoinbaseOut - Pushes a coinbase output to the output stack. Only valid in the coinbase input. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
