@@ -215,6 +215,7 @@ impl Input {
                                 prev_block_hash: prev_block_hash.0,
                                 in_binary: self.to_bytes_for_signing(),
                                 spent_out: None,
+                                can_fail: false,
                             },
                         );
 

@@ -1170,6 +1170,7 @@ impl Block {
                 prev_block_hash: prev.hash().unwrap().0,
                 in_binary: input.to_bytes_for_signing(),
                 spent_out: input.out.clone(),
+                can_fail: false,
             },
         );
 

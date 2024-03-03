@@ -108,6 +108,10 @@ pub struct VmFlags {
 
     /// Previous output script outputs
     pub spent_out: Option<Output>,
+
+    /// Whether the transaction is allowed to fail at block
+    /// inclusion time or not.
+    pub can_fail: bool,
 }
 
 impl Default for VmFlags {
@@ -122,6 +126,7 @@ impl Default for VmFlags {
             prev_block_hash: [0; 32],
             in_binary: vec![],
             spent_out: None,
+            can_fail: false,
         }
     }
 }
@@ -9121,66 +9126,194 @@ impl ScriptExecutor {
                 }
 
                 ScriptEntry::Opcode(OP::RandomHash160Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomHash160Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomHash256Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomHash256Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomHash512Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomHash512Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomUnsigned8Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned8Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomUnsigned16Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned16Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomUnsigned32Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned32Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomUnsigned64Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned64Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomUnsigned128Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomUnsigned128Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomSigned8Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned8Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomSigned16Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned16Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomSigned32Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned32Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomSigned64Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned64Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomSigned128Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomSigned128Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomFloat32Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomFloat32Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomFloat64Var) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomFloat64Var);
                 }
 
                 ScriptEntry::Opcode(OP::RandomDecimalVar) => {
+                    if !flags.can_fail {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     self.state = ScriptExecutorState::ExpectingRandomTerm(OP::RandomDecimalVar);
                 }
 
@@ -12797,6 +12930,9 @@ pub enum ExecutionResult {
 
     /// VM ran out of gas
     OutOfGas,
+
+    /// This opcode is only allowed in a failable input
+    OpcodeAllowedOnlyInFailableInput,
 
     /// VM Term overflow
     TermOverflow,
@@ -21022,7 +21158,10 @@ mod tests {
                 [0; 32],
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -21568,7 +21707,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -21613,7 +21755,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -21668,7 +21813,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -21713,7 +21861,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -21758,7 +21909,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -21803,7 +21957,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -21848,7 +22005,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -21893,7 +22053,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -21938,7 +22101,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -21983,7 +22149,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -22028,7 +22197,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -22073,7 +22245,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -22118,7 +22293,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -22163,7 +22341,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -22208,7 +22389,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
@@ -22253,7 +22437,10 @@ mod tests {
                 seed,
                 key,
                 "",
-                VmFlags::default()
+                VmFlags {
+                    can_fail: true,
+                    ..VmFlags::default()
+                }
             ),
             Ok(ExecutionResult::OkVerify).into()
         );
