@@ -7777,6 +7777,14 @@ impl ScriptExecutor {
                         return;
                     }
 
+                    if !flags.is_coinbase {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OPOnlyAllowedInCoinbaseInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     let amount = exec_stack.pop().unwrap();
                     *memory_size -= amount.size();
                     let address = exec_stack.pop().unwrap();
@@ -7809,7 +7817,65 @@ impl ScriptExecutor {
                             output_stack.push(output);
                             *script_outputs = vec![];
 
-                            self.state = ScriptExecutorState::ExpectingInitialOP;
+                            self.state = ScriptExecutorState::Ok;
+                        }
+
+                        _ => {
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidArgs,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
+                        }
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::PushCoinbaseOutNoSpendAddress) => {
+                    if exec_stack.len() < 3 {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    if !flags.is_coinbase {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::OPOnlyAllowedInCoinbaseInput,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let amount = exec_stack.pop().unwrap();
+                    *memory_size -= amount.size();
+                    let script_hash = exec_stack.pop().unwrap();
+                    *memory_size -= script_hash.size();
+                    let coinbase_height = exec_stack.pop().unwrap();
+                    *memory_size -= coinbase_height.size();
+
+                    match (amount, script_hash, coinbase_height) {
+                        (
+                            VmTerm::Signed128(amount),
+                            VmTerm::Hash160(script_hash),
+                            VmTerm::Unsigned64(coinbase_height),
+                        ) if amount > 0 && coinbase_height > 0 => {
+                            let mut output = Output {
+                                amount,
+                                address: None,
+                                script_hash: Hash160(script_hash),
+                                coinbase_height: Some(coinbase_height),
+                                coloured_address: None,
+                                inputs_hash: inputs_hash.clone(),
+                                idx: output_stack.len() as u16,
+                                script_outs: script_outputs.clone(),
+                                hash: None,
+                            };
+
+                            output.compute_hash(key);
+                            output_stack.push(output);
+                            *script_outputs = vec![];
+
+                            self.state = ScriptExecutorState::Ok;
                         }
 
                         _ => {
@@ -12909,6 +12975,9 @@ pub enum ExecutionResult {
 
     /// The opcode is not valid in a coinbase input
     InvalidOPForCoinbaseInput,
+
+    /// The opcode is only available in a coinbase input
+    OPOnlyAllowedInCoinbaseInput,
 
     /// The term being cast to the desired type is invalid.
     InvalidCast,

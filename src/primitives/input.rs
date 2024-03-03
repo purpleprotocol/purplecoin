@@ -229,6 +229,56 @@ impl Input {
                 }
             }
 
+            InputFlags::IsCoinbaseWithoutSpendKey => {
+                *coinbase_count += 1;
+
+                if *coinbase_count != 1 {
+                    return Err(TxVerifyErr::InvalidCoinbase);
+                }
+
+                let script = Script::new_coinbase_without_spending_address();
+
+                let a1 = &self.script_args[0];
+                let a4 = &self.script_args[3];
+
+                // Validate terms
+                match (a1, a4) {
+                    (VmTerm::Signed128(amount), VmTerm::Unsigned64(coinbase_height))
+                        if amount == block_reward && coinbase_height == block_height =>
+                    {
+                        let result = script.execute(
+                            &self.script_args,
+                            &[],
+                            to_add,
+                            idx_map,
+                            ver_stack,
+                            [0; 32], // TODO: Inject seed here
+                            key,
+                            SETTINGS.node.network_name.as_str(),
+                            VmFlags {
+                                is_coinbase: true,
+                                chain_id,
+                                chain_height: height,
+                                chain_timestamp: timestamp,
+                                build_stacktrace: false,
+                                validate_output_amounts: true,
+                                prev_block_hash: prev_block_hash.0,
+                                in_binary: self.to_bytes_for_signing(),
+                                spent_out: None,
+                                can_fail: false,
+                            },
+                        );
+
+                        // Validate script execution
+                        match result {
+                            VmResult(Ok(ExecutionResult::Ok)) => Ok(()),
+                            _ => Err(TxVerifyErr::InvalidScriptExecution),
+                        }
+                    }
+                    _ => Err(TxVerifyErr::InvalidCoinbase),
+                }
+            }
+
             InputFlags::IsColouredCoinbase => {
                 unimplemented!()
             }
