@@ -7241,18 +7241,14 @@ impl ScriptExecutor {
                     exec_stack.push(term);
                 }
 
-                ScriptEntry::Opcode(OP::IsCoinbase) => {
-                    let term = if flags.is_coinbase {
-                        VmTerm::Signed8(1)
-                    } else {
-                        VmTerm::Signed8(0)
-                    };
-                    *memory_size += 1;
+                ScriptEntry::Opcode(OP::NetworkName) => {
+                    let term = VmTerm::Unsigned8Array(network_name.as_bytes().to_vec());
+                    *memory_size += term.size();
                     exec_stack.push(term);
                 }
 
-                ScriptEntry::Opcode(OP::NetworkName) => {
-                    let term = VmTerm::Unsigned8Array(network_name.as_bytes().to_vec());
+                ScriptEntry::Opcode(OP::Pi) => {
+                    let term = VmTerm::Decimal(Decimal::PI);
                     *memory_size += term.size();
                     exec_stack.push(term);
                 }
@@ -9894,6 +9890,60 @@ impl ScriptExecutor {
 
                     let mut last = exec_stack.last_mut().unwrap();
                     if last.add_one().is_none() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::Ln) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let mut last = exec_stack.last_mut().unwrap();
+                    if last.ln(exec_count).is_none() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::Exp) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let mut last = exec_stack.last_mut().unwrap();
+                    if last.exp(exec_count).is_none() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                    }
+                }
+
+                ScriptEntry::Opcode(OP::Sqrt) => {
+                    if exec_stack.is_empty() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
+                    let mut last = exec_stack.last_mut().unwrap();
+                    if last.sqrt(exec_count).is_none() {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),

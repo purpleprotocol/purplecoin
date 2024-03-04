@@ -1,9 +1,11 @@
 # Technical Roadmap
+
 This document presents the technical roadmap of the Purplecoin project. Please note that these are subject to change before the release. The roadmap branches off a higher level with subsections describing a greater level of detail.
 
 ## Purplecoin Core
 
-* [ ] Consensus layer
+- [ ] Consensus layer
+
   - [x] Implement sector blocks
   - [x] Implement shard blocks
   - [x] Implement RSA accumulators
@@ -26,7 +28,9 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [ ] Find a way to dynamically determine the minimum fee for acceptance into the mempool
   - [ ] Implement optimal atomic asset exchange script and use it as a default script
   - [ ] Implement coloured assets
+
   * [ ] Implement VM opcodes
+
     - [x] OP `0x00` Func - Start a function definition
     - [x] OP `0x01` BaseContext - Pushes to the top of the stack the base cryptographic context, which can be used to create application specific contexts by appending other contexts to it before being passed to cryptographic opcodes. The base context is specific to the current shard.
     - [x] OP `0x02` OpenImplicitCert - Pops a public key, transcript, context, and implicit certificate from the top of the stack and extracts the public key from the certificate.
@@ -37,7 +41,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x07` ChainId - Pushes the current `chain_id` onto the stack
     - [x] OP `0x08` ChainHeight - Pushes the current `chain_height` onto the stack
     - [x] OP `0x09` ChainTimestamp - Pushes the current timestamp of the chain onto the stack as a `Signed64`
-    - [x] OP `0x0a` IsCoinbase - Pushes `1` as an `Signed8` onto the stack if the current input is a coinbase otherwise pushes `0`
+    - [x] OP `0x0a` Pi - Pushes pi to the top of the stack as a `Decimal`.
     - [x] OP `0x0b` PrevBlockHash - Pushes the previous block hash onto the stack as a `Hash256`
     - [x] OP `0x0c` NetworkName - Pushes the network name as a `Unsigned8Array` to the top of the stack.
     - [x] OP `0x0d` RandomHash160Var - Pushes a random `Hash160` onto the stack
@@ -60,6 +64,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x1e` Ceil - Returns the smallest integer less than or equal to the float/decimal.
     - [x] OP `0x1f` IsNaN - Pushes `1` to the top of the stack if the float is NaN. Otherwise pushes `0`.
     - [x] OP `0x20` IsInfinite - Pushes `1` to the top of the stack if the float is infinite. Otherwise pushes `0`.
+    - [x] OP `0x21` Ln - Pops a term from the top of the stack, performs the natural logarithm, and pushes it back on the stack.
+    - [x] OP `0x22` Exp - Pops a term from the top of the stack, performs `e^x` and pushes the term to the top of the stack.
     - [x] OP `0x23` Hash160Var - Pushes a `Hash160` onto the stack
     - [x] OP `0x24` Hash256Var - Pushes a `Hash256` onto the stack
     - [x] OP `0x25` Hash512Var - Pushes a `Hash512` onto the stack
@@ -150,8 +156,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x7a` Swap2 - Swaps the topmost pairs of terms on top of the stack
     - [x] OP `0x7b` Size - Pushes the size in bytes of the topmost item on the stack
     - [x] OP `0x7c` Substr - Splits the given array at position n and pushes both arrays to the top of the stack
-    - [x] OP `0x7d` BitAND -  Pops the two topmost items on the stack, performs bit AND on the operands and then pushes the result on the stack
-    - [x] OP `0x7e` BitOR -  Pops the two topmost items on the stack, performs bit OR on the operands and then pushes the result on the stack
+    - [x] OP `0x7d` BitAND - Pops the two topmost items on the stack, performs bit AND on the operands and then pushes the result on the stack
+    - [x] OP `0x7e` BitOR - Pops the two topmost items on the stack, performs bit OR on the operands and then pushes the result on the stack
     - [x] OP `0x7f` BitInvert - Inverts all bits of the topmost item on the stack
     - [x] OP `0x80` DupAll - Duplicates the whole stack
     - [x] OP `0x81` IsUTF8 - Pushes `1` on top of the stack if the given `Unsigned8Array` is a valid UTF8 byte sequence
@@ -231,6 +237,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xcb` InputScriptArgsLen - Pushes the number of script args of the input at the given index to the top of the stack
     - [x] OP `0xcc` GetInputScriptArgAt - Pushes the script argument at the second given index of the input at the first given index to the top of the stack
     - [x] OP `0xcd` SpillInputScriptArgs - Pushes all the script args of the input at the given index to the top of the stack.
+    - [x] OP `0xce` Sqrt - Pops a term from the top of the stack, performs sqrt and pushes it back to the top of the stack.
     - [x] OP `0xcf` PushOut - Pushes a new output to the output stack. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [x] OP `0xd0` PushOutVerify - Pushes a new output to the output stack and calls Verify. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [x] OP `0xd1` PushCoinbaseOut - Pushes a coinbase output to the output stack. Only valid in the coinbase input. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
@@ -279,7 +286,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xfd` Blake3_256_160Internal - Pops the topmost item on the stack, hashes it with Blake3_256 keyed with the current shard key, and then pushes the result to the stack.
     - [x] OP `0xfe` Ripemd160 - Pops the topmost item on the stack, hashes it with Ripemd_160 and then pushes the result to the stack.
     - [x] OP `0xff` Nop - Does nothing
-* [ ] Network layer
+
+- [ ] Network layer
   - [ ] Sector networking
     - [x] Seed nodes DNS resolution
     - [ ] Header synchronization
@@ -308,7 +316,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [ ] Asset Exchange
     - [ ] Quote mempool
     - [ ] Asset exchange peer discovery via Kademlia DHT
-* [ ] Node
+- [ ] Node
   - [ ] RPC
     - [x] RPC over HTTP/JSON
     - [ ] RPC over WS/JSON
@@ -357,7 +365,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [ ] Mempool
     - [x] Base Implementation
     - [ ] Sharded mempool
-* [ ] Wallet
+- [ ] Wallet
   - [x] Hierarchical Deterministic Wallet
   - [ ] Multi-Sig Hierarchical Deterministic Wallet
   - [ ] Backup wallet
@@ -366,7 +374,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [ ] Restore wallet from file
   - [ ] Restore wallet from AWS S3
   - [ ] Restore wallet from Google Cloud Storage
-* [ ] GUI
+- [ ] GUI
   - [x] Onboarding screen
   - [x] Render XPU balances
   - [ ] Render XPU transaction history

@@ -37,7 +37,7 @@ base64 = "0.13.1"
 chrono = "0.4.19"
 triomphe = "0.1.7"
 crossbeam-channel = "0.5.4"
-rust_decimal = "1.34.2"
+rust_decimal = { version = "1.34.2", features = ["maths"] }
 rust_decimal_macros = "1.34.2"
 ripemd = "0.1.1"
 argon2rs = "0.2.5"

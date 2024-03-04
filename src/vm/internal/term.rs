@@ -10,7 +10,7 @@ use ibig::ops::Abs;
 use ibig::{ibig, ubig, IBig, UBig};
 use num_traits::identities::Zero;
 use num_traits::ToPrimitive;
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::{fmt, mem};
 
@@ -403,6 +403,135 @@ impl VmTerm {
             Self::Decimal(ref mut val) => {
                 *val = val.checked_add(dec!(1))?;
             }
+            _ => {
+                return None;
+            }
+        }
+
+        Some(())
+    }
+
+    pub fn ln(&mut self, exec_count: &mut u64) -> Option<()> {
+        match self {
+            Self::Decimal(v) => {
+                *v = v.checked_ln()?;
+            }
+
+            Self::Float32(v) => {
+                *v = Float32Wrapper(v.0.ln());
+            }
+
+            Self::Float64(v) => {
+                *v = Float64Wrapper(v.0.ln());
+            }
+
+            Self::DecimalArray(val) => {
+                for v in val.iter_mut() {
+                    *v = v.checked_ln()?;
+                }
+                *exec_count += val.len() as u64;
+            }
+
+            Self::Float32Array(val) => {
+                for v in val.iter_mut() {
+                    *v = Float32Wrapper(v.0.ln());
+                }
+                *exec_count += val.len() as u64;
+            }
+
+            Self::Float64Array(val) => {
+                for v in val.iter_mut() {
+                    *v = Float64Wrapper(v.0.ln());
+                }
+                *exec_count += val.len() as u64;
+            }
+
+            _ => {
+                return None;
+            }
+        }
+
+        Some(())
+    }
+
+    pub fn exp(&mut self, exec_count: &mut u64) -> Option<()> {
+        match self {
+            Self::Decimal(v) => {
+                *v = v.checked_exp()?;
+            }
+
+            Self::Float32(v) => {
+                *v = Float32Wrapper(v.0.exp());
+            }
+
+            Self::Float64(v) => {
+                *v = Float64Wrapper(v.0.exp());
+            }
+
+            Self::DecimalArray(val) => {
+                for v in val.iter_mut() {
+                    *v = v.checked_exp()?;
+                }
+                *exec_count += val.len() as u64;
+            }
+
+            Self::Float32Array(val) => {
+                for v in val.iter_mut() {
+                    *v = Float32Wrapper(v.0.exp());
+                }
+                *exec_count += val.len() as u64;
+            }
+
+            Self::Float64Array(val) => {
+                for v in val.iter_mut() {
+                    *v = Float64Wrapper(v.0.exp());
+                }
+                *exec_count += val.len() as u64;
+            }
+
+            _ => {
+                return None;
+            }
+        }
+
+        Some(())
+    }
+
+    pub fn sqrt(&mut self, exec_count: &mut u64) -> Option<()> {
+        match self {
+            Self::Decimal(v) => {
+                *v = v.sqrt()?;
+            }
+
+            Self::Float32(v) => {
+                *v = Float32Wrapper(v.0.sqrt());
+            }
+
+            Self::Float64(v) => {
+                *v = Float64Wrapper(v.0.sqrt());
+            }
+
+            Self::DecimalArray(val) => {
+                for v in val.iter_mut() {
+                    *v = v.sqrt()?;
+                }
+                *exec_count += val.len() as u64;
+            }
+
+            Self::Float32Array(val) => {
+                for v in val.iter_mut() {
+                    *v = Float32Wrapper(v.0.sqrt());
+                }
+                *exec_count += val.len() as u64;
+            }
+
+            Self::Float64Array(val) => {
+                for v in val.iter_mut() {
+                    *v = Float64Wrapper(v.0.sqrt());
+                }
+                *exec_count += val.len() as u64;
+            }
+
             _ => {
                 return None;
             }
