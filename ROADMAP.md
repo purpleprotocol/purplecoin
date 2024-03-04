@@ -138,7 +138,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0x68` ContinueIfLt - Moves to the next iteration of the current loop if the topmost item on the stack is less than the second
     - [x] OP `0x69` ContinueIfGt - Moves to the next iteration of the current loop if the topmost item on the stack is greater than the second
     - [x] OP `0x6a` Depth - Pushes the depth of the current frame onto the stack as an `Unsigned16`
-    - [x] OP `0x6b` IfDup - If the topmost item on the stack is not `0`, duplicate it
+    - [x] OP `0x6b` Factorial - Pops the topmost item from the stack and performs a factorial operation on it.
     - [x] OP `0x6c` Drop - Removes the topmost item on the stack
     - [x] OP `0x6d` Dup - Duplicates the topmost item on the stack
     - [x] OP `0x6e` Nip - Removes the second item on the stack

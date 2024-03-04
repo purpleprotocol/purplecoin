@@ -8765,9 +8765,8 @@ impl ScriptExecutor {
                     *memory_size += 2;
                 }
 
-                ScriptEntry::Opcode(OP::IfDup) => {
-                    let len = exec_stack.len();
-                    if len == 0 {
+                ScriptEntry::Opcode(OP::Factorial) => {
+                    if exec_stack.is_empty() {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
@@ -8775,10 +8774,12 @@ impl ScriptExecutor {
                         return;
                     }
 
-                    if !exec_stack[len - 1].equals_0() {
-                        let c = exec_stack[len - 1].clone();
-                        *memory_size += c.size();
-                        exec_stack.push(c);
+                    let mut last = exec_stack.last_mut().unwrap();
+                    if last.factorial(exec_count).is_none() {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidArgs,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
                     }
                 }
 
@@ -9149,6 +9150,7 @@ impl ScriptExecutor {
                     }
 
                     let copy = exec_stack.clone();
+                    *exec_stack += copy.len() as u64;
                     exec_stack.extend_from_slice(&copy);
                     *memory_size *= 2;
                 }
@@ -9172,6 +9174,7 @@ impl ScriptExecutor {
                     }
 
                     if let VmTerm::Unsigned8Array(arr) = term {
+                        *exec_count += arr.len() as u64;
                         let utf8 = from_utf8(arr);
                         if utf8.is_err() {
                             exec_stack.push(VmTerm::Unsigned8(0));
@@ -9687,6 +9690,7 @@ impl ScriptExecutor {
 
                     let last = exec_stack.pop().unwrap();
                     *memory_size -= last.size();
+                    *exec_count += last.size() as u64;
 
                     let bytes = last.to_bytes_raw();
                     let encoded = hex::encode(bytes);
@@ -9708,6 +9712,7 @@ impl ScriptExecutor {
 
                     let last = exec_stack.pop().unwrap();
                     *memory_size -= last.size();
+                    *exec_count += last.size() as u64;
 
                     match last {
                         VmTerm::Unsigned8Array(val) => match hex::decode(val) {
@@ -16883,63 +16888,6 @@ mod tests {
             VmTerm::Unsigned16(7),
             VmTerm::Unsigned16(6),
             VmTerm::Unsigned16(5),
-        ];
-        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
-        let mut idx_map = HashMap::new();
-        let mut outs = vec![];
-        let mut verif_stack = VerificationStack::new();
-
-        assert_eq!(
-            ss.execute(
-                &base.args,
-                &base.ins,
-                &mut outs,
-                &mut idx_map,
-                &mut verif_stack,
-                [0; 32],
-                key,
-                "",
-                VmFlags::default()
-            ),
-            Ok(ExecutionResult::OkVerify).into()
-        );
-        assert_eq!(outs, base.out);
-    }
-
-    #[test]
-    fn it_if_dup() {
-        let key = "test_key";
-        let mut ss = Script {
-            script: vec![
-                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x0),
-                ScriptEntry::Opcode(OP::IfDup),
-                ScriptEntry::Opcode(OP::IfDup),
-                ScriptEntry::Opcode(OP::IfDup),
-                ScriptEntry::Opcode(OP::IfDup),
-                ScriptEntry::Opcode(OP::Unsigned8Var),
-                ScriptEntry::Byte(0x1),
-                ScriptEntry::Opcode(OP::IfDup),
-                ScriptEntry::Opcode(OP::IfDup),
-                ScriptEntry::Opcode(OP::Depth),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PopToScriptOuts),
-                ScriptEntry::Opcode(OP::PushOut),
-                ScriptEntry::Opcode(OP::Verify),
-            ],
-            ..Script::default()
-        };
-
-        let script_output: Vec<VmTerm> = vec![
-            VmTerm::Unsigned16(7),
-            VmTerm::Unsigned8(1),
-            VmTerm::Unsigned8(1),
-            VmTerm::Unsigned8(1),
-            VmTerm::Unsigned8(0),
         ];
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();

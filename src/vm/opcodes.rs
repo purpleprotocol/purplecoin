@@ -117,7 +117,7 @@ pub enum OP {
     ContinueIfLt = 0x68,
     ContinueIfGt = 0x69,
     Depth = 0x6a,
-    IfDup = 0x6b,
+    Factorial = 0x6b,
     Drop = 0x6c,
     Dup = 0x6d,
     Nip = 0x6e,

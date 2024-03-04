@@ -4,6 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use crate::consensus::rules::SCRIPT_GAS_LIMIT;
 use crate::vm::internal::VmTerm::{Hash512, Unsigned8, UnsignedBig};
 use bincode::{Decode, Encode};
 use ibig::ops::Abs;
@@ -1415,6 +1416,192 @@ impl VmTerm {
                     *x = x.checked_sub(*y)?;
                 }
                 *exec_count += lhs_val.len() as u64;
+            }
+            _ => {
+                return None;
+            }
+        }
+
+        Some(())
+    }
+
+    pub fn factorial(&mut self, exec_count: &mut u64) -> Option<()> {
+        if self.is_array() {
+            return None;
+        }
+
+        match self {
+            Self::Unsigned8(ref mut v) if *v >= 2 => {
+                let mut product: u8 = 1;
+                for i in 2..=*v {
+                    product = product.checked_mul(i)?;
+                    *exec_count += 1;
+                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                        return None;
+                    }
+                }
+                *v = product;
+            }
+            Self::Unsigned8(ref mut v) if *v < 2 => {
+                *v = 1;
+            }
+            Self::Unsigned16(ref mut v) if *v >= 2 => {
+                let mut product: u16 = 1;
+                for i in 2..=*v {
+                    product = product.checked_mul(i)?;
+                    *exec_count += 1;
+                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                        return None;
+                    }
+                }
+                *v = product;
+            }
+            Self::Unsigned16(ref mut v) if *v < 2 => {
+                *v = 1;
+            }
+            Self::Unsigned32(ref mut v) if *v >= 2 => {
+                let mut product: u32 = 1;
+                for i in 2..=*v {
+                    product = product.checked_mul(i)?;
+                    *exec_count += 1;
+                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                        return None;
+                    }
+                }
+                *v = product;
+            }
+            Self::Unsigned32(ref mut v) if *v < 2 => {
+                *v = 1;
+            }
+            Self::Unsigned64(ref mut v) if *v >= 2 => {
+                let mut product: u64 = 1;
+                for i in 2..=*v {
+                    product = product.checked_mul(i)?;
+                    *exec_count += 1;
+                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                        return None;
+                    }
+                }
+                *v = product;
+            }
+            Self::Unsigned64(ref mut v) if *v < 2 => {
+                *v = 1;
+            }
+            Self::Unsigned128(ref mut v) if *v >= 2 => {
+                let mut product: u128 = 1;
+                for i in 2..=*v {
+                    product = product.checked_mul(i)?;
+                    *exec_count += 1;
+                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                        return None;
+                    }
+                }
+                *v = product;
+            }
+            Self::Unsigned128(ref mut v) if *v < 2 => {
+                *v = 1;
+            }
+            Self::UnsignedBig(ref mut v) if *v >= ubig!(2) => {
+                let mut product = ubig!(1);
+                let mut i = ubig!(2);
+                while i <= *v {
+                    product *= i;
+                    *exec_count += 1;
+                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                        return None;
+                    }
+                    i += 1;
+                }
+                *v = product;
+            }
+            Self::UnsignedBig(ref mut v) if *v < ubig!(2) => {
+                *v = ubig!(1);
+            }
+            Self::Signed8(ref mut v) if *v >= 2 => {
+                let mut product: i8 = 1;
+                for i in 2..=*v {
+                    product = product.checked_mul(i)?;
+                    *exec_count += 1;
+                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                        return None;
+                    }
+                }
+                *v = product;
+            }
+            Self::Signed8(ref mut v) if *v >= 0 && *v < 2 => {
+                *v = 1;
+            }
+            Self::Signed16(ref mut v) if *v >= 2 => {
+                let mut product: i16 = 1;
+                for i in 2..=*v {
+                    product = product.checked_mul(i)?;
+                    *exec_count += 1;
+                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                        return None;
+                    }
+                }
+                *v = product;
+            }
+            Self::Signed16(ref mut v) if *v >= 0 && *v < 2 => {
+                *v = 1;
+            }
+            Self::Signed32(ref mut v) if *v >= 2 => {
+                let mut product: i32 = 1;
+                for i in 2..=*v {
+                    product = product.checked_mul(i)?;
+                    *exec_count += 1;
+                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                        return None;
+                    }
+                }
+                *v = product;
+            }
+            Self::Signed32(ref mut v) if *v >= 0 && *v < 2 => {
+                *v = 1;
+            }
+            Self::Signed64(ref mut v) if *v >= 2 => {
+                let mut product: i64 = 1;
+                for i in 2..=*v {
+                    product = product.checked_mul(i)?;
+                    *exec_count += 1;
+                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                        return None;
+                    }
+                }
+                *v = product;
+            }
+            Self::Signed64(ref mut v) if *v >= 0 && *v < 2 => {
+                *v = 1;
+            }
+            Self::Signed128(ref mut v) if *v >= 2 => {
+                let mut product: i128 = 1;
+                for i in 2..=*v {
+                    product = product.checked_mul(i)?;
+                    *exec_count += 1;
+                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                        return None;
+                    }
+                }
+                *v = product;
+            }
+            Self::Signed128(ref mut v) if *v >= 0 && *v < 2 => {
+                *v = 1;
+            }
+            Self::SignedBig(ref mut v) if *v >= ibig!(2) => {
+                let mut product = ibig!(1);
+                let mut i = ibig!(2);
+                while i <= *v {
+                    product *= i;
+                    *exec_count += 1;
+                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                        return None;
+                    }
+                    i += 1;
+                }
+                *v = product;
+            }
+            Self::SignedBig(ref mut v) if *v >= ibig!(0) && *v < ibig!(2) => {
+                *v = ibig!(1);
             }
             _ => {
                 return None;
