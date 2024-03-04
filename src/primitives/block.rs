@@ -32,13 +32,15 @@ use merkletree::store::VecStore;
 use rand::prelude::*;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
+use schnorrkel::signing_context;
+use schnorrkel::vrf::{VRFInOut, VRFPreOut, VRFProof};
 use serde::{Deserialize, Serialize};
 use std::cmp;
 use std::collections::HashMap;
 use std::io::{self, prelude::*, BufReader, Cursor};
 use triomphe::Arc;
 
-type OutWitnessVec = Vec<(Output, Witness<Rsa2048, Output>)>;
+pub type OutWitnessVec = Vec<(Output, Witness<Rsa2048, Output>)>;
 
 #[cfg(host_family = "windows")]
 macro_rules! psep {
@@ -169,6 +171,21 @@ pub struct PowBlockHeader {
     /// This is null if `block_height % 4 == 0 | 2`.
     pub runnerups_prev_hash: Option<Hash256>,
 
+    /// Public key used to produce the VRF
+    pub vrf_pkey_bytes: [u8; 32],
+
+    /// VRF output.
+    pub vrf_out: [u8; 32],
+
+    /// VRF proof first 32 bytes
+    pub vrf_proof_1: [u8; 32],
+
+    /// VRF proof next 32 bytes
+    pub vrf_proof_2: [u8; 32],
+
+    /// An extra data field of max 14 bytes
+    pub extra_data: Vec<u8>,
+
     /// Cached block hash
     pub hash: Option<Hash256>,
 }
@@ -183,8 +200,14 @@ impl PowBlockHeader {
         prev_root: Hash256,
         runnerups: Option<[&PowBlockHeader; SECTORS - 1]>,
         blocks: Vec<BlockHeader>,
+        vrf_pkey_bytes: [u8; 32],
+        extra_data: Vec<u8>,
         key: &str,
     ) -> Result<Self, BlockVerifyErr> {
+        assert!(
+            extra_data.len() <= 14,
+            "extra data field too large expected max 14 bytes"
+        );
         let mt: MerkleTree<Hash256, Hash256Algo, VecStore<Hash256>> =
             MerkleTree::from_data::<Hash256, _>(blocks.iter().map(|b| b.hash().unwrap()).copied())
                 .unwrap();
@@ -246,9 +269,14 @@ impl PowBlockHeader {
             bits: prev.bits,
             bt_mean: prev.bt_mean,
             diff_heights: prev.diff_heights,
+            extra_data,
             runnerup_hashes,
             runnerups_prev_hash,
             timestamp,
+            vrf_pkey_bytes,
+            vrf_out: [0; 32], // Set these as null before the block is being mined
+            vrf_proof_1: [0; 32], // Set these as null before the block is being mined
+            vrf_proof_2: [0; 32], // Set these as null before the block is being mined
             hash: None,
         };
 
@@ -319,6 +347,11 @@ impl PowBlockHeader {
             prev_root: Hash256::zero(),
             runnerup_hashes: Some([Hash256::zero(); SECTORS - 1]),
             runnerups_prev_hash: Some(Hash256::zero()),
+            vrf_pkey_bytes: [0; 32], // These are null in the genesis block
+            vrf_out: [0; 32],        // These are null in the genesis block
+            vrf_proof_1: [0; 32],    // These are null in the genesis block
+            vrf_proof_2: [0; 32],    // These are null in the genesis block
+            extra_data: vec![],
             hash: None,
         };
 
@@ -469,6 +502,9 @@ impl PowBlockHeader {
 
             _ => unreachable!(),
         }
+
+        self.validate_pow()?;
+        self.validate_vrf_fields()?;
 
         Ok(())
     }
@@ -632,13 +668,56 @@ impl PowBlockHeader {
         self.hash.as_ref()
     }
 
+    /// Validate vrf fields. Also returns the `VRFInOut` to be used for
+    /// generation of RNGs.
+    pub fn validate_vrf_fields(&self) -> Result<VRFInOut, BlockVerifyErr> {
+        let pub_key = PublicKey::from_bytes(&self.vrf_pkey_bytes)
+            .map_err(|_| BlockVerifyErr::InvalidVrfFields)?;
+        let vrf_out = VRFPreOut(self.vrf_out);
+        let mut vrf_proof_buf = [0; 64];
+        let mut i = 0;
+        while i < 64 {
+            if i < 32 {
+                vrf_proof_buf[i] = self.vrf_proof_1[i];
+            } else {
+                vrf_proof_buf[i] = self.vrf_proof_2[i - 32];
+            }
+            i += 1;
+        }
+        let vrf_proof =
+            VRFProof::from_bytes(&vrf_proof_buf).map_err(|_| BlockVerifyErr::InvalidVrfFields)?;
+        let ctx = signing_context(&self.prev_hash.0);
+        let transcript = ctx.bytes(&self.hash().unwrap().0);
+
+        let r = pub_key
+            .0
+            .vrf_verify(transcript, &vrf_out, &vrf_proof)
+            .map_err(|_| BlockVerifyErr::InvalidVrfFields)?;
+
+        Ok(r.0)
+    }
+
     /// Compute hash
     pub fn compute_hash(&mut self) {
+        // Backup vrf out and proof fields
+        let vrf_out_bak = self.vrf_out;
+        let vrf_proof_1_bak = self.vrf_proof_1;
+        let vrf_proof_2_bak = self.vrf_proof_2;
+        // Set vrf out and proof to null for hash computation
+        self.vrf_out = [0; 32];
+        self.vrf_proof_1 = [0; 32];
+        self.vrf_proof_2 = [0; 32];
+        // Compute hash
         let encoded = crate::codec::encode_to_vec(self).unwrap();
         let hash = match self.map_height_to_algo() {
             PowAlgorithm::RandomHash(algo) => algo.hash(&encoded),
             PowAlgorithm::GR => Hash256(hash_arb_bytes_gr(&encoded, self.prev_hash.0)),
         };
+        // Set back the vrf fields from backups
+        self.vrf_out = vrf_out_bak;
+        self.vrf_proof_1 = vrf_proof_1_bak;
+        self.vrf_proof_2 = vrf_proof_2_bak;
+        // Set the hash
         self.hash = Some(hash);
     }
 }
@@ -870,7 +949,6 @@ impl BlockHeader {
                     VmTerm::Unsigned32(0),
                 ];
                 let mut input = Input {
-                    script: Script::new_coinbase(),
                     input_flags: InputFlags::IsCoinbase,
                     script_args,
                     ..Default::default()
@@ -889,11 +967,12 @@ impl BlockHeader {
         let mut out_stack = vec![];
         let mut ver_stack = VerificationStack::new();
         let mut idx_map = HashMap::new();
+        let script = Script::new_coinbase();
 
         // Compute outputs
         for input in &inputs {
             let in_clone = input.clone();
-            let result = input.script.execute(
+            let result = script.execute(
                 &input.script_args,
                 &[in_clone],
                 &mut out_stack,
@@ -901,7 +980,11 @@ impl BlockHeader {
                 &mut ver_stack,
                 [0; 32],
                 key,
-                VmFlags::default(),
+                SETTINGS.node.network_name.as_str(),
+                VmFlags {
+                    is_coinbase: true,
+                    ..VmFlags::default()
+                },
             );
 
             assert_eq!(
@@ -1099,7 +1182,6 @@ impl Block {
         let mut idx_map = HashMap::new();
         let coinbase_height = prev.height + 1;
         let mut input = Input {
-            script: Script::new_coinbase(),
             input_flags: InputFlags::IsCoinbase,
             script_args: vec![
                 VmTerm::Signed128(map_height_to_block_reward(coinbase_height)),
@@ -1121,6 +1203,7 @@ impl Block {
             &mut ver_stack,
             [0; 32],
             key,
+            SETTINGS.node.network_name.as_str(),
             VmFlags {
                 is_coinbase: input.is_coinbase(),
                 chain_id: prev.chain_id,
@@ -1130,9 +1213,8 @@ impl Block {
                 validate_output_amounts: true,
                 prev_block_hash: prev.hash().unwrap().0,
                 in_binary: input.to_bytes_for_signing(),
-                in_args: input.script_args.clone(),
                 spent_out: input.out.clone(),
-                base_ctx: "".to_owned(), // TODO: Inject base context here
+                can_fail: false,
             },
         );
 
@@ -1236,7 +1318,7 @@ impl BlockData {
 
         let block_height = prev.height + 1;
         let block_reward = map_height_to_block_reward(block_height);
-        let mut idx_map = HashMap::new();
+        //let mut idx_map = HashMap::new();
         let mut coinbase: Option<Input> = None;
         let mut coinbase_count = 0;
         let mut coloured_coinbase_count = 0;
@@ -1253,103 +1335,6 @@ impl BlockData {
             if let Some(public_key) = &input.spending_pkey {
                 public_keys.push(public_key.0);
                 transcripts.push(ctx.bytes(&input.to_bytes()));
-            }
-
-            match input.input_flags {
-                InputFlags::IsCoinbase => {
-                    coinbase_count += 1;
-
-                    if coinbase_count != 1 {
-                        return Err(BlockVerifyErr::InvalidCoinbase);
-                    }
-
-                    let oracle_script = Script::new_coinbase();
-
-                    if input.script != oracle_script {
-                        return Err(BlockVerifyErr::InvalidCoinbase);
-                    }
-
-                    if input.script_args.len() != 5 {
-                        return Err(BlockVerifyErr::InvalidCoinbase);
-                    }
-
-                    let a1 = &input.script_args[0];
-                    let a2 = &input.script_args[1];
-                    let a3 = &input.script_args[2];
-                    let a4 = &input.script_args[3];
-                    let a5 = &input.script_args[4];
-
-                    // Validate terms
-                    match (a1, a2, a3, a4, a5) {
-                        (
-                            VmTerm::Signed128(amount),
-                            VmTerm::Hash160(_),
-                            VmTerm::Hash160(_),
-                            VmTerm::Unsigned64(coinbase_height),
-                            VmTerm::Unsigned32(_),
-                        ) if amount == &block_reward && coinbase_height == &block_height => {
-                            let result = input.script.execute(
-                                &input.script_args,
-                                &[input.clone()],
-                                &mut to_add,
-                                &mut idx_map,
-                                &mut ver_stack,
-                                [0; 32], // TODO: Inject seed here
-                                key,
-                                VmFlags {
-                                    is_coinbase: true,
-                                    chain_id: prev.chain_id,
-                                    chain_height: prev.height + 1,
-                                    chain_timestamp: prev_pow.timestamp,
-                                    build_stacktrace: false,
-                                    validate_output_amounts: true,
-                                    prev_block_hash: prev.hash().unwrap().0,
-                                    in_binary: input.to_bytes_for_signing(),
-                                    in_args: input.script_args.clone(),
-                                    spent_out: input.out.clone(),
-                                    base_ctx: "".to_owned(), // TODO: Inject base context here
-                                },
-                            );
-
-                            // Validate script execution
-                            match result {
-                                VmResult(Ok(ExecutionResult::Ok)) => {
-                                    // Validate input format
-                                    if let Some(public_key) = &input.spending_pkey {
-                                        // We cannot have a spending key on a coinbase input
-                                        return Err(BlockVerifyErr::InvalidInputFormat);
-                                    }
-                                }
-                                VmResult(Ok(ExecutionResult::OkVerify)) => {
-                                    // We cannot hit an OP_Verify or other derivates on a coinbase input
-                                    return Err(BlockVerifyErr::InvalidInputFormat);
-                                }
-                                _ => return Err(BlockVerifyErr::InvalidScriptExecution),
-                            }
-                        }
-                        _ => return Err(BlockVerifyErr::InvalidCoinbase),
-                    }
-                }
-
-                InputFlags::IsColouredCoinbase => {
-                    coloured_coinbase_count += 1;
-
-                    if coloured_coinbase_count > 2 {
-                        return Err(BlockVerifyErr::InvalidCoinbase);
-                    }
-
-                    unimplemented!()
-                }
-
-                InputFlags::Plain => {
-                    to_delete.push((
-                        input.out.as_ref().unwrap().clone(),
-                        input.witness.as_ref().unwrap().clone(),
-                    ));
-                    unimplemented!()
-                }
-
-                _ => unimplemented!(),
             }
         }
 
@@ -1415,6 +1400,11 @@ impl Encode for PowBlockHeader {
         bincode::Encode::encode(&self.bt_mean, encoder)?;
         bincode::Encode::encode(&self.diff_heights, encoder)?;
         bincode::Encode::encode(&self.timestamp, encoder)?;
+        bincode::Encode::encode(&self.vrf_pkey_bytes, encoder)?;
+        bincode::Encode::encode(&self.vrf_out, encoder)?;
+        bincode::Encode::encode(&self.vrf_proof_1, encoder)?;
+        bincode::Encode::encode(&self.vrf_proof_2, encoder)?;
+        bincode::Encode::encode(&self.extra_data, encoder)?;
 
         match self.height % 4 {
             1 | 3 => {
@@ -1450,6 +1440,21 @@ impl Decode for PowBlockHeader {
             bt_mean: bincode::Decode::decode(decoder)?,
             diff_heights: bincode::Decode::decode(decoder)?,
             timestamp: bincode::Decode::decode(decoder)?,
+            vrf_pkey_bytes: bincode::Decode::decode(decoder)?,
+            vrf_out: bincode::Decode::decode(decoder)?,
+            vrf_proof_1: bincode::Decode::decode(decoder)?,
+            vrf_proof_2: bincode::Decode::decode(decoder)?,
+            extra_data: {
+                let d: Vec<u8> = bincode::Decode::decode(decoder)?;
+
+                if d.len() > 14 {
+                    return Err(bincode::error::DecodeError::OtherString(format!(
+                        "invalid extra data, max len is 14, received {}",
+                        d.len()
+                    )));
+                }
+                d
+            },
             runnerup_hashes: match m {
                 1 | 3 => Some(bincode::Decode::decode(decoder)?),
                 _ => None,
@@ -1566,10 +1571,12 @@ pub enum BlockVerifyErr {
     InvalidOuts,
     InvalidCoinbase,
     InvalidRunnerupTimestamp,
+    InvalidExtraData,
     SigVerificationErr,
     InvalidSignature,
     InvalidScriptExecution,
     InvalidInputFormat,
+    InvalidVrfFields,
     Tx(TxVerifyErr),
 }
 
@@ -1584,6 +1591,7 @@ mod tests {
     use super::*;
     use crate::consensus::*;
     use crate::primitives::*;
+    use crate::vm::{StackTrace, VmResult};
     use quickcheck::*;
     use std::collections::{HashMap, HashSet};
     use std::path::PathBuf;
@@ -1699,8 +1707,8 @@ mod tests {
             VmTerm::Unsigned64(1),
             VmTerm::Unsigned32(0),
         ];
+        let script = Script::new_coinbase();
         let mut input = Input {
-            script: Script::new_coinbase(),
             input_flags: InputFlags::IsCoinbase,
             script_args,
             ..Default::default()
@@ -1722,7 +1730,7 @@ mod tests {
 
         for batch_size in &batch_sizes {
             let in_clone = input.clone();
-            input.script.execute(
+            let r = script.execute(
                 &input.script_args,
                 &[in_clone],
                 &mut out_stack,
@@ -1730,8 +1738,14 @@ mod tests {
                 &mut ver_stack,
                 [0; 32],
                 key,
-                VmFlags::default(),
+                "",
+                VmFlags {
+                    is_coinbase: true,
+                    ..VmFlags::default()
+                },
             );
+
+            assert_eq!(r, VmResult(Ok(ExecutionResult::Ok)));
 
             let outputs: Vec<Output> = out_stack
                 .iter()
@@ -1839,6 +1853,64 @@ mod tests {
             accumulator = accumulator2;
             proof_added = Some(pa);
             proof_deleted = Some(pd);
+        }
+    }
+
+    #[test]
+    fn it_doesnt_blow_the_stack_when_processing_a_block_full_of_errors() {
+        let batch_sizes = [
+            250, 500, 750, 1000, 1500, 2000, 2500, 3500, 4000, 10000, 20000,
+        ];
+        let chain_id = 255;
+        let config = ChainConfig::default();
+        let address = Address::from_bech32("pu1wyzgxpzedr24l28ku8nsfwd2h4zrsqas69s3mp").unwrap();
+        let key = config.get_chain_key(chain_id);
+        let ss = Script::new_simple_spend();
+        let sh = ss.to_script_hash(key);
+        let mut out_stack = vec![];
+        let mut ver_stack = VerificationStack::new();
+        let mut idx_map = HashMap::new();
+        let script_args = vec![
+            VmTerm::Signed128(INITIAL_BLOCK_REWARD),
+            VmTerm::Hash160(address.0),
+            VmTerm::Hash160(sh.0),
+            VmTerm::Unsigned64(1),
+            VmTerm::Unsigned32(0),
+        ];
+        let mut input = Input {
+            script: Script::new_coinbase(),
+            input_flags: InputFlags::IsCoinbase,
+            script_args,
+            ..Default::default()
+        };
+        input.compute_hash(key);
+
+        for batch_size in batch_sizes.iter() {
+            let in_clone = input.clone();
+            input.script.execute(
+                &input.script_args,
+                &[in_clone],
+                &mut out_stack,
+                &mut idx_map,
+                &mut ver_stack,
+                [0; 32],
+                key,
+                "",
+                VmFlags::default(),
+            );
+
+            let outputs: Vec<Output> = out_stack
+                .iter()
+                .cycle()
+                .take(*batch_size * SHARDS_PER_SECTOR)
+                .cloned()
+                .map(|mut o| {
+                    o.inputs_hash = Hash160(rand::thread_rng().gen());
+                    o.hash = None;
+                    o.compute_hash(key);
+                    o
+                })
+                .collect();
         }
     }
 }

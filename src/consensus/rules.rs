@@ -68,6 +68,12 @@ pub const MIN_DIFF_GR: u32 = 0x010f_ffff;
 /// Minimum Random hash `PoW` difficulty
 pub const MIN_DIFF_RANDOM_HASH: u32 = 0x020f_ffff;
 
+/// Min ratio of diff change.
+pub const DIFF_CHANGE_MIN: f32 = 0.5;
+
+/// Max ratio of diff change.
+pub const DIFF_CHANGE_MAX: f32 = 2.0;
+
 /// False positive rate for block header bloom filter
 pub const BLOCK_HEADER_BLOOM_FP_RATE: f64 = 0.005;
 
@@ -130,7 +136,8 @@ pub fn map_height_to_block_reward(height: u64) -> Money {
 #[must_use]
 pub fn calc_difficulty(bits: u32, blocktime: u64) -> u32 {
     let mut diff = Difficulty::new(bits);
-    let diff_change = (BLOCK_TIME_SECONDS as f32 / blocktime as f32).clamp(0.5f32, 2f32);
+    let diff_change =
+        (BLOCK_TIME_SECONDS as f32 / blocktime as f32).clamp(DIFF_CHANGE_MIN, DIFF_CHANGE_MAX);
     diff.scale(diff_change).to_u32()
 }
 
@@ -162,6 +169,9 @@ const_assert!(BLOCK_HEADER_BLOOM_FP_RATE <= 0.1);
 const_assert!(SHARDS_PER_SECTOR > 1);
 const_assert!(256 % SHARDS_PER_SECTOR == 0);
 const_assert!(ACCUMULATOR_MULTIPLIER > 0);
+const_assert!(DIFF_CHANGE_MIN > 0.0);
+const_assert!(DIFF_CHANGE_MIN < 1.0);
+const_assert!(DIFF_CHANGE_MAX > 1.0);
 const_assert_eq!(HALVING_INTERVAL % 4, 0);
 const_assert_eq!(SECOND_ROUND_TIMEOUT, BLOCK_TIME_SECONDS as i64 * 3);
 const_assert_eq!(BLOCK_TIMESTAMP_MAX, BLOCK_TIME_SECONDS * 2);
