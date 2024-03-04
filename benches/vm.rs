@@ -1,3 +1,4 @@
+use bitvec::prelude::*;
 use criterion::*;
 use mimalloc::MiMalloc;
 use purplecoin::chain::ChainConfig;
@@ -154,8 +155,9 @@ fn bench_vm_abuse(c: &mut Criterion) {
             ScriptEntry::Opcode(OP::Add1),
             ScriptEntry::Opcode(OP::BreakIfEq),
             ScriptEntry::Opcode(OP::End),
-            ScriptEntry::Opcode(OP::Verify),
+            ScriptEntry::Opcode(OP::Ok),
         ],
+        malleable_args: bitvec![0, 0, 0],
         ..Script::default()
     };
     let sh = ss.to_script_hash(key);
@@ -203,7 +205,7 @@ fn bench_vm_abuse(c: &mut Criterion) {
                                 ..Default::default()
                             }
                         ),
-                        Ok(ExecutionResult::Ok).into()
+                        Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
                     );
                 });
             })
@@ -255,6 +257,7 @@ fn bench_vm_load_var(c: &mut Criterion) {
             ScriptEntry::Opcode(OP::PushOut),
             ScriptEntry::Opcode(OP::Verify),
         ],
+        malleable_args: bitvec![0, 0, 0],
         ..Script::default()
     };
     let script_output: Vec<VmTerm> = vec![
