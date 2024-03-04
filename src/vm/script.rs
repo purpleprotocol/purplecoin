@@ -9141,18 +9141,12 @@ impl ScriptExecutor {
                         return;
                     }
 
-                    if *memory_size > MEMORY_SIZE / 2 {
-                        self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OutOfMemory,
-                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                        );
-                        return;
-                    }
-
                     let copy = exec_stack.clone();
                     *exec_count += copy.len() as u64;
+                    for t in copy.iter() {
+                        *memory_size += t.size();
+                    }
                     exec_stack.extend_from_slice(&copy);
-                    *memory_size *= 2;
                 }
 
                 ScriptEntry::Opcode(OP::IsUTF8) => {
