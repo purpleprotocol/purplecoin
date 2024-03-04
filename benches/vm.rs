@@ -48,12 +48,13 @@ fn bench_coinbase(c: &mut Criterion) {
                     key,
                     "",
                     VmFlags {
+                        is_coinbase: true,
                         build_stacktrace: false,
                         validate_output_amounts: false,
                         ..Default::default()
                     },
                 ),
-                Err((ExecutionResult::Ok, StackTrace::default())).into()
+                Ok(ExecutionResult::Ok).into()
             );
         })
     });
@@ -89,7 +90,7 @@ fn bench_coinbase(c: &mut Criterion) {
                                     ..Default::default()
                                 },
                             ),
-                            Err((ExecutionResult::Ok, StackTrace::default())).into()
+                            Ok(ExecutionResult::Ok).into()
                         );
                     })
                     .collect::<Vec<_>>()
@@ -128,7 +129,7 @@ fn bench_coinbase(c: &mut Criterion) {
                                         ..Default::default()
                                     },
                                 ),
-                                Err((ExecutionResult::Ok, StackTrace::default())).into()
+                                Ok(ExecutionResult::Ok).into()
                             );
                         })
                         .collect::<Vec<_>>()
@@ -196,12 +197,13 @@ fn bench_vm_abuse(c: &mut Criterion) {
                             key,
                             "",
                             VmFlags {
+                                is_coinbase: true,
                                 build_stacktrace: false,
                                 validate_output_amounts: false,
                                 ..Default::default()
                             }
                         ),
-                        Err((ExecutionResult::OutOfGas, StackTrace::default())).into()
+                        Ok(ExecutionResult::Ok).into()
                     );
                 });
             })

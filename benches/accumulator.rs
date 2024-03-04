@@ -46,16 +46,24 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
 
     for batch_size in batch_sizes.iter() {
         let in_clone = input.clone();
-        input.script.execute(
-            &input.script_args,
-            &[in_clone],
-            &mut out_stack,
-            &mut idx_map,
-            &mut ver_stack,
-            [0; 32],
-            key,
-            "",
-            VmFlags::default(),
+        assert_eq!(
+            input.script.execute(
+                &input.script_args,
+                &[in_clone],
+                &mut out_stack,
+                &mut idx_map,
+                &mut ver_stack,
+                [0; 32],
+                key,
+                "",
+                VmFlags {
+                    is_coinbase: true,
+                    build_stacktrace: false,
+                    validate_output_amounts: false,
+                    ..Default::default()
+                },
+            ),
+            Ok(ExecutionResult::Ok).into()
         );
 
         let outputs: Vec<Output> = out_stack
