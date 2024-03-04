@@ -6890,23 +6890,6 @@ impl Script {
                 unreachable!();
             }
 
-            // Check if we are done
-            match frame_stack.last().unwrap().executor.done() {
-                None => {}
-                Some(result) => match result {
-                    Ok(res) => return Ok(res).into(),
-                    Err((result, mut stack_trace)) => {
-                        let fs_len = frame_stack.len();
-
-                        if flags.build_stacktrace {
-                            stack_trace.extend_from_frame_stack(&frame_stack[..fs_len - 1], self);
-                        }
-
-                        return Err((result, stack_trace)).into();
-                    }
-                },
-            }
-
             if exec_count > SCRIPT_GAS_LIMIT {
                 let mut stack_trace = StackTrace::default();
                 let i_ptr = frame_stack.last().unwrap().i_ptr;
@@ -6944,6 +6927,23 @@ impl Script {
                 }
 
                 return Err((ExecutionResult::OutOfMemory, stack_trace)).into();
+            }
+
+            // Check if we are done
+            match frame_stack.last().unwrap().executor.done() {
+                None => {}
+                Some(result) => match result {
+                    Ok(res) => return Ok(res).into(),
+                    Err((result, mut stack_trace)) => {
+                        let fs_len = frame_stack.len();
+
+                        if flags.build_stacktrace {
+                            stack_trace.extend_from_frame_stack(&frame_stack[..fs_len - 1], self);
+                        }
+
+                        return Err((result, stack_trace)).into();
+                    }
+                },
             }
 
             if pop_frame {

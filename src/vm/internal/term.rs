@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::consensus::rules::SCRIPT_GAS_LIMIT;
+use crate::consensus::SCRIPT_GAS_LIMIT;
 use crate::vm::internal::VmTerm::{Hash512, Unsigned8, UnsignedBig};
 use bincode::{Decode, Encode};
 use ibig::ops::Abs;
@@ -1436,7 +1436,7 @@ impl VmTerm {
                 for i in 2..=*v {
                     product = product.checked_mul(i)?;
                     *exec_count += 1;
-                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                    if *exec_count > SCRIPT_GAS_LIMIT {
                         return None;
                     }
                 }
@@ -1450,7 +1450,7 @@ impl VmTerm {
                 for i in 2..=*v {
                     product = product.checked_mul(i)?;
                     *exec_count += 1;
-                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                    if *exec_count > SCRIPT_GAS_LIMIT {
                         return None;
                     }
                 }
@@ -1464,7 +1464,7 @@ impl VmTerm {
                 for i in 2..=*v {
                     product = product.checked_mul(i)?;
                     *exec_count += 1;
-                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                    if *exec_count > SCRIPT_GAS_LIMIT {
                         return None;
                     }
                 }
@@ -1478,7 +1478,7 @@ impl VmTerm {
                 for i in 2..=*v {
                     product = product.checked_mul(i)?;
                     *exec_count += 1;
-                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                    if *exec_count > SCRIPT_GAS_LIMIT {
                         return None;
                     }
                 }
@@ -1492,7 +1492,7 @@ impl VmTerm {
                 for i in 2..=*v {
                     product = product.checked_mul(i)?;
                     *exec_count += 1;
-                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                    if *exec_count > SCRIPT_GAS_LIMIT {
                         return None;
                     }
                 }
@@ -1505,9 +1505,9 @@ impl VmTerm {
                 let mut product = ubig!(1);
                 let mut i = ubig!(2);
                 while i <= *v {
-                    product *= i;
+                    product *= i.clone();
                     *exec_count += 1;
-                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                    if *exec_count > SCRIPT_GAS_LIMIT {
                         return None;
                     }
                     i += 1;
@@ -1522,7 +1522,7 @@ impl VmTerm {
                 for i in 2..=*v {
                     product = product.checked_mul(i)?;
                     *exec_count += 1;
-                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                    if *exec_count > SCRIPT_GAS_LIMIT {
                         return None;
                     }
                 }
@@ -1536,7 +1536,7 @@ impl VmTerm {
                 for i in 2..=*v {
                     product = product.checked_mul(i)?;
                     *exec_count += 1;
-                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                    if *exec_count > SCRIPT_GAS_LIMIT {
                         return None;
                     }
                 }
@@ -1550,7 +1550,7 @@ impl VmTerm {
                 for i in 2..=*v {
                     product = product.checked_mul(i)?;
                     *exec_count += 1;
-                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                    if *exec_count > SCRIPT_GAS_LIMIT {
                         return None;
                     }
                 }
@@ -1564,7 +1564,7 @@ impl VmTerm {
                 for i in 2..=*v {
                     product = product.checked_mul(i)?;
                     *exec_count += 1;
-                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                    if *exec_count > SCRIPT_GAS_LIMIT {
                         return None;
                     }
                 }
@@ -1578,7 +1578,7 @@ impl VmTerm {
                 for i in 2..=*v {
                     product = product.checked_mul(i)?;
                     *exec_count += 1;
-                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                    if *exec_count > SCRIPT_GAS_LIMIT {
                         return None;
                     }
                 }
@@ -1591,9 +1591,9 @@ impl VmTerm {
                 let mut product = ibig!(1);
                 let mut i = ibig!(2);
                 while i <= *v {
-                    product *= i;
+                    product *= i.clone();
                     *exec_count += 1;
-                    if *exec_count >= SCRIPT_GAS_LIMIT {
+                    if *exec_count > SCRIPT_GAS_LIMIT {
                         return None;
                     }
                     i += 1;
