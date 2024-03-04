@@ -9150,7 +9150,7 @@ impl ScriptExecutor {
                     }
 
                     let copy = exec_stack.clone();
-                    *exec_stack += copy.len() as u64;
+                    *exec_count += copy.len() as u64;
                     exec_stack.extend_from_slice(&copy);
                     *memory_size *= 2;
                 }
