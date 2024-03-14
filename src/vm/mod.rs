@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MITv
 
-mod bifs;
+pub mod bifs;
 pub mod internal;
 mod opcodes;
 mod script;
