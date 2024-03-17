@@ -1280,7 +1280,7 @@ impl Block {
 #[derive(PartialEq, Debug)]
 /// Pow block body
 pub struct PowBlockData {
-    pub blocks: [Option<Arc<Block>>; 64],
+    pub blocks: [Option<Arc<Block>>; SHARDS_PER_SECTOR],
 }
 
 #[derive(PartialEq, Debug, Encode, Decode, Default)]
