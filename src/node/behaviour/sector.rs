@@ -17,7 +17,7 @@ use libp2p::{request_response, PeerId};
 use std::fmt;
 use tarpc::tokio_util::time::delay_queue::Key;
 
-use crate::node::request_peer::{
+use crate::node::sector::request_peer::{
     PeerInfoRequest, PeerInfoRequestCodec, PeerInfoRequestProtocol, PeerInfoResponse,
 };
 

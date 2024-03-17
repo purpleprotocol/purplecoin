@@ -4,7 +4,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use self::request_peer::PeerInfoRequest;
+use self::sector::request_peer::PeerInfoRequest;
 use crate::chain::{
     Chain, ChainConfig, DBInterface, IteratorDirection, PowChainBackend, Shard, ShardBackend,
 };
@@ -12,7 +12,7 @@ use crate::consensus::{SECTORS, SHARDS_PER_SECTOR};
 use crate::node::behaviour::{ClusterBehaviour, ExchangeBehaviour, SectorBehaviour, SectorEvent};
 use crate::node::peer_info::PeerInfo;
 use crate::settings::SETTINGS;
-use crate::{chain::backend::disk::DiskBackend, node::request_peer::PeerInfoResponse};
+use crate::{chain::backend::disk::DiskBackend, node::sector::request_peer::PeerInfoResponse};
 use async_channel::{unbounded, Receiver, Sender};
 use blake3::Hash;
 use fancy_regex::Regex;
@@ -471,5 +471,5 @@ fn resolve_txt_record(fqdn: &str) -> Option<Vec<String>> {
 mod behaviour;
 mod mempool;
 mod peer_info;
-mod request_peer;
 mod rpc;
+mod sector;
