@@ -17,7 +17,7 @@ pub struct ClusterBehaviour {
 
 impl ClusterBehaviour {
     pub fn new(local_pbk: &PublicKey) -> Self {
-        let identify_config = identify::Config::new("purplecoin/0.1.0".into(), local_pbk.clone());
+        let identify_config = identify::Config::new("xpu/0.1.0".into(), local_pbk.clone());
         let identify_behavior = identify::Behaviour::new(identify_config);
         let ping_config = ping::Config::default();
         let ping_behavior = ping::Behaviour::new(ping_config);

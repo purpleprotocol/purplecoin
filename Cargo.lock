@@ -4399,7 +4399,6 @@ dependencies = [
  "tarpc",
  "tiny-bip39",
  "tokio",
- "tokio-rayon",
  "toml 0.5.11",
  "tracing",
  "tracing-opentelemetry",
@@ -5878,16 +5877,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.48",
-]
-
-[[package]]
-name = "tokio-rayon"
-version = "2.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cf33a76e0b1dd03b778f83244137bd59887abf25c0e87bc3e7071105f457693"
-dependencies = [
- "rayon",
- "tokio",
 ]
 
 [[package]]

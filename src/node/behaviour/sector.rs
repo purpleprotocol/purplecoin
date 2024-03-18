@@ -35,7 +35,7 @@ pub struct SectorBehaviour {
 impl SectorBehaviour {
     fn build_identify_behaviour(local_key: &PublicKey) -> identify::Behaviour {
         let identify_config = identify::Config::new(
-            format!("purplecoin/{}", env!("CARGO_PKG_VERSION")),
+            format!("xpu/{}", env!("CARGO_PKG_VERSION")),
             local_key.clone(),
         );
         identify::Behaviour::new(identify_config)
@@ -66,8 +66,8 @@ impl SectorBehaviour {
         let peer_request_codec = PeerInfoRequestCodec;
         let peer_request_protocol = vec![(
             PeerInfoRequestProtocol::new(
-                format!("purplecoin/{}", env!("CARGO_PKG_VERSION")),
-                "/purplecoin/peer_info/".to_string(),
+                format!("xpu/{}", env!("CARGO_PKG_VERSION")),
+                "/xpu/peer_info/".to_string(),
             ),
             ProtocolSupport::Full,
         )];
