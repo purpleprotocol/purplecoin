@@ -63,7 +63,7 @@ trust-dns-resolver = "0.22.0"
 bitvec = "1.0.1"
 futures = "0.3"
 tarpc = { version = "0.31", features = ["full"] }
-tokio = { version = "1.36", features = ["full"] }
+tokio = { version = "=1.28.1", features = ["full"] }
 tokio-rayon = "2.1.0"
 warp = "0.3.3"
 rayon = "1.5.3"
