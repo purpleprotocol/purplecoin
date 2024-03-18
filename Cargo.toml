@@ -64,7 +64,7 @@ bitvec = "1.0.1"
 futures = "0.3"
 tarpc = { version = "0.31", features = ["full"] }
 tokio = { version = "=1.28.1", features = ["full"] }
-#tokio-rayon = "2.1.0"
+tokio-rayon = "2.1.0"
 warp = "0.3.3"
 rayon = "1.5.3"
 bytes = "1.4.0"
@@ -123,7 +123,10 @@ version = "0.8.6"
 features = ["xxh3", "const_xxh3"]
 
 [dependencies.rocksdb]
-version = "0.21.0"
+#version = "0.22.0"
+git = "https://github.com/rust-rocksdb/rust-rocksdb"
+default-features = false
+features = ["snappy", "lz4", "zstd", "zlib", "bzip2", "portable"]
 
 [target.'cfg(not(windows))'.dependencies]
 signal-hook = "0.3.4"

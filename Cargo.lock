@@ -469,17 +469,16 @@ dependencies = [
 
 [[package]]
 name = "bindgen"
-version = "0.65.1"
+version = "0.69.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfdf7b466f9a4903edc73f95d6d2bcd5baf8ae620638762244d3f60143643cc5"
+checksum = "a00dc851838a2120612785d195287475a3ac45514741da670b735818822129a0"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.4.2",
  "cexpr",
  "clang-sys",
+ "itertools",
  "lazy_static",
  "lazycell",
- "peeking_take_while",
- "prettyplease",
  "proc-macro2",
  "quote",
  "regex",
@@ -3096,11 +3095,10 @@ dependencies = [
 
 [[package]]
 name = "librocksdb-sys"
-version = "0.11.0+8.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3386f101bcb4bd252d8e9d2fb41ec3b0862a15a62b478c355b2982efa469e3e"
+version = "0.16.0+8.10.0"
+source = "git+https://github.com/rust-rocksdb/rust-rocksdb#0d8804a5d668989fc450205e990204bf72427650"
 dependencies = [
- "bindgen 0.65.1",
+ "bindgen 0.69.4",
  "bzip2-sys",
  "cc",
  "glob",
@@ -4192,16 +4190,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "prettyplease"
-version = "0.2.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a41cf62165e97c7f814d2221421dbb9afcbcdb0a88068e5ea206e19951c2cbb5"
-dependencies = [
- "proc-macro2",
- "syn 2.0.48",
-]
-
-[[package]]
 name = "proc-macro-crate"
 version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4399,6 +4387,7 @@ dependencies = [
  "tarpc",
  "tiny-bip39",
  "tokio",
+ "tokio-rayon",
  "toml 0.5.11",
  "tracing",
  "tracing-opentelemetry",
@@ -4830,9 +4819,8 @@ dependencies = [
 
 [[package]]
 name = "rocksdb"
-version = "0.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb6f170a4041d50a0ce04b0d2e14916d6ca863ea2e422689a5b694395d299ffe"
+version = "0.22.0"
+source = "git+https://github.com/rust-rocksdb/rust-rocksdb#0d8804a5d668989fc450205e990204bf72427650"
 dependencies = [
  "libc",
  "librocksdb-sys",
@@ -5877,6 +5865,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.48",
+]
+
+[[package]]
+name = "tokio-rayon"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cf33a76e0b1dd03b778f83244137bd59887abf25c0e87bc3e7071105f457693"
+dependencies = [
+ "rayon",
+ "tokio",
 ]
 
 [[package]]
