@@ -11,7 +11,7 @@ use libp2p::swarm::NetworkBehaviour;
 use libp2p::{
     dcutr, identify,
     kad::{self, store},
-    mdns, ping, upnp, relay,
+    mdns, ping, relay, upnp,
 };
 use libp2p::{request_response, PeerId};
 use std::fmt;
