@@ -120,9 +120,20 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
             network => panic!("invalid network name: {network}"),
         };
 
-        let addrs = format!("/ip4/{}/tcp/{}", SETTINGS.network.listen_addr, listen_port);
+        let tcp_addrs = format!("/ip4/{}/tcp/{}", SETTINGS.network.listen_addr, listen_port);
+        let quic_addrs = format!(
+            "/ip4/{}/udp/{}/quic-v1",
+            SETTINGS.network.listen_addr, listen_port
+        );
         sector_swarm
-            .listen_on(addrs.parse().expect("Could not parse listener address"))
+            .listen_on(tcp_addrs.parse().expect("Could not parse listener address"))
+            .expect("Invalid listener address");
+        sector_swarm
+            .listen_on(
+                quic_addrs
+                    .parse()
+                    .expect("Could not parse listener address"),
+            )
             .expect("Invalid listener address");
 
         // Exchange swarm
