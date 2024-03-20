@@ -72,6 +72,7 @@ libp2p = { version = "0.53.2", features = [
     "ping",
     "identify",
     "kad",
+    "dcutr",
     "mdns",
     "yamux",
     "macros",
@@ -83,6 +84,7 @@ libp2p = { version = "0.53.2", features = [
     "relay",
     "request-response",
     "gossipsub",
+    "upnp",
 ] }
 unsigned-varint = "0.8.0"
 async-trait = "0.1"

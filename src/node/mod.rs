@@ -94,24 +94,67 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
         let local_peer_id = PeerId::from(local_pbk.clone());
 
         // Sector swarm
-        let mut sector_swarm = SwarmBuilder::with_existing_identity(id.clone())
-            .with_tokio()
-            .with_tcp(
-                tcp::Config::default().port_reuse(true).nodelay(true),
-                noise::Config::new,
-                yamux::Config::default,
-            )
-            .expect("could not start tcp stack")
-            .with_quic()
-            .with_dns()
-            .expect("DNS client failed")
-            .with_relay_client(noise::Config::new, yamux::Config::default)
-            .expect("could not initialise relay client")
-            .with_behaviour(|_key, relay_client| {
-                SectorBehaviour::new(relay_client, &id, &local_pbk)
-            })
-            .expect("could not initialise behaviour")
-            .build();
+        let mut sector_swarm = SwarmBuilder::with_existing_identity(id.clone()).with_tokio();
+
+        let has_tcp = SETTINGS
+            .network
+            .use_protocols
+            .iter()
+            .any(|p| p.as_str() == "tcp");
+        let has_quic = SETTINGS
+            .network
+            .use_protocols
+            .iter()
+            .any(|p| p.as_str() == "quic");
+
+        // Initialise TCP and/or quic
+        let mut sector_swarm = match (has_tcp, has_quic) {
+            (true, true) => sector_swarm
+                .with_tcp(
+                    tcp::Config::default().port_reuse(true).nodelay(true),
+                    noise::Config::new,
+                    yamux::Config::default,
+                )
+                .expect("could not start tcp stack")
+                .with_quic()
+                .with_dns()
+                .expect("DNS client failed")
+                .with_relay_client(noise::Config::new, yamux::Config::default)
+                .expect("could not initialise relay client")
+                .with_behaviour(|_key, relay_client| {
+                    SectorBehaviour::new(relay_client, &id, &local_pbk)
+                })
+                .expect("could not initialise behaviour")
+                .build(),
+            (false, true) => sector_swarm
+                .with_quic()
+                .with_dns()
+                .expect("DNS client failed")
+                .with_relay_client(noise::Config::new, yamux::Config::default)
+                .expect("could not initialise relay client")
+                .with_behaviour(|_key, relay_client| {
+                    SectorBehaviour::new(relay_client, &id, &local_pbk)
+                })
+                .expect("could not initialise behaviour")
+                .build(),
+            (true, false) => sector_swarm
+                .with_tcp(
+                    tcp::Config::default().port_reuse(true).nodelay(true),
+                    noise::Config::new,
+                    yamux::Config::default,
+                )
+                .expect("could not start tcp stack")
+                .with_dns()
+                .expect("DNS client failed")
+                .with_relay_client(noise::Config::new, yamux::Config::default)
+                .expect("could not initialise relay client")
+                .with_behaviour(|_key, relay_client| {
+                    SectorBehaviour::new(relay_client, &id, &local_pbk)
+                })
+                .expect("could not initialise behaviour")
+                .build(),
+            _ => unreachable!(),
+        };
 
         let listen_port = match SETTINGS.node.network_name.as_str() {
             "mainnet" => SETTINGS.network.listen_port_mainnet,
@@ -120,21 +163,30 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
             network => panic!("invalid network name: {network}"),
         };
 
-        let tcp_addrs = format!("/ip4/{}/tcp/{}", SETTINGS.network.listen_addr, listen_port);
-        let quic_addrs = format!(
-            "/ip4/{}/udp/{}/quic-v1",
-            SETTINGS.network.listen_addr, listen_port
-        );
-        sector_swarm
-            .listen_on(tcp_addrs.parse().expect("Could not parse listener address"))
-            .expect("Invalid listener address");
-        sector_swarm
-            .listen_on(
-                quic_addrs
-                    .parse()
-                    .expect("Could not parse listener address"),
-            )
-            .expect("Invalid listener address");
+        // Listen on tcp address
+        if has_tcp {
+            let tcp_addrs = format!("/ip4/{}/tcp/{}", SETTINGS.network.listen_addr, listen_port);
+
+            sector_swarm
+                .listen_on(tcp_addrs.parse().expect("Could not parse listener address"))
+                .expect("Invalid listener address");
+        }
+
+        // Listen on quic address
+        if has_quic {
+            let quic_addrs = format!(
+                "/ip4/{}/udp/{}/quic-v1",
+                SETTINGS.network.listen_addr, listen_port
+            );
+
+            sector_swarm
+                .listen_on(
+                    quic_addrs
+                        .parse()
+                        .expect("Could not parse listener address"),
+                )
+                .expect("Invalid listener address");
+        }
 
         // Exchange swarm
         let exchange_swarm = SwarmBuilder::with_existing_identity(id.clone())

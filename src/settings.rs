@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs::{metadata, File as FsFile};
+use std::hash::Hash;
 use std::io::{self, Write};
 use struct_field_names_as_array::FieldNamesAsArray;
 
@@ -237,7 +238,7 @@ impl Default for Network {
             listen_port_mainnet: 8098,
             listen_port_testnet: 8031,
             listen_port_devnet: 8021,
-            use_protocols: vec!["tcp".to_owned()],
+            use_protocols: vec!["tcp".to_owned(), "quic".to_owned()],
             desired_peers: 8,
             rpc_enabled: true,
             rpc_listen_port_mainnet: 8067,
@@ -258,13 +259,20 @@ impl Network {
             self.desired_peers > 0,
             "invalid settings: desiredpeers must be greater than 0"
         );
-        assert!(!self.use_protocols.is_empty(), "invalid settings: no value provided for useprotocols. Possible values: quic, tcp, or uds.");
+        assert!(
+            !self.use_protocols.is_empty(),
+            "invalid settings: no value provided for useprotocols. Possible values: quic, tcp."
+        );
         assert!(
             !self
                 .use_protocols
                 .iter()
-                .any(|p| p.as_str() != "quic" && p.as_str() != "tcp" && p.as_str() != "uds"),
-            "invalid settings: useprotocols is invalid, possible values: quic, tcp, or uds."
+                .any(|p| p.as_str() != "quic" && p.as_str() != "tcp"),
+            "invalid settings: useprotocols is invalid, possible values: quic, tcp."
+        );
+        assert!(
+            has_unique_elements(&self.use_protocols),
+            "invalid settings: useprotocols contains duplicate entries"
         );
     }
 }
@@ -570,6 +578,15 @@ enum DynamicConfVal {
     OptionSequenceByte(Option<Vec<u8>>),
     Bool(bool),
     U16(u16),
+}
+
+fn has_unique_elements<T>(iter: T) -> bool
+where
+    T: IntoIterator,
+    T::Item: Eq + Hash,
+{
+    let mut uniq = HashSet::new();
+    iter.into_iter().all(move |x| uniq.insert(x))
 }
 
 #[cfg(test)]

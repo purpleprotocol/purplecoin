@@ -9,9 +9,9 @@ use libp2p::identity::{Keypair, PublicKey};
 use libp2p::request_response::ProtocolSupport;
 use libp2p::swarm::NetworkBehaviour;
 use libp2p::{
-    identify,
+    dcutr, identify,
     kad::{self, store},
-    mdns, ping, relay,
+    mdns, ping, upnp, relay,
 };
 use libp2p::{request_response, PeerId};
 use std::fmt;
@@ -25,9 +25,12 @@ use crate::node::sector::request_peer::{
 #[behaviour(out_event = "SectorEvent")]
 pub struct SectorBehaviour {
     relay_client: relay::client::Behaviour,
+    relay_server: relay::Behaviour,
     identify: identify::Behaviour,
     ping: ping::Behaviour,
+    dcutr: dcutr::Behaviour,
     mdns: mdns::tokio::Behaviour,
+    upnp: upnp::tokio::Behaviour,
     pub gossipsub: gossipsub::Behaviour,
     pub kademlia: kad::Behaviour<kad::store::MemoryStore>,
     pub peer_request: request_response::Behaviour<PeerInfoRequestCodec>,
@@ -40,6 +43,14 @@ impl SectorBehaviour {
             local_key.clone(),
         );
         identify::Behaviour::new(identify_config)
+    }
+
+    fn build_relay_server(id: PeerId) -> relay::Behaviour {
+        relay::Behaviour::new(id, relay::Config::default())
+    }
+
+    fn build_dcutr(id: PeerId) -> dcutr::Behaviour {
+        dcutr::Behaviour::new(id)
     }
 
     fn build_ping_behaviour() -> ping::Behaviour {
@@ -76,26 +87,36 @@ impl SectorBehaviour {
         )
     }
 
+    fn build_upnp() -> upnp::tokio::Behaviour {
+        libp2p::upnp::tokio::Behaviour::default()
+    }
+
     pub fn new(
         relay_client: relay::client::Behaviour,
         local_key: &Keypair,
         local_pbk: &PublicKey,
     ) -> Self {
         let identify = Self::build_identify_behaviour(local_pbk);
+        let dcutr = Self::build_dcutr(local_pbk.into());
         let ping = Self::build_ping_behaviour();
         let mdns = Self::build_mdns_behaviour(local_pbk.into());
         let kademlia = Self::build_kad_behaviour(local_pbk.into());
         let gossipsub = Self::build_gossip_behaviour(local_key);
         let peer_request = Self::build_peer_request_behaviour();
+        let relay_server = Self::build_relay_server(local_pbk.into());
+        let upnp = Self::build_upnp();
 
         Self {
             relay_client,
+            relay_server,
             identify,
+            dcutr,
             ping,
             mdns,
             gossipsub,
             kademlia,
             peer_request,
+            upnp,
         }
     }
 }
@@ -105,10 +126,13 @@ pub enum SectorEvent {
     Identify(identify::Event),
     Ping(ping::Event),
     Mdns(mdns::Event),
+    Dcutr(dcutr::Event),
     Kademlia(kad::Event),
     RelayClient(relay::client::Event),
+    RelayServer(relay::Event),
     PeerRequest(request_response::Event<PeerInfoRequest, PeerInfoResponse>),
     Gossip(gossipsub::Event),
+    Upnp(upnp::Event),
 }
 
 impl From<identify::Event> for SectorEvent {
@@ -138,6 +162,24 @@ impl From<kad::Event> for SectorEvent {
 impl From<relay::client::Event> for SectorEvent {
     fn from(other: relay::client::Event) -> Self {
         Self::RelayClient(other)
+    }
+}
+
+impl From<relay::Event> for SectorEvent {
+    fn from(other: relay::Event) -> Self {
+        Self::RelayServer(other)
+    }
+}
+
+impl From<dcutr::Event> for SectorEvent {
+    fn from(other: dcutr::Event) -> Self {
+        Self::Dcutr(other)
+    }
+}
+
+impl From<upnp::Event> for SectorEvent {
+    fn from(other: upnp::Event) -> Self {
+        Self::Upnp(other)
     }
 }
 
