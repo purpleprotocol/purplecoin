@@ -23,8 +23,8 @@ use libp2p::{
     identify,
     identity::{self, ed25519::SecretKey, Keypair},
     kad, mdns, noise, ping, request_response,
-    swarm::{SwarmBuilder, SwarmEvent},
-    tcp, Multiaddr, PeerId, Swarm, Transport,
+    swarm::SwarmEvent,
+    tcp, Multiaddr, PeerId, Swarm, SwarmBuilder, Transport,
 };
 use log::{debug, error, info};
 pub use mempool::*;
@@ -73,13 +73,8 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
             .get::<_, Vec<u8>>(IDENTITY_KEY.as_bytes())
             .expect("db error")
         {
-            Some(mut keypair_bytes) =>
-            {
-                #[allow(deprecated)]
-                Keypair::Ed25519(
-                    identity::ed25519::Keypair::try_from_bytes(&mut keypair_bytes)
-                        .expect("db corruption"),
-                )
+            Some(mut keypair_bytes) => {
+                Keypair::ed25519_from_bytes(&mut keypair_bytes).expect("db corruption")
             }
             None => {
                 let id: Keypair = Keypair::generate_ed25519();
@@ -99,15 +94,24 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
         let local_peer_id = PeerId::from(local_pbk.clone());
 
         // Sector swarm
-        let sector_behaviour = SectorBehaviour::new(&id, &local_pbk);
-        let swarm_transport = tcp::tokio::Transport::new(tcp::Config::default())
-            .upgrade(upgrade::Version::V1)
-            .authenticate(noise::Config::new(&id).unwrap())
-            .multiplex(yamux::Config::default())
-            .boxed();
-        let mut sector_swarm =
-            SwarmBuilder::with_tokio_executor(swarm_transport, sector_behaviour, local_peer_id)
-                .build();
+        let mut sector_swarm = SwarmBuilder::with_existing_identity(id.clone())
+            .with_tokio()
+            .with_tcp(
+                tcp::Config::default().port_reuse(true).nodelay(true),
+                noise::Config::new,
+                yamux::Config::default,
+            )
+            .expect("could not start tcp stack")
+            .with_quic()
+            .with_dns()
+            .expect("DNS client failed")
+            .with_relay_client(noise::Config::new, yamux::Config::default)
+            .expect("could not initialise relay client")
+            .with_behaviour(|_key, relay_client| {
+                SectorBehaviour::new(relay_client, &id, &local_pbk)
+            })
+            .expect("could not initialise behaviour")
+            .build();
 
         let listen_port = match SETTINGS.node.network_name.as_str() {
             "mainnet" => SETTINGS.network.listen_port_mainnet,
@@ -122,29 +126,36 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
             .expect("Invalid listener address");
 
         // Exchange swarm
-        let exchange_behaviour = ExchangeBehaviour::new(&local_pbk);
-        let exchange_transport = tcp::tokio::Transport::new(tcp::Config::default())
-            .upgrade(upgrade::Version::V1)
-            .authenticate(noise::Config::new(&id).unwrap())
-            .multiplex(yamux::Config::default())
-            .boxed();
-        let exchange_swarm = SwarmBuilder::with_tokio_executor(
-            exchange_transport,
-            exchange_behaviour,
-            local_peer_id,
-        )
-        .build();
+        let exchange_swarm = SwarmBuilder::with_existing_identity(id.clone())
+            .with_tokio()
+            .with_tcp(
+                tcp::Config::default().port_reuse(true).nodelay(true),
+                noise::Config::new,
+                yamux::Config::default,
+            )
+            .expect("could not start tcp stack")
+            .with_quic()
+            .with_dns()
+            .expect("DNS client failed")
+            .with_behaviour(|_key| ExchangeBehaviour::new(&local_pbk))
+            .expect("could not initialise behaviour")
+            .build();
 
         // Cluster swarm
-        let cluster_behaviour = ClusterBehaviour::new(&local_pbk);
-        let cluster_transport = tcp::tokio::Transport::new(tcp::Config::default())
-            .upgrade(upgrade::Version::V1)
-            .authenticate(noise::Config::new(&id).unwrap())
-            .multiplex(yamux::Config::default())
-            .boxed();
-        let cluster_swarm =
-            SwarmBuilder::with_tokio_executor(cluster_transport, cluster_behaviour, local_peer_id)
-                .build();
+        let cluster_swarm = SwarmBuilder::with_existing_identity(id.clone())
+            .with_tokio()
+            .with_tcp(
+                tcp::Config::default().port_reuse(true).nodelay(true),
+                noise::Config::new,
+                yamux::Config::default,
+            )
+            .expect("could not start tcp stack")
+            .with_quic()
+            .with_dns()
+            .expect("DNS client failed")
+            .with_behaviour(|_key| ClusterBehaviour::new(&local_pbk))
+            .expect("could not initialise behaviour")
+            .build();
 
         let (listening_sectors, listening_shards) = match (
             SETTINGS.node.sectors_listening.as_ref(),
@@ -398,7 +409,7 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
                         mdns::Event::Expired(_) => ()
                     }
                     SwarmEvent::Behaviour(SectorEvent::Kademlia(event)) => match event {
-                        kad::KademliaEvent::RoutingUpdated { peer, is_new_peer, addresses, .. } => {
+                        kad::Event::RoutingUpdated { peer, is_new_peer, addresses, .. } => {
                             let peer_b58 =  peer.to_base58();
                             info!("Received RoutingUpdated event for peer {} with addresses: {:?}", peer_b58, addresses);
                             let peer_key = format!("peer.{peer_b58}");
@@ -472,4 +483,5 @@ mod behaviour;
 mod mempool;
 mod peer_info;
 mod rpc;
+mod rw_socket;
 mod sector;

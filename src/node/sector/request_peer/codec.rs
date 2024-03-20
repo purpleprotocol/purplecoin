@@ -2,13 +2,11 @@ use super::{
     payload::{PeerInfoRequest, PeerInfoResponse},
     PeerInfoRequestProtocol,
 };
+use crate::node::rw_socket::{read_length_prefixed, write_length_prefixed};
 use async_trait::async_trait;
 use bincode::enc::write::SliceWriter;
 use futures::AsyncWriteExt;
-use libp2p::{
-    core::upgrade::{read_length_prefixed, write_length_prefixed},
-    request_response,
-};
+use libp2p::request_response;
 use std::io;
 
 #[derive(Clone, Debug, Default)]

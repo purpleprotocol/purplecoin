@@ -11,7 +11,7 @@ use libp2p::swarm::NetworkBehaviour;
 use libp2p::{
     identify,
     kad::{self, store},
-    mdns, ping,
+    mdns, ping, relay,
 };
 use libp2p::{request_response, PeerId};
 use std::fmt;
@@ -24,11 +24,12 @@ use crate::node::sector::request_peer::{
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "SectorEvent")]
 pub struct SectorBehaviour {
+    relay_client: relay::client::Behaviour,
     identify: identify::Behaviour,
     ping: ping::Behaviour,
     mdns: mdns::tokio::Behaviour,
     pub gossipsub: gossipsub::Behaviour,
-    pub kademlia: kad::Kademlia<store::MemoryStore>,
+    pub kademlia: kad::Behaviour<kad::store::MemoryStore>,
     pub peer_request: request_response::Behaviour<PeerInfoRequestCodec>,
 }
 
@@ -50,10 +51,10 @@ impl SectorBehaviour {
         mdns::tokio::Behaviour::new(mdns::Config::default(), peer_id).expect("mdns error")
     }
 
-    fn build_kad_behaviour(peer_id: PeerId) -> kad::Kademlia<store::MemoryStore> {
+    fn build_kad_behaviour(peer_id: PeerId) -> kad::Behaviour<kad::store::MemoryStore> {
         let store = store::MemoryStore::new(peer_id);
-        let kad_config = kad::KademliaConfig::default();
-        kad::Kademlia::with_config(peer_id, store, kad_config)
+        let kad_config = kad::Config::default();
+        kad::Behaviour::with_config(peer_id, store, kad_config)
     }
 
     fn build_gossip_behaviour(local_key: &Keypair) -> gossipsub::Behaviour {
@@ -65,20 +66,21 @@ impl SectorBehaviour {
     fn build_peer_request_behaviour() -> request_response::Behaviour<PeerInfoRequestCodec> {
         let peer_request_codec = PeerInfoRequestCodec;
         let peer_request_protocol = vec![(
-            PeerInfoRequestProtocol::new(
-                format!("xpu/{}", env!("CARGO_PKG_VERSION")),
-                "/xpu/peer_info/".to_string(),
-            ),
+            PeerInfoRequestProtocol::new("/xpu/peer_info/0.1".to_string()),
             ProtocolSupport::Full,
         )];
-        request_response::Behaviour::new(
+        request_response::Behaviour::with_codec(
             peer_request_codec,
             peer_request_protocol,
             request_response::Config::default(),
         )
     }
 
-    pub fn new(local_key: &Keypair, local_pbk: &PublicKey) -> Self {
+    pub fn new(
+        relay_client: relay::client::Behaviour,
+        local_key: &Keypair,
+        local_pbk: &PublicKey,
+    ) -> Self {
         let identify = Self::build_identify_behaviour(local_pbk);
         let ping = Self::build_ping_behaviour();
         let mdns = Self::build_mdns_behaviour(local_pbk.into());
@@ -87,6 +89,7 @@ impl SectorBehaviour {
         let peer_request = Self::build_peer_request_behaviour();
 
         Self {
+            relay_client,
             identify,
             ping,
             mdns,
@@ -102,7 +105,8 @@ pub enum SectorEvent {
     Identify(identify::Event),
     Ping(ping::Event),
     Mdns(mdns::Event),
-    Kademlia(kad::KademliaEvent),
+    Kademlia(kad::Event),
+    RelayClient(relay::client::Event),
     PeerRequest(request_response::Event<PeerInfoRequest, PeerInfoResponse>),
     Gossip(gossipsub::Event),
 }
@@ -125,9 +129,15 @@ impl From<mdns::Event> for SectorEvent {
     }
 }
 
-impl From<kad::KademliaEvent> for SectorEvent {
-    fn from(other: kad::KademliaEvent) -> Self {
+impl From<kad::Event> for SectorEvent {
+    fn from(other: kad::Event) -> Self {
         Self::Kademlia(other)
+    }
+}
+
+impl From<relay::client::Event> for SectorEvent {
+    fn from(other: relay::client::Event) -> Self {
+        Self::RelayClient(other)
     }
 }
 

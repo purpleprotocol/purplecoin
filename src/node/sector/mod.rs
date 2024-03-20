@@ -4,7 +4,4 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-pub mod get_pow_headers;
-pub mod get_shard_data;
-pub mod get_shard_headers;
 pub mod request_peer;
