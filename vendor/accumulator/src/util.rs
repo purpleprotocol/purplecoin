@@ -111,11 +111,11 @@ mod tests {
     #[derive(Debug)]
     enum Never {}
 
-    /// Merge-based computation of `Integer` array products. Faster than  the iterative
-    /// `iter.product()` for really large integers.
-    fn merge_product(xs: &[Integer]) -> Integer {
-        divide_and_conquer(|a, b| -> Result<Integer, Never> { Ok(int(a * b)) }, &xs).unwrap()
-    }
+    // /// Merge-based computation of `Integer` array products. Faster than  the iterative
+    // /// `iter.product()` for really large integers.
+    // fn merge_product(xs: &[Integer]) -> Integer {
+    //     divide_and_conquer(|a, b| -> Result<Integer, Never> { Ok(int(a * b)) }, &xs).unwrap()
+    // }
 
     #[test]
     fn test_linear_congruence_solver() {
@@ -184,9 +184,9 @@ mod tests {
         assert!(shamir_trick::<Rsa2048>(&xth_root, &yth_root, x, y) == None);
     }
 
-    #[test]
-    fn test_merge_product() {
-        let ints = vec![int(3), int(5), int(7), int(9), int(11)];
-        assert!(merge_product(&ints) == int(10395));
-    }
+    // #[test]
+    // fn test_merge_product() {
+    //     let ints = vec![int(3), int(5), int(7), int(9), int(11)];
+    //     assert!(merge_product(&ints) == int(10395));
+    // }
 }

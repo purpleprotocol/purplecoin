@@ -9,10 +9,10 @@ use parking_lot::Mutex;
 use rand::Rng;
 use rayon::prelude::*;
 
+use fxhash::hash64;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroUsize;
-use xxhash_rust::xxh3::xxh3_128;
 
 mod blake2b;
 mod blake3_mod;
@@ -117,13 +117,22 @@ pub fn hash<T: Hash + ?Sized>(t: &T) -> [u8; 32] {
 /// Uses `Blake3` as the hash function, and hashes with a counter until a prime is found via
 /// probabilistic primality checking.
 ///
-/// This function is optimized for 256-bit integers.
+/// This function is optimized for 256-bit integer
 #[allow(clippy::module_name_repetitions)]
 #[inline]
 pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
-    let mut counter = 0_u64;
-    let mut checked = bitarr![0; 256];
-    let mut first_pass = true;
+    hash_to_prime_with_counter(t, None).0
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[inline]
+pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
+    t: &T,
+    counters: Option<(u64, u8)>,
+) -> (Integer, (u64, u8)) {
+    let mut counter = if let Some((c, _)) = counters { c } else { 0 };
+    // let mut checked = bitarr![0; 256];
+    // let mut first_pass = true;
     let mut first_hash = [0; 32];
     let mut shard: usize = 0;
     loop {
@@ -131,32 +140,37 @@ pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
         let mut hash = hash(&(t, counter));
 
         // Check the LRU cache
-        if first_pass {
-            let mut bytes = [0; 8];
-            bytes.copy_from_slice(&hash[..8]);
-            shard =
-                jump_consistent_hash::hash(u64::from_le_bytes(bytes), INTERNAL_LRU_SHARDS) as usize;
-            {
-                let mut lru = (*INTERNAL_LRU)[shard].lock();
+        // if first_pass {
+        //     let mut bytes = [0; 8];
+        //     bytes.copy_from_slice(&hash[..8]);
+        //     shard =
+        //         jump_consistent_hash::hash(u64::from_le_bytes(bytes), INTERNAL_LRU_SHARDS) as usize;
+        //     {
+        //         let mut lru = (*INTERNAL_LRU)[shard].lock();
 
-                if let Some(cached) = lru.get(&hash) {
-                    return cached.clone();
-                }
-            }
-            first_pass = false;
-            first_hash = hash;
-        }
+        //         if let Some(cached) = lru.get(&hash) {
+        //             return (cached.clone(), (0, 0));
+        //         }
+        //     }
+        //     first_pass = false;
+        //     first_hash = hash;
+        // }
 
         // Make the candidate prime odd. This gives ~7% performance gain on a 2018 Macbook Pro.
         hash[0] |= 1;
-        let candidate_prime = u256(hash);
-        if primality::is_prob_prime(&candidate_prime) {
-            let prime = Integer::from(candidate_prime);
-            {
-                let mut lru = (*INTERNAL_LRU)[shard].lock();
-                lru.put(first_hash, prime.clone());
+        match counters {
+            Some((_, 0)) | None => {
+                let candidate_prime = u256(hash);
+                if primality::is_prob_prime(&candidate_prime) {
+                    let prime = Integer::from(candidate_prime);
+                    // {
+                    //     let mut lru = (*INTERNAL_LRU)[shard].lock();
+                    //     lru.put(first_hash, prime.clone());
+                    // }
+                    return (prime, (counter, 0));
+                }
             }
-            return prime;
+            _ => {}
         }
 
         // Second pass
@@ -166,32 +180,40 @@ pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
         // hash for 13 passes.
         //
         // This gives a ~14% performance gain on a 2019 Macbook Pro.
-        unsafe {
-            checked.set_unchecked(hash[31] as usize, true);
-        }
-        for c in 0_u8..=13_u8 {
-            let hashed_with_counter = xxh3_128(&[&hash[..], &[c]].concat());
-            let tail_bytes = hashed_with_counter.to_le_bytes();
-            for i in 0..16 {
-                if unsafe { *checked.get_unchecked(tail_bytes[i] as usize) } {
-                    continue;
-                }
-                hash[31] = tail_bytes[i];
-                unsafe {
-                    checked.set_unchecked(tail_bytes[i] as usize, true);
-                }
-                let candidate_prime = u256(hash);
-                if primality::is_prob_prime(&candidate_prime) {
-                    let prime = Integer::from(candidate_prime);
-                    {
-                        let mut lru = (*INTERNAL_LRU)[shard].lock();
-                        lru.put(first_hash, prime.clone());
-                    }
-                    return prime;
-                }
+        let mut cc = if let Some((_, cc)) = counters {
+            if cc == 0 {
+                1_u8
+            } else {
+                cc
             }
+        } else {
+            1_u8
+        };
+        let mut hash_clone = hash;
+        while cc <= 9 {
+            let c = cc - 1;
+            let to_hash: &[u8] = &[&hash[..], &[c]].concat();
+            let hashed_with_counter = hash64(to_hash);
+            let tail_bytes = hashed_with_counter.to_le_bytes();
+
+            hash_clone[1] = tail_bytes[0];
+            hash_clone[2] = tail_bytes[1];
+            hash_clone[3] = tail_bytes[2];
+            hash_clone[4] = tail_bytes[3];
+
+            let candidate_prime = u256(hash_clone);
+            if primality::is_prob_prime(&candidate_prime) {
+                let prime = Integer::from(candidate_prime);
+                // {
+                //     let mut lru = (*INTERNAL_LRU)[shard].lock();
+                //     lru.put(first_hash, prime.clone());
+                // }
+                return (prime, (counter, cc));
+            }
+            cc += 1;
         }
-        checked.fill(false);
+
+        // checked.fill(false);
         counter += 1;
     }
 }
@@ -199,6 +221,7 @@ pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rug::integer::Order;
 
     #[test]
     fn test_blake2() {

@@ -803,7 +803,9 @@ mod tests {
     use super::*;
     use crate::group::{ClassGroup, Rsa2048};
 
-    fn new_acc<G: UnknownOrderGroup, T: Hash + Clone + Eq + Sync>(data: &[T]) -> Accumulator<G, T> {
+    fn new_acc<G: UnknownOrderGroup, T: Hash + Clone + Eq + Sync + Send>(
+        data: &[T],
+    ) -> Accumulator<G, T> {
         Accumulator::<G, T>::empty().add(data)
     }
 

@@ -3,15 +3,22 @@ name = "accumulator"
 version = "0.2.1"
 edition = "2018"
 authors = [
-  "Pablo Aldape <pablo.aldape@gmail.com>",
-  "Lucas Ege <egelucas@gmail.com>",
-  "Alan Flores-Lopez <alanf94@gmail.com>",
-  "Sanjay Kannan <whaatt@gmail.com>",
-  "Michael Straka <mstraka100@gmail.com>",
-  "Eddie Wang <eddiew@cs.stanford.edu>"
+    "Pablo Aldape <pablo.aldape@gmail.com>",
+    "Lucas Ege <egelucas@gmail.com>",
+    "Alan Flores-Lopez <alanf94@gmail.com>",
+    "Sanjay Kannan <whaatt@gmail.com>",
+    "Michael Straka <mstraka100@gmail.com>",
+    "Eddie Wang <eddiew@cs.stanford.edu>",
 ]
 description = "Cryptographic accumulators in Rust."
-keywords = ["cryptography", "crypto", "accumulator", "rsa", "vector", "commitment"]
+keywords = [
+    "cryptography",
+    "crypto",
+    "accumulator",
+    "rsa",
+    "vector",
+    "commitment",
+]
 readme = "README.md"
 repository = "https://github.com/cambrian/accumulator"
 
@@ -29,10 +36,7 @@ jump-consistent-hash = "0.1.0"
 rand = "0.8.5"
 parking_lot = "0.12.1"
 bitvec = "1.0.1"
-
-[dependencies.xxhash-rust]
-version = "0.8.6"
-features = ["xxh3", "const_xxh3"]
+fxhash = "0.2.1"
 
 [dev-dependencies]
 criterion = "0.3.6"
