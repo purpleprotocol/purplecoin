@@ -67,7 +67,7 @@ pub fn passes_lucas(n: &U256) -> bool {
     u_delta == 0
   // Additional check which is not strictly part of Lucas test but nonetheless filters some
     // composite n for free. See section "Checking additional congruence conditions" on Wikipedia.
-    && v_delta.is_congruent(2 * q, n)
+    && v_delta.is_congruent(q << 1, n)
     // Congruence check which holds for prime n by Euler's criterion.
     && q_delta_over_2.is_congruent(q * U256::jacobi(q, n), n)
 }

@@ -107,9 +107,9 @@ pub fn hash<T: Hash + ?Sized>(t: &T) -> [u8; 32] {
     h.finalize()
 }
 
-/// Calls `hash` with a Blake3 hasher.
+// /// Calls `hash` with a Blake3 hasher.
 // pub fn blake2b<T: Hash + ?Sized>(t: &T) -> Integer {
-//   Integer::from_digits(&hash(&Blake3::default, t), Order::Msf)
+//     Integer::from_digits(&hash(t), Order::Msf)
 // }
 
 /// Hashes `t` to an odd prime.
@@ -128,8 +128,8 @@ pub fn hash_to_prime<T: Hash + ?Sized>(t: &T) -> Integer {
 #[inline]
 pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
     t: &T,
-    counters: Option<(u64, u8)>,
-) -> (Integer, (u64, u8)) {
+    counters: Option<(u32, u8)>,
+) -> (Integer, (u32, u8)) {
     let mut counter = if let Some((c, _)) = counters { c } else { 0 };
     // let mut checked = bitarr![0; 256];
     // let mut first_pass = true;
@@ -137,7 +137,8 @@ pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
     let mut shard: usize = 0;
     loop {
         // First pass using blake3
-        let mut hash = hash(&(t, counter));
+        let to_hash = (t, counter);
+        let mut hash = hash(&to_hash);
 
         // Check the LRU cache
         // if first_pass {
@@ -192,8 +193,9 @@ pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
         let mut hash_clone = hash;
         while cc <= 9 {
             let c = cc - 1;
-            let to_hash: &[u8] = &[&hash[..], &[c]].concat();
-            let hashed_with_counter = hash64(to_hash);
+            //let to_hash: &[u8] = &[&hash[..], &[c]].concat();
+            let to_hash = (&hash, c);
+            let hashed_with_counter = hash64(&to_hash);
             let tail_bytes = hashed_with_counter.to_le_bytes();
 
             hash_clone[1] = tail_bytes[0];
@@ -222,6 +224,14 @@ pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
 mod tests {
     use super::*;
     use rug::integer::Order;
+
+    #[test]
+    fn deterministic() {
+        let t = "tesgggt_datgga5344tretrfdserewfdsfdsrewtrexbkhjb";
+        let h1 = hash_to_prime_with_counter(t, None);
+        let h2 = hash_to_prime_with_counter(t, None);
+        assert_eq!(h1, h2);
+    }
 
     #[test]
     fn test_blake2() {

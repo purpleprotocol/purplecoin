@@ -3,6 +3,10 @@ use super::GeneralHasher;
 use blake3::Hasher as Blake3_;
 use std::hash::Hasher;
 
+lazy_static! {
+    pub(crate) static ref BLAKE3_HASHER: Blake3_ = Blake3_::new_derive_key("xpu.accumulator");
+}
+
 /// Thin wrapper around `Blake3` from `blake2_rfc`.
 pub struct Blake3(pub Blake3_);
 
@@ -10,7 +14,7 @@ impl Default for Blake3 {
     #[inline]
     fn default() -> Self {
         // 32 bytes = 256 bits
-        Self(Blake3_::new_derive_key("purplecoin.accumulator"))
+        Self(BLAKE3_HASHER.clone())
     }
 }
 

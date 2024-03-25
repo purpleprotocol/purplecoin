@@ -459,7 +459,7 @@ macro_rules! u_types {
 
       impl From<$t> for Integer {
         fn from(x: $t) -> Self {
-          Self::from_digits(&x.limbs, Order::Lsf)
+          Self::from_digits(&x.limbs, Order::LsfLe)
         }
       }
     )+
