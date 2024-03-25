@@ -24,14 +24,16 @@
 //! not designed to prevent any attacks for determining collisions which could be used to
 //! potentially cause quadratic behavior in `HashMap`s.  So it is not recommended to expose
 //! this hash in places where collissions or DDOS attacks may be a concern.
+//!
+//! Modified version for XPU. Modified for portability and optimised for our usecase.
 
 use std::collections::{HashMap, HashSet};
 use std::default::Default;
-use std::hash::{Hasher, Hash, BuildHasherDefault};
+use std::hash::{BuildHasherDefault, Hash, Hasher};
 use std::ops::BitXor;
 
 extern crate byteorder;
-use byteorder::{ByteOrder, NativeEndian};
+use byteorder::{ByteOrder, LittleEndian};
 
 /// A builder for default Fx hashers.
 pub type FxBuildHasher = BuildHasherDefault<FxHasher>;
@@ -45,14 +47,10 @@ pub type FxHashSet<V> = HashSet<V, FxBuildHasher>;
 const ROTATE: u32 = 5;
 const SEED64: u64 = 0x517cc1b727220a95;
 const SEED32: u32 = (SEED64 & 0xFFFF_FFFF) as u32;
-
-#[cfg(target_pointer_width = "32")]
-const SEED: usize = SEED32 as usize;
-#[cfg(target_pointer_width = "64")]
 const SEED: usize = SEED64 as usize;
 
 trait HashWord {
-    fn hash_word(&mut self, Self);
+    fn hash_word(&mut self, word: Self);
 }
 
 macro_rules! impl_hash_word {
@@ -73,7 +71,7 @@ impl_hash_word!(usize = SEED, u32 = SEED32, u64 = SEED64);
 #[inline]
 fn write32(mut hash: u32, mut bytes: &[u8]) -> u32 {
     while bytes.len() >= 4 {
-        let n = NativeEndian::read_u32(bytes);
+        let n = LittleEndian::read_u32(bytes);
         hash.hash_word(n);
         bytes = bytes.split_at(4).1;
     }
@@ -86,32 +84,39 @@ fn write32(mut hash: u32, mut bytes: &[u8]) -> u32 {
 
 #[inline]
 fn write64(mut hash: u64, mut bytes: &[u8]) -> u64 {
-    while bytes.len() >= 8 {
-        let n = NativeEndian::read_u64(bytes);
-        hash.hash_word(n);
-        bytes = bytes.split_at(8).1;
-    }
+    // while bytes.len() >= 8 {
+    //     let n = LittleEndian::read_u64(bytes);
+    //     hash.hash_word(n);
+    //     bytes = bytes.split_at(8).1;
+    // }
 
-    if bytes.len() >= 4 {
-        let n = NativeEndian::read_u32(bytes);
-        hash.hash_word(n as u64);
-        bytes = bytes.split_at(4).1;
-    }
+    // Unroll the above loop as we always receive a 32 byte input
+    let n = LittleEndian::read_u64(bytes);
+    hash.hash_word(n);
+    bytes = bytes.split_at(8).1;
+    let n = LittleEndian::read_u64(bytes);
+    hash.hash_word(n);
+    bytes = bytes.split_at(8).1;
+    let n = LittleEndian::read_u64(bytes);
+    hash.hash_word(n);
+    bytes = bytes.split_at(8).1;
+    let n = LittleEndian::read_u64(bytes);
+    hash.hash_word(n);
+    // We don't need this. Useless check.
+    // if bytes.len() >= 4 {
+    //     let n = LittleEndian::read_u32(bytes);
+    //     hash.hash_word(n as u64);
+    //     bytes = bytes.split_at(4).1;
+    // }
 
-    for byte in bytes {
-        hash.hash_word(*byte as u64);
-    }
+    // We don't need this either the input length is a multiple of 8
+    // for byte in bytes {
+    //     hash.hash_word(*byte as u64);
+    // }
     hash
 }
 
 #[inline]
-#[cfg(target_pointer_width = "32")]
-fn write(hash: usize, bytes: &[u8]) -> usize {
-    write32(hash as u32, bytes) as usize
-}
-
-#[inline]
-#[cfg(target_pointer_width = "64")]
 fn write(hash: usize, bytes: &[u8]) -> usize {
     write64(hash as u64, bytes) as usize
 }
@@ -157,14 +162,6 @@ impl Hasher for FxHasher {
     }
 
     #[inline]
-    #[cfg(target_pointer_width = "32")]
-    fn write_u64(&mut self, i: u64) {
-        self.hash.hash_word(i as usize);
-        self.hash.hash_word((i >> 32) as usize);
-    }
-
-    #[inline]
-    #[cfg(target_pointer_width = "64")]
     fn write_u64(&mut self, i: u64) {
         self.hash.hash_word(i as usize);
     }
@@ -190,6 +187,13 @@ impl Hasher for FxHasher {
 #[derive(Debug, Clone)]
 pub struct FxHasher64 {
     hash: u64,
+}
+
+impl FxHasher64 {
+    #[inline]
+    pub fn reset(&mut self) {
+        self.hash = 0;
+    }
 }
 
 impl Default for FxHasher64 {
@@ -220,6 +224,7 @@ impl Hasher for FxHasher64 {
         self.hash.hash_word(i as u64);
     }
 
+    #[inline]
     fn write_u64(&mut self, i: u64) {
         self.hash.hash_word(i);
     }
@@ -282,13 +287,6 @@ impl Hasher for FxHasher32 {
     }
 
     #[inline]
-    #[cfg(target_pointer_width = "32")]
-    fn write_usize(&mut self, i: usize) {
-        self.write_u32(i as u32);
-    }
-
-    #[inline]
-    #[cfg(target_pointer_width = "64")]
     fn write_usize(&mut self, i: usize) {
         self.write_u64(i as u64);
     }

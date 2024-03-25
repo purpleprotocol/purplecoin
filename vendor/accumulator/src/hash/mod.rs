@@ -9,13 +9,14 @@ use parking_lot::Mutex;
 use rand::Rng;
 use rayon::prelude::*;
 
-use fxhash::hash64;
+use fx_hash::FxHasher64;
 use rug::Integer;
 use std::hash::{Hash, Hasher};
 use std::num::NonZeroUsize;
 
 mod blake2b;
 mod blake3_mod;
+mod fx_hash;
 pub use blake2b::Blake2b;
 pub use blake3_mod::Blake3;
 pub mod primality;
@@ -191,11 +192,16 @@ pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
             1_u8
         };
         let mut hash_clone = hash;
+        // Cache hasher instance up to counter and then only hash the counter
+        let mut hasher = FxHasher64::default();
+        hasher.write(&hash);
+
         while cc <= 9 {
             let c = cc - 1;
             //let to_hash: &[u8] = &[&hash[..], &[c]].concat();
-            let to_hash = (&hash, c);
-            let hashed_with_counter = hash64(&to_hash);
+            let mut hasher = hasher.clone();
+            hasher.write_u8(c);
+            let hashed_with_counter = hasher.finish();
             let tail_bytes = hashed_with_counter.to_le_bytes();
 
             hash_clone[1] = tail_bytes[0];
