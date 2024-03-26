@@ -73,7 +73,7 @@ impl Group for Rsa2048 {
         let mut bytes = [0; 8];
         bytes.copy_from_slice(&hash[..8]);
         let shard =
-            jump_consistent_hash::hash(u64::from_le_bytes(bytes), INTERNAL_LRU_SHARDS) as usize;
+            jump_consistent_hash::hash(u64::from_le_bytes(bytes), *INTERNAL_LRU_SHARDS) as usize;
 
         // Check LRU
         {

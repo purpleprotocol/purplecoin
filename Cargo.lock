@@ -16,6 +16,7 @@ dependencies = [
  "jump-consistent-hash",
  "lazy_static",
  "lru 0.12.2",
+ "num_cpus",
  "parking_lot",
  "rand",
  "rayon",

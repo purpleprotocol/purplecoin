@@ -22,15 +22,16 @@ pub use blake3_mod::Blake3;
 pub mod primality;
 
 // With this setup, we'll have around 100mb cache. TODO: Make this changeable
-pub(crate) const INTERNAL_LRU_SHARDS: usize = 16;
-pub(crate) const LRU_BYTES_PER_SHARD: usize = 7700000;
+pub(crate) const CACHE_BYTES_TOTAL: usize = 100_000_000;
 
 lazy_static! {
+    pub(crate) static ref INTERNAL_LRU_SHARDS: usize = num_cpus::get();
     pub(crate) static ref INTERNAL_LRU: Vec<Mutex<LruCache<[u8; 32], Integer>>> = {
-        let mut v = Vec::with_capacity(INTERNAL_LRU_SHARDS);
-        for _ in 0..INTERNAL_LRU_SHARDS {
+        let bytes_per_shard = CACHE_BYTES_TOTAL / *INTERNAL_LRU_SHARDS;
+        let mut v = Vec::with_capacity(*INTERNAL_LRU_SHARDS);
+        for _ in 0..*INTERNAL_LRU_SHARDS {
             v.push(Mutex::new(LruCache::new(
-                NonZeroUsize::new(LRU_BYTES_PER_SHARD / 64).unwrap(),
+                NonZeroUsize::new(bytes_per_shard / 64).unwrap(),
             )));
         }
         v
@@ -42,7 +43,7 @@ fn hash_to_cache_key<T: Hash + ?Sized>(t: &T) -> ([u8; 32], usize) {
     let hash = hash(&(t, 0_u64));
     let mut bytes = [0; 8];
     bytes.copy_from_slice(&hash[..8]);
-    let shard = jump_consistent_hash::hash(u64::from_le_bytes(bytes), INTERNAL_LRU_SHARDS) as usize;
+    let shard = jump_consistent_hash::hash(u64::from_le_bytes(bytes), *INTERNAL_LRU_SHARDS) as usize;
     (hash, shard)
 }
 
@@ -132,8 +133,7 @@ pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
     counters: Option<(u32, u8)>,
 ) -> (Integer, (u32, u8)) {
     let mut counter = if let Some((c, _)) = counters { c } else { 0 };
-    // let mut checked = bitarr![0; 256];
-    // let mut first_pass = true;
+    let mut first_pass = true;
     let mut first_hash = [0; 32];
     let mut shard: usize = 0;
     loop {
@@ -142,21 +142,21 @@ pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
         let mut hash = hash(&to_hash);
 
         // Check the LRU cache
-        // if first_pass {
-        //     let mut bytes = [0; 8];
-        //     bytes.copy_from_slice(&hash[..8]);
-        //     shard =
-        //         jump_consistent_hash::hash(u64::from_le_bytes(bytes), INTERNAL_LRU_SHARDS) as usize;
-        //     {
-        //         let mut lru = (*INTERNAL_LRU)[shard].lock();
+        if first_pass {
+            let mut bytes = [0; 8];
+            bytes.copy_from_slice(&hash[..8]);
+            shard =
+                jump_consistent_hash::hash(u64::from_le_bytes(bytes), *INTERNAL_LRU_SHARDS) as usize;
+            {
+                let mut lru = (*INTERNAL_LRU)[shard].lock();
 
-        //         if let Some(cached) = lru.get(&hash) {
-        //             return (cached.clone(), (0, 0));
-        //         }
-        //     }
-        //     first_pass = false;
-        //     first_hash = hash;
-        // }
+                if let Some(cached) = lru.get(&hash) {
+                    return (cached.clone(), (0, 0));
+                }
+            }
+            first_pass = false;
+            first_hash = hash;
+        }
 
         // Make the candidate prime odd. This gives ~7% performance gain on a 2018 Macbook Pro.
         hash[0] |= 1;
@@ -165,10 +165,10 @@ pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
                 let candidate_prime = u256(hash);
                 if primality::is_prob_prime(&candidate_prime) {
                     let prime = Integer::from(candidate_prime);
-                    // {
-                    //     let mut lru = (*INTERNAL_LRU)[shard].lock();
-                    //     lru.put(first_hash, prime.clone());
-                    // }
+                    {
+                        let mut lru = (*INTERNAL_LRU)[shard].lock();
+                        lru.put(first_hash, prime.clone());
+                    }
                     return (prime, (counter, 0));
                 }
             }
@@ -212,16 +212,14 @@ pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
             let candidate_prime = u256(hash_clone);
             if primality::is_prob_prime(&candidate_prime) {
                 let prime = Integer::from(candidate_prime);
-                // {
-                //     let mut lru = (*INTERNAL_LRU)[shard].lock();
-                //     lru.put(first_hash, prime.clone());
-                // }
+                {
+                    let mut lru = (*INTERNAL_LRU)[shard].lock();
+                    lru.put(first_hash, prime.clone());
+                }
                 return (prime, (counter, cc));
             }
             cc += 1;
         }
-
-        // checked.fill(false);
         counter += 1;
     }
 }
