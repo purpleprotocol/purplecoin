@@ -43,7 +43,8 @@ fn hash_to_cache_key<T: Hash + ?Sized>(t: &T) -> ([u8; 32], usize) {
     let hash = hash(&(t, 0_u64));
     let mut bytes = [0; 8];
     bytes.copy_from_slice(&hash[..8]);
-    let shard = jump_consistent_hash::hash(u64::from_le_bytes(bytes), *INTERNAL_LRU_SHARDS) as usize;
+    let shard =
+        jump_consistent_hash::hash(u64::from_le_bytes(bytes), *INTERNAL_LRU_SHARDS) as usize;
     (hash, shard)
 }
 
@@ -145,8 +146,8 @@ pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
         if first_pass {
             let mut bytes = [0; 8];
             bytes.copy_from_slice(&hash[..8]);
-            shard =
-                jump_consistent_hash::hash(u64::from_le_bytes(bytes), *INTERNAL_LRU_SHARDS) as usize;
+            shard = jump_consistent_hash::hash(u64::from_le_bytes(bytes), *INTERNAL_LRU_SHARDS)
+                as usize;
             {
                 let mut lru = (*INTERNAL_LRU)[shard].lock();
 
@@ -217,6 +218,89 @@ pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
                     lru.put(first_hash, prime.clone());
                 }
                 return (prime, (counter, cc));
+            }
+            cc += 1;
+        }
+        counter += 1;
+    }
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[inline]
+pub fn hash_to_prime_check_counter<T: Hash + ?Sized>(
+    t: &T,
+    counters: (u32, u8),
+) -> Option<Integer> {
+    let mut counter = counters.0;
+    let mut first_pass = true;
+    let mut first_hash = [0; 32];
+    let mut shard: usize = 0;
+    loop {
+        // First pass using blake3
+        let to_hash = (t, counter);
+        let mut hash = hash(&to_hash);
+
+        // Check the LRU cache
+        if first_pass {
+            first_pass = false;
+            first_hash = hash;
+        }
+
+        // Make the candidate prime odd. This gives ~7% performance gain on a 2018 Macbook Pro.
+        hash[0] |= 1;
+        match counters {
+            (_, 0) => {
+                let candidate_prime = u256(hash);
+                if primality::is_prob_prime(&candidate_prime) {
+                    let prime = Integer::from(candidate_prime);
+                    {
+                        let mut lru = (*INTERNAL_LRU)[shard].lock();
+                        lru.put(first_hash, prime.clone());
+                    }
+                    return Some(prime);
+                } else {
+                    return None;
+                }
+            }
+            _ => {}
+        }
+
+        // Second pass
+        //
+        // Hash the result using xxh3_128 and then change the last byte
+        // of the hash from the previous pass with every byte in the resulting
+        // hash for 13 passes.
+        //
+        // This gives a ~14% performance gain on a 2019 Macbook Pro.
+        let mut cc = if counters.1 == 0 { 1_u8 } else { counters.1 };
+        let mut hash_clone = hash;
+        // Cache hasher instance up to counter and then only hash the counter
+        let mut hasher = FxHasher64::default();
+        hasher.write(&hash);
+
+        while cc <= 9 {
+            let c = cc - 1;
+            //let to_hash: &[u8] = &[&hash[..], &[c]].concat();
+            let mut hasher = hasher.clone();
+            hasher.write_u8(c);
+            let hashed_with_counter = hasher.finish();
+            let tail_bytes = hashed_with_counter.to_le_bytes();
+
+            hash_clone[1] = tail_bytes[0];
+            hash_clone[2] = tail_bytes[1];
+            hash_clone[3] = tail_bytes[2];
+            hash_clone[4] = tail_bytes[3];
+
+            let candidate_prime = u256(hash_clone);
+            if primality::is_prob_prime(&candidate_prime) {
+                let prime = Integer::from(candidate_prime);
+                {
+                    let mut lru = (*INTERNAL_LRU)[shard].lock();
+                    lru.put(first_hash, prime.clone());
+                }
+                return Some(prime);
+            } else {
+                return None;
             }
             cc += 1;
         }

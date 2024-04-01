@@ -573,6 +573,16 @@ impl<G: UnknownOrderGroup, T: Eq + Hash + Clone + Send + Sync> Accumulator<G, T>
         Poe::verify(&witness.0.value, &exp, &self.value, proof)
     }
 
+    /// Verify membership proof but with an already hashed prime. Doesn't check if the element
+    /// correctly hashes to a a prime.
+    pub fn verify_membership_with_prime(
+        &self,
+        exp: &Integer,
+        MembershipProof { witness, proof }: &MembershipProof<G, T>,
+    ) -> bool {
+        Poe::verify(&witness.0.value, &exp, &self.value, proof)
+    }
+
     /// Batch version of `verify_membership` for multiple `elems`.
     pub fn verify_membership_batch(
         &self,

@@ -15,6 +15,60 @@ use std::collections::{HashMap, HashSet};
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
+pub fn verify_membership_benchmark(c: &mut Criterion) {
+    let elems = vec!["test1".to_owned(), "test2".to_owned(), "test3".to_owned()];
+    let elemsplus1 = vec![
+        "test1".to_owned(),
+        "test2".to_owned(),
+        "test3".to_owned(),
+        "test4".to_owned(),
+    ];
+    let accumulator1 = Accumulator::<Rsa2048, String>::empty();
+    let (witness_deleted, proof_deleted) = accumulator1.clone().delete_with_proof(&[]).unwrap();
+    let (accumulator2, proof_added) = witness_deleted.add_with_proof(&elems);
+    assert!(accumulator2.verify_membership_batch(&elems, &proof_added));
+    assert!(!accumulator2.verify_membership_batch(&elems, &proof_deleted));
+    assert!(!accumulator2.verify_membership_batch(&elemsplus1, &proof_added));
+    let invalid_proof = accumulator2
+        .prove_membership(&[("test6".to_owned(), proof_added.witness.clone())])
+        .unwrap();
+    assert!(!accumulator2.verify_membership(&"test6".to_owned(), &invalid_proof));
+    assert!(accumulator1.verify_membership_batch(&[], &proof_deleted));
+    assert_eq!(proof_added.witness, proof_deleted.witness);
+
+    let e = &elems[0];
+
+    let witness = Witness(Accumulator::<Rsa2048, String>::empty());
+    let witness = witness
+        .compute_subset_witness(&elems, &[e.clone()])
+        .unwrap();
+    let proof = accumulator2
+        .prove_membership(&[(e.clone(), witness)])
+        .unwrap();
+
+    let mut group = c.benchmark_group("witnessverification");
+
+    group.bench_function("prove membership one element", |b| {
+        b.iter(|| {
+            assert!(accumulator2.verify_membership(e, &proof));
+            accumulator::hash::clear_cache();
+        });
+    });
+
+    accumulator::hash::clear_cache();
+
+    group.bench_function("prove membership one element check with counters", |b| {
+        let (_, counters) = accumulator::hash::hash_to_prime_with_counter(e, None);
+        accumulator::hash::clear_cache();
+
+        b.iter(|| {
+            let prime = accumulator::hash::hash_to_prime_check_counter(e, counters).unwrap();
+            assert!(accumulator2.verify_membership_with_prime(&prime, &proof));
+            accumulator::hash::clear_cache();
+        });
+    });
+}
+
 pub fn transaction_batch_benchmark(c: &mut Criterion) {
     let batch_sizes = [250, 500, 750, 1000, 1500, 2000, 2500, 3500, 4000];
     let chain_id = 255;
@@ -217,5 +271,9 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, transaction_batch_benchmark);
+criterion_group!(
+    benches,
+    verify_membership_benchmark,
+    transaction_batch_benchmark
+);
 criterion_main!(benches);
