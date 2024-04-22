@@ -318,7 +318,7 @@ mod tests {
         let t = "tesgggt_datgga5344tretrfdserewfdsfdsrewtrexbkhjb";
         let h1 = hash_to_prime_with_counter(t, None);
         let h2 = hash_to_prime_with_counter(t, None);
-        assert_eq!(h1, h2);
+        assert_eq!(h1.0, h2.0);
     }
 
     #[test]
