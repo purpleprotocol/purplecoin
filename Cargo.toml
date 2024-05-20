@@ -31,7 +31,7 @@ bincode = { path = "./vendor/bincode" }
 lazy_static = "1.4.0"
 bech32 = "0.9.0"
 ed25519-dalek = { version = "2.1.1", features = ["batch"] }
-mimalloc = { version = "0.1.41", default-features = false }
+mimalloc = { version = "0.1.42", default-features = false }
 hex = "0.4.3"
 base64 = "0.13.1"
 chrono = "0.4.19"
