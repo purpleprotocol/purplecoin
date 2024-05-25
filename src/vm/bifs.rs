@@ -10,7 +10,7 @@ use crate::vm::internal::VmTerm as Term;
 
 use blake2::digest::{Update, VariableOutput};
 use blake2::{Blake2bVar, Blake2s, Blake2sVar, Digest as Blake2Digest};
-use jh_x86_64::{Digest as JhDigest, Jh256};
+use jh::{Digest as JhDigest, Jh256};
 use ripemd::{Digest as RipemdDigest, Ripemd160};
 use sha2::{Digest as ShaDigest, Sha256, Sha512};
 use sha3::{Digest as KeccakDigest, Keccak256, Keccak512};
@@ -169,8 +169,8 @@ pub fn fugue256(term: &Term) -> Term {
 
 pub fn jh256(term: &Term) -> Term {
     let mut hasher = Jh256::new();
-    hasher.input(&term.to_bytes_raw());
-    let hash = hasher.result();
+    JhDigest::update(&mut hasher, &term.to_bytes_raw());
+    let hash = hasher.finalize();
     let hash: [u8; 32] = hash.as_slice().try_into().unwrap();
 
     Term::Hash256(hash)

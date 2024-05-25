@@ -10,7 +10,7 @@ use crate::consensus::Difficulty;
 use crate::primitives::{Hash256, PowBlockHeader};
 use blake2::{Blake2b512, Blake2s256, Digest};
 use crossbeam_channel::{unbounded, Receiver, Sender, TryRecvError};
-use jh_x86_64::{Digest as JhDigest, Jh256};
+use jh::{Digest as JhDigest, Jh256};
 use parking_lot::Mutex;
 use sha2::{Sha256, Sha512, Sha512_256};
 use sha3::{Keccak256, Keccak512, Sha3_256, Sha3_512};
@@ -70,8 +70,8 @@ impl HashAlgorithm {
 
             Self::JH => {
                 let mut hasher = Jh256::new();
-                hasher.input(bytes);
-                let hash = hasher.result();
+                hasher.update(bytes);
+                let hash = hasher.finalize();
                 out.0.copy_from_slice(&hash[..]);
                 out
             }
