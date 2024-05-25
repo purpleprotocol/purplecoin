@@ -159,20 +159,15 @@ impl Input {
         }
     }
 
-    pub fn verify<'a, B: ShardBackend>(
-        &'a self,
-        key: &'static str,
+    pub fn verify(
+        &self,
+        key: &str,
         height: u64,
         chain_id: u8,
         sum: &mut Money,
         timestamp: i64,
         block_reward: &Money,
-        block_height: &u64,
         prev_block_hash: Hash256,
-        transcripts: &mut Vec<&'a [u8]>,
-        public_keys: &mut Vec<SchnorPK>,
-        shard: &Shard<B>,
-        coinbase_count: &mut u64,
         coinbase_allowed: bool,
         to_add: &mut Vec<Output>,
         to_delete: &mut OutWitnessVec,
@@ -181,12 +176,6 @@ impl Input {
     ) -> Result<(), TxVerifyErr> {
         match self.input_flags {
             InputFlags::IsCoinbase => {
-                *coinbase_count += 1;
-
-                if *coinbase_count != 1 {
-                    return Err(TxVerifyErr::InvalidCoinbase);
-                }
-
                 if !coinbase_allowed {
                     return Err(TxVerifyErr::InvalidCoinbase);
                 }
@@ -203,7 +192,7 @@ impl Input {
                         VmTerm::Signed128(amount),
                         VmTerm::Unsigned64(coinbase_height),
                         VmTerm::Unsigned32(_),
-                    ) if amount == block_reward && coinbase_height == block_height => {
+                    ) if amount == block_reward && coinbase_height == &height => {
                         let result = script.execute(
                             &self.script_args,
                             &[],
@@ -238,12 +227,6 @@ impl Input {
             }
 
             InputFlags::IsCoinbaseWithoutSpendKey => {
-                *coinbase_count += 1;
-
-                if *coinbase_count != 1 {
-                    return Err(TxVerifyErr::InvalidCoinbase);
-                }
-
                 if !coinbase_allowed {
                     return Err(TxVerifyErr::InvalidCoinbase);
                 }
@@ -260,7 +243,7 @@ impl Input {
                         VmTerm::Signed128(amount),
                         VmTerm::Unsigned64(coinbase_height),
                         VmTerm::Unsigned32(_),
-                    ) if amount == block_reward && coinbase_height == block_height => {
+                    ) if amount == block_reward && coinbase_height == &height => {
                         let result = script.execute(
                             &self.script_args,
                             &[],
@@ -319,50 +302,46 @@ impl Input {
             }
 
             _ => unimplemented!(),
-        }
+        }?;
 
         // let key = shard.shard_config().key();
 
-        // // Get script hash according to spend proof, address and script hash
-        // let oracle_script_hash = if let Some(ref spend_proof) = self.spend_proof {
-        //     let mut out = self.script.to_script_hash(key);
-        //     out.0 = Hash160::hash_from_slice(
-        //         [
-        //             &self.spending_pkey.as_ref().unwrap().0.to_bytes(),
-        //             out.0.as_slice(),
-        //         ]
-        //         .concat(),
-        //         key,
-        //     )
-        //     .0;
+        // Get script hash according to spend proof, address and script hash
+        let oracle_script_hash = if let Some(ref spend_proof) = self.spend_proof {
+            let mut out = self.script.to_script_hash(key);
+            out.0 = Hash160::hash_from_slice(
+                [
+                    &self.spending_pkey.as_ref().unwrap().0.to_bytes(),
+                    out.0.as_slice(),
+                ]
+                .concat(),
+                key,
+            )
+            .0;
 
-        //     for l in spend_proof {
-        //         let l1 = out.0.as_ref();
-        //         let l2 = l.0.as_ref();
+            for l in spend_proof {
+                let l1 = out.0.as_ref();
+                let l2 = l.0.as_ref();
 
-        //         if l1 < l2 {
-        //             out.0 = Hash160::hash_from_slice(&[l1, l2].concat(), key).0;
-        //         } else {
-        //             out.0 = Hash160::hash_from_slice(&[l2, l1].concat(), key).0;
-        //         }
-        //     }
+                if l1 < l2 {
+                    out.0 = Hash160::hash_from_slice(&[l1, l2].concat(), key).0;
+                } else {
+                    out.0 = Hash160::hash_from_slice(&[l2, l1].concat(), key).0;
+                }
+            }
 
-        //     out
-        // } else {
-        //     self.script.to_script_hash(key)
-        // };
+            out
+        } else {
+            self.script.to_script_hash(key)
+        };
 
-        // // Verify script hash
-        // if oracle_script_hash != self.out().unwrap().script_hash {
-        //     return Err(TxVerifyErr::InvalidScriptHash);
-        // }
+        // Verify script hash
+        if oracle_script_hash != self.out().unwrap().script_hash {
+            return Err(TxVerifyErr::InvalidScriptHash);
+        }
 
-        // *sum += self.out().unwrap().amount();
-        // transcripts.push(self.out().unwrap().hash().unwrap().as_bytes());
-        // if let Some(ref public_key) = self.spending_pkey {
-        //     public_keys.push(public_key.0);
-        // }
-        // Ok(())
+        *sum += self.out().unwrap().amount();
+        Ok(())
     }
 }
 
