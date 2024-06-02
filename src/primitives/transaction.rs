@@ -104,13 +104,17 @@ impl Transaction {
         to_delete: &mut OutWitnessVec,
         ver_stack: &mut VerificationStack,
         idx_map: &mut HashMap<(Address, Hash160), u16>,
+        tx_seed_bytes: &[u8],
     ) -> Result<Money, TxVerifyErr> {
         let mut ins_sum: Money = 0;
         let mut outs_sum: Money = 0;
 
         // Verify inputs
-        for i in &self.ins {
-            i.verify(
+        for (i, input) in self.ins.iter().enumerate() {
+            let nonce = (i as u64).to_le_bytes();
+            let input_seed_bytes: &[u8] = &[tx_seed_bytes, nonce.as_slice()].concat();
+
+            input.verify(
                 key,
                 height,
                 chain_id,
@@ -123,6 +127,7 @@ impl Transaction {
                 to_delete,
                 ver_stack,
                 idx_map,
+                input_seed_bytes,
             )?;
         }
 

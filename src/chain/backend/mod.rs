@@ -338,11 +338,15 @@ pub trait ShardBackend: Sized + Clone {
     }
 
     /// Attempts to append a block to the latest tip of the chain. Assumes block header is valid
-    fn append_block(&self, block: &Block) -> Result<(), ShardBackendErr> {
+    fn append_block(&self, pow: &PowBlockHeader, block: &Block) -> Result<(), ShardBackendErr> {
         let tip = self.tip()?;
         let tip_pow: PowBlockHeader = self.tip_pow()?;
-        let (outs, _) =
-            block.validate_against_current(&tip_pow, &tip, self.shard_config().key())?;
+        let (outs, _) = block.validate_against_current(
+            &tip_pow,
+            &tip,
+            self.shard_config().key(),
+            pow.validate_vrf_fields().unwrap(),
+        )?;
         self.write_block(block, outs)
     }
 

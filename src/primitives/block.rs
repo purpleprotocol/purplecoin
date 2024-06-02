@@ -6,9 +6,10 @@
 
 use crate::chain::ChainConfig;
 use crate::consensus::{
-    self, calc_difficulty, map_height_to_block_reward, map_sector_id_to_chain_ids, Difficulty,
-    Money, ACCUMULATOR_MULTIPLIER, BLOCK_HEADER_BLOOM_FP_RATE, COIN, MIN_DIFF_GR,
-    MIN_DIFF_RANDOM_HASH, SECOND_ROUND_TIMEOUT, SECTORS, SHARDS_PER_SECTOR,
+    calc_difficulty, map_height_to_block_reward, map_height_to_chain_id_for_reward,
+    map_sector_id_to_chain_ids, Difficulty, Money, ACCUMULATOR_MULTIPLIER,
+    BLOCK_HEADER_BLOOM_FP_RATE, COIN, MIN_DIFF_GR, MIN_DIFF_RANDOM_HASH, SECOND_ROUND_TIMEOUT,
+    SECTORS, SHARDS_PER_SECTOR,
 };
 use crate::miner::{HashAlgorithm, PowAlgorithm};
 use crate::primitives::{
@@ -781,8 +782,9 @@ impl BlockHeader {
         runnerup: Option<&BlockHeader>,
         data: &BlockData,
         key: &str,
+        vrf_in_out: VRFInOut,
     ) -> Result<Self, BlockVerifyErr> {
-        let (to_add, to_delete) = data.validate_txs(prev_pow, prev, key)?;
+        let (to_add, to_delete) = data.validate_txs(prev_pow, prev, key, vrf_in_out)?;
         let to_add: Vec<Output> = to_add.iter().map(|(o, _)| o.clone()).collect();
 
         Self::new_unsafe(
@@ -1173,6 +1175,7 @@ impl Block {
         aggregated_signature: Option<AggregatedSignature>,
         key: &str,
         witnesses: &[Witness<Rsa2048, Output>],
+        vrf_in_out: VRFInOut,
     ) -> Result<(Self, Vec<Output>), BlockVerifyErr> {
         let extra_nonce: u32 = rand::thread_rng().gen();
         let ss = Script::new_simple_spend();
@@ -1236,7 +1239,7 @@ impl Block {
 
         Ok((
             Self {
-                header: BlockHeader::new(prev_pow, prev, runnerup, &body, key)?,
+                header: BlockHeader::new(prev_pow, prev, runnerup, &body, key, vrf_in_out)?,
                 body,
             },
             out_stack,
@@ -1249,10 +1252,11 @@ impl Block {
         prev_pow: &PowBlockHeader,
         prev: &BlockHeader,
         key: &str,
+        vrf_in_out: VRFInOut,
     ) -> Result<(OutWitnessVec, OutWitnessVec), BlockVerifyErr> {
         self.header.validate(prev)?;
         self.body
-            .validate_against_current(&self.header, prev_pow, prev, key)
+            .validate_against_current(&self.header, prev_pow, prev, key, vrf_in_out)
     }
 
     /// Run full body validations. Assumes initial header validations passed
@@ -1261,9 +1265,10 @@ impl Block {
         prev_pow: &PowBlockHeader,
         prev: &BlockHeader,
         key: &str,
+        vrf_in_out: VRFInOut,
     ) -> Result<(OutWitnessVec, OutWitnessVec), BlockVerifyErr> {
         self.body
-            .validate_against_current(&self.header, prev_pow, prev, key)
+            .validate_against_current(&self.header, prev_pow, prev, key, vrf_in_out)
     }
 
     /// Validates only the body against the previous header
@@ -1272,8 +1277,9 @@ impl Block {
         prev_pow: &PowBlockHeader,
         prev: &BlockHeader,
         key: &str,
+        vrf_in_out: VRFInOut,
     ) -> Result<(OutWitnessVec, OutWitnessVec), BlockVerifyErr> {
-        self.body.validate_txs(prev_pow, prev, key)
+        self.body.validate_txs(prev_pow, prev, key, vrf_in_out)
     }
 }
 
@@ -1311,6 +1317,7 @@ impl BlockData {
         prev_pow: &PowBlockHeader,
         prev: &BlockHeader,
         key: &str,
+        vrf_in_out: VRFInOut,
     ) -> Result<(OutWitnessVec, OutWitnessVec), BlockVerifyErr> {
         if self.txs.is_empty() {
             return Ok((vec![], vec![]));
@@ -1328,21 +1335,25 @@ impl BlockData {
         let mut public_keys = vec![];
         let mut transcripts = vec![];
         let mut ctx = schnorrkel::signing_context(key.as_bytes());
+        let master_seed_bytes: [u8; 32] = vrf_in_out.make_bytes(key.as_bytes());
 
-        for tx in self.txs.iter() {
+        for (i, tx) in self.txs.iter().enumerate() {
+            let nonce = (i as u64).to_le_bytes();
+            let tx_seed_bytes: &[u8] = &[master_seed_bytes.as_slice(), nonce.as_slice()].concat();
             tx.verify_single(
                 key,
                 block_height,
                 prev.chain_id,
                 prev_pow.timestamp,
                 *prev.hash().unwrap(),
-                consensus::map_height_to_block_reward(block_height),
-                consensus::map_height_to_chain_id_for_reward(block_height, prev_pow.sector_id)
+                map_height_to_block_reward(block_height),
+                map_height_to_chain_id_for_reward(block_height, prev_pow.sector_id)
                     == prev.chain_id,
                 &mut to_add,
                 &mut to_delete,
                 &mut ver_stack,
                 &mut idx_map,
+                tx_seed_bytes,
             )?;
             for input in tx.ins.iter() {
                 // Push public key and input binary format if we have a spending pkey
@@ -1390,8 +1401,9 @@ impl BlockData {
         prev_pow: &PowBlockHeader,
         prev: &BlockHeader,
         key: &str,
+        vrf_in_out: VRFInOut,
     ) -> Result<(OutWitnessVec, OutWitnessVec), BlockVerifyErr> {
-        let (outs, to_delete) = self.validate_txs(prev_pow, prev, key)?;
+        let (outs, to_delete) = self.validate_txs(prev_pow, prev, key, vrf_in_out)?;
 
         Ok((outs, to_delete))
     }

@@ -173,6 +173,7 @@ impl Input {
         to_delete: &mut OutWitnessVec,
         ver_stack: &mut VerificationStack,
         idx_map: &mut HashMap<(Address, Hash160), u16>,
+        seed_bytes: &[u8],
     ) -> Result<(), TxVerifyErr> {
         match self.input_flags {
             InputFlags::IsCoinbase => {
