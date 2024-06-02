@@ -91,7 +91,7 @@ impl Transaction {
 
     /// Validate single transaction against the chain-state. Returns transaction fee if successful.
     /// Does not verify signatures.
-    pub fn verify_single<B: ShardBackend>(
+    pub fn verify_single(
         &self,
         key: &str,
         height: u64,

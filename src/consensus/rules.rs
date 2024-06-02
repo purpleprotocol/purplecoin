@@ -132,6 +132,13 @@ pub fn map_height_to_block_reward(height: u64) -> Money {
     INITIAL_BLOCK_REWARD >> h
 }
 
+#[must_use]
+/// Returns the eligible shard to receive the PoW reward based
+/// on the current height and the sector id.
+pub fn map_height_to_chain_id_for_reward(height: u64, sector_id: u8) -> u8 {
+    ((height % SHARDS_PER_SECTOR as u64) + (sector_id as u64 * SHARDS_PER_SECTOR as u64)) as u8
+}
+
 /// Calculate new bits based on blocktime and old bits
 #[must_use]
 pub fn calc_difficulty(bits: u32, blocktime: u64) -> u32 {
@@ -348,5 +355,24 @@ mod tests {
             map_sector_id_to_chain_ids(0),
             Some(RangeInclusive::new(0, SHARDS_PER_SECTOR as u8 - 1))
         );
+    }
+
+    #[test]
+    fn it_maps_reward_to_correct_shard() {
+        assert_eq!(map_height_to_chain_id_for_reward(0, 0), 0);
+        assert_eq!(map_height_to_chain_id_for_reward(1, 0), 1);
+        assert_eq!(map_height_to_chain_id_for_reward(2, 0), 2);
+        assert_eq!(map_height_to_chain_id_for_reward(3, 0), 3);
+        assert_eq!(map_height_to_chain_id_for_reward(15, 0), 15);
+        assert_eq!(map_height_to_chain_id_for_reward(16, 0), 0);
+        assert_eq!(map_height_to_chain_id_for_reward(0, 1), 16);
+        assert_eq!(map_height_to_chain_id_for_reward(0, 2), 32);
+        assert_eq!(map_height_to_chain_id_for_reward(0, 3), 48);
+        assert_eq!(map_height_to_chain_id_for_reward(0, 4), 64);
+        assert_eq!(map_height_to_chain_id_for_reward(0, 15), 240);
+        assert_eq!(map_height_to_chain_id_for_reward(1, 15), 241);
+        assert_eq!(map_height_to_chain_id_for_reward(2, 15), 242);
+        assert_eq!(map_height_to_chain_id_for_reward(15, 15), 255);
+        assert_eq!(map_height_to_chain_id_for_reward(16, 15), 240);
     }
 }

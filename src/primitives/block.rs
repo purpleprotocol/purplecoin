@@ -6,9 +6,9 @@
 
 use crate::chain::ChainConfig;
 use crate::consensus::{
-    calc_difficulty, map_height_to_block_reward, map_sector_id_to_chain_ids, Difficulty, Money,
-    ACCUMULATOR_MULTIPLIER, BLOCK_HEADER_BLOOM_FP_RATE, COIN, MIN_DIFF_GR, MIN_DIFF_RANDOM_HASH,
-    SECOND_ROUND_TIMEOUT, SECTORS, SHARDS_PER_SECTOR,
+    self, calc_difficulty, map_height_to_block_reward, map_sector_id_to_chain_ids, Difficulty,
+    Money, ACCUMULATOR_MULTIPLIER, BLOCK_HEADER_BLOOM_FP_RATE, COIN, MIN_DIFF_GR,
+    MIN_DIFF_RANDOM_HASH, SECOND_ROUND_TIMEOUT, SECTORS, SHARDS_PER_SECTOR,
 };
 use crate::miner::{HashAlgorithm, PowAlgorithm};
 use crate::primitives::{
@@ -1318,7 +1318,7 @@ impl BlockData {
 
         let block_height = prev.height + 1;
         let block_reward = map_height_to_block_reward(block_height);
-        //let mut idx_map = HashMap::new();
+        let mut idx_map = HashMap::new();
         let mut coinbase: Option<Input> = None;
         let mut coinbase_count = 0;
         let mut coloured_coinbase_count = 0;
@@ -1328,13 +1328,28 @@ impl BlockData {
         let mut public_keys = vec![];
         let mut transcripts = vec![];
         let mut ctx = schnorrkel::signing_context(key.as_bytes());
-        let iter = self.txs.iter().flat_map(|tx| tx.ins.iter());
 
-        for input in iter {
-            // Push public key and input binary format if we have a spending pkey
-            if let Some(public_key) = &input.spending_pkey {
-                public_keys.push(public_key.0);
-                transcripts.push(ctx.bytes(&input.to_bytes()));
+        for tx in self.txs.iter() {
+            tx.verify_single(
+                key,
+                block_height,
+                prev.chain_id,
+                prev_pow.timestamp,
+                *prev.hash().unwrap(),
+                consensus::map_height_to_block_reward(block_height),
+                consensus::map_height_to_chain_id_for_reward(block_height, prev_pow.sector_id)
+                    == prev.chain_id,
+                &mut to_add,
+                &mut to_delete,
+                &mut ver_stack,
+                &mut idx_map,
+            )?;
+            for input in tx.ins.iter() {
+                // Push public key and input binary format if we have a spending pkey
+                if let Some(public_key) = &input.spending_pkey {
+                    public_keys.push(public_key.0);
+                    transcripts.push(ctx.bytes(&input.to_bytes()));
+                }
             }
         }
 
@@ -1582,7 +1597,13 @@ pub enum BlockVerifyErr {
 
 impl From<SigVerificationErr> for BlockVerifyErr {
     fn from(_other: SigVerificationErr) -> Self {
-        BlockVerifyErr::SigVerificationErr
+        Self::SigVerificationErr
+    }
+}
+
+impl From<TxVerifyErr> for BlockVerifyErr {
+    fn from(other: TxVerifyErr) -> Self {
+        Self::Tx(other)
     }
 }
 
