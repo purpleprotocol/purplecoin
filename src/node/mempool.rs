@@ -125,7 +125,7 @@ mod tests {
         tx.compute_hash(key);
         let tx = TransactionWithSignatures {
             tx,
-            signatures: vec![None],
+            signatures: vec![],
         };
         TransactionWithFee::from_transaction(tx, 0, 0, [0; 32])
     }

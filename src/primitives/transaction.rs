@@ -89,7 +89,8 @@ impl Transaction {
         &self.ins
     }
 
-    /// Validate single transaction against the chain-state. Returns transaction fee if successful
+    /// Validate single transaction against the chain-state. Returns transaction fee if successful.
+    /// Does not verify signatures.
     pub fn verify_single<B: ShardBackend>(
         &self,
         key: &str,
@@ -129,20 +130,6 @@ impl Transaction {
         if ins_sum < outs_sum {
             return Err(TxVerifyErr::InvalidAmount);
         }
-
-        // TODO: Validate signatures another way for a single transaction
-        // and validate aggregated signature in the block validation pipeline.
-        //
-        // // Verify all signatures against transcripts and public keys
-        // if verify_batch(
-        //     transcripts.iter().map(|m| ctx.bytes(m)),
-        //     &public_keys,
-        //     false,
-        // )
-        // .is_err()
-        // {
-        //     return Err(TxVerifyErr::InvalidSignature);
-        // }
 
         Ok(ins_sum - outs_sum)
     }
@@ -212,6 +199,7 @@ pub enum TxVerifyErr {
     InvalidScriptHash,
     InvalidScriptExecution,
     InvalidCoinbase,
+    InvalidSignaturesLength,
     BackendErr,
     Error(&'static str),
 }
@@ -220,7 +208,43 @@ pub enum TxVerifyErr {
 /// Transaction with signatures used at the p2p layer for initial propagation.
 pub struct TransactionWithSignatures {
     pub(crate) tx: Transaction,
-    pub(crate) signatures: Vec<Option<SchnorSig>>,
+    pub(crate) signatures: Vec<SchnorSig>,
+}
+
+impl TransactionWithSignatures {
+    /// Verify only the signatures against the inputs in the transaction.
+    pub fn verify_signatures(&self, key: &str) -> Result<(), TxVerifyErr> {
+        let mut transcripts: Vec<Vec<u8>> = Vec::new();
+        let mut public_keys: Vec<SchnorPK> = Vec::new();
+
+        for input in &self.tx.ins {
+            if let Some(pub_key) = &input.spending_pkey {
+                let bytes = input.to_bytes_for_signing();
+                transcripts.push(bytes);
+                public_keys.push(pub_key.0.clone());
+            }
+        }
+
+        if self.signatures.len() != public_keys.len() {
+            return Err(TxVerifyErr::InvalidSignaturesLength);
+        }
+
+        let mut ctx = signing_context(key.as_bytes());
+
+        // Verify all signatures against transcripts and public keys
+        if verify_batch(
+            transcripts.iter().map(|m| ctx.bytes(m.as_slice())),
+            &self.signatures,
+            &public_keys,
+            false,
+        )
+        .is_err()
+        {
+            return Err(TxVerifyErr::InvalidSignature);
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug)]
