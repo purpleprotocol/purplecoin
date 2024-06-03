@@ -174,6 +174,7 @@ impl Input {
         ver_stack: &mut VerificationStack,
         idx_map: &mut HashMap<(Address, Hash160), u16>,
         seed_bytes: &[u8],
+        input_stack: &[Self],
     ) -> Result<(), TxVerifyErr> {
         match self.input_flags {
             InputFlags::IsCoinbase => {
@@ -196,7 +197,7 @@ impl Input {
                     ) if amount == block_reward && coinbase_height == &height => {
                         let result = script.execute(
                             &self.script_args,
-                            &[],
+                            input_stack,
                             to_add,
                             idx_map,
                             ver_stack,
@@ -247,7 +248,7 @@ impl Input {
                     ) if amount == block_reward && coinbase_height == &height => {
                         let result = script.execute(
                             &self.script_args,
-                            &[],
+                            input_stack,
                             to_add,
                             idx_map,
                             ver_stack,
@@ -295,11 +296,101 @@ impl Input {
                     }
                 }
 
+                let script_hash = self.script.to_script_hash(key);
+
+                // Verify script hash
+                if script_hash != out.script_hash {
+                    return Err(TxVerifyErr::InvalidScriptHash);
+                }
+
+                let result = self
+                    .script
+                    .execute(
+                        &self.script_args,
+                        input_stack,
+                        to_add,
+                        idx_map,
+                        ver_stack,
+                        [0; 32], // Empty seed, not failable
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: true,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: Some(out.clone()),
+                            can_fail: false,
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+
                 to_delete.push((
                     self.out.as_ref().unwrap().clone(),
                     self.witness.as_ref().unwrap().clone(),
                 ));
-                unimplemented!()
+                Ok(())
+            }
+
+            InputFlags::FailablePlain => {
+                let out = self.out.as_ref().unwrap();
+
+                // Validate coinbase height against block horizon as coinbase outputs
+                // can only be spent if they are created beyong the block horizon.
+                if out.is_coinbase() {
+                    let out_height = out.coinbase_height().unwrap();
+
+                    if height < out_height + BLOCK_HORIZON {
+                        return Err(TxVerifyErr::CoinbaseOutSpentBeforeMaturation);
+                    }
+                }
+
+                let script_hash = self.script.to_script_hash(key);
+
+                // Verify script hash
+                if script_hash != out.script_hash {
+                    return Err(TxVerifyErr::InvalidScriptHash);
+                }
+
+                let seed_hash = Hash256::hash_from_slice(seed_bytes, key);
+
+                let result = self
+                    .script
+                    .execute(
+                        &self.script_args,
+                        input_stack,
+                        to_add,
+                        idx_map,
+                        ver_stack,
+                        seed_hash.0,
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: true,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: Some(out.clone()),
+                            can_fail: false,
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+
+                to_delete.push((
+                    self.out.as_ref().unwrap().clone(),
+                    self.witness.as_ref().unwrap().clone(),
+                ));
+                Ok(())
             }
 
             _ => unimplemented!(),

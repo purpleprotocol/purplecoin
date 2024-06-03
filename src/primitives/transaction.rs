@@ -128,6 +128,7 @@ impl Transaction {
                 ver_stack,
                 idx_map,
                 input_seed_bytes,
+                self.ins.as_slice(),
             )?;
         }
 
