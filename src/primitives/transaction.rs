@@ -206,6 +206,7 @@ pub enum TxVerifyErr {
     InvalidScriptExecution,
     InvalidCoinbase,
     InvalidSignaturesLength,
+    InvalidPublicKey,
     BackendErr,
     Error(&'static str),
 }

@@ -303,6 +303,13 @@ impl Input {
                     return Err(TxVerifyErr::InvalidScriptHash);
                 }
 
+                let address_to_check = self.spending_pkey.as_ref().unwrap().to_address();
+
+                // Verify address
+                if &address_to_check != out.address.as_ref().unwrap() {
+                    return Err(TxVerifyErr::InvalidPublicKey);
+                }
+
                 let result = self
                     .script
                     .execute(
@@ -355,6 +362,13 @@ impl Input {
                 // Verify script hash
                 if script_hash != out.script_hash {
                     return Err(TxVerifyErr::InvalidScriptHash);
+                }
+
+                let address_to_check = self.spending_pkey.as_ref().unwrap().to_address();
+
+                // Verify address
+                if &address_to_check != out.address.as_ref().unwrap() {
+                    return Err(TxVerifyErr::InvalidPublicKey);
                 }
 
                 let seed_hash = Hash256::hash_from_slice(seed_bytes, key);
