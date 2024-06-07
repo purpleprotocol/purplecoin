@@ -52,6 +52,7 @@ impl Transaction {
     pub fn get_outs(&self, height: u64, timestamp: i64, prev_block_hash: [u8; 32]) -> Vec<Output> {
         let key = format!("{}.shard.{}", SETTINGS.node.network_name, self.chain_id);
         let mut out_stack = vec![];
+        let mut outs_sum = 0;
         let mut idx_map = HashMap::new();
         let mut ver_stack = VerificationStack::new();
 
@@ -61,6 +62,7 @@ impl Transaction {
                 &input.script_args,
                 &self.ins,
                 &mut out_stack,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut ver_stack,
                 [0; 32], // TODO: Inject seed here
@@ -119,6 +121,7 @@ impl Transaction {
                 height,
                 chain_id,
                 &mut ins_sum,
+                &mut outs_sum,
                 timestamp,
                 &block_reward,
                 prev_block_hash,

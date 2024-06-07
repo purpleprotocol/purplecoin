@@ -301,6 +301,7 @@ impl Script {
         args: &[VmTerm],
         input_stack: &[Input],
         output_stack: &mut Vec<Output>,
+        outs_sum: &mut Money,
         output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
         verification_stack: &mut VerificationStack,
         seed: [u8; 32],
@@ -393,6 +394,7 @@ impl Script {
                         verification_stack,
                         input_stack,
                         output_stack,
+                        outs_sum,
                         output_stack_idx_map,
                         &mut script_outputs,
                         key,
@@ -7126,6 +7128,7 @@ impl ScriptExecutor {
         verification_stack: &mut VerificationStack,
         input_stack: &[Input],
         output_stack: &mut Vec<Output>,
+        outs_sum: &mut Money,
         output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
         script_outputs: &mut Vec<VmTerm>,
         key: &str,
@@ -7612,7 +7615,7 @@ impl ScriptExecutor {
 
                                             let inputs_hash =
                                                 Hash160::hash_from_slice(inputs_hashes, key);
-
+                                            *outs_sum += amount;
                                             output_stack[*idx as usize].amount += amount;
                                             output_stack[*idx as usize].inputs_hash = inputs_hash;
                                             output_stack[*idx as usize].compute_hash(key);
@@ -7632,7 +7635,7 @@ impl ScriptExecutor {
                                                 script_outs: script_outputs.clone(),
                                                 hash: None,
                                             };
-
+                                            *outs_sum += amount;
                                             output.compute_hash(key);
                                             output_stack_idx_map.insert(
                                                 (address, script_hash),
@@ -7715,7 +7718,7 @@ impl ScriptExecutor {
                                 });
 
                                 let inputs_hash = Hash160::hash_from_slice(inputs_hashes, key);
-
+                                *outs_sum += amount;
                                 output_stack[*idx as usize].amount += amount;
                                 output_stack[*idx as usize].inputs_hash = inputs_hash;
                                 output_stack[*idx as usize].compute_hash(key);
@@ -7740,7 +7743,7 @@ impl ScriptExecutor {
                                     .insert((address, script_hash), output_stack.len() as u16);
                                 output_stack.push(output);
                                 *script_outputs = vec![];
-
+                                *outs_sum += amount;
                                 if output_stack.len() > MAX_OUT_STACK {
                                     self.state = ScriptExecutorState::Error(
                                         ExecutionResult::OutStackOverflow,
@@ -7810,7 +7813,7 @@ impl ScriptExecutor {
                             output.compute_hash(key);
                             output_stack.push(output);
                             *script_outputs = vec![];
-
+                            *outs_sum += amount;
                             self.state = ScriptExecutorState::Ok;
                         }
 
@@ -7868,7 +7871,7 @@ impl ScriptExecutor {
                             output.compute_hash(key);
                             output_stack.push(output);
                             *script_outputs = vec![];
-
+                            *outs_sum += amount;
                             self.state = ScriptExecutorState::Ok;
                         }
 
@@ -13107,6 +13110,7 @@ mod tests {
                     get_test_args(&mut ss, 30, script_output.clone(), 0, key, args);
                 let mut idx_map = HashMap::new();
                 let mut outs = vec![];
+                let mut outs_sum = 0;
                 let mut verif_stack = VerificationStack::new();
 
                 assert_eq!(
@@ -13114,6 +13118,7 @@ mod tests {
                         &base.args,
                         &base.ins,
                         &mut outs,
+                        &mut outs_sum,
                         &mut idx_map,
                         &mut verif_stack,
                         [0; 32],
@@ -13160,6 +13165,7 @@ mod tests {
                     get_test_args(&mut ss, 30, script_output.clone(), 0, key, args);
                 let mut idx_map = HashMap::new();
                 let mut outs = vec![];
+                let mut outs_sum = 0;
                 let mut verif_stack = VerificationStack::new();
 
                 assert_eq!(
@@ -13167,6 +13173,7 @@ mod tests {
                         &base.args,
                         &base.ins,
                         &mut outs,
+                        &mut outs_sum,
                         &mut idx_map,
                         &mut verif_stack,
                         [0; 32],
@@ -13213,6 +13220,7 @@ mod tests {
                     get_test_args(&mut ss, 30, script_output.clone(), 0, key, args);
                 let mut idx_map = HashMap::new();
                 let mut outs = vec![];
+                let mut outs_sum = 0;
                 let mut verif_stack = VerificationStack::new();
 
                 assert_eq!(
@@ -13220,6 +13228,7 @@ mod tests {
                         &base.args,
                         &base.ins,
                         &mut outs,
+                        &mut outs_sum,
                         &mut idx_map,
                         &mut verif_stack,
                         [0; 32],
@@ -13266,6 +13275,7 @@ mod tests {
                     get_test_args(&mut ss, 30, script_output.clone(), 0, key, args);
                 let mut idx_map = HashMap::new();
                 let mut outs = vec![];
+                let mut outs_sum = 0;
                 let mut verif_stack = VerificationStack::new();
 
                 assert_eq!(
@@ -13273,6 +13283,7 @@ mod tests {
                         &base.args,
                         &base.ins,
                         &mut outs,
+                        &mut outs_sum,
                         &mut idx_map,
                         &mut verif_stack,
                         [0; 32],
@@ -13292,12 +13303,14 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut script, 30, outputs, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
         assert_eq!(
             script.execute(
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -13320,12 +13333,14 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut script, 30, outputs, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
         assert_eq!(
             script.execute(
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15241,6 +15256,7 @@ mod tests {
             ..Default::default()
         }];
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         let ins_hashes: Vec<u8> = ins.iter_mut().fold(vec![], |mut acc, v: &mut Input| {
@@ -15268,6 +15284,7 @@ mod tests {
                 &args,
                 &ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15310,6 +15327,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15317,6 +15335,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15358,6 +15377,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15365,6 +15385,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15407,6 +15428,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15414,6 +15436,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15455,6 +15478,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15462,6 +15486,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15503,6 +15528,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15510,6 +15536,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15553,6 +15580,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15560,6 +15588,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15603,6 +15632,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15610,6 +15640,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15654,6 +15685,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15661,6 +15693,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15704,6 +15737,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15711,6 +15745,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15755,6 +15790,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15762,6 +15798,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15805,6 +15842,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15812,6 +15850,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15856,6 +15895,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15863,6 +15903,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15906,6 +15947,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15913,6 +15955,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15957,6 +16000,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15964,6 +16008,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16007,6 +16052,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16014,6 +16060,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16058,6 +16105,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16065,6 +16113,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16108,6 +16157,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16115,6 +16165,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16159,6 +16210,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16166,6 +16218,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16209,6 +16262,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16216,6 +16270,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16259,6 +16314,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16266,6 +16322,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16307,6 +16364,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16314,6 +16372,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16355,6 +16414,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16362,6 +16422,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16405,6 +16466,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16412,6 +16474,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16455,6 +16518,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16462,6 +16526,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16517,12 +16582,14 @@ mod tests {
         .collect::<Vec<_>>();
 
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
         assert_eq!(
             ss.execute(
                 &args,
                 ins.as_slice(),
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16559,6 +16626,7 @@ mod tests {
         })
         .collect();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16566,6 +16634,7 @@ mod tests {
                 &args,
                 &ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16602,6 +16671,7 @@ mod tests {
         })
         .collect();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16609,6 +16679,7 @@ mod tests {
                 &args,
                 &ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16779,6 +16850,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16786,6 +16858,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16836,6 +16909,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16843,6 +16917,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16886,6 +16961,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16893,6 +16969,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16932,6 +17009,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16939,6 +17017,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16998,6 +17077,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17005,6 +17085,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17045,6 +17126,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17052,6 +17134,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17108,6 +17191,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17115,6 +17199,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17171,6 +17256,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17178,6 +17264,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17227,6 +17314,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17234,6 +17322,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17276,6 +17365,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17283,6 +17373,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17333,6 +17424,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17340,6 +17432,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17384,6 +17477,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17391,6 +17485,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17432,6 +17527,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17439,6 +17535,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17486,6 +17583,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17493,6 +17591,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17548,6 +17647,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17555,6 +17655,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17589,6 +17690,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17596,6 +17698,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17624,6 +17727,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17631,6 +17735,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17658,6 +17763,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17665,6 +17771,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17694,6 +17801,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17701,6 +17809,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17732,6 +17841,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17739,6 +17849,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17776,6 +17887,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17783,6 +17895,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17812,6 +17925,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17819,6 +17933,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17857,6 +17972,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17864,6 +17980,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17893,6 +18010,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17900,6 +18018,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17929,6 +18048,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17936,6 +18056,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17965,6 +18086,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17972,6 +18094,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18001,6 +18124,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18008,6 +18132,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18039,6 +18164,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18046,6 +18172,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18079,6 +18206,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18086,6 +18214,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18119,6 +18248,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18126,6 +18256,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18153,6 +18284,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18160,6 +18292,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18240,6 +18373,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18247,6 +18381,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18354,6 +18489,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18361,6 +18497,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18536,6 +18673,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18543,6 +18681,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18584,6 +18723,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18591,6 +18731,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18635,6 +18776,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18642,6 +18784,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18692,6 +18835,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18699,6 +18843,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18761,6 +18906,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18768,6 +18914,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18835,6 +18982,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18842,6 +18990,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18886,6 +19035,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18893,6 +19043,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18943,6 +19094,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18950,6 +19102,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19012,6 +19165,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19019,6 +19173,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19086,6 +19241,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19093,6 +19249,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19129,6 +19286,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19136,6 +19294,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19176,6 +19335,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19183,6 +19343,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19250,6 +19411,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19257,6 +19419,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19368,6 +19531,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19375,6 +19539,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19525,6 +19690,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19532,6 +19698,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19784,6 +19951,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19791,6 +19959,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19840,6 +20009,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19847,6 +20017,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19906,6 +20077,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19913,6 +20085,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19999,6 +20172,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20006,6 +20180,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20137,6 +20312,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20144,6 +20320,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20270,6 +20447,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20277,6 +20455,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20326,6 +20505,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20333,6 +20513,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20392,6 +20573,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20399,6 +20581,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20485,6 +20668,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20492,6 +20676,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20623,6 +20808,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20630,6 +20816,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20756,6 +20943,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20763,6 +20951,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20829,6 +21018,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20836,6 +21026,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20914,6 +21105,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20921,6 +21113,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21031,6 +21224,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21038,6 +21232,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21089,6 +21284,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21096,6 +21292,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21205,6 +21402,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21212,6 +21410,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21285,6 +21484,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21292,6 +21492,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21361,6 +21562,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21368,6 +21570,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21437,6 +21640,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21444,6 +21648,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21514,6 +21719,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21521,6 +21727,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21585,6 +21792,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21592,6 +21800,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21657,6 +21866,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21664,6 +21874,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21754,6 +21965,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21761,6 +21973,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -21802,6 +22015,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21809,6 +22023,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -21860,6 +22075,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21867,6 +22083,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -21908,6 +22125,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21915,6 +22133,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -21956,6 +22175,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21963,6 +22183,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22004,6 +22225,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22011,6 +22233,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22052,6 +22275,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22059,6 +22283,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22100,6 +22325,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22107,6 +22333,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22148,6 +22375,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22155,6 +22383,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22196,6 +22425,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22203,6 +22433,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22244,6 +22475,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22251,6 +22483,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22292,6 +22525,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22299,6 +22533,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22340,6 +22575,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22347,6 +22583,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22388,6 +22625,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22395,6 +22633,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22436,6 +22675,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22443,6 +22683,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22484,6 +22725,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22491,6 +22733,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22555,6 +22798,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22562,6 +22806,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -22623,6 +22868,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22630,6 +22876,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -22691,6 +22938,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22698,6 +22946,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -22759,6 +23008,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22766,6 +23016,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -22827,6 +23078,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22834,6 +23086,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -22895,6 +23148,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22902,6 +23156,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23020,6 +23275,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23027,6 +23283,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23171,6 +23428,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23178,6 +23436,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23221,6 +23480,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23228,6 +23488,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23271,6 +23532,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23278,6 +23540,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23321,6 +23584,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23328,6 +23592,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23371,6 +23636,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23378,6 +23644,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23433,6 +23700,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23440,6 +23708,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23483,6 +23752,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23490,6 +23760,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23533,6 +23804,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23540,6 +23812,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23583,6 +23856,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23590,6 +23864,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23633,6 +23908,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23640,6 +23916,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23711,6 +23988,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23718,6 +23996,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23768,6 +24047,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23775,6 +24055,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23910,6 +24191,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23917,6 +24199,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23980,6 +24263,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23987,6 +24271,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24123,6 +24408,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24130,6 +24416,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24193,6 +24480,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24200,6 +24488,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24309,6 +24598,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24316,6 +24606,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24360,6 +24651,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24367,6 +24659,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24411,6 +24704,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24418,6 +24712,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24462,6 +24757,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24469,6 +24765,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24513,6 +24810,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24520,6 +24818,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26488,6 +26787,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26495,6 +26795,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26543,6 +26844,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26550,6 +26852,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26599,6 +26902,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26606,6 +26910,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26654,6 +26959,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26661,6 +26967,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26710,6 +27017,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 120, vec![], 3, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26717,6 +27025,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26765,6 +27074,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26772,6 +27082,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26821,6 +27132,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26828,6 +27140,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26876,6 +27189,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26883,6 +27197,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26932,6 +27247,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 90, vec![], 2, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26939,6 +27255,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26987,6 +27304,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26994,6 +27312,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27059,6 +27378,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27066,6 +27386,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27173,6 +27494,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27180,6 +27502,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27288,6 +27611,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27295,6 +27619,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27358,6 +27683,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27365,6 +27691,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27442,6 +27769,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27449,6 +27777,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27515,6 +27844,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27522,6 +27852,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27588,6 +27919,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27595,6 +27927,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27661,6 +27994,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27668,6 +28002,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27734,6 +28069,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 30, vec![], 0, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27741,6 +28077,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27813,6 +28150,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27820,6 +28158,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27892,6 +28231,7 @@ mod tests {
         let base: TestBaseArgs = get_test_base_args(&mut ss, 60, vec![], 1, key);
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
+        let mut outs_sum = 0;
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27899,6 +28239,7 @@ mod tests {
                 &base.args,
                 &base.ins,
                 &mut outs,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],

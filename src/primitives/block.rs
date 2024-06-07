@@ -967,6 +967,7 @@ impl BlockHeader {
         let inputs = Self::read_genesis_inputs(chain_id, config);
         let key = config.get_chain_key(chain_id);
         let mut out_stack = vec![];
+        let mut outs_sum = 0;
         let mut ver_stack = VerificationStack::new();
         let mut idx_map = HashMap::new();
         let script = Script::new_coinbase();
@@ -978,6 +979,7 @@ impl BlockHeader {
                 &input.script_args,
                 &[in_clone],
                 &mut out_stack,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut ver_stack,
                 [0; 32],
@@ -1181,6 +1183,7 @@ impl Block {
         let ss = Script::new_simple_spend();
         let sh = ss.to_script_hash(key);
         let mut out_stack = vec![];
+        let mut outs_sum = 0;
         let mut ver_stack = VerificationStack::new();
         let mut idx_map = HashMap::new();
         let coinbase_height = prev.height + 1;
@@ -1202,6 +1205,7 @@ impl Block {
             &input.script_args,
             &[in_clone],
             &mut out_stack,
+            &mut outs_sum,
             &mut idx_map,
             &mut ver_stack,
             [0; 32],
@@ -1733,6 +1737,7 @@ mod tests {
         let ss = Script::new_simple_spend();
         let sh = ss.to_script_hash(key);
         let mut out_stack = vec![];
+        let mut outs_sum = 0;
         let script_args = vec![
             VmTerm::Signed128(INITIAL_BLOCK_REWARD),
             VmTerm::Hash160(address.0),
@@ -1767,6 +1772,7 @@ mod tests {
                 &input.script_args,
                 &[in_clone],
                 &mut out_stack,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut ver_stack,
                 [0; 32],
@@ -1901,6 +1907,7 @@ mod tests {
         let ss = Script::new_simple_spend();
         let sh = ss.to_script_hash(key);
         let mut out_stack = vec![];
+        let mut outs_sum = 0;
         let mut ver_stack = VerificationStack::new();
         let mut idx_map = HashMap::new();
         let script_args = vec![
@@ -1924,6 +1931,7 @@ mod tests {
                 &input.script_args,
                 &[in_clone],
                 &mut out_stack,
+                &mut outs_sum,
                 &mut idx_map,
                 &mut ver_stack,
                 [0; 32],

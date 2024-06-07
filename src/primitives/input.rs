@@ -169,7 +169,8 @@ impl Input {
         key: &str,
         height: u64,
         chain_id: u8,
-        sum: &mut Money,
+        ins_sum: &mut Money,
+        outs_sum: &mut Money,
         timestamp: i64,
         block_reward: &Money,
         prev_block_hash: Hash256,
@@ -204,9 +205,10 @@ impl Input {
                             &self.script_args,
                             input_stack,
                             to_add,
+                            outs_sum,
                             idx_map,
                             ver_stack,
-                            [0; 32], // TODO: Inject seed here
+                            [0; 32],
                             key,
                             SETTINGS.node.network_name.as_str(),
                             VmFlags {
@@ -225,7 +227,10 @@ impl Input {
 
                         // Validate script execution
                         match result {
-                            VmResult(Ok(ExecutionResult::Ok)) => Ok(()),
+                            VmResult(Ok(ExecutionResult::Ok)) => {
+                                *ins_sum += block_reward;
+                                Ok(())
+                            }
                             _ => Err(TxVerifyErr::InvalidScriptExecution),
                         }
                     }
@@ -255,9 +260,10 @@ impl Input {
                             &self.script_args,
                             input_stack,
                             to_add,
+                            outs_sum,
                             idx_map,
                             ver_stack,
-                            [0; 32], // TODO: Inject seed here
+                            [0; 32],
                             key,
                             SETTINGS.node.network_name.as_str(),
                             VmFlags {
@@ -276,7 +282,10 @@ impl Input {
 
                         // Validate script execution
                         match result {
-                            VmResult(Ok(ExecutionResult::Ok)) => Ok(()),
+                            VmResult(Ok(ExecutionResult::Ok)) => {
+                                *ins_sum += block_reward;
+                                Ok(())
+                            }
                             _ => Err(TxVerifyErr::InvalidScriptExecution),
                         }
                     }
@@ -290,6 +299,14 @@ impl Input {
 
             InputFlags::Plain => {
                 let out = self.out.as_ref().unwrap();
+                let out = if let Some(idx) = idx_map
+                    .get(&(out.address.as_ref().unwrap().clone(), out.script_hash.clone()))
+                {
+                    &to_add[*idx as usize]
+                } else {
+                    out
+                };
+                let out_amount = out.amount;
 
                 // Validate coinbase height against block horizon as coinbase outputs
                 // can only be spent if they are created beyong the block horizon.
@@ -321,6 +338,7 @@ impl Input {
                         &self.script_args,
                         input_stack,
                         to_add,
+                        outs_sum,
                         idx_map,
                         ver_stack,
                         [0; 32], // Empty seed, not failable
@@ -341,7 +359,7 @@ impl Input {
                     )
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
-
+                *ins_sum += out_amount;
                 to_delete.push((
                     self.out.as_ref().unwrap().clone(),
                     self.witness.as_ref().unwrap().clone(),
@@ -351,6 +369,14 @@ impl Input {
 
             InputFlags::FailablePlain => {
                 let out = self.out.as_ref().unwrap();
+                let out = if let Some(idx) = idx_map
+                    .get(&(out.address.as_ref().unwrap().clone(), out.script_hash.clone()))
+                {
+                    &to_add[*idx as usize]
+                } else {
+                    out
+                };
+                let out_amount = out.amount;
 
                 // Validate coinbase height against block horizon as coinbase outputs
                 // can only be spent if they are created beyong the block horizon.
@@ -384,6 +410,7 @@ impl Input {
                         &self.script_args,
                         input_stack,
                         to_add,
+                        outs_sum,
                         idx_map,
                         ver_stack,
                         seed_hash.0,
@@ -404,7 +431,7 @@ impl Input {
                     )
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
-
+                *ins_sum += out_amount;
                 to_delete.push((
                     self.out.as_ref().unwrap().clone(),
                     self.witness.as_ref().unwrap().clone(),
@@ -412,8 +439,21 @@ impl Input {
                 Ok(())
             }
 
+            InputFlags::IsColoured => {
+                let out = self.out.as_ref().unwrap();
+                unimplemented!()
+            }
+
             InputFlags::HasSpendProof => {
                 let out = self.out.as_ref().unwrap();
+                let out = if let Some(idx) = idx_map
+                    .get(&(out.address.as_ref().unwrap().clone(), out.script_hash.clone()))
+                {
+                    &to_add[*idx as usize]
+                } else {
+                    out
+                };
+                let out_amount = out.amount;
 
                 // Validate coinbase height against block horizon as coinbase outputs
                 // can only be spent if they are created beyong the block horizon.
@@ -459,6 +499,7 @@ impl Input {
                         &self.script_args,
                         input_stack,
                         to_add,
+                        outs_sum,
                         idx_map,
                         ver_stack,
                         [0; 32],
@@ -479,7 +520,7 @@ impl Input {
                     )
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
-
+                *ins_sum += out_amount;
                 to_delete.push((
                     self.out.as_ref().unwrap().clone(),
                     self.witness.as_ref().unwrap().clone(),
@@ -489,6 +530,14 @@ impl Input {
 
             InputFlags::FailableHasSpendProof => {
                 let out = self.out.as_ref().unwrap();
+                let out = if let Some(idx) = idx_map
+                    .get(&(out.address.as_ref().unwrap().clone(), out.script_hash.clone()))
+                {
+                    &to_add[*idx as usize]
+                } else {
+                    out
+                };
+                let out_amount = out.amount;
 
                 // Validate coinbase height against block horizon as coinbase outputs
                 // can only be spent if they are created beyong the block horizon.
@@ -536,6 +585,7 @@ impl Input {
                         &self.script_args,
                         input_stack,
                         to_add,
+                        outs_sum,
                         idx_map,
                         ver_stack,
                         seed_hash.0,
@@ -556,7 +606,7 @@ impl Input {
                     )
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
-
+                *ins_sum += out_amount;
                 to_delete.push((
                     self.out.as_ref().unwrap().clone(),
                     self.witness.as_ref().unwrap().clone(),
@@ -566,6 +616,14 @@ impl Input {
 
             InputFlags::HasSpendProofWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
+                let out = if let Some(idx) = idx_map
+                    .get(&(out.address.as_ref().unwrap().clone(), out.script_hash.clone()))
+                {
+                    &to_add[*idx as usize]
+                } else {
+                    out
+                };
+                let out_amount = out.amount;
 
                 // Validate coinbase height against block horizon as coinbase outputs
                 // can only be spent if they are created beyong the block horizon.
@@ -605,6 +663,7 @@ impl Input {
                         &self.script_args,
                         input_stack,
                         to_add,
+                        outs_sum,
                         idx_map,
                         ver_stack,
                         [0; 32],
@@ -625,7 +684,7 @@ impl Input {
                     )
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
-
+                *ins_sum += out_amount;
                 to_delete.push((
                     self.out.as_ref().unwrap().clone(),
                     self.witness.as_ref().unwrap().clone(),
@@ -635,6 +694,14 @@ impl Input {
 
             InputFlags::FailableHasSpendProofWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
+                let out = if let Some(idx) = idx_map
+                    .get(&(out.address.as_ref().unwrap().clone(), out.script_hash.clone()))
+                {
+                    &to_add[*idx as usize]
+                } else {
+                    out
+                };
+                let out_amount = out.amount;
 
                 // Validate coinbase height against block horizon as coinbase outputs
                 // can only be spent if they are created beyong the block horizon.
@@ -676,6 +743,7 @@ impl Input {
                         &self.script_args,
                         input_stack,
                         to_add,
+                        outs_sum,
                         idx_map,
                         ver_stack,
                         seed_hash.0,
@@ -696,7 +764,7 @@ impl Input {
                     )
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
-
+*               ins_sum += out_amount;
                 to_delete.push((
                     self.out.as_ref().unwrap().clone(),
                     self.witness.as_ref().unwrap().clone(),
