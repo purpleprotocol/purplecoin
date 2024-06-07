@@ -410,6 +410,27 @@ impl Algorithm<Hash160> for Hash160Algo {
     }
 }
 
+pub(crate) struct AddressAndHash160(Address, Hash160);
+
+impl From<(Address, Hash160)> for AddressAndHash160 {
+    fn from(other: (Address, Hash160)) -> Self {
+        Self(other.0, other.1)
+    }
+}
+
+impl<H: Hasher> Hashable<H> for Hash160 {
+    fn hash(&self, state: &mut H) {
+        Hashable::hash(&self.0, state);
+    }
+}
+
+impl<H: Hasher> Hashable<H> for AddressAndHash160 {
+    fn hash(&self, state: &mut H) {
+        Hashable::hash(&self.0 .0, state);
+        Hashable::hash(&self.1 .0, state);
+    }
+}
+
 #[derive(
     PartialEq,
     Eq,
