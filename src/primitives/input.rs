@@ -299,9 +299,10 @@ impl Input {
 
             InputFlags::Plain => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) = idx_map
-                    .get(&(out.address.as_ref().unwrap().clone(), out.script_hash.clone()))
-                {
+                let out = if let Some(idx) = idx_map.get(&(
+                    out.address.as_ref().unwrap().clone(),
+                    out.script_hash.clone(),
+                )) {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -369,9 +370,10 @@ impl Input {
 
             InputFlags::FailablePlain => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) = idx_map
-                    .get(&(out.address.as_ref().unwrap().clone(), out.script_hash.clone()))
-                {
+                let out = if let Some(idx) = idx_map.get(&(
+                    out.address.as_ref().unwrap().clone(),
+                    out.script_hash.clone(),
+                )) {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -446,9 +448,10 @@ impl Input {
 
             InputFlags::HasSpendProof => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) = idx_map
-                    .get(&(out.address.as_ref().unwrap().clone(), out.script_hash.clone()))
-                {
+                let out = if let Some(idx) = idx_map.get(&(
+                    out.address.as_ref().unwrap().clone(),
+                    out.script_hash.clone(),
+                )) {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -530,9 +533,10 @@ impl Input {
 
             InputFlags::FailableHasSpendProof => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) = idx_map
-                    .get(&(out.address.as_ref().unwrap().clone(), out.script_hash.clone()))
-                {
+                let out = if let Some(idx) = idx_map.get(&(
+                    out.address.as_ref().unwrap().clone(),
+                    out.script_hash.clone(),
+                )) {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -616,9 +620,10 @@ impl Input {
 
             InputFlags::HasSpendProofWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) = idx_map
-                    .get(&(out.address.as_ref().unwrap().clone(), out.script_hash.clone()))
-                {
+                let out = if let Some(idx) = idx_map.get(&(
+                    out.address.as_ref().unwrap().clone(),
+                    out.script_hash.clone(),
+                )) {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -694,9 +699,10 @@ impl Input {
 
             InputFlags::FailableHasSpendProofWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) = idx_map
-                    .get(&(out.address.as_ref().unwrap().clone(), out.script_hash.clone()))
-                {
+                let out = if let Some(idx) = idx_map.get(&(
+                    out.address.as_ref().unwrap().clone(),
+                    out.script_hash.clone(),
+                )) {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -764,7 +770,7 @@ impl Input {
                     )
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
-*               ins_sum += out_amount;
+                *ins_sum += out_amount;
                 to_delete.push((
                     self.out.as_ref().unwrap().clone(),
                     self.witness.as_ref().unwrap().clone(),
