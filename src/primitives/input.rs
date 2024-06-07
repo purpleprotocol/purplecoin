@@ -6,7 +6,9 @@
 
 use crate::chain::{Shard, ShardBackend};
 use crate::consensus::{Money, BLOCK_HORIZON};
-use crate::primitives::{Address, Hash160, Hash256, Hash160Algo, OutWitnessVec, Output, PublicKey, TxVerifyErr};
+use crate::primitives::{
+    Address, Hash160, Hash160Algo, Hash256, OutWitnessVec, Output, PublicKey, TxVerifyErr,
+};
 use crate::settings::SETTINGS;
 use crate::vm::internal::VmTerm;
 use crate::vm::{
@@ -15,9 +17,9 @@ use crate::vm::{
 use accumulator::group::{Codec, Rsa2048};
 use accumulator::Witness;
 use bincode::{Decode, Encode};
+use merkletree::proof::Proof;
 use schnorrkel::{PublicKey as SchnorPK, Signature as SchnorSig};
 use std::collections::HashMap;
-use merkletree::proof::Proof;
 use typenum::U2;
 
 #[derive(PartialEq, Debug, Clone)]
@@ -440,8 +442,19 @@ impl Input {
                 let spend_proof = self.spend_proof.as_ref().unwrap();
                 let mut lemma = spend_proof.0.clone();
                 lemma.push(out.script_hash.clone());
-                let merkle_proof = Proof::<Hash160>::new::<U2, U2>(None, lemma, spend_proof.1.iter().map(|p| *p as usize).collect::<Vec<_>>()).map_err(|_| TxVerifyErr::InvalidSpendProof)?;
-                let mpr = merkle_proof.validate_with_data::<Hash160Algo>(self.hash.as_ref().unwrap()).map_err(|_| TxVerifyErr::InvalidSpendProof)?;
+                let merkle_proof = Proof::<Hash160>::new::<U2, U2>(
+                    None,
+                    lemma,
+                    spend_proof
+                        .1
+                        .iter()
+                        .map(|p| *p as usize)
+                        .collect::<Vec<_>>(),
+                )
+                .map_err(|_| TxVerifyErr::InvalidSpendProof)?;
+                let mpr = merkle_proof
+                    .validate_with_data::<Hash160Algo>(self.hash.as_ref().unwrap())
+                    .map_err(|_| TxVerifyErr::InvalidSpendProof)?;
                 if !mpr {
                     return Err(TxVerifyErr::InvalidSpendProof);
                 }
@@ -511,8 +524,19 @@ impl Input {
                 let spend_proof = self.spend_proof.as_ref().unwrap();
                 let mut lemma = spend_proof.0.clone();
                 lemma.push(out.script_hash.clone());
-                let merkle_proof = Proof::<Hash160>::new::<U2, U2>(None, lemma, spend_proof.1.iter().map(|p| *p as usize).collect::<Vec<_>>()).map_err(|_| TxVerifyErr::InvalidSpendProof)?;
-                let mpr = merkle_proof.validate_with_data::<Hash160Algo>(self.hash.as_ref().unwrap()).map_err(|_| TxVerifyErr::InvalidSpendProof)?;
+                let merkle_proof = Proof::<Hash160>::new::<U2, U2>(
+                    None,
+                    lemma,
+                    spend_proof
+                        .1
+                        .iter()
+                        .map(|p| *p as usize)
+                        .collect::<Vec<_>>(),
+                )
+                .map_err(|_| TxVerifyErr::InvalidSpendProof)?;
+                let mpr = merkle_proof
+                    .validate_with_data::<Hash160Algo>(self.hash.as_ref().unwrap())
+                    .map_err(|_| TxVerifyErr::InvalidSpendProof)?;
                 if !mpr {
                     return Err(TxVerifyErr::InvalidSpendProof);
                 }
@@ -1338,7 +1362,10 @@ mod tests {
             input_flags: InputFlags::HasSpendProof,
             spending_pkey: Some(PublicKey::zero()),
             script: Script::new_simple_spend(),
-            spend_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
+            spend_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1369,7 +1396,10 @@ mod tests {
             witness: Some(Witness::empty()),
             input_flags: InputFlags::HasSpendProofWithoutSpendKey,
             script: Script::new_simple_spend(),
-            spend_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
+            spend_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1438,7 +1468,10 @@ mod tests {
             input_flags: InputFlags::IsColouredHasSpendProof,
             spending_pkey: Some(PublicKey::zero()),
             script: Script::new_simple_spend(),
-            spend_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
+            spend_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1476,8 +1509,14 @@ mod tests {
             input_flags: InputFlags::IsColouredHasSpendProofAndColourProof,
             spending_pkey: Some(PublicKey::zero()),
             script: Script::new_simple_spend(),
-            spend_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
-            colour_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
+            spend_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
+            colour_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1551,7 +1590,10 @@ mod tests {
             input_flags: InputFlags::IsColouredHasColourProof,
             spending_pkey: Some(PublicKey::zero()),
             script: Script::new_simple_spend(),
-            colour_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
+            colour_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1588,8 +1630,14 @@ mod tests {
             witness: Some(Witness::empty()),
             input_flags: InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey,
             script: Script::new_simple_spend(),
-            spend_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
-            colour_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
+            spend_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
+            colour_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1626,7 +1674,10 @@ mod tests {
             witness: Some(Witness::empty()),
             input_flags: InputFlags::IsColouredHasSpendProofWithoutSpendKey,
             script: Script::new_simple_spend(),
-            spend_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
+            spend_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1663,7 +1714,10 @@ mod tests {
             witness: Some(Witness::empty()),
             input_flags: InputFlags::IsColouredHasColourProofWithoutSpendKey,
             script: Script::new_simple_spend(),
-            colour_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
+            colour_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
