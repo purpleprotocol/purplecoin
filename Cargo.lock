@@ -3956,6 +3956,7 @@ dependencies = [
  "tracing-subscriber",
  "triomphe",
  "trust-dns-resolver",
+ "typenum",
  "unsigned-varint 0.8.0",
  "warp",
  "web-sys",

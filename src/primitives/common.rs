@@ -376,6 +376,40 @@ impl fmt::Debug for Hash160 {
     }
 }
 
+impl AsRef<[u8]> for Hash160 {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+#[derive(Default)]
+pub struct Hash160Algo(Vec<u8>);
+
+impl Hasher for Hash160Algo {
+    #[inline]
+    fn write(&mut self, msg: &[u8]) {
+        self.0.extend_from_slice(msg);
+    }
+
+    #[inline]
+    fn finish(&self) -> u64 {
+        unimplemented!()
+    }
+}
+
+impl Algorithm<Hash160> for Hash160Algo {
+    #[inline]
+    fn hash(&mut self) -> Hash160 {
+        let h1 = Hash256::hash_from_slice(&self.0, "purplecoin.merklehasher.tx.32");
+        Hash160::hash_from_slice(&h1.0, "purplecoin.merklehasher.tx.20")
+    }
+
+    #[inline]
+    fn reset(&mut self) {
+        self.0.clear();
+    }
+}
+
 #[derive(
     PartialEq,
     Eq,
@@ -524,7 +558,7 @@ impl Hasher for Hash256Algo {
 impl Algorithm<Hash256> for Hash256Algo {
     #[inline]
     fn hash(&mut self) -> Hash256 {
-        Hash256::hash_from_slice(&self.0, "purplecoin.generichasher.32")
+        Hash256::hash_from_slice(&self.0, "purplecoin.merklehasher.block.32")
     }
 
     #[inline]

@@ -6,7 +6,7 @@
 
 use crate::chain::{Shard, ShardBackend};
 use crate::consensus::{Money, BLOCK_HORIZON};
-use crate::primitives::{Address, Hash160, Hash256, OutWitnessVec, Output, PublicKey, TxVerifyErr};
+use crate::primitives::{Address, Hash160, Hash256, Hash160Algo, OutWitnessVec, Output, PublicKey, TxVerifyErr};
 use crate::settings::SETTINGS;
 use crate::vm::internal::VmTerm;
 use crate::vm::{
@@ -17,6 +17,8 @@ use accumulator::Witness;
 use bincode::{Decode, Encode};
 use schnorrkel::{PublicKey as SchnorPK, Signature as SchnorSig};
 use std::collections::HashMap;
+use merkletree::proof::Proof;
+use typenum::U2;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Input {
@@ -45,10 +47,10 @@ pub struct Input {
     /// Merkle spend proof of address + script hash if spend key is present
     ///
     /// Otherwise this is the merkle proof of a script hash
-    pub spend_proof: Option<Vec<Hash160>>,
+    pub spend_proof: Option<(Vec<Hash160>, Vec<u64>)>,
 
     /// Merkle colour spend proof of colour script hash
-    pub colour_proof: Option<Vec<Hash160>>,
+    pub colour_proof: Option<(Vec<Hash160>, Vec<u64>)>,
 
     /// Block height chosen by the coinbase emitter for coinbase idempotency. Without it,
     /// an attacker can replay the transaction and emit more coins than intended.
@@ -394,6 +396,77 @@ impl Input {
                             prev_block_hash: prev_block_hash.0,
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
+                            can_fail: true,
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+
+                to_delete.push((
+                    self.out.as_ref().unwrap().clone(),
+                    self.witness.as_ref().unwrap().clone(),
+                ));
+                Ok(())
+            }
+
+            InputFlags::HasSpendProof => {
+                let out = self.out.as_ref().unwrap();
+
+                // Validate coinbase height against block horizon as coinbase outputs
+                // can only be spent if they are created beyong the block horizon.
+                if out.is_coinbase() {
+                    let out_height = out.coinbase_height().unwrap();
+
+                    if height < out_height + BLOCK_HORIZON {
+                        return Err(TxVerifyErr::CoinbaseOutSpentBeforeMaturation);
+                    }
+                }
+
+                let script_hash = self.script.to_script_hash(key);
+
+                // Verify script hash
+                if script_hash != out.script_hash {
+                    return Err(TxVerifyErr::InvalidScriptHash);
+                }
+
+                let address_to_check = self.spending_pkey.as_ref().unwrap().to_address();
+
+                // Verify address
+                if &address_to_check != out.address.as_ref().unwrap() {
+                    return Err(TxVerifyErr::InvalidPublicKey);
+                }
+
+                // Verify spend proof
+                let spend_proof = self.spend_proof.as_ref().unwrap();
+                let mut lemma = spend_proof.0.clone();
+                lemma.push(out.script_hash.clone());
+                let merkle_proof = Proof::<Hash160>::new::<U2, U2>(None, lemma, spend_proof.1.iter().map(|p| *p as usize).collect::<Vec<_>>()).map_err(|_| TxVerifyErr::InvalidSpendProof)?;
+                let mpr = merkle_proof.validate_with_data::<Hash160Algo>(self.hash.as_ref().unwrap()).map_err(|_| TxVerifyErr::InvalidSpendProof)?;
+                if !mpr {
+                    return Err(TxVerifyErr::InvalidSpendProof);
+                }
+
+                let result = self
+                    .script
+                    .execute(
+                        &self.script_args,
+                        input_stack,
+                        to_add,
+                        idx_map,
+                        ver_stack,
+                        [0; 32],
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: true,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: Some(out.clone()),
                             can_fail: false,
                         },
                     )
@@ -407,47 +480,81 @@ impl Input {
                 Ok(())
             }
 
-            _ => unimplemented!(),
-        }?;
+            InputFlags::FailableHasSpendProof => {
+                let out = self.out.as_ref().unwrap();
 
-        // let key = shard.shard_config().key();
+                // Validate coinbase height against block horizon as coinbase outputs
+                // can only be spent if they are created beyong the block horizon.
+                if out.is_coinbase() {
+                    let out_height = out.coinbase_height().unwrap();
 
-        // Get script hash according to spend proof, address and script hash
-        let oracle_script_hash = if let Some(ref spend_proof) = self.spend_proof {
-            let mut out = self.script.to_script_hash(key);
-            out.0 = Hash160::hash_from_slice(
-                [
-                    &self.spending_pkey.as_ref().unwrap().0.to_bytes(),
-                    out.0.as_slice(),
-                ]
-                .concat(),
-                key,
-            )
-            .0;
-
-            for l in spend_proof {
-                let l1 = out.0.as_ref();
-                let l2 = l.0.as_ref();
-
-                if l1 < l2 {
-                    out.0 = Hash160::hash_from_slice(&[l1, l2].concat(), key).0;
-                } else {
-                    out.0 = Hash160::hash_from_slice(&[l2, l1].concat(), key).0;
+                    if height < out_height + BLOCK_HORIZON {
+                        return Err(TxVerifyErr::CoinbaseOutSpentBeforeMaturation);
+                    }
                 }
+
+                let script_hash = self.script.to_script_hash(key);
+
+                // Verify script hash
+                if script_hash != out.script_hash {
+                    return Err(TxVerifyErr::InvalidScriptHash);
+                }
+
+                let address_to_check = self.spending_pkey.as_ref().unwrap().to_address();
+
+                // Verify address
+                if &address_to_check != out.address.as_ref().unwrap() {
+                    return Err(TxVerifyErr::InvalidPublicKey);
+                }
+
+                // Verify spend proof
+                let spend_proof = self.spend_proof.as_ref().unwrap();
+                let mut lemma = spend_proof.0.clone();
+                lemma.push(out.script_hash.clone());
+                let merkle_proof = Proof::<Hash160>::new::<U2, U2>(None, lemma, spend_proof.1.iter().map(|p| *p as usize).collect::<Vec<_>>()).map_err(|_| TxVerifyErr::InvalidSpendProof)?;
+                let mpr = merkle_proof.validate_with_data::<Hash160Algo>(self.hash.as_ref().unwrap()).map_err(|_| TxVerifyErr::InvalidSpendProof)?;
+                if !mpr {
+                    return Err(TxVerifyErr::InvalidSpendProof);
+                }
+
+                let seed_hash = Hash256::hash_from_slice(seed_bytes, key);
+
+                let result = self
+                    .script
+                    .execute(
+                        &self.script_args,
+                        input_stack,
+                        to_add,
+                        idx_map,
+                        ver_stack,
+                        seed_hash.0,
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: true,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: Some(out.clone()),
+                            can_fail: true,
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+
+                to_delete.push((
+                    self.out.as_ref().unwrap().clone(),
+                    self.witness.as_ref().unwrap().clone(),
+                ));
+                Ok(())
             }
 
-            out
-        } else {
-            self.script.to_script_hash(key)
-        };
-
-        // Verify script hash
-        if oracle_script_hash != self.out().unwrap().script_hash {
-            return Err(TxVerifyErr::InvalidScriptHash);
+            _ => unimplemented!(),
         }
-
-        *sum += self.out().unwrap().amount();
-        Ok(())
     }
 }
 
@@ -1231,7 +1338,7 @@ mod tests {
             input_flags: InputFlags::HasSpendProof,
             spending_pkey: Some(PublicKey::zero()),
             script: Script::new_simple_spend(),
-            spend_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            spend_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1262,7 +1369,7 @@ mod tests {
             witness: Some(Witness::empty()),
             input_flags: InputFlags::HasSpendProofWithoutSpendKey,
             script: Script::new_simple_spend(),
-            spend_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            spend_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1331,7 +1438,7 @@ mod tests {
             input_flags: InputFlags::IsColouredHasSpendProof,
             spending_pkey: Some(PublicKey::zero()),
             script: Script::new_simple_spend(),
-            spend_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            spend_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1369,8 +1476,8 @@ mod tests {
             input_flags: InputFlags::IsColouredHasSpendProofAndColourProof,
             spending_pkey: Some(PublicKey::zero()),
             script: Script::new_simple_spend(),
-            spend_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
-            colour_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            spend_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
+            colour_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1444,7 +1551,7 @@ mod tests {
             input_flags: InputFlags::IsColouredHasColourProof,
             spending_pkey: Some(PublicKey::zero()),
             script: Script::new_simple_spend(),
-            colour_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            colour_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1481,8 +1588,8 @@ mod tests {
             witness: Some(Witness::empty()),
             input_flags: InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey,
             script: Script::new_simple_spend(),
-            spend_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
-            colour_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            spend_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
+            colour_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1519,7 +1626,7 @@ mod tests {
             witness: Some(Witness::empty()),
             input_flags: InputFlags::IsColouredHasSpendProofWithoutSpendKey,
             script: Script::new_simple_spend(),
-            spend_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            spend_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -1556,7 +1663,7 @@ mod tests {
             witness: Some(Witness::empty()),
             input_flags: InputFlags::IsColouredHasColourProofWithoutSpendKey,
             script: Script::new_simple_spend(),
-            colour_proof: Some(vec![Hash160::zero(), Hash160::zero(), Hash160::zero()]),
+            colour_proof: Some((vec![Hash160::zero(), Hash160::zero(), Hash160::zero()], vec![0, 0, 0])),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
