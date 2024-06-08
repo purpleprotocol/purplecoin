@@ -166,7 +166,17 @@ impl Input {
             | InputFlags::FailableIsColouredWithoutSpendKey
             | InputFlags::FailableIsColouredHasColourProofWithoutSpendKey
             | InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey
-            | InputFlags::FailableIsColouredHasSpendProofAndColourProofWithoutSpendKey => true,
+            | InputFlags::FailableIsColouredHasSpendProofAndColourProofWithoutSpendKey
+            | InputFlags::FailableIsColouredCoinbase
+            | InputFlags::FailableIsColouredCoinbaseHasColourProof
+            | InputFlags::FailableIsColouredCoinbaseHasSpendProof
+            | InputFlags::FailableIsColouredCoinbaseHasSpendProofAndColourProof
+            | InputFlags::FailableIsColouredCoinbaseWithoutSpendKey
+            | InputFlags::FailableIsColouredCoinbaseHasColourProofWithoutSpendKey
+            | InputFlags::FailableIsColouredCoinbaseHasSpendProofWithoutSpendKey
+            | InputFlags::FailableIsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey => {
+                true
+            }
             _ => false,
         }
     }
