@@ -2,7 +2,6 @@
 //! exports the generalized `hash` function. Also exported is `hash_to_prime`, which works by
 //! repeatedly `hash`ing a value together with an incrementing nonce until the output is prime.
 use crate::uint::u256;
-use bitvec::prelude::*;
 use lazy_static::*;
 use lru::LruCache;
 use parking_lot::Mutex;
@@ -199,7 +198,6 @@ pub fn hash_to_prime_with_counter<T: Hash + ?Sized>(
 
         while cc <= 9 {
             let c = cc - 1;
-            //let to_hash: &[u8] = &[&hash[..], &[c]].concat();
             let mut hasher = hasher.clone();
             hasher.write_u8(c);
             let hashed_with_counter = hasher.finish();
@@ -234,7 +232,7 @@ pub fn hash_to_prime_check_counter<T: Hash + ?Sized>(
     let mut counter = counters.0;
     let mut first_pass = true;
     let mut first_hash = [0; 32];
-    let mut shard: usize = 0;
+    //let mut shard: usize = 0;
     loop {
         // First pass using blake3
         let to_hash = (t, counter);
@@ -253,10 +251,10 @@ pub fn hash_to_prime_check_counter<T: Hash + ?Sized>(
                 let candidate_prime = u256(hash);
                 if primality::is_prob_prime(&candidate_prime) {
                     let prime = Integer::from(candidate_prime);
-                    {
-                        let mut lru = (*INTERNAL_LRU)[shard].lock();
-                        lru.put(first_hash, prime.clone());
-                    }
+                    // {
+                    //     let mut lru = (*INTERNAL_LRU)[shard].lock();
+                    //     lru.put(first_hash, prime.clone());
+                    // }
                     return Some(prime);
                 } else {
                     return None;
@@ -272,7 +270,7 @@ pub fn hash_to_prime_check_counter<T: Hash + ?Sized>(
         // hash for 13 passes.
         //
         // This gives a ~14% performance gain on a 2019 Macbook Pro.
-        let mut cc = if counters.1 == 0 { 1_u8 } else { counters.1 };
+        let cc = if counters.1 == 0 { 1_u8 } else { counters.1 };
         let mut hash_clone = hash;
         // Cache hasher instance up to counter and then only hash the counter
         let mut hasher = FxHasher64::default();
@@ -280,7 +278,6 @@ pub fn hash_to_prime_check_counter<T: Hash + ?Sized>(
 
         while cc <= 9 {
             let c = cc - 1;
-            //let to_hash: &[u8] = &[&hash[..], &[c]].concat();
             let mut hasher = hasher.clone();
             hasher.write_u8(c);
             let hashed_with_counter = hasher.finish();
@@ -294,15 +291,14 @@ pub fn hash_to_prime_check_counter<T: Hash + ?Sized>(
             let candidate_prime = u256(hash_clone);
             if primality::is_prob_prime(&candidate_prime) {
                 let prime = Integer::from(candidate_prime);
-                {
-                    let mut lru = (*INTERNAL_LRU)[shard].lock();
-                    lru.put(first_hash, prime.clone());
-                }
+                // {
+                //     let mut lru = (*INTERNAL_LRU)[shard].lock();
+                //     lru.put(first_hash, prime.clone());
+                // }
                 return Some(prime);
             } else {
                 return None;
             }
-            cc += 1;
         }
         counter += 1;
     }
