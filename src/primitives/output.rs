@@ -115,10 +115,12 @@ impl Encode for Output {
             self.coloured_address.is_some(),
             self.coinbase_height.is_some(),
         ) {
-            (true, false, true) => OutputFlags::HasAdddressIsCoinbase,
+            (true, false, true) => OutputFlags::HasAddressIsCoinbase,
             (false, true, true) => OutputFlags::HasColouredAddressIsCoinbase,
             (true, false, false) => OutputFlags::HasAddress,
             (false, true, false) => OutputFlags::HasColouredAddress,
+            (false, false, true) => OutputFlags::IsCoinbase,
+            (false, false, false) => OutputFlags::WithoutAddress,
             _ => {
                 return Err(bincode::error::EncodeError::OtherString(
                     "invalid output struct".to_owned(),
@@ -133,7 +135,7 @@ impl Encode for Output {
         bincode::Encode::encode(&self.idx, encoder)?;
         bincode::Encode::encode(&self.script_outs, encoder)?;
         match flags {
-            OutputFlags::HasAdddressIsCoinbase => {
+            OutputFlags::HasAddressIsCoinbase => {
                 bincode::Encode::encode(self.address.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(self.coinbase_height.as_ref().unwrap(), encoder)?;
             }
@@ -150,6 +152,10 @@ impl Encode for Output {
             OutputFlags::HasColouredAddress => {
                 bincode::Encode::encode(self.coloured_address.as_ref().unwrap(), encoder)?;
             }
+            OutputFlags::IsCoinbase => {
+                bincode::Encode::encode(self.coinbase_height.as_ref().unwrap(), encoder)?;
+            }
+            OutputFlags::WithoutAddress => {}
         };
         Ok(())
     }
@@ -169,7 +175,7 @@ impl Decode for Output {
         let idx = bincode::Decode::decode(decoder)?;
         let script_outs = bincode::Decode::decode(decoder)?;
         let (address, coloured_address, coinbase_height) = match flags {
-            OutputFlags::HasAdddressIsCoinbase => (
+            OutputFlags::HasAddressIsCoinbase => (
                 Some(bincode::Decode::decode(decoder)?),
                 None,
                 Some(bincode::Decode::decode(decoder)?),
@@ -186,6 +192,8 @@ impl Decode for Output {
             OutputFlags::HasColouredAddress => {
                 (None, Some(bincode::Decode::decode(decoder)?), None)
             }
+            OutputFlags::IsCoinbase => (None, None, Some(bincode::Decode::decode(decoder)?)),
+            OutputFlags::WithoutAddress => (None, None, None),
         };
 
         Ok(Self {
@@ -205,10 +213,12 @@ impl Decode for Output {
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 enum OutputFlags {
-    HasAdddressIsCoinbase = 0x00,
+    HasAddressIsCoinbase = 0x00,
     HasColouredAddressIsCoinbase = 0x01,
     HasAddress = 0x02,
     HasColouredAddress = 0x03,
+    IsCoinbase = 0x04,
+    WithoutAddress = 0x05,
 }
 
 impl std::convert::TryFrom<u8> for OutputFlags {
@@ -216,10 +226,12 @@ impl std::convert::TryFrom<u8> for OutputFlags {
 
     fn try_from(num: u8) -> Result<Self, Self::Error> {
         match num {
-            0x00 => Ok(Self::HasAdddressIsCoinbase),
+            0x00 => Ok(Self::HasAddressIsCoinbase),
             0x01 => Ok(Self::HasColouredAddressIsCoinbase),
             0x02 => Ok(Self::HasAddress),
             0x03 => Ok(Self::HasColouredAddress),
+            0x04 => Ok(Self::IsCoinbase),
+            0x05 => Ok(Self::WithoutAddress),
             _ => Err("invalid bitflags"),
         }
     }

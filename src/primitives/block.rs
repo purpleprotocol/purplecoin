@@ -1222,6 +1222,7 @@ impl Block {
                 in_binary: input.to_bytes_for_signing(),
                 spent_out: input.out.clone(),
                 can_fail: false,
+                ..Default::default()
             },
         );
 
@@ -1358,6 +1359,7 @@ impl BlockData {
                 &mut ver_stack,
                 &mut idx_map,
                 tx_seed_bytes,
+                |_| Ok(()), // TODO: Validate coloured coinbases for idempotency here
             )?;
             for input in tx.ins.iter() {
                 // Push public key and input binary format if we have a spending pkey

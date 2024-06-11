@@ -23,6 +23,8 @@ use schnorrkel::{PublicKey as SchnorPK, Signature as SchnorSig};
 use std::collections::HashMap;
 use typenum::U2;
 
+const COLOUR_HASH_KEY: &str = "colour";
+
 #[derive(PartialEq, Debug, Clone)]
 pub struct Input {
     /// Output. Is null if this is a coinbase input
@@ -112,7 +114,7 @@ impl Input {
         // We also don't sign the script arguments marked as malleable
         let mut i = 0;
         let mut r = 0;
-        while i < copied.script_args.len() {
+        while i + r < copied.script.malleable_args.len() {
             if copied.script.malleable_args[i + r] {
                 copied.script_args.remove(i);
                 r += 1; // Account for removed indexes
@@ -157,6 +159,7 @@ impl Input {
     pub fn is_failable(&self) -> bool {
         match self.input_flags {
             InputFlags::FailablePlain
+            | InputFlags::FailablePlainWithoutSpendKey
             | InputFlags::FailableHasSpendProof
             | InputFlags::FailableIsColoured
             | InputFlags::FailableIsColouredHasColourProof
@@ -195,9 +198,10 @@ impl Input {
         to_add: &mut Vec<Output>,
         to_delete: &mut OutWitnessVec,
         ver_stack: &mut VerificationStack,
-        idx_map: &mut HashMap<(Address, Hash160), u16>,
+        idx_map: &mut HashMap<Hash160, u16>,
         seed_bytes: &[u8],
         input_stack: &[Self],
+        validate_coloured_coinbase_idempotency: fn(&Self) -> Result<(), TxVerifyErr>,
     ) -> Result<(), TxVerifyErr> {
         match self.input_flags {
             InputFlags::IsCoinbase => {
@@ -239,6 +243,7 @@ impl Input {
                                 in_binary: self.to_bytes_for_signing(),
                                 spent_out: None,
                                 can_fail: false,
+                                ..Default::default()
                             },
                         );
 
@@ -294,6 +299,7 @@ impl Input {
                                 in_binary: self.to_bytes_for_signing(),
                                 spent_out: None,
                                 can_fail: false,
+                                ..Default::default()
                             },
                         );
 
@@ -311,15 +317,75 @@ impl Input {
             }
 
             InputFlags::IsColouredCoinbase => {
-                unimplemented!()
+                let coloured_coinbase_block_height = self.coloured_coinbase_block_height.unwrap();
+
+                // Check that the block height is between current and the horizon
+                if coloured_coinbase_block_height >= height
+                    || coloured_coinbase_block_height
+                        < height.checked_sub(BLOCK_HORIZON).unwrap_or(0)
+                {
+                    return Err(TxVerifyErr::InvalidColouredCoinbaseBlockHeight);
+                }
+
+                validate_coloured_coinbase_idempotency(&self)?;
+
+                // Compute colour hash which is the hash of the script + non malleable script args + spending key
+                let mut bytes = self.script.to_bytes();
+                let mut copied_args = self.script_args.clone();
+                let mut i = 0;
+                let mut r = 0;
+                while i + r < self.script.malleable_args.len() {
+                    if self.script.malleable_args[i + r] {
+                        copied_args.remove(i);
+                        r += 1;
+                    } else {
+                        i += 1;
+                    }
+                }
+                for a in copied_args {
+                    bytes.extend_from_slice(&a.to_bytes());
+                }
+                bytes.extend_from_slice(&self.spending_pkey.as_ref().unwrap().to_bytes());
+                let colour_hash = Hash160::hash_from_slice(bytes, COLOUR_HASH_KEY);
+
+                let result = self
+                    .script
+                    .execute(
+                        &self.script_args,
+                        input_stack,
+                        to_add,
+                        outs_sum,
+                        idx_map,
+                        ver_stack,
+                        [0; 32], // Empty seed, not failable
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: true,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            colour_hash: Some(colour_hash),
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: None,
+                            can_fail: false,
+                            ..Default::default()
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+
+                Ok(())
             }
 
             InputFlags::Plain => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) = idx_map.get(&(
-                    out.address.as_ref().unwrap().clone(),
-                    out.script_hash.clone(),
-                )) {
+                let out = if let Some(idx) =
+                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
+                {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -363,7 +429,7 @@ impl Input {
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
-                            is_coinbase: true,
+                            is_coinbase: false,
                             chain_id,
                             chain_height: height,
                             chain_timestamp: timestamp,
@@ -373,6 +439,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: false,
+                            ..Default::default()
                         },
                     )
                     .0
@@ -387,10 +454,9 @@ impl Input {
 
             InputFlags::FailablePlain => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) = idx_map.get(&(
-                    out.address.as_ref().unwrap().clone(),
-                    out.script_hash.clone(),
-                )) {
+                let out = if let Some(idx) =
+                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
+                {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -436,7 +502,7 @@ impl Input {
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
-                            is_coinbase: true,
+                            is_coinbase: false,
                             chain_id,
                             chain_height: height,
                             chain_timestamp: timestamp,
@@ -446,6 +512,133 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: true,
+                            ..Default::default()
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+                *ins_sum += out_amount;
+                to_delete.push((
+                    self.out.as_ref().unwrap().clone(),
+                    self.witness.as_ref().unwrap().clone(),
+                ));
+                Ok(())
+            }
+
+            InputFlags::PlainWithoutSpendKey => {
+                let out = self.out.as_ref().unwrap();
+                let out = if let Some(idx) = idx_map.get(&out.script_hash) {
+                    &to_add[*idx as usize]
+                } else {
+                    out
+                };
+                let out_amount = out.amount;
+
+                // Validate coinbase height against block horizon as coinbase outputs
+                // can only be spent if they are created beyong the block horizon.
+                if out.is_coinbase() {
+                    let out_height = out.coinbase_height().unwrap();
+
+                    if height < out_height + BLOCK_HORIZON {
+                        return Err(TxVerifyErr::CoinbaseOutSpentBeforeMaturation);
+                    }
+                }
+
+                let script_hash = self.script.to_script_hash(key);
+
+                // Verify script hash
+                if script_hash != out.script_hash {
+                    return Err(TxVerifyErr::InvalidScriptHash);
+                }
+
+                let result = self
+                    .script
+                    .execute(
+                        &self.script_args,
+                        input_stack,
+                        to_add,
+                        outs_sum,
+                        idx_map,
+                        ver_stack,
+                        [0; 32], // Empty seed, not failable
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: false,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: Some(out.clone()),
+                            can_fail: false,
+                            ..Default::default()
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+                *ins_sum += out_amount;
+                to_delete.push((
+                    self.out.as_ref().unwrap().clone(),
+                    self.witness.as_ref().unwrap().clone(),
+                ));
+                Ok(())
+            }
+
+            InputFlags::FailablePlainWithoutSpendKey => {
+                let out = self.out.as_ref().unwrap();
+                let out = if let Some(idx) = idx_map.get(&out.script_hash) {
+                    &to_add[*idx as usize]
+                } else {
+                    out
+                };
+                let out_amount = out.amount;
+
+                // Validate coinbase height against block horizon as coinbase outputs
+                // can only be spent if they are created beyong the block horizon.
+                if out.is_coinbase() {
+                    let out_height = out.coinbase_height().unwrap();
+
+                    if height < out_height + BLOCK_HORIZON {
+                        return Err(TxVerifyErr::CoinbaseOutSpentBeforeMaturation);
+                    }
+                }
+
+                let script_hash = self.script.to_script_hash(key);
+
+                // Verify script hash
+                if script_hash != out.script_hash {
+                    return Err(TxVerifyErr::InvalidScriptHash);
+                }
+
+                let seed_hash = Hash256::hash_from_slice(seed_bytes, key);
+
+                let result = self
+                    .script
+                    .execute(
+                        &self.script_args,
+                        input_stack,
+                        to_add,
+                        outs_sum,
+                        idx_map,
+                        ver_stack,
+                        seed_hash.0,
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: false,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: Some(out.clone()),
+                            can_fail: true,
+                            ..Default::default()
                         },
                     )
                     .0
@@ -465,10 +658,9 @@ impl Input {
 
             InputFlags::HasSpendProof => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) = idx_map.get(&(
-                    out.address.as_ref().unwrap().clone(),
-                    out.script_hash.clone(),
-                )) {
+                let out = if let Some(idx) =
+                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
+                {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -526,7 +718,7 @@ impl Input {
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
-                            is_coinbase: true,
+                            is_coinbase: false,
                             chain_id,
                             chain_height: height,
                             chain_timestamp: timestamp,
@@ -536,6 +728,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: false,
+                            ..Default::default()
                         },
                     )
                     .0
@@ -550,10 +743,9 @@ impl Input {
 
             InputFlags::FailableHasSpendProof => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) = idx_map.get(&(
-                    out.address.as_ref().unwrap().clone(),
-                    out.script_hash.clone(),
-                )) {
+                let out = if let Some(idx) =
+                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
+                {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -613,7 +805,7 @@ impl Input {
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
-                            is_coinbase: true,
+                            is_coinbase: false,
                             chain_id,
                             chain_height: height,
                             chain_timestamp: timestamp,
@@ -623,6 +815,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: true,
+                            ..Default::default()
                         },
                     )
                     .0
@@ -637,10 +830,7 @@ impl Input {
 
             InputFlags::HasSpendProofWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) = idx_map.get(&(
-                    out.address.as_ref().unwrap().clone(),
-                    out.script_hash.clone(),
-                )) {
+                let out = if let Some(idx) = idx_map.get(&out.script_hash) {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -692,7 +882,7 @@ impl Input {
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
-                            is_coinbase: true,
+                            is_coinbase: false,
                             chain_id,
                             chain_height: height,
                             chain_timestamp: timestamp,
@@ -702,6 +892,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: false,
+                            ..Default::default()
                         },
                     )
                     .0
@@ -716,10 +907,7 @@ impl Input {
 
             InputFlags::FailableHasSpendProofWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) = idx_map.get(&(
-                    out.address.as_ref().unwrap().clone(),
-                    out.script_hash.clone(),
-                )) {
+                let out = if let Some(idx) = idx_map.get(&out.script_hash) {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -773,7 +961,7 @@ impl Input {
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
-                            is_coinbase: true,
+                            is_coinbase: false,
                             chain_id,
                             chain_height: height,
                             chain_timestamp: timestamp,
@@ -783,6 +971,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: true,
+                            ..Default::default()
                         },
                     )
                     .0
@@ -925,10 +1114,21 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script_args, encoder)?;
             }
 
+            InputFlags::PlainWithoutSpendKey | InputFlags::FailablePlainWithoutSpendKey => {
+                bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
+                if let Some(witness) = self.witness.as_ref() {
+                    bincode::Encode::encode(&witness.to_bytes(), encoder)?;
+                }
+                bincode::Encode::encode(&self.script, encoder)?;
+                bincode::Encode::encode(&self.script_args, encoder)?;
+            }
+
             InputFlags::HasSpendProof | InputFlags::FailableHasSpendProof => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                if let Some(witness) = self.witness.as_ref() {
+                    bincode::Encode::encode(&witness.to_bytes(), encoder)?;
+                }
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
@@ -937,7 +1137,9 @@ impl Encode for Input {
             InputFlags::HasSpendProofWithoutSpendKey
             | InputFlags::FailableHasSpendProofWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                if let Some(witness) = self.witness.as_ref() {
+                    bincode::Encode::encode(&witness.to_bytes(), encoder)?;
+                }
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
@@ -946,7 +1148,9 @@ impl Encode for Input {
             InputFlags::IsColoured | InputFlags::FailableIsColoured => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                if let Some(witness) = self.witness.as_ref() {
+                    bincode::Encode::encode(&witness.to_bytes(), encoder)?;
+                }
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
@@ -956,7 +1160,9 @@ impl Encode for Input {
             InputFlags::IsColouredHasSpendProof | InputFlags::FailableIsColouredHasSpendProof => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                if let Some(witness) = self.witness.as_ref() {
+                    bincode::Encode::encode(&witness.to_bytes(), encoder)?;
+                }
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
@@ -968,7 +1174,9 @@ impl Encode for Input {
             | InputFlags::FailableIsColouredHasSpendProofAndColourProof => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                if let Some(witness) = self.witness.as_ref() {
+                    bincode::Encode::encode(&witness.to_bytes(), encoder)?;
+                }
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
@@ -980,7 +1188,9 @@ impl Encode for Input {
             InputFlags::IsColouredWithoutSpendKey
             | InputFlags::FailableIsColouredWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                if let Some(witness) = self.witness.as_ref() {
+                    bincode::Encode::encode(&witness.to_bytes(), encoder)?;
+                }
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
@@ -990,7 +1200,9 @@ impl Encode for Input {
             InputFlags::IsColouredHasColourProof | InputFlags::FailableIsColouredHasColourProof => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                if let Some(witness) = self.witness.as_ref() {
+                    bincode::Encode::encode(&witness.to_bytes(), encoder)?;
+                }
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
@@ -1001,7 +1213,9 @@ impl Encode for Input {
             InputFlags::IsColouredHasColourProofWithoutSpendKey
             | InputFlags::FailableIsColouredHasColourProofWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                if let Some(witness) = self.witness.as_ref() {
+                    bincode::Encode::encode(&witness.to_bytes(), encoder)?;
+                }
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
@@ -1012,7 +1226,9 @@ impl Encode for Input {
             InputFlags::IsColouredHasSpendProofWithoutSpendKey
             | InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                if let Some(witness) = self.witness.as_ref() {
+                    bincode::Encode::encode(&witness.to_bytes(), encoder)?;
+                }
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
@@ -1023,7 +1239,9 @@ impl Encode for Input {
             InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey
             | InputFlags::FailableIsColouredHasSpendProofAndColourProofWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                if let Some(witness) = self.witness.as_ref() {
+                    bincode::Encode::encode(&witness.to_bytes(), encoder)?;
+                }
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
@@ -1257,6 +1475,31 @@ impl Decode for Input {
             }
 
             InputFlags::Plain | InputFlags::FailablePlain => {
+                let out = Some(bincode::Decode::decode(decoder)?);
+                let spending_pkey = Some(bincode::Decode::decode(decoder)?);
+                let witness = {
+                    let v: Vec<u8> = bincode::Decode::decode(decoder)?;
+                    Some(
+                        Witness::from_bytes(&v)
+                            .map_err(|e| bincode::error::DecodeError::OtherString(e.to_owned()))?,
+                    )
+                };
+                let script = bincode::Decode::decode(decoder)?;
+                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
+                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
+
+                Ok(Self {
+                    script,
+                    script_args,
+                    input_flags,
+                    spending_pkey,
+                    witness,
+                    out,
+                    ..Default::default()
+                })
+            }
+
+            InputFlags::PlainWithoutSpendKey | InputFlags::FailablePlainWithoutSpendKey => {
                 let out = Some(bincode::Decode::decode(decoder)?);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
@@ -1684,6 +1927,8 @@ pub enum InputFlags {
     FailableIsColouredCoinbaseHasColourProofWithoutSpendKey = 0x25,
     FailableIsColouredCoinbaseHasSpendProofWithoutSpendKey = 0x26,
     FailableIsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey = 0x27,
+    PlainWithoutSpendKey = 0x28,
+    FailablePlainWithoutSpendKey = 0x29,
 }
 
 impl std::convert::TryFrom<u8> for InputFlags {
@@ -1731,6 +1976,8 @@ impl std::convert::TryFrom<u8> for InputFlags {
             0x25 => Ok(Self::FailableIsColouredCoinbaseHasColourProofWithoutSpendKey),
             0x26 => Ok(Self::FailableIsColouredCoinbaseHasSpendProofWithoutSpendKey),
             0x27 => Ok(Self::FailableIsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey),
+            0x28 => Ok(Self::PlainWithoutSpendKey),
+            0x29 => Ok(Self::FailablePlainWithoutSpendKey),
             _ => Err("invalid bitflags"),
         }
     }

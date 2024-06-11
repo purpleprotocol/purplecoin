@@ -100,6 +100,9 @@ pub struct VmFlags {
     /// Whether we are processing a coinbase input or not
     pub is_coinbase: bool,
 
+    /// The current colour hash
+    pub colour_hash: Option<Hash160>,
+
     /// The previous block hash
     pub prev_block_hash: [u8; 32],
 
@@ -127,6 +130,7 @@ impl Default for VmFlags {
             in_binary: vec![],
             spent_out: None,
             can_fail: false,
+            colour_hash: None,
         }
     }
 }
@@ -302,7 +306,7 @@ impl Script {
         input_stack: &[Input],
         output_stack: &mut Vec<Output>,
         outs_sum: &mut Money,
-        output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
+        output_stack_idx_map: &mut HashMap<Hash160, u16>,
         verification_stack: &mut VerificationStack,
         seed: [u8; 32],
         key: &str,
@@ -7092,7 +7096,12 @@ impl Script {
 
     #[must_use]
     pub fn to_script_hash(&self, key: &str) -> Hash160 {
-        Hash160::hash_from_slice(crate::codec::encode_to_vec(&self).unwrap(), key)
+        Hash160::hash_from_slice(self.to_bytes(), key)
+    }
+
+    #[must_use]
+    pub fn to_bytes(&self) -> Vec<u8> {
+        crate::codec::encode_to_vec(&self).unwrap()
     }
 }
 
@@ -7129,7 +7138,7 @@ impl ScriptExecutor {
         input_stack: &[Input],
         output_stack: &mut Vec<Output>,
         outs_sum: &mut Money,
-        output_stack_idx_map: &mut HashMap<(Address, Hash160), u16>,
+        output_stack_idx_map: &mut HashMap<Hash160, u16>,
         script_outputs: &mut Vec<VmTerm>,
         key: &str,
         network_name: &str,
@@ -7598,10 +7607,19 @@ impl ScriptExecutor {
                                     ) if amount > 0 => {
                                         let address = Address(addr);
                                         let script_hash = Hash160(script_hash);
+                                        let address = if address == Address::zero() {
+                                            None
+                                        } else {
+                                            Some(address.clone())
+                                        };
 
-                                        if let Some(idx) = output_stack_idx_map
-                                            .get(&(address.clone(), script_hash.clone()))
-                                        {
+                                        let to_get = if let Some(addr) = &address {
+                                            (addr, &script_hash).into()
+                                        } else {
+                                            script_hash.clone()
+                                        };
+
+                                        if let Some(idx) = output_stack_idx_map.get(&to_get) {
                                             // Re-hash inputs
                                             let inputs_hashes: Vec<u8> = [
                                                 output_stack[*idx as usize].inputs_hash.clone(),
@@ -7626,7 +7644,7 @@ impl ScriptExecutor {
                                         } else {
                                             let mut output = Output {
                                                 amount,
-                                                address: Some(address.clone()),
+                                                address: address.clone(),
                                                 script_hash: script_hash.clone(),
                                                 coinbase_height: None,
                                                 coloured_address: None,
@@ -7637,10 +7655,15 @@ impl ScriptExecutor {
                                             };
                                             *outs_sum += amount;
                                             output.compute_hash(key);
-                                            output_stack_idx_map.insert(
-                                                (address, script_hash),
-                                                output_stack.len() as u16,
-                                            );
+                                            if let Some(address) = address {
+                                                output_stack_idx_map.insert(
+                                                    (&address, &script_hash).into(),
+                                                    output_stack.len() as u16,
+                                                );
+                                            } else {
+                                                output_stack_idx_map
+                                                    .insert(script_hash, output_stack.len() as u16);
+                                            }
                                             output_stack.push(output);
                                             *script_outputs = vec![];
                                         }
@@ -7703,9 +7726,19 @@ impl ScriptExecutor {
                             let address = Address(addr);
                             let script_hash = Hash160(script_hash);
 
-                            if let Some(idx) =
-                                output_stack_idx_map.get(&(address.clone(), script_hash.clone()))
-                            {
+                            let address = if address == Address::zero() {
+                                None
+                            } else {
+                                Some(address.clone())
+                            };
+
+                            let to_get = if let Some(addr) = &address {
+                                (addr, &script_hash).into()
+                            } else {
+                                script_hash.clone()
+                            };
+
+                            if let Some(idx) = output_stack_idx_map.get(&to_get) {
                                 // Re-hash inputs
                                 let inputs_hashes: Vec<u8> = [
                                     output_stack[*idx as usize].inputs_hash.clone(),
@@ -7728,7 +7761,7 @@ impl ScriptExecutor {
                             } else {
                                 let mut output = Output {
                                     amount,
-                                    address: Some(address.clone()),
+                                    address: address.clone(),
                                     script_hash: script_hash.clone(),
                                     coinbase_height: None,
                                     coloured_address: None,
@@ -7739,8 +7772,15 @@ impl ScriptExecutor {
                                 };
 
                                 output.compute_hash(key);
-                                output_stack_idx_map
-                                    .insert((address, script_hash), output_stack.len() as u16);
+                                if let Some(address) = address {
+                                    output_stack_idx_map.insert(
+                                        (&address, &script_hash).into(),
+                                        output_stack.len() as u16,
+                                    );
+                                } else {
+                                    output_stack_idx_map
+                                        .insert(script_hash, output_stack.len() as u16);
+                                }
                                 output_stack.push(output);
                                 *script_outputs = vec![];
                                 *outs_sum += amount;
@@ -8104,7 +8144,7 @@ impl ScriptExecutor {
                     }
                 }
 
-                ScriptEntry::Opcode(OP::SpentOutColourHash) => {
+                ScriptEntry::Opcode(OP::CurrentColourHash) => {
                     if let Some(out) = flags.spent_out.as_ref() {
                         if let Some(receiver) = &out.coloured_address {
                             exec_stack.push(VmTerm::Hash160(receiver.colour_hash));
@@ -13414,7 +13454,7 @@ mod tests {
             },
         );
         let mut oracle_out = Output {
-            address: Some(Hash160::zero().to_address()),
+            address: None,
             amount: out_amount,
             script_hash: sh,
             inputs_hash,
@@ -15267,7 +15307,7 @@ mod tests {
 
         let inputs_hash = Hash160::hash_from_slice(ins_hashes, key);
         let mut oracle_out = Output {
-            address: Some(Hash160::zero().to_address()),
+            address: None,
             amount: 30,
             script_hash: sh,
             inputs_hash,

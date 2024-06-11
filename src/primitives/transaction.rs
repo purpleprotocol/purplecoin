@@ -5,7 +5,7 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use crate::chain::{Shard, ShardBackend};
-use crate::consensus::Money;
+use crate::consensus::{map_height_to_block_reward, Money};
 use crate::primitives::{Address, Hash160, Hash256, Input, OutWitnessVec, Output};
 use crate::settings::SETTINGS;
 use crate::vm::{VerificationStack, VmFlags};
@@ -49,44 +49,6 @@ impl Transaction {
     }
 
     #[must_use]
-    pub fn get_outs(&self, height: u64, timestamp: i64, prev_block_hash: [u8; 32]) -> Vec<Output> {
-        let key = format!("{}.shard.{}", SETTINGS.node.network_name, self.chain_id);
-        let mut out_stack = vec![];
-        let mut outs_sum = 0;
-        let mut idx_map = HashMap::new();
-        let mut ver_stack = VerificationStack::new();
-
-        // Compute outputs
-        for input in &self.ins {
-            input.script.execute(
-                &input.script_args,
-                &self.ins,
-                &mut out_stack,
-                &mut outs_sum,
-                &mut idx_map,
-                &mut ver_stack,
-                [0; 32], // TODO: Inject seed here
-                &key,
-                SETTINGS.node.network_name.as_str(),
-                VmFlags {
-                    is_coinbase: input.is_coinbase(),
-                    chain_height: height,
-                    chain_timestamp: timestamp,
-                    chain_id: self.chain_id,
-                    validate_output_amounts: true,
-                    build_stacktrace: false,
-                    prev_block_hash,
-                    in_binary: input.to_bytes_for_signing(),
-                    spent_out: input.out.clone(),
-                    can_fail: input.is_failable(),
-                },
-            );
-        }
-
-        out_stack
-    }
-
-    #[must_use]
     pub fn get_ins(&self) -> &[Input] {
         &self.ins
     }
@@ -105,8 +67,9 @@ impl Transaction {
         to_add: &mut Vec<Output>,
         to_delete: &mut OutWitnessVec,
         ver_stack: &mut VerificationStack,
-        idx_map: &mut HashMap<(Address, Hash160), u16>,
+        idx_map: &mut HashMap<Hash160, u16>,
         tx_seed_bytes: &[u8],
+        validate_coloured_coinbase: fn(&Input) -> Result<(), TxVerifyErr>,
     ) -> Result<Money, TxVerifyErr> {
         let mut ins_sum: Money = 0;
         let mut outs_sum: Money = 0;
@@ -132,6 +95,7 @@ impl Transaction {
                 idx_map,
                 input_seed_bytes,
                 self.ins.as_slice(),
+                validate_coloured_coinbase,
             )?;
         }
 
@@ -141,34 +105,6 @@ impl Transaction {
         }
 
         Ok(ins_sum - outs_sum)
-    }
-
-    /// Validate transaction against the chain-state and add to batch.
-    /// To be used in the context of validating an entire block.
-    ///
-    /// Returns transaction fee if successful.
-    pub fn verify_batch<'a, B: ShardBackend>(
-        &'a self,
-        transcripts: &mut Vec<&'a [u8]>,
-        public_keys: &mut Vec<SchnorPK>,
-        shard: &Shard<B>,
-    ) -> Result<Money, TxVerifyErr> {
-        unimplemented!();
-        // let mut ins_sum: Money = 0;
-        // let mut outs_sum: Money = 0;
-        // let shard_height = shard.height().map_err(|_| TxVerifyErr::BackendErr)?;
-
-        // // Verify inputs
-        // for i in &self.ins {
-        //     i.verify(shard_height, &mut ins_sum, transcripts, public_keys, shard)?;
-        // }
-
-        // // Check that the sum of inputs is greater than that of the outputs
-        // if ins_sum < outs_sum {
-        //     return Err(TxVerifyErr::InvalidAmount);
-        // }
-
-        // Ok(ins_sum - outs_sum)
     }
 }
 
@@ -211,6 +147,7 @@ pub enum TxVerifyErr {
     InvalidSignaturesLength,
     InvalidPublicKey,
     InvalidSpendProof,
+    InvalidColouredCoinbaseBlockHeight,
     BackendErr,
     Error(&'static str),
 }
@@ -276,42 +213,39 @@ impl TransactionWithFee {
     #[must_use]
     pub fn from_transaction(
         other: TransactionWithSignatures,
+        key: &str,
         height: u64,
+        chain_id: u8,
         timestamp: i64,
-        prev_block_hash: [u8; 32],
-    ) -> Self {
-        let ins = other.tx.get_ins();
-        let outs = other.tx.get_outs(height, timestamp, prev_block_hash);
-        let ins_amount = ins
-            .iter()
-            .filter_map(|i| {
-                // Filter coinbase and coloured outs
-                let o = i.out.as_ref()?;
-                i.out.as_ref().unwrap().address.as_ref()?;
-
-                Some(o)
-            })
-            .fold(0, |acc, x| acc + x.amount);
-
-        let outs_amount = outs
-            .iter()
-            .filter_map(|o| {
-                // Filter coloured outs
-                o.address.as_ref()?;
-
-                Some(o)
-            })
-            .fold(0, |acc, x| acc + x.amount);
-
-        let raw_fee = ins_amount - outs_amount;
+        prev_block_hash: Hash256,
+    ) -> Result<Self, TxVerifyErr> {
+        let mut to_add = vec![];
+        let mut to_delete = vec![];
+        let mut ver_stack = VerificationStack::new();
+        let mut idx_map = HashMap::new();
+        let raw_fee = other.tx.verify_single(
+            key,
+            height,
+            chain_id,
+            timestamp,
+            prev_block_hash,
+            map_height_to_block_reward(height),
+            false,
+            &mut to_add,
+            &mut to_delete,
+            &mut ver_stack,
+            &mut idx_map,
+            &[0_u8; 32],
+            |_| Ok(()),
+        )?;
         let tx_size = other.tx.to_bytes().len() as u32;
 
-        Self {
+        Ok(Self {
             tx: other,
             raw_fee,
             fee_per_byte: raw_fee / i128::from(tx_size),
             tx_size,
-        }
+        })
     }
 }
 

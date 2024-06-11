@@ -220,6 +220,11 @@ impl PublicKey {
         Self::from_bytes(&bytes).unwrap()
     }
 
+    #[must_use]
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
+    }
+
     #[inline]
     #[must_use]
     pub fn to_address(&self) -> Address {
@@ -379,6 +384,15 @@ impl fmt::Debug for Hash160 {
 impl AsRef<[u8]> for Hash160 {
     fn as_ref(&self) -> &[u8] {
         &self.0
+    }
+}
+
+impl From<(&Address, &Self)> for Hash160 {
+    fn from(other: (&Address, &Self)) -> Self {
+        let mut buf = Vec::with_capacity(40);
+        buf.extend_from_slice(&other.0 .0);
+        buf.extend_from_slice(&other.1 .0);
+        Self::hash_from_slice(&buf, "idx_map_hasher")
     }
 }
 

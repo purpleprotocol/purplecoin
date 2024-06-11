@@ -258,7 +258,7 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xe1` GetSpentOutScriptOut - Pushes the script output of the spent output at the given index to the top of stack.
     - [x] OP `0xe2` SpillSpentOutScriptOuts - Pushes all the script outputs of the spent output to the top of the stack.
     - [x] OP `0xe3` SpentOutIsColouredOut - Pushes `1` if the spent output is coloured and `0` otherwise.
-    - [x] OP `0xe4` SpentOutColourHash - Pushes the colour hash of the spent out to the top of the stack. Pushes a zero hash if the output is an XPU output.
+    - [x] OP `0xe4` CurrentColourHash - Pushes the colour hash of the spent out to the top of the stack. Pushes a zero hash if the output is an XPU output. Pushes the colour hash if it is a coloured coinbase.
     - [x] OP `0xe5` PushPrevScriptOuts - Pushes previous spend script outs on top of the stack up to `n`
     - [x] OP `0xe6` Trunc - Returns the integer part of a float/decimal.
     - [x] OP `0xe7` Frac - Returns the fractionary part of a float/decimal.

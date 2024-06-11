@@ -74,6 +74,7 @@ mod tests {
     use crate::primitives::*;
     use crate::vm::internal::VmTerm;
     use crate::vm::*;
+    use accumulator::Witness;
     use rand::prelude::*;
 
     #[test]
@@ -106,13 +107,23 @@ mod tests {
             VmTerm::Signed128(INITIAL_BLOCK_REWARD),
             VmTerm::Hash160(address.0),
             VmTerm::Hash160(sh.0),
-            VmTerm::Unsigned64(rand::thread_rng().gen()),
-            VmTerm::Unsigned32(0),
         ];
         let mut input = Input {
-            script: Script::new_coinbase(),
-            input_flags: InputFlags::IsCoinbase,
+            script: ss,
+            input_flags: InputFlags::PlainWithoutSpendKey,
             script_args,
+            out: Some(Output {
+                amount: INITIAL_BLOCK_REWARD,
+                script_hash: sh.clone(),
+                inputs_hash: Hash160::zero(),
+                idx: 0,
+                address: Some(address),
+                coloured_address: None,
+                coinbase_height: None,
+                script_outs: vec![],
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
             ..Default::default()
         };
         input.compute_hash(key);
@@ -127,6 +138,6 @@ mod tests {
             tx,
             signatures: vec![],
         };
-        TransactionWithFee::from_transaction(tx, 0, 0, [0; 32])
+        TransactionWithFee::from_transaction(tx, key, 0, 0, 0, Hash256::zero()).unwrap()
     }
 }

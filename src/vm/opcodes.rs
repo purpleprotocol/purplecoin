@@ -237,7 +237,7 @@ pub enum OP {
     GetSpentOutScriptOut = 0xe1,
     SpillSpentOutScriptOuts = 0xe2,
     SpentOutIsColouredOut = 0xe3,
-    SpentOutColourHash = 0xe4,
+    CurrentColourHash = 0xe4,
     PushPrevScriptOuts = 0xe5,
     Trunc = 0xe6,
     Frac = 0xe7,
