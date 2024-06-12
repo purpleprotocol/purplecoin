@@ -8175,7 +8175,7 @@ impl ScriptExecutor {
                     match exec_stack.last_mut().unwrap().append(&mut top) {
                         Some(()) => {
                             // The items size is already added to the memory_size of the VM,
-                            // we only have to substract the HEAP_SIZE for the removed vector
+                            // we only have to subtract the HEAP_SIZE for the removed vector
                             *memory_size -= crate::vm::internal::EMPTY_VEC_HEAP_SIZE;
                         }
                         None => {
@@ -13112,7 +13112,7 @@ mod tests {
     use crate::primitives::InputFlags;
     use rayon::prelude::*;
 
-    pub struct TestBaseArgs {
+    struct TestBaseArgs {
         args: Vec<VmTerm>,
         ins: Vec<Input>,
         out: Vec<Output>,
@@ -23685,6 +23685,106 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut idx_map,
+                &mut verif_stack,
+                [0; 32],
+                key,
+                "",
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_hashes_with_keccak256() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Keccak256),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Keccak256),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        for term in test_terms {
+            let hashed_term = bifs::keccak256(&term);
+            script_output.push(hashed_term);
+        }
+
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+        let mut verif_stack = VerificationStack::new();
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
+                &mut idx_map,
+                &mut verif_stack,
+                [0; 32],
+                key,
+                "",
+                VmFlags::default()
+            ),
+            Ok(ExecutionResult::OkVerify).into()
+        );
+        assert_eq!(outs, base.out);
+    }
+
+    #[test]
+    fn it_hashes_with_keccak512() {
+        let key = "test_key";
+        let mut ss = Script {
+            script: vec![
+                ScriptEntry::Byte(0x03), // 3 arguments are pushed onto the stack: out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::Unsigned8Var),
+                ScriptEntry::Byte(0x01),
+                ScriptEntry::Opcode(OP::Keccak512),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::Signed8Var),
+                ScriptEntry::Byte(0xFF),
+                ScriptEntry::Opcode(OP::Keccak512),
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOut),
+                ScriptEntry::Opcode(OP::Verify),
+            ],
+            ..Script::default()
+        };
+
+        let test_terms = vec![VmTerm::Unsigned8(0x01), VmTerm::Signed8(-1)];
+
+        let mut script_output: Vec<VmTerm> = vec![];
+        for term in test_terms {
+            let hashed_term = bifs::keccak512(&term);
+            script_output.push(hashed_term);
+        }
+
+        let base: TestBaseArgs = get_test_base_args(&mut ss, 30, script_output, 0, key);
+        let mut idx_map = HashMap::new();
+        let mut outs = vec![];
+        let mut verif_stack = VerificationStack::new();
+
+        assert_eq!(
+            ss.execute(
+                &base.args,
+                &base.ins,
+                &mut outs,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],

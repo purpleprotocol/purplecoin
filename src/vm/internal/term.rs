@@ -15,8 +15,10 @@ use rust_decimal::{Decimal, MathematicalOps};
 use rust_decimal_macros::dec;
 use std::{fmt, mem};
 
-const WORD_SIZE: usize = 8; // 8 bytes on 64bit machines
-pub const EMPTY_VEC_HEAP_SIZE: usize = 3 * WORD_SIZE; // 3 words
+const WORD_SIZE: usize = 8;
+// 8 bytes on 64bit machines
+pub const EMPTY_VEC_HEAP_SIZE: usize = 3 * WORD_SIZE;
+// 3 words
 pub const HASH_KEY_TYPE: u8 = 0x15_u8; // the allowed type of the hashing key
 
 const ZERO_HASH160: [u8; 20] = [0; 20];
@@ -5407,9 +5409,9 @@ mod tests {
             Float32Wrapper(0.0),
             Float32Wrapper(0.0),
             Float32Wrapper(0.0),
-            Float32Wrapper(0.0)
+            Float32Wrapper(0.0),
         ])
-        .equals_0());
+            .equals_0());
         assert!(VmTerm::Float64Array(vec![
             Float64Wrapper(0.0),
             Float64Wrapper(0.0),
@@ -5418,9 +5420,9 @@ mod tests {
             Float64Wrapper(0.0),
             Float64Wrapper(0.0),
             Float64Wrapper(0.0),
-            Float64Wrapper(0.0)
+            Float64Wrapper(0.0),
         ])
-        .equals_0());
+            .equals_0());
         assert!(VmTerm::DecimalArray(vec![
             dec!(0.0),
             dec!(0.0),
@@ -5429,9 +5431,9 @@ mod tests {
             dec!(0.0),
             dec!(0.0),
             dec!(0.0),
-            dec!(0.0)
+            dec!(0.0),
         ])
-        .equals_0());
+            .equals_0());
 
         assert!(!VmTerm::Hash160([1; 20]).equals_0());
         assert!(!VmTerm::Hash256([1; 32]).equals_0());
@@ -5476,9 +5478,9 @@ mod tests {
             Float32Wrapper(0.0),
             Float32Wrapper(0.0),
             Float32Wrapper(10.1),
-            Float32Wrapper(0.0)
+            Float32Wrapper(0.0),
         ])
-        .equals_0());
+            .equals_0());
         assert!(!VmTerm::Float64Array(vec![
             Float64Wrapper(0.0),
             Float64Wrapper(0.0),
@@ -5487,9 +5489,9 @@ mod tests {
             Float64Wrapper(0.0),
             Float64Wrapper(0.0),
             Float64Wrapper(10.1),
-            Float64Wrapper(0.0)
+            Float64Wrapper(0.0),
         ])
-        .equals_0());
+            .equals_0());
         assert!(!VmTerm::DecimalArray(vec![
             dec!(0.0),
             dec!(0.0),
@@ -5498,9 +5500,9 @@ mod tests {
             dec!(0.0),
             dec!(0.0),
             dec!(10.1),
-            dec!(0.0)
+            dec!(0.0),
         ])
-        .equals_0());
+            .equals_0());
     }
 
     #[test]
@@ -5553,9 +5555,9 @@ mod tests {
             Float32Wrapper(1.0),
             Float32Wrapper(1.0),
             Float32Wrapper(1.0),
-            Float32Wrapper(1.0)
+            Float32Wrapper(1.0),
         ])
-        .equals_1());
+            .equals_1());
         assert!(VmTerm::Float64Array(vec![
             Float64Wrapper(1.0),
             Float64Wrapper(1.0),
@@ -5564,9 +5566,9 @@ mod tests {
             Float64Wrapper(1.0),
             Float64Wrapper(1.0),
             Float64Wrapper(1.0),
-            Float64Wrapper(1.0)
+            Float64Wrapper(1.0),
         ])
-        .equals_1());
+            .equals_1());
         assert!(VmTerm::DecimalArray(vec![
             dec!(1.0),
             dec!(1.0),
@@ -5575,9 +5577,9 @@ mod tests {
             dec!(1.0),
             dec!(1.0),
             dec!(1.0),
-            dec!(1.0)
+            dec!(1.0),
         ])
-        .equals_1());
+            .equals_1());
 
         assert!(!VmTerm::Hash160([0; 20]).equals_1());
         assert!(!VmTerm::Hash256([0; 32]).equals_1());
@@ -5622,9 +5624,9 @@ mod tests {
             Float32Wrapper(1.0),
             Float32Wrapper(1.0),
             Float32Wrapper(0.1),
-            Float32Wrapper(1.0)
+            Float32Wrapper(1.0),
         ])
-        .equals_1());
+            .equals_1());
         assert!(!VmTerm::Float64Array(vec![
             Float64Wrapper(1.0),
             Float64Wrapper(1.0),
@@ -5633,9 +5635,9 @@ mod tests {
             Float64Wrapper(1.0),
             Float64Wrapper(1.0),
             Float64Wrapper(0.1),
-            Float64Wrapper(1.0)
+            Float64Wrapper(1.0),
         ])
-        .equals_1());
+            .equals_1());
         assert!(!VmTerm::DecimalArray(vec![
             dec!(1.0),
             dec!(1.0),
@@ -5644,9 +5646,9 @@ mod tests {
             dec!(1.0),
             dec!(1.0),
             dec!(0.1),
-            dec!(1.0)
+            dec!(1.0),
         ])
-        .equals_1());
+            .equals_1());
     }
 
     #[test]
@@ -5840,9 +5842,9 @@ mod tests {
             Float32Wrapper(1.0),
             Float32Wrapper(1.0),
             Float32Wrapper(1.0),
-            Float32Wrapper(1.0)
+            Float32Wrapper(1.0),
         ])
-        .is_array());
+            .is_array());
         assert!(VmTerm::Float64Array(vec![
             Float64Wrapper(1.0),
             Float64Wrapper(1.0),
@@ -5851,9 +5853,9 @@ mod tests {
             Float64Wrapper(1.0),
             Float64Wrapper(1.0),
             Float64Wrapper(1.0),
-            Float64Wrapper(1.0)
+            Float64Wrapper(1.0),
         ])
-        .is_array());
+            .is_array());
     }
 
     #[test]
