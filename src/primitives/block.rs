@@ -968,6 +968,8 @@ impl BlockHeader {
         let key = config.get_chain_key(chain_id);
         let mut out_stack = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut ver_stack = VerificationStack::new();
         let mut idx_map = HashMap::new();
         let script = Script::new_coinbase();
@@ -980,6 +982,8 @@ impl BlockHeader {
                 &[in_clone],
                 &mut out_stack,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut ver_stack,
                 [0; 32],
@@ -1178,14 +1182,10 @@ impl Block {
         key: &str,
         witnesses: &[Witness<Rsa2048, Output>],
         vrf_in_out: VRFInOut,
-    ) -> Result<(Self, Vec<Output>), BlockVerifyErr> {
+    ) -> Result<Self, BlockVerifyErr> {
         let extra_nonce: u32 = rand::thread_rng().gen();
         let ss = Script::new_simple_spend();
         let sh = ss.to_script_hash(key);
-        let mut out_stack = vec![];
-        let mut outs_sum = 0;
-        let mut ver_stack = VerificationStack::new();
-        let mut idx_map = HashMap::new();
         let coinbase_height = prev.height + 1;
         let mut input = Input {
             input_flags: InputFlags::IsCoinbase,
@@ -1199,38 +1199,6 @@ impl Block {
             ..Default::default()
         };
         input.compute_hash(key);
-        let in_clone = input.clone();
-
-        let result = input.script.execute(
-            &input.script_args,
-            &[in_clone],
-            &mut out_stack,
-            &mut outs_sum,
-            &mut idx_map,
-            &mut ver_stack,
-            [0; 32],
-            key,
-            SETTINGS.node.network_name.as_str(),
-            VmFlags {
-                is_coinbase: input.is_coinbase(),
-                chain_id: prev.chain_id,
-                chain_height: prev.height + 1,
-                chain_timestamp: prev_pow.timestamp,
-                build_stacktrace: false,
-                validate_output_amounts: true,
-                prev_block_hash: prev.hash().unwrap().0,
-                in_binary: input.to_bytes_for_signing(),
-                spent_out: input.out.clone(),
-                can_fail: false,
-                ..Default::default()
-            },
-        );
-
-        assert_eq!(
-            result,
-            VmResult(Ok(ExecutionResult::Ok)),
-            "invalid coinbase transaction"
-        );
 
         let mut tx = Transaction {
             chain_id: prev.chain_id,
@@ -1242,13 +1210,10 @@ impl Block {
 
         let body = BlockData::new(txs, aggregated_signature);
 
-        Ok((
-            Self {
-                header: BlockHeader::new(prev_pow, prev, runnerup, &body, key, vrf_in_out)?,
-                body,
-            },
-            out_stack,
-        ))
+        Ok(Self {
+            header: BlockHeader::new(prev_pow, prev, runnerup, &body, key, vrf_in_out)?,
+            body,
+        })
     }
 
     /// Run full header and body validations
@@ -1740,6 +1705,8 @@ mod tests {
         let sh = ss.to_script_hash(key);
         let mut out_stack = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let script_args = vec![
             VmTerm::Signed128(INITIAL_BLOCK_REWARD),
             VmTerm::Hash160(address.0),
@@ -1775,6 +1742,8 @@ mod tests {
                 &[in_clone],
                 &mut out_stack,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut ver_stack,
                 [0; 32],
@@ -1910,6 +1879,8 @@ mod tests {
         let sh = ss.to_script_hash(key);
         let mut out_stack = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut ver_stack = VerificationStack::new();
         let mut idx_map = HashMap::new();
         let script_args = vec![
@@ -1934,6 +1905,8 @@ mod tests {
                 &[in_clone],
                 &mut out_stack,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut ver_stack,
                 [0; 32],

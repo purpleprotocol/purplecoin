@@ -117,9 +117,22 @@ impl Input {
         while i + r < copied.script.malleable_args.len() {
             if copied.script.malleable_args[i + r] {
                 copied.script_args.remove(i);
-                r += 1; // Account for removed indexes
+                r += 1;
             } else {
                 i += 1;
+            }
+        }
+        if let Some(script) = &self.colour_script {
+            i = 0;
+            r = 0;
+            let args = copied.colour_script_args.as_mut().unwrap();
+            while i + r < script.malleable_args.len() {
+                if script.malleable_args[i + r] {
+                    args.remove(i);
+                    r += 1;
+                } else {
+                    i += 1;
+                }
             }
         }
 
@@ -191,6 +204,8 @@ impl Input {
         chain_id: u8,
         ins_sum: &mut Money,
         outs_sum: &mut Money,
+        coloured_ins_sums: &mut HashMap<Hash160, Money>,
+        coloured_outs_sums: &mut HashMap<Hash160, Money>,
         timestamp: i64,
         block_reward: &Money,
         prev_block_hash: Hash256,
@@ -227,6 +242,8 @@ impl Input {
                             input_stack,
                             to_add,
                             outs_sum,
+                            coloured_ins_sums,
+                            coloured_outs_sums,
                             idx_map,
                             ver_stack,
                             [0; 32],
@@ -283,6 +300,8 @@ impl Input {
                             input_stack,
                             to_add,
                             outs_sum,
+                            coloured_ins_sums,
+                            coloured_outs_sums,
                             idx_map,
                             ver_stack,
                             [0; 32],
@@ -355,6 +374,8 @@ impl Input {
                         input_stack,
                         to_add,
                         outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
                         idx_map,
                         ver_stack,
                         [0; 32], // Empty seed, not failable
@@ -423,6 +444,8 @@ impl Input {
                         input_stack,
                         to_add,
                         outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
                         idx_map,
                         ver_stack,
                         [0; 32], // Empty seed, not failable
@@ -496,6 +519,8 @@ impl Input {
                         input_stack,
                         to_add,
                         outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
                         idx_map,
                         ver_stack,
                         seed_hash.0,
@@ -558,6 +583,8 @@ impl Input {
                         input_stack,
                         to_add,
                         outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
                         idx_map,
                         ver_stack,
                         [0; 32], // Empty seed, not failable
@@ -622,6 +649,8 @@ impl Input {
                         input_stack,
                         to_add,
                         outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
                         idx_map,
                         ver_stack,
                         seed_hash.0,
@@ -712,6 +741,8 @@ impl Input {
                         input_stack,
                         to_add,
                         outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
                         idx_map,
                         ver_stack,
                         [0; 32],
@@ -799,6 +830,8 @@ impl Input {
                         input_stack,
                         to_add,
                         outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
                         idx_map,
                         ver_stack,
                         seed_hash.0,
@@ -876,6 +909,8 @@ impl Input {
                         input_stack,
                         to_add,
                         outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
                         idx_map,
                         ver_stack,
                         [0; 32],
@@ -955,6 +990,8 @@ impl Input {
                         input_stack,
                         to_add,
                         outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
                         idx_map,
                         ver_stack,
                         seed_hash.0,

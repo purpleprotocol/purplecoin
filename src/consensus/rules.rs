@@ -32,8 +32,8 @@ pub const MAX_BYTES_PER_BLOCK: u64 = 380_000;
 /// Max bytes per transaction
 pub const TRANSACTION_LIMIT_SIZE: u64 = 10_000;
 
-/// Initial block reward, per shard. The miner reward is equal to `INITIAL_BLOCK_REWARD` * `SHARDS_PER_SECTOR`
-pub const INITIAL_BLOCK_REWARD: Money = COIN; // 1 XPU
+/// Initial block reward
+pub const INITIAL_BLOCK_REWARD: Money = COIN * 16; // 16 XPU
 
 /// Amount of coins mined in the genesis block
 pub const PRE_MINED_COINS: Money = COIN * 227_994_000;

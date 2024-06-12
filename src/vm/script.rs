@@ -306,6 +306,8 @@ impl Script {
         input_stack: &[Input],
         output_stack: &mut Vec<Output>,
         outs_sum: &mut Money,
+        coloured_ins_sums: &mut HashMap<Hash160, Money>,
+        coloured_outs_sums: &mut HashMap<Hash160, Money>,
         output_stack_idx_map: &mut HashMap<Hash160, u16>,
         verification_stack: &mut VerificationStack,
         seed: [u8; 32],
@@ -399,6 +401,8 @@ impl Script {
                         input_stack,
                         output_stack,
                         outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
                         output_stack_idx_map,
                         &mut script_outputs,
                         key,
@@ -7138,6 +7142,8 @@ impl ScriptExecutor {
         input_stack: &[Input],
         output_stack: &mut Vec<Output>,
         outs_sum: &mut Money,
+        coloured_ins_sums: &mut HashMap<Hash160, Money>,
+        coloured_outs_sums: &mut HashMap<Hash160, Money>,
         output_stack_idx_map: &mut HashMap<Hash160, u16>,
         script_outputs: &mut Vec<VmTerm>,
         key: &str,
@@ -13151,6 +13157,8 @@ mod tests {
                 let mut idx_map = HashMap::new();
                 let mut outs = vec![];
                 let mut outs_sum = 0;
+                let mut coloured_ins_sums = HashMap::new();
+                let mut coloured_outs_sums = HashMap::new();
                 let mut verif_stack = VerificationStack::new();
 
                 assert_eq!(
@@ -13159,6 +13167,8 @@ mod tests {
                         &base.ins,
                         &mut outs,
                         &mut outs_sum,
+                        &mut coloured_ins_sums,
+                        &mut coloured_outs_sums,
                         &mut idx_map,
                         &mut verif_stack,
                         [0; 32],
@@ -13206,6 +13216,8 @@ mod tests {
                 let mut idx_map = HashMap::new();
                 let mut outs = vec![];
                 let mut outs_sum = 0;
+                let mut coloured_ins_sums = HashMap::new();
+                let mut coloured_outs_sums = HashMap::new();
                 let mut verif_stack = VerificationStack::new();
 
                 assert_eq!(
@@ -13214,6 +13226,8 @@ mod tests {
                         &base.ins,
                         &mut outs,
                         &mut outs_sum,
+                        &mut coloured_ins_sums,
+                        &mut coloured_outs_sums,
                         &mut idx_map,
                         &mut verif_stack,
                         [0; 32],
@@ -13261,6 +13275,8 @@ mod tests {
                 let mut idx_map = HashMap::new();
                 let mut outs = vec![];
                 let mut outs_sum = 0;
+                let mut coloured_ins_sums = HashMap::new();
+                let mut coloured_outs_sums = HashMap::new();
                 let mut verif_stack = VerificationStack::new();
 
                 assert_eq!(
@@ -13269,6 +13285,8 @@ mod tests {
                         &base.ins,
                         &mut outs,
                         &mut outs_sum,
+                        &mut coloured_ins_sums,
+                        &mut coloured_outs_sums,
                         &mut idx_map,
                         &mut verif_stack,
                         [0; 32],
@@ -13316,6 +13334,8 @@ mod tests {
                 let mut idx_map = HashMap::new();
                 let mut outs = vec![];
                 let mut outs_sum = 0;
+                let mut coloured_ins_sums = HashMap::new();
+                let mut coloured_outs_sums = HashMap::new();
                 let mut verif_stack = VerificationStack::new();
 
                 assert_eq!(
@@ -13324,6 +13344,8 @@ mod tests {
                         &base.ins,
                         &mut outs,
                         &mut outs_sum,
+                        &mut coloured_ins_sums,
+                        &mut coloured_outs_sums,
                         &mut idx_map,
                         &mut verif_stack,
                         [0; 32],
@@ -13344,6 +13366,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
         assert_eq!(
             script.execute(
@@ -13351,6 +13375,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -13374,6 +13400,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
         assert_eq!(
             script.execute(
@@ -13381,6 +13409,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15297,6 +15327,8 @@ mod tests {
         }];
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         let ins_hashes: Vec<u8> = ins.iter_mut().fold(vec![], |mut acc, v: &mut Input| {
@@ -15325,6 +15357,8 @@ mod tests {
                 &ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15368,6 +15402,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15376,6 +15412,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15418,6 +15456,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15426,6 +15466,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15469,6 +15511,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15477,6 +15521,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15519,6 +15565,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15527,6 +15575,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15569,6 +15619,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15577,6 +15629,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15621,6 +15675,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15629,6 +15685,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15673,6 +15731,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15681,6 +15741,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15726,6 +15788,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15734,6 +15798,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15778,6 +15844,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15786,6 +15854,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15831,6 +15901,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15839,6 +15911,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15883,6 +15957,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15891,6 +15967,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15936,6 +16014,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15944,6 +16024,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -15988,6 +16070,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -15996,6 +16080,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16041,6 +16127,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16049,6 +16137,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16093,6 +16183,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16101,6 +16193,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16146,6 +16240,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16154,6 +16250,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16198,6 +16296,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16206,6 +16306,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16251,6 +16353,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16259,6 +16363,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16303,6 +16409,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16311,6 +16419,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16355,6 +16465,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16363,6 +16475,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16405,6 +16519,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16413,6 +16529,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16455,6 +16573,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16463,6 +16583,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16507,6 +16629,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16515,6 +16639,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16559,6 +16685,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16567,6 +16695,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16623,6 +16753,8 @@ mod tests {
 
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
         assert_eq!(
             ss.execute(
@@ -16630,6 +16762,8 @@ mod tests {
                 ins.as_slice(),
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16667,6 +16801,8 @@ mod tests {
         .collect();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16675,6 +16811,8 @@ mod tests {
                 &ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16712,6 +16850,8 @@ mod tests {
         .collect();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16720,6 +16860,8 @@ mod tests {
                 &ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16891,6 +17033,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16899,6 +17043,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -16950,6 +17096,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -16958,6 +17106,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17002,6 +17152,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17010,6 +17162,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17050,6 +17204,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17058,6 +17214,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17118,6 +17276,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17126,6 +17286,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17167,6 +17329,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17175,6 +17339,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17232,6 +17398,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17240,6 +17408,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17297,6 +17467,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17305,6 +17477,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17355,6 +17529,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17363,6 +17539,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17406,6 +17584,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17414,6 +17594,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17465,6 +17647,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17473,6 +17657,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17518,6 +17704,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17526,6 +17714,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17568,6 +17758,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17576,6 +17768,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17624,6 +17818,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17632,6 +17828,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17688,6 +17886,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17696,6 +17896,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17731,6 +17933,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17739,6 +17943,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17768,6 +17974,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17776,6 +17984,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17804,6 +18014,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17812,6 +18024,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17842,6 +18056,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17850,6 +18066,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17882,6 +18100,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17890,6 +18110,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17928,6 +18150,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17936,6 +18160,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -17966,6 +18192,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -17974,6 +18202,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18013,6 +18243,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18021,6 +18253,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18051,6 +18285,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18059,6 +18295,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18089,6 +18327,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18097,6 +18337,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18127,6 +18369,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18135,6 +18379,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18165,6 +18411,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18173,6 +18421,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18205,6 +18455,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18213,6 +18465,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18247,6 +18501,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18255,6 +18511,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18289,6 +18547,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18297,6 +18557,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18325,6 +18587,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18333,6 +18597,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18414,6 +18680,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18422,6 +18690,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18530,6 +18800,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18538,6 +18810,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18714,6 +18988,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18722,6 +18998,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18764,6 +19042,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18772,6 +19052,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18817,6 +19099,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18825,6 +19109,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18876,6 +19162,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18884,6 +19172,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -18947,6 +19237,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -18955,6 +19247,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19023,6 +19317,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19031,6 +19327,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19076,6 +19374,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19084,6 +19384,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19135,6 +19437,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19143,6 +19447,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19206,6 +19512,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19214,6 +19522,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19282,6 +19592,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19290,6 +19602,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19327,6 +19641,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19335,6 +19651,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19376,6 +19694,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19384,6 +19704,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19452,6 +19774,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19460,6 +19784,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19572,6 +19898,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19580,6 +19908,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19731,6 +20061,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -19739,6 +20071,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -19992,6 +20326,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20000,6 +20336,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20050,6 +20388,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20058,6 +20398,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20118,6 +20460,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20126,6 +20470,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20213,6 +20559,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20221,6 +20569,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20353,6 +20703,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20361,6 +20713,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20488,6 +20842,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20496,6 +20852,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20546,6 +20904,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20554,6 +20914,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20614,6 +20976,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20622,6 +20986,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20709,6 +21075,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20717,6 +21085,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20849,6 +21219,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20857,6 +21229,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -20984,6 +21358,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -20992,6 +21368,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21059,6 +21437,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21067,6 +21447,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21146,6 +21528,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21154,6 +21538,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21265,6 +21651,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21273,6 +21661,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21325,6 +21715,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21333,6 +21725,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21443,6 +21837,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21451,6 +21847,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21525,6 +21923,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21533,6 +21933,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21603,6 +22005,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21611,6 +22015,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21681,6 +22087,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21689,6 +22097,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21760,6 +22170,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21768,6 +22180,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21833,6 +22247,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21841,6 +22257,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -21907,6 +22325,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -21915,6 +22335,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -22006,6 +22428,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22014,6 +22438,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22056,6 +22482,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22064,6 +22492,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22116,6 +22546,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22124,6 +22556,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22166,6 +22600,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22174,6 +22610,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22216,6 +22654,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22224,6 +22664,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22266,6 +22708,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22274,6 +22718,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22316,6 +22762,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22324,6 +22772,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22366,6 +22816,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22374,6 +22826,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22416,6 +22870,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22424,6 +22880,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22466,6 +22924,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22474,6 +22934,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22516,6 +22978,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22524,6 +22988,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22566,6 +23032,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22574,6 +23042,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22616,6 +23086,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22624,6 +23096,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22666,6 +23140,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22674,6 +23150,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22716,6 +23194,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22724,6 +23204,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22766,6 +23248,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22774,6 +23258,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 seed,
@@ -22839,6 +23325,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22847,6 +23335,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -22909,6 +23399,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22917,6 +23409,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -22979,6 +23473,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -22987,6 +23483,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23049,6 +23547,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23057,6 +23557,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23119,6 +23621,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23127,6 +23631,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23189,6 +23695,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23197,6 +23705,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23316,6 +23826,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23324,6 +23836,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23469,6 +23983,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23477,6 +23993,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23521,6 +24039,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23529,6 +24049,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23573,6 +24095,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23581,6 +24105,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23625,6 +24151,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23633,6 +24161,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23677,6 +24207,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23685,6 +24217,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23741,6 +24275,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23749,6 +24285,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23793,6 +24331,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23801,6 +24341,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23845,6 +24387,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23853,6 +24397,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23897,6 +24443,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23905,6 +24453,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -23949,6 +24499,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -23957,6 +24509,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24029,6 +24583,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24037,6 +24593,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24088,6 +24646,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24096,6 +24656,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24232,6 +24794,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24240,6 +24804,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24304,6 +24870,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24312,6 +24880,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24449,6 +25019,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24457,6 +25029,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24521,6 +25095,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24529,6 +25105,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24639,6 +25217,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24647,6 +25227,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24692,6 +25274,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24700,6 +25284,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24745,6 +25331,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24753,6 +25341,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24798,6 +25388,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24806,6 +25398,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -24851,6 +25445,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -24859,6 +25455,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26828,6 +27426,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26836,6 +27436,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26885,6 +27487,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26893,6 +27497,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -26943,6 +27549,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -26951,6 +27559,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27000,6 +27610,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27008,6 +27620,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27058,6 +27672,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27066,6 +27682,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27115,6 +27733,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27123,6 +27743,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27173,6 +27795,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27181,6 +27805,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27230,6 +27856,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27238,6 +27866,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27288,6 +27918,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27296,6 +27928,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27345,6 +27979,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27353,6 +27989,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27419,6 +28057,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27427,6 +28067,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27535,6 +28177,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27543,6 +28187,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27652,6 +28298,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27660,6 +28308,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27724,6 +28374,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27732,6 +28384,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27810,6 +28464,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27818,6 +28474,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27885,6 +28543,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27893,6 +28553,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -27960,6 +28622,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -27968,6 +28632,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -28035,6 +28701,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -28043,6 +28711,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -28110,6 +28780,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -28118,6 +28790,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -28191,6 +28865,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -28199,6 +28875,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],
@@ -28272,6 +28950,8 @@ mod tests {
         let mut idx_map = HashMap::new();
         let mut outs = vec![];
         let mut outs_sum = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
         let mut verif_stack = VerificationStack::new();
 
         assert_eq!(
@@ -28280,6 +28960,8 @@ mod tests {
                 &base.ins,
                 &mut outs,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut verif_stack,
                 [0; 32],

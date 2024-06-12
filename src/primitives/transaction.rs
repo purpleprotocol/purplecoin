@@ -73,18 +73,22 @@ impl Transaction {
     ) -> Result<Money, TxVerifyErr> {
         let mut ins_sum: Money = 0;
         let mut outs_sum: Money = 0;
+        let mut coloured_ins_sums = HashMap::new();
+        let mut coloured_outs_sums = HashMap::new();
 
         // Verify inputs
         for (i, input) in self.ins.iter().enumerate() {
             let nonce = (i as u64).to_le_bytes();
             let input_seed_bytes: &[u8] = &[tx_seed_bytes, nonce.as_slice()].concat();
 
-            input.verify(
+            let result = input.verify(
                 key,
                 height,
                 chain_id,
                 &mut ins_sum,
                 &mut outs_sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 timestamp,
                 &block_reward,
                 prev_block_hash,
@@ -96,12 +100,26 @@ impl Transaction {
                 input_seed_bytes,
                 self.ins.as_slice(),
                 validate_coloured_coinbase,
-            )?;
+            );
+
+            match (result, input.is_failable()) {
+                (Err(err), false) => return Err(err), // Not failable so the whole transaction is invalid
+                (Err(_), true) => break, // Stop the rest of the transaction execution at this point
+                _ => {}
+            }
         }
 
         // Check that the sum of inputs is greater than that of the outputs
         if ins_sum < outs_sum {
             return Err(TxVerifyErr::InvalidAmount);
+        }
+
+        // Verify coloured sums
+        for (k, ins_sum) in coloured_ins_sums.iter() {
+            let outs_sum = coloured_outs_sums.get(k).unwrap_or(&0);
+            if ins_sum < outs_sum {
+                return Err(TxVerifyErr::InvalidAmount);
+            }
         }
 
         Ok(ins_sum - outs_sum)
