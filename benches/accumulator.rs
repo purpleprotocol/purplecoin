@@ -79,6 +79,8 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
     let sh = ss.to_script_hash(key);
     let mut out_stack = vec![];
     let mut sum = 0;
+    let mut coloured_ins_sums = HashMap::new();
+    let mut coloured_outs_sums = HashMap::new();
     let mut ver_stack = VerificationStack::new();
     let mut idx_map = HashMap::new();
     let script_args = vec![
@@ -107,6 +109,8 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
                 &[in_clone],
                 &mut out_stack,
                 &mut sum,
+                &mut coloured_ins_sums,
+                &mut coloured_outs_sums,
                 &mut idx_map,
                 &mut ver_stack,
                 [0; 32],
