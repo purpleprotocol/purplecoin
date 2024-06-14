@@ -221,7 +221,7 @@ impl Input {
         match self.input_flags {
             InputFlags::IsCoinbase => {
                 if !coinbase_allowed {
-                    return Err(TxVerifyErr::InvalidCoinbase);
+                    return Err(TxVerifyErr::CoinbaseNotAllowed);
                 }
 
                 let script = Script::new_coinbase();
@@ -270,30 +270,30 @@ impl Input {
                             _ => Err(TxVerifyErr::InvalidScriptExecution),
                         }
                     }
-                    _ => Err(TxVerifyErr::InvalidCoinbase),
+                    _ => Err(TxVerifyErr::InvalidCoinbaseArgs),
                 }
             }
 
             InputFlags::IsCoinbaseWithoutSpendKey => {
                 if !coinbase_allowed {
-                    return Err(TxVerifyErr::InvalidCoinbase);
+                    return Err(TxVerifyErr::CoinbaseNotAllowed);
                 }
 
                 let script = Script::new_coinbase();
 
                 let a1 = &self.script_args[0];
                 let a3 = &self.script_args[2];
-                let a4 = &self.script_args[3];
 
                 // Validate terms
-                match (a1, a3, a4) {
-                    (
-                        VmTerm::Signed128(amount),
-                        VmTerm::Unsigned64(coinbase_height),
-                        VmTerm::Unsigned32(_),
-                    ) if amount == block_reward && coinbase_height == &height => {
+                match (a1, a3) {
+                    (VmTerm::Signed128(amount), VmTerm::Unsigned32(_))
+                        if amount == block_reward =>
+                    {
+                        let mut script_args = self.script_args.clone();
+                        // Push a zero address at index 1
+                        script_args.insert(1, VmTerm::Hash160([0; 20]));
                         let result = script.execute(
-                            &self.script_args,
+                            &script_args,
                             input_stack,
                             to_add,
                             outs_sum,
@@ -328,7 +328,7 @@ impl Input {
                             _ => Err(TxVerifyErr::InvalidScriptExecution),
                         }
                     }
-                    _ => Err(TxVerifyErr::InvalidCoinbase),
+                    _ => Err(TxVerifyErr::InvalidCoinbaseArgs),
                 }
             }
 

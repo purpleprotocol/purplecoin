@@ -8036,11 +8036,17 @@ impl ScriptExecutor {
 
                                 *script_outputs = vec![];
                             } else {
+                                let coinbase_height =
+                                    if flags.is_coinbase && flags.colour_hash.is_none() {
+                                        Some(flags.chain_height)
+                                    } else {
+                                        None
+                                    };
                                 let mut output = Output {
                                     amount,
                                     address: address.clone(),
                                     script_hash: script_hash.clone(),
-                                    coinbase_height: None,
+                                    coinbase_height,
                                     coloured_address: None,
                                     inputs_hash: inputs_hash.clone(),
                                     idx: output_stack.len() as u16,
