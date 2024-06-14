@@ -238,12 +238,12 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [x] OP `0xcc` GetInputScriptArgAt - Pushes the script argument at the second given index of the input at the first given index to the top of the stack
     - [x] OP `0xcd` SpillInputScriptArgs - Pushes all the script args of the input at the given index to the top of the stack.
     - [x] OP `0xce` Sqrt - Pops a term from the top of the stack, performs sqrt and pushes it back to the top of the stack.
-    - [x] OP `0xcf` PushOut - Pushes a new output to the output stack. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
-    - [x] OP `0xd0` PushOutVerify - Pushes a new output to the output stack and calls Verify. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
-    - [x] OP `0xd1` PushCoinbaseOut - Pushes a coinbase output to the output stack. Only valid in the coinbase input. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
-    - [ ] OP `0xd2` PushColouredCoinbaseOut - Pushes a coloured coinbase output to the output stack. Only valid in the asset emission script. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160` where `out_address` is the first 20 bytes of a coloured address.
-    - [x] OP `0xd3` PushCoinbaseOutNoSpendAddress - Pushes a coinbase output to the output stack without an explicit spend address. Only valid in the coinbase input. The following arguments are popped from the stack: `out_amount = Signed128, out_script_hash = Hash160`
-    - [ ] OP `0xd4` PushColouredCoinbaseOutNoSpendAddress - Pushes a coloured coinbase output to the output stack without an explicit spend address. Only valid in the asset emission script. The following arguments are popped from the stack: `out_amount = Signed128, out_script_hash = Hash160`
+    - [x] OP `0xcf` Zero - Pushes zero as an `Unsigned8` to the top of the stack.
+    - [x] OP `0xd0` One - Pushes one as an `Unsigned8` to the top of the stack.
+    - [x] OP `0xd1` ZeroOfType - Receives a type id of a primitive and pushes zero of that type to the top of the stack.
+    - [x] OP `0xd2` OneOfType - Receives a type id of a primitive and pushes one of that type to the top of the stack.
+    - [x] OP `0xd3` PushOut - Pushes a new output to the output stack. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
+    - [x] OP `0xd4` PushOutVerify - Pushes a new output to the output stack and calls Verify. The following arguments are popped from the stack: `out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [x] OP `0xd5` PushOutIf - Pushes a new output to the output stack if the first item on the stack is equal to 1. The following arguments are popped from the stack: `condition = <any_integer_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [x] OP `0xd6` PushOutIfEq - Pushes a new output to the output stack if the topmost items on the stack are equal. The following arguments are popped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`
     - [x] OP `0xd7` PushOutIfNeq - Pushes a new output to the output stack if the topmost items on the stack are not equal. The following arguments are popped from the stack: `value1 = <any_type>, value2 = <any_type>, out_amount = Signed128, out_address = Hash160, out_script_hash = Hash160`

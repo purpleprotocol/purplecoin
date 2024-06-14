@@ -249,20 +249,8 @@ impl Script {
     pub fn new_coinbase() -> Script {
         Script {
             script: vec![
-                ScriptEntry::Byte(0x05), // 5 arguments are pushed onto the stack: out_amount, out_address, out_script_hash, coinbase_height, extra_nonce
-                ScriptEntry::Opcode(OP::PushCoinbaseOut),
-            ],
-            malleable_args: bitvec_from_bools![false, false, false, false, false],
-            ..Script::default()
-        }
-    }
-
-    #[must_use]
-    pub fn new_coinbase_without_spending_address() -> Script {
-        Script {
-            script: vec![
-                ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: out_amount, out_script_hash, coinbase_height, extra_nonce
-                ScriptEntry::Opcode(OP::PushCoinbaseOutNoSpendAddress),
+                ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: out_amount, out_address, out_script_hash, extra_nonce
+                ScriptEntry::Opcode(OP::PushOutVerify),
             ],
             malleable_args: bitvec_from_bools![false, false, false, false],
             ..Script::default()
@@ -6885,6 +6873,276 @@ impl Script {
                             }
                         }
 
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::OneOfType) => {
+                            frame.i_ptr += 1;
+                            let type_id = if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                *byte
+                            } else {
+                                unreachable!()
+                            };
+
+                            match type_id {
+                                0x00 => {
+                                    frame.stack.push(VmTerm::Hash160([1; 20]));
+                                    memory_size += 20;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x01 => {
+                                    frame.stack.push(VmTerm::Hash256([1; 32]));
+                                    memory_size += 32;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x02 => {
+                                    frame.stack.push(VmTerm::Hash512([1; 64]));
+                                    memory_size += 64;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x03 => {
+                                    frame.stack.push(VmTerm::Unsigned8(1));
+                                    memory_size += 1;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x04 => {
+                                    frame.stack.push(VmTerm::Unsigned16(1));
+                                    memory_size += 2;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x05 => {
+                                    frame.stack.push(VmTerm::Unsigned32(1));
+                                    memory_size += 4;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x06 => {
+                                    frame.stack.push(VmTerm::Unsigned64(1));
+                                    memory_size += 8;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x07 => {
+                                    frame.stack.push(VmTerm::Unsigned128(1));
+                                    memory_size += 16;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x08 => {
+                                    let term = VmTerm::UnsignedBig(ubig!(1));
+                                    memory_size += term.size();
+                                    frame.stack.push(term);
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x09 => {
+                                    frame.stack.push(VmTerm::Signed8(1));
+                                    memory_size += 1;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x0a => {
+                                    frame.stack.push(VmTerm::Signed16(1));
+                                    memory_size += 2;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x0b => {
+                                    frame.stack.push(VmTerm::Signed32(1));
+                                    memory_size += 4;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x0c => {
+                                    frame.stack.push(VmTerm::Signed64(1));
+                                    memory_size += 8;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x0d => {
+                                    frame.stack.push(VmTerm::Signed128(1));
+                                    memory_size += 16;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x0e => {
+                                    let term = VmTerm::SignedBig(ibig!(1));
+                                    memory_size += term.size();
+                                    frame.stack.push(term);
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x0f => {
+                                    frame.stack.push(VmTerm::Float32(Float32Wrapper(1.0)));
+                                    memory_size += 4;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x10 => {
+                                    frame.stack.push(VmTerm::Float64(Float64Wrapper(1.0)));
+                                    memory_size += 8;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x11 => {
+                                    let term = VmTerm::Decimal(dec!(1));
+                                    memory_size += term.size();
+                                    frame.stack.push(term);
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                _ => {
+                                    frame.executor.state = ScriptExecutorState::Error(
+                                        ExecutionResult::InvalidArgs,
+                                        (
+                                            frame.i_ptr,
+                                            frame.func_idx,
+                                            i.clone(),
+                                            frame.stack.as_slice(),
+                                        )
+                                            .into(),
+                                    );
+                                }
+                            }
+                        }
+
+                        ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::ZeroOfType) => {
+                            frame.i_ptr += 1;
+                            let type_id = if let ScriptEntry::Byte(byte) = &f[frame.i_ptr] {
+                                *byte
+                            } else {
+                                unreachable!()
+                            };
+
+                            match type_id {
+                                0x00 => {
+                                    frame.stack.push(VmTerm::Hash160([0; 20]));
+                                    memory_size += 20;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x01 => {
+                                    frame.stack.push(VmTerm::Hash256([0; 32]));
+                                    memory_size += 32;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x02 => {
+                                    frame.stack.push(VmTerm::Hash512([0; 64]));
+                                    memory_size += 64;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x03 => {
+                                    frame.stack.push(VmTerm::Unsigned8(0));
+                                    memory_size += 1;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x04 => {
+                                    frame.stack.push(VmTerm::Unsigned16(0));
+                                    memory_size += 2;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x05 => {
+                                    frame.stack.push(VmTerm::Unsigned32(0));
+                                    memory_size += 4;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x06 => {
+                                    frame.stack.push(VmTerm::Unsigned64(0));
+                                    memory_size += 8;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x07 => {
+                                    frame.stack.push(VmTerm::Unsigned128(0));
+                                    memory_size += 16;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x08 => {
+                                    let term = VmTerm::UnsignedBig(ubig!(0));
+                                    memory_size += term.size();
+                                    frame.stack.push(term);
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x09 => {
+                                    frame.stack.push(VmTerm::Signed8(0));
+                                    memory_size += 1;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x0a => {
+                                    frame.stack.push(VmTerm::Signed16(0));
+                                    memory_size += 2;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x0b => {
+                                    frame.stack.push(VmTerm::Signed32(0));
+                                    memory_size += 4;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x0c => {
+                                    frame.stack.push(VmTerm::Signed64(0));
+                                    memory_size += 8;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x0d => {
+                                    frame.stack.push(VmTerm::Signed128(0));
+                                    memory_size += 16;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x0e => {
+                                    let term = VmTerm::SignedBig(ibig!(0));
+                                    memory_size += term.size();
+                                    frame.stack.push(term);
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x0f => {
+                                    frame.stack.push(VmTerm::Float32(Float32Wrapper(0.0)));
+                                    memory_size += 4;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x10 => {
+                                    frame.stack.push(VmTerm::Float64(Float64Wrapper(0.0)));
+                                    memory_size += 8;
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                0x11 => {
+                                    let term = VmTerm::Decimal(dec!(0));
+                                    memory_size += term.size();
+                                    frame.stack.push(term);
+                                    frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
+                                    frame.i_ptr += 1;
+                                }
+                                _ => {
+                                    frame.executor.state = ScriptExecutorState::Error(
+                                        ExecutionResult::InvalidArgs,
+                                        (
+                                            frame.i_ptr,
+                                            frame.func_idx,
+                                            i.clone(),
+                                            frame.stack.as_slice(),
+                                        )
+                                            .into(),
+                                    );
+                                }
+                            }
+                        }
+
                         // Extend stack trace
                         ScriptExecutorState::Error(err, stack_trace) => {
                             let mut stack_trace = stack_trace.clone();
@@ -7577,6 +7835,26 @@ impl ScriptExecutor {
                     exec_stack.push(term);
                 }
 
+                ScriptEntry::Opcode(OP::Zero) => {
+                    let term = VmTerm::Unsigned8(0);
+                    *memory_size += 1;
+                    exec_stack.push(term);
+                }
+
+                ScriptEntry::Opcode(OP::One) => {
+                    let term = VmTerm::Unsigned8(0);
+                    *memory_size += 1;
+                    exec_stack.push(term);
+                }
+
+                ScriptEntry::Opcode(OP::ZeroOfType) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::ZeroOfType);
+                }
+
+                ScriptEntry::Opcode(OP::OneOfType) => {
+                    self.state = ScriptExecutorState::ExpectingBytesOrCachedTerm(OP::OneOfType);
+                }
+
                 ScriptEntry::Opcode(
                     OP::PushOut
                     | OP::PushOutIf
@@ -7588,119 +7866,112 @@ impl ScriptExecutor {
                     | OP::PushOutIfGeq,
                 ) => {
                     match Self::check_condition_push_out(exec_stack, memory_size, op.clone()) {
-                        Ok(val) => {
-                            if val {
-                                if exec_stack.len() < 3 {
+                        Ok(true) => {
+                            if exec_stack.len() < 3 {
+                                self.state = ScriptExecutorState::Error(
+                                    ExecutionResult::InvalidArgs,
+                                    (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                );
+                                return;
+                            }
+
+                            let amount = exec_stack.pop().unwrap();
+                            *memory_size -= amount.size();
+                            let address = exec_stack.pop().unwrap();
+                            *memory_size -= address.size();
+                            let script_hash = exec_stack.pop().unwrap();
+                            *memory_size -= script_hash.size();
+
+                            match (amount, address, script_hash) {
+                                (
+                                    VmTerm::Signed128(amount),
+                                    VmTerm::Hash160(addr),
+                                    VmTerm::Hash160(script_hash),
+                                ) if amount > 0 => {
+                                    let address = Address(addr);
+                                    let script_hash = Hash160(script_hash);
+                                    let address = if address == Address::zero() {
+                                        None
+                                    } else {
+                                        Some(address.clone())
+                                    };
+
+                                    let to_get = if let Some(addr) = &address {
+                                        (addr, &script_hash).into()
+                                    } else {
+                                        script_hash.clone()
+                                    };
+
+                                    if let Some(idx) = output_stack_idx_map.get(&to_get) {
+                                        // Re-hash inputs
+                                        let inputs_hashes: Vec<u8> = [
+                                            output_stack[*idx as usize].inputs_hash.clone(),
+                                            inputs_hash.clone(),
+                                        ]
+                                        .iter()
+                                        .fold(vec![], |mut acc, hash| {
+                                            acc.extend(hash.0);
+                                            acc
+                                        });
+
+                                        let inputs_hash =
+                                            Hash160::hash_from_slice(inputs_hashes, key);
+                                        *outs_sum += amount;
+                                        output_stack[*idx as usize].amount += amount;
+                                        output_stack[*idx as usize].inputs_hash = inputs_hash;
+                                        output_stack[*idx as usize].compute_hash(key);
+                                        output_stack[*idx as usize].script_outs =
+                                            script_outputs.clone();
+
+                                        *script_outputs = vec![];
+                                    } else {
+                                        let mut output = Output {
+                                            amount,
+                                            address: address.clone(),
+                                            script_hash: script_hash.clone(),
+                                            coinbase_height: None,
+                                            coloured_address: None,
+                                            inputs_hash: inputs_hash.clone(),
+                                            idx: output_stack.len() as u16,
+                                            script_outs: script_outputs.clone(),
+                                            hash: None,
+                                        };
+                                        *outs_sum += amount;
+                                        output.compute_hash(key);
+                                        if let Some(address) = address {
+                                            output_stack_idx_map.insert(
+                                                (&address, &script_hash).into(),
+                                                output_stack.len() as u16,
+                                            );
+                                        } else {
+                                            output_stack_idx_map
+                                                .insert(script_hash, output_stack.len() as u16);
+                                        }
+                                        output_stack.push(output);
+                                        *script_outputs = vec![];
+                                    }
+
+                                    if output_stack.len() > MAX_OUT_STACK {
+                                        self.state = ScriptExecutorState::Error(
+                                            ExecutionResult::OutStackOverflow,
+                                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice())
+                                                .into(),
+                                        );
+                                        return;
+                                    }
+
+                                    self.state = ScriptExecutorState::ExpectingInitialOP;
+                                }
+
+                                _ => {
                                     self.state = ScriptExecutorState::Error(
                                         ExecutionResult::InvalidArgs,
                                         (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                                     );
-                                    return;
-                                }
-
-                                let amount = exec_stack.pop().unwrap();
-                                *memory_size -= amount.size();
-                                let address = exec_stack.pop().unwrap();
-                                *memory_size -= address.size();
-                                let script_hash = exec_stack.pop().unwrap();
-                                *memory_size -= script_hash.size();
-
-                                match (amount, address, script_hash) {
-                                    (
-                                        VmTerm::Signed128(amount),
-                                        VmTerm::Hash160(addr),
-                                        VmTerm::Hash160(script_hash),
-                                    ) if amount > 0 => {
-                                        let address = Address(addr);
-                                        let script_hash = Hash160(script_hash);
-                                        let address = if address == Address::zero() {
-                                            None
-                                        } else {
-                                            Some(address.clone())
-                                        };
-
-                                        let to_get = if let Some(addr) = &address {
-                                            (addr, &script_hash).into()
-                                        } else {
-                                            script_hash.clone()
-                                        };
-
-                                        if let Some(idx) = output_stack_idx_map.get(&to_get) {
-                                            // Re-hash inputs
-                                            let inputs_hashes: Vec<u8> = [
-                                                output_stack[*idx as usize].inputs_hash.clone(),
-                                                inputs_hash.clone(),
-                                            ]
-                                            .iter()
-                                            .fold(vec![], |mut acc, hash| {
-                                                acc.extend(hash.0);
-                                                acc
-                                            });
-
-                                            let inputs_hash =
-                                                Hash160::hash_from_slice(inputs_hashes, key);
-                                            *outs_sum += amount;
-                                            output_stack[*idx as usize].amount += amount;
-                                            output_stack[*idx as usize].inputs_hash = inputs_hash;
-                                            output_stack[*idx as usize].compute_hash(key);
-                                            output_stack[*idx as usize].script_outs =
-                                                script_outputs.clone();
-
-                                            *script_outputs = vec![];
-                                        } else {
-                                            let mut output = Output {
-                                                amount,
-                                                address: address.clone(),
-                                                script_hash: script_hash.clone(),
-                                                coinbase_height: None,
-                                                coloured_address: None,
-                                                inputs_hash: inputs_hash.clone(),
-                                                idx: output_stack.len() as u16,
-                                                script_outs: script_outputs.clone(),
-                                                hash: None,
-                                            };
-                                            *outs_sum += amount;
-                                            output.compute_hash(key);
-                                            if let Some(address) = address {
-                                                output_stack_idx_map.insert(
-                                                    (&address, &script_hash).into(),
-                                                    output_stack.len() as u16,
-                                                );
-                                            } else {
-                                                output_stack_idx_map
-                                                    .insert(script_hash, output_stack.len() as u16);
-                                            }
-                                            output_stack.push(output);
-                                            *script_outputs = vec![];
-                                        }
-
-                                        if output_stack.len() > MAX_OUT_STACK {
-                                            self.state = ScriptExecutorState::Error(
-                                                ExecutionResult::OutStackOverflow,
-                                                (
-                                                    i_ptr,
-                                                    func_idx,
-                                                    op.clone(),
-                                                    exec_stack.as_slice(),
-                                                )
-                                                    .into(),
-                                            );
-                                            return;
-                                        }
-
-                                        self.state = ScriptExecutorState::ExpectingInitialOP;
-                                    }
-
-                                    _ => {
-                                        self.state = ScriptExecutorState::Error(
-                                            ExecutionResult::InvalidArgs,
-                                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice())
-                                                .into(),
-                                        );
-                                    }
                                 }
                             }
                         }
+                        Ok(false) => {}
                         Err(()) => {
                             self.state = ScriptExecutorState::Error(
                                 ExecutionResult::InvalidArgs,
@@ -7799,126 +8070,12 @@ impl ScriptExecutor {
                                 }
                             }
 
-                            self.state = ScriptExecutorState::OkVerify;
-                        }
-
-                        _ => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
-                    }
-                }
-
-                ScriptEntry::Opcode(OP::PushCoinbaseOut) => {
-                    if exec_stack.len() < 4 {
-                        self.state = ScriptExecutorState::Error(
-                            ExecutionResult::InvalidArgs,
-                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                        );
-                        return;
-                    }
-
-                    if !flags.is_coinbase {
-                        self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OPOnlyAllowedInCoinbaseInput,
-                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                        );
-                        return;
-                    }
-
-                    let amount = exec_stack.pop().unwrap();
-                    *memory_size -= amount.size();
-                    let address = exec_stack.pop().unwrap();
-                    *memory_size -= address.size();
-                    let script_hash = exec_stack.pop().unwrap();
-                    *memory_size -= script_hash.size();
-                    let coinbase_height = exec_stack.pop().unwrap();
-                    *memory_size -= coinbase_height.size();
-
-                    match (amount, address, script_hash, coinbase_height) {
-                        (
-                            VmTerm::Signed128(amount),
-                            VmTerm::Hash160(addr),
-                            VmTerm::Hash160(script_hash),
-                            VmTerm::Unsigned64(coinbase_height),
-                        ) if amount > 0 && coinbase_height > 0 => {
-                            let mut output = Output {
-                                amount,
-                                address: Some(Address(addr)),
-                                script_hash: Hash160(script_hash),
-                                coinbase_height: Some(coinbase_height),
-                                coloured_address: None,
-                                inputs_hash: inputs_hash.clone(),
-                                idx: output_stack.len() as u16,
-                                script_outs: script_outputs.clone(),
-                                hash: None,
-                            };
-
-                            output.compute_hash(key);
-                            output_stack.push(output);
-                            *script_outputs = vec![];
-                            *outs_sum += amount;
-                            self.state = ScriptExecutorState::Ok;
-                        }
-
-                        _ => {
-                            self.state = ScriptExecutorState::Error(
-                                ExecutionResult::InvalidArgs,
-                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                            );
-                        }
-                    }
-                }
-
-                ScriptEntry::Opcode(OP::PushCoinbaseOutNoSpendAddress) => {
-                    if exec_stack.len() < 3 {
-                        self.state = ScriptExecutorState::Error(
-                            ExecutionResult::InvalidArgs,
-                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                        );
-                        return;
-                    }
-
-                    if !flags.is_coinbase {
-                        self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OPOnlyAllowedInCoinbaseInput,
-                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                        );
-                        return;
-                    }
-
-                    let amount = exec_stack.pop().unwrap();
-                    *memory_size -= amount.size();
-                    let script_hash = exec_stack.pop().unwrap();
-                    *memory_size -= script_hash.size();
-                    let coinbase_height = exec_stack.pop().unwrap();
-                    *memory_size -= coinbase_height.size();
-
-                    match (amount, script_hash, coinbase_height) {
-                        (
-                            VmTerm::Signed128(amount),
-                            VmTerm::Hash160(script_hash),
-                            VmTerm::Unsigned64(coinbase_height),
-                        ) if amount > 0 && coinbase_height > 0 => {
-                            let mut output = Output {
-                                amount,
-                                address: None,
-                                script_hash: Hash160(script_hash),
-                                coinbase_height: Some(coinbase_height),
-                                coloured_address: None,
-                                inputs_hash: inputs_hash.clone(),
-                                idx: output_stack.len() as u16,
-                                script_outs: script_outputs.clone(),
-                                hash: None,
-                            };
-
-                            output.compute_hash(key);
-                            output_stack.push(output);
-                            *script_outputs = vec![];
-                            *outs_sum += amount;
-                            self.state = ScriptExecutorState::Ok;
+                            // We cannot call verify on a coinbase input
+                            if flags.is_coinbase {
+                                self.state = ScriptExecutorState::Ok;
+                            } else {
+                                self.state = ScriptExecutorState::OkVerify;
+                            }
                         }
 
                         _ => {
@@ -15111,7 +15268,7 @@ mod tests {
             0x03, // Pick at index 3
             0x70, // OP_Pick,
             0x03, // Pick at index 3
-            0xcf, // OP_PushOut,
+            0xd3, // OP_PushOut,
             0x82, // OP_Add1,
             0x70, // OP_Pick,
             0x00, // Pick at index 0

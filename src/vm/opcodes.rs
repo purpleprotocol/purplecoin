@@ -217,12 +217,12 @@ pub enum OP {
     GetInputScriptArgAt = 0xcc,
     SpillInputScriptArgs = 0xcd,
     Sqrt = 0xce,
-    PushOut = 0xcf,
-    PushOutVerify = 0xd0,
-    PushCoinbaseOut = 0xd1,
-    PushColouredCoinbaseOut = 0xd2,
-    PushCoinbaseOutNoSpendAddress = 0xd3,
-    PushColouredCoinbaseOutNoSpendAddress = 0xd4,
+    Zero = 0xcf,
+    One = 0xd0,
+    ZeroOfType = 0xd1,
+    OneOfType = 0xd2,
+    PushOut = 0xd3,
+    PushOutVerify = 0xd4,
     PushOutIf = 0xd5,
     PushOutIfEq = 0xd6,
     PushOutIfNeq = 0xd7,
@@ -275,8 +275,8 @@ mod tests {
     fn it_encodes_opcode_to_byte() {
         let encoded = crate::codec::encode_to_vec(&OP::Func).unwrap();
         assert_eq!(encoded.as_slice(), &[0x00]);
-        let encoded = crate::codec::encode_to_vec(&OP::PushCoinbaseOut).unwrap();
-        assert_eq!(encoded.as_slice(), &[0xd1]);
+        let encoded = crate::codec::encode_to_vec(&OP::PushOut).unwrap();
+        assert_eq!(encoded.as_slice(), &[0xd3]);
         let encoded = crate::codec::encode_to_vec(&OP::Nop).unwrap();
         assert_eq!(encoded.as_slice(), &[0xff]);
     }

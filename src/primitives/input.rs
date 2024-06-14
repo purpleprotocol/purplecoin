@@ -228,15 +228,12 @@ impl Input {
 
                 let a1 = &self.script_args[0];
                 let a4 = &self.script_args[3];
-                let a5 = &self.script_args[4];
 
                 // Validate terms
-                match (a1, a4, a5) {
-                    (
-                        VmTerm::Signed128(amount),
-                        VmTerm::Unsigned64(coinbase_height),
-                        VmTerm::Unsigned32(_),
-                    ) if amount == block_reward && coinbase_height == &height => {
+                match (a1, a4) {
+                    (VmTerm::Signed128(amount), VmTerm::Unsigned32(_))
+                        if amount == block_reward =>
+                    {
                         let result = script.execute(
                             &self.script_args,
                             input_stack,
@@ -282,7 +279,7 @@ impl Input {
                     return Err(TxVerifyErr::InvalidCoinbase);
                 }
 
-                let script = Script::new_coinbase_without_spending_address();
+                let script = Script::new_coinbase();
 
                 let a1 = &self.script_args[0];
                 let a3 = &self.script_args[2];
@@ -1306,7 +1303,7 @@ impl Decode for Input {
                 let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
 
                 // Validate number of coinbase arguments
-                if script_args.len() != 5 {
+                if script_args.len() != 4 {
                     return Err(bincode::error::DecodeError::OtherString(
                         format!(
                             "invalid argument length for coinbase! expected 5, found {}",
@@ -1327,7 +1324,7 @@ impl Decode for Input {
                 let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
 
                 // Validate number of coinbase arguments
-                if script_args.len() != 4 {
+                if script_args.len() != 3 {
                     return Err(bincode::error::DecodeError::OtherString(
                         format!(
                             "invalid argument length for coinbase! expected 4, found {}",
@@ -2033,7 +2030,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2051,7 +2047,6 @@ mod tests {
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2074,7 +2069,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2097,7 +2091,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2119,7 +2112,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2141,7 +2133,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2168,7 +2159,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2195,7 +2185,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2221,7 +2210,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2247,7 +2235,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2274,7 +2261,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2301,7 +2287,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2327,7 +2312,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2353,7 +2337,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2384,7 +2367,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2415,7 +2397,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2445,7 +2426,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()
@@ -2477,7 +2457,6 @@ mod tests {
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned64(1_654_654_645_645),
                 VmTerm::Unsigned32(543_543),
             ],
             ..Default::default()

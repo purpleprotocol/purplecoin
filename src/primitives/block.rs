@@ -947,7 +947,6 @@ impl BlockHeader {
                     VmTerm::Signed128(amount / 256),
                     VmTerm::Hash160(address.0),
                     VmTerm::Hash160(sh.0),
-                    VmTerm::Unsigned64(1),
                     VmTerm::Unsigned32(0),
                 ];
                 let mut input = Input {
@@ -979,7 +978,7 @@ impl BlockHeader {
             let in_clone = input.clone();
             let result = script.execute(
                 &input.script_args,
-                &[in_clone],
+                &[],
                 &mut out_stack,
                 &mut outs_sum,
                 &mut coloured_ins_sums,
@@ -1711,7 +1710,6 @@ mod tests {
             VmTerm::Signed128(INITIAL_BLOCK_REWARD),
             VmTerm::Hash160(address.0),
             VmTerm::Hash160(sh.0),
-            VmTerm::Unsigned64(1),
             VmTerm::Unsigned32(0),
         ];
         let script = Script::new_coinbase();
@@ -1739,7 +1737,7 @@ mod tests {
             let in_clone = input.clone();
             let r = script.execute(
                 &input.script_args,
-                &[in_clone],
+                &[],
                 &mut out_stack,
                 &mut outs_sum,
                 &mut coloured_ins_sums,
