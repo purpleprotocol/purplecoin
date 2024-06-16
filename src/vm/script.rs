@@ -8323,10 +8323,19 @@ impl ScriptExecutor {
                             *memory_size += 20;
                         }
                     } else {
-                        self.state = ScriptExecutorState::Error(
-                            ExecutionResult::InvalidOPForCoinbaseInput,
-                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                        );
+                        if flags.is_coinbase {
+                            if let Some(colour_hash) = &flags.colour_hash {
+                                exec_stack.push(VmTerm::Hash160(colour_hash.0));
+                                *memory_size += 20;
+                            } else {
+                                self.state = ScriptExecutorState::Error(
+                                    ExecutionResult::InvalidOPForCoinbaseInput,
+                                    (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                                );
+                            }
+                        } else {
+                            unreachable!();
+                        }
                     }
                 }
 
