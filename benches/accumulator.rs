@@ -87,7 +87,6 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
         VmTerm::Signed128(INITIAL_BLOCK_REWARD),
         VmTerm::Hash160(address.0),
         VmTerm::Hash160(sh.0),
-        VmTerm::Unsigned64(1),
         VmTerm::Unsigned32(0),
     ];
     let mut input = Input {

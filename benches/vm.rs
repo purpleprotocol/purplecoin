@@ -23,7 +23,6 @@ fn bench_coinbase(c: &mut Criterion) {
         VmTerm::Signed128(INITIAL_BLOCK_REWARD),
         VmTerm::Hash160(address.0),
         VmTerm::Hash160(sh.0),
-        VmTerm::Unsigned64(1),
         VmTerm::Unsigned32(0),
     ];
     let mut input = Input {
@@ -33,12 +32,12 @@ fn bench_coinbase(c: &mut Criterion) {
         ..Default::default()
     };
     input.compute_hash(key);
-    let mut out_stack = vec![];
     let mut sum = 0;
     let mut coloured_ins_sums = HashMap::new();
     let mut coloured_outs_sums = HashMap::new();
     c.bench_function("verify coinbase script", |b| {
         b.iter(|| {
+            let mut out_stack = vec![];
             let mut idx_map = HashMap::new();
             let mut ver_stack = VerificationStack::new();
             assert_eq!(
