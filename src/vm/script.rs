@@ -115,6 +115,9 @@ pub struct VmFlags {
     /// Whether the transaction is allowed to fail at block
     /// inclusion time or not.
     pub can_fail: bool,
+
+    /// Whether this is a colour script executing.
+    pub is_colour_script: bool,
 }
 
 impl Default for VmFlags {
@@ -131,6 +134,7 @@ impl Default for VmFlags {
             spent_out: None,
             can_fail: false,
             colour_hash: None,
+            is_colour_script: false,
         }
     }
 }
@@ -7865,6 +7869,15 @@ impl ScriptExecutor {
                     | OP::PushOutIfLeq
                     | OP::PushOutIfGeq,
                 ) => {
+                    // We cannot push outs in this case
+                    if flags.is_colour_script {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidOP,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     match Self::check_condition_push_out(exec_stack, memory_size, op.clone()) {
                         Ok(true) => {
                             if exec_stack.len() < 3 {
@@ -7982,6 +7995,15 @@ impl ScriptExecutor {
                 }
 
                 ScriptEntry::Opcode(OP::PushOutVerify) => {
+                    // We cannot push outs in this case
+                    if flags.is_colour_script {
+                        self.state = ScriptExecutorState::Error(
+                            ExecutionResult::InvalidOP,
+                            (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                        );
+                        return;
+                    }
+
                     if exec_stack.len() < 3 {
                         self.state = ScriptExecutorState::Error(
                             ExecutionResult::InvalidArgs,
@@ -13243,6 +13265,9 @@ pub enum ExecutionResult {
 
     /// The opcode is not valid in a coinbase input
     InvalidOPForCoinbaseInput,
+
+    /// Invalid opcode for this context
+    InvalidOP,
 
     /// The opcode is only available in a coinbase input
     OPOnlyAllowedInCoinbaseInput,

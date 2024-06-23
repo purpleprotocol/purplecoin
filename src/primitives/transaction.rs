@@ -169,6 +169,7 @@ pub enum TxVerifyErr {
     InvalidSpendProof,
     InvalidColouredCoinbaseBlockHeight,
     InvalidInputType,
+    InvalidOutput,
     BackendErr,
     Error(&'static str),
 }

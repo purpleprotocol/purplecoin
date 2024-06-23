@@ -59,6 +59,11 @@ impl ColouredAddress {
     }
 
     #[must_use]
+    pub fn colour_hash(&self) -> Hash160 {
+        Hash160(self.colour_hash)
+    }
+
+    #[must_use]
     pub fn to_bech32(&self, hrp: &str) -> String {
         let mut buf: Vec<u8> = Vec::with_capacity(COLOURED_ADDRESS_BYTES);
         buf.extend_from_slice(&self.address);
