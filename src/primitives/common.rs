@@ -64,6 +64,12 @@ impl ColouredAddress {
     }
 
     #[must_use]
+    /// Return the `Address` part of this `ColouredAddress`
+    pub fn to_address(&self) -> Address {
+        Address(self.address)
+    }
+
+    #[must_use]
     pub fn to_bech32(&self, hrp: &str) -> String {
         let mut buf: Vec<u8> = Vec::with_capacity(COLOURED_ADDRESS_BYTES);
         buf.extend_from_slice(&self.address);
@@ -254,6 +260,7 @@ impl PublicKey {
         let pub_bytes = self.0.to_bytes();
         let mut hasher = blake3::Hasher::new_derive_key(&HASH_KEY256);
         hasher.update(&pub_bytes);
+        hasher.update(&colour_hash.0);
         let mut out = hasher.finalize_xof();
         out.fill(&mut hash1);
         let mut hasher = blake3::Hasher::new_derive_key(&HASH_KEY160);
@@ -845,7 +852,7 @@ mod tests {
         let encoded = address.to_bech32("pu");
         assert_eq!(
             encoded,
-            "pu16yxqz45dsd83vmqys4t68kfwylk6mkgcqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqshx4a9"
+            "pu1q0txr6qz9rnt4ncywf2sjaxftt7vxzfxqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpdqwap"
         );
     }
 
