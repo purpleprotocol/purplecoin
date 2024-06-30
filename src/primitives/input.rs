@@ -224,10 +224,6 @@ impl Input {
                     return Err(TxVerifyErr::CoinbaseNotAllowed);
                 }
 
-                if self.script_args.len() != 4 {
-                    return Err(TxVerifyErr::InvalidCoinbaseArgs);
-                }
-
                 let script = Script::new_coinbase();
 
                 let a1 = &self.script_args[0];
@@ -281,10 +277,6 @@ impl Input {
             InputFlags::IsCoinbaseWithoutSpendKey => {
                 if !coinbase_allowed {
                     return Err(TxVerifyErr::CoinbaseNotAllowed);
-                }
-
-                if self.script_args.len() != 3 {
-                    return Err(TxVerifyErr::InvalidCoinbaseArgs);
                 }
 
                 let script = Script::new_coinbase();
