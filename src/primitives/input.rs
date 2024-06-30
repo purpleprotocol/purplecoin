@@ -1175,6 +1175,7 @@ impl Input {
                             prev_block_hash: prev_block_hash.0,
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
+                            colour_hash: Some(colour_hash.clone()),
                             can_fail: false,
                             ..Default::default()
                         },
@@ -1208,6 +1209,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: false,
+                            colour_hash: Some(colour_hash),
                             is_colour_script: true,
                             ..Default::default()
                         },
@@ -1304,6 +1306,7 @@ impl Input {
                             prev_block_hash: prev_block_hash.0,
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
+                            colour_hash: Some(colour_hash.clone()),
                             can_fail: true,
                             ..Default::default()
                         },
@@ -1336,6 +1339,7 @@ impl Input {
                             prev_block_hash: prev_block_hash.0,
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
+                            colour_hash: Some(colour_hash),
                             can_fail: true,
                             is_colour_script: true,
                             ..Default::default()
@@ -1435,6 +1439,7 @@ impl Input {
                             prev_block_hash: prev_block_hash.0,
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
+                            colour_hash: Some(colour_hash.clone()),
                             can_fail: false,
                             ..Default::default()
                         },
@@ -1468,6 +1473,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: false,
+                            colour_hash: Some(colour_hash),
                             is_colour_script: true,
                             ..Default::default()
                         },
@@ -1566,6 +1572,7 @@ impl Input {
                             prev_block_hash: prev_block_hash.0,
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
+                            colour_hash: Some(colour_hash.clone()),
                             can_fail: false,
                             ..Default::default()
                         },
@@ -1598,6 +1605,7 @@ impl Input {
                             prev_block_hash: prev_block_hash.0,
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
+                            colour_hash: Some(colour_hash),
                             can_fail: false,
                             is_colour_script: true,
                             ..Default::default()
@@ -1713,6 +1721,7 @@ impl Input {
                             prev_block_hash: prev_block_hash.0,
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
+                            colour_hash: Some(colour_hash.clone()),
                             can_fail: false,
                             ..Default::default()
                         },
@@ -1745,6 +1754,7 @@ impl Input {
                             prev_block_hash: prev_block_hash.0,
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
+                            colour_hash: Some(colour_hash),
                             can_fail: false,
                             is_colour_script: true,
                             ..Default::default()
@@ -1860,6 +1870,7 @@ impl Input {
                             prev_block_hash: prev_block_hash.0,
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
+                            colour_hash: Some(colour_hash.clone()),
                             can_fail: false,
                             ..Default::default()
                         },
@@ -1893,6 +1904,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: false,
+                            colour_hash: Some(colour_hash),
                             is_colour_script: true,
                             ..Default::default()
                         },
