@@ -7938,16 +7938,38 @@ impl ScriptExecutor {
 
                                         *script_outputs = vec![];
                                     } else {
-                                        let mut output = Output {
-                                            amount,
-                                            address: address.clone(),
-                                            script_hash: script_hash.clone(),
-                                            coinbase_height: None,
-                                            coloured_address: None,
-                                            inputs_hash: inputs_hash.clone(),
-                                            idx: output_stack.len() as u16,
-                                            script_outs: script_outputs.clone(),
-                                            hash: None,
+                                        let mut output = if let Some(colour_hash) =
+                                            &flags.colour_hash
+                                        {
+                                            Output {
+                                                amount,
+                                                address: None,
+                                                script_hash: script_hash.clone(),
+                                                coinbase_height: None,
+                                                coloured_address: Some(
+                                                    (
+                                                        address.clone().unwrap_or(Address::zero()),
+                                                        colour_hash.clone(),
+                                                    )
+                                                        .into(),
+                                                ),
+                                                inputs_hash: inputs_hash.clone(),
+                                                idx: output_stack.len() as u16,
+                                                script_outs: script_outputs.clone(),
+                                                hash: None,
+                                            }
+                                        } else {
+                                            Output {
+                                                amount,
+                                                address: address.clone(),
+                                                script_hash: script_hash.clone(),
+                                                coinbase_height: None,
+                                                coloured_address: None,
+                                                inputs_hash: inputs_hash.clone(),
+                                                idx: output_stack.len() as u16,
+                                                script_outs: script_outputs.clone(),
+                                                hash: None,
+                                            }
                                         };
                                         *outs_sum += amount;
                                         output.compute_hash(key);
@@ -8064,16 +8086,36 @@ impl ScriptExecutor {
                                     } else {
                                         None
                                     };
-                                let mut output = Output {
-                                    amount,
-                                    address: address.clone(),
-                                    script_hash: script_hash.clone(),
-                                    coinbase_height,
-                                    coloured_address: None,
-                                    inputs_hash: inputs_hash.clone(),
-                                    idx: output_stack.len() as u16,
-                                    script_outs: script_outputs.clone(),
-                                    hash: None,
+                                let mut output = if let Some(colour_hash) = &flags.colour_hash {
+                                    Output {
+                                        amount,
+                                        address: None,
+                                        script_hash: script_hash.clone(),
+                                        coinbase_height: None,
+                                        coloured_address: Some(
+                                            (
+                                                address.clone().unwrap_or(Address::zero()),
+                                                colour_hash.clone(),
+                                            )
+                                                .into(),
+                                        ),
+                                        inputs_hash: inputs_hash.clone(),
+                                        idx: output_stack.len() as u16,
+                                        script_outs: script_outputs.clone(),
+                                        hash: None,
+                                    }
+                                } else {
+                                    Output {
+                                        amount,
+                                        address: address.clone(),
+                                        script_hash: script_hash.clone(),
+                                        coinbase_height: None,
+                                        coloured_address: None,
+                                        inputs_hash: inputs_hash.clone(),
+                                        idx: output_stack.len() as u16,
+                                        script_outs: script_outputs.clone(),
+                                        hash: None,
+                                    }
                                 };
 
                                 output.compute_hash(key);

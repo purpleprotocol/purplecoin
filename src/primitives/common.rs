@@ -95,6 +95,16 @@ impl ColouredAddress {
         Ok(out)
     }
 
+    fn from_address_and_colour_bytes(
+        address: [u8; ADDRESS_BYTES],
+        colour_hash: [u8; SCRIPT_HASH_BYTES],
+    ) -> Self {
+        Self {
+            address,
+            colour_hash,
+        }
+    }
+
     /// Validate against public key
     #[must_use]
     pub fn validate(&self, public_key: &PublicKey, colour_hash: &Hash160) -> bool {
@@ -127,6 +137,12 @@ impl fmt::Debug for ColouredAddress {
         f.debug_tuple("ColouredAddress")
             .field(&self.to_bech32("pu"))
             .finish()
+    }
+}
+
+impl From<(Address, Hash160)> for ColouredAddress {
+    fn from(other: (Address, Hash160)) -> Self {
+        Self::from_address_and_colour_bytes(other.0 .0, other.1 .0)
     }
 }
 
