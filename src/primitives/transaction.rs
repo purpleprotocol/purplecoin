@@ -170,6 +170,7 @@ pub enum TxVerifyErr {
     InvalidColouredCoinbaseBlockHeight,
     InvalidInputType,
     InvalidOutput,
+    InvalidColourScriptHash,
     BackendErr,
     Error(&'static str),
 }

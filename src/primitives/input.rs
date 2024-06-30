@@ -736,6 +736,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: true,
+                            colour_hash: Some(colour_hash.clone()),
                             ..Default::default()
                         },
                     )
@@ -769,6 +770,7 @@ impl Input {
                             spent_out: Some(out.clone()),
                             can_fail: true,
                             is_colour_script: true,
+                            colour_hash: Some(colour_hash),
                             ..Default::default()
                         },
                     )
@@ -843,6 +845,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: false,
+                            colour_hash: Some(colour_hash.clone()),
                             ..Default::default()
                         },
                     )
@@ -876,6 +879,207 @@ impl Input {
                             spent_out: Some(out.clone()),
                             can_fail: false,
                             is_colour_script: true,
+                            colour_hash: Some(colour_hash),
+                            ..Default::default()
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+
+                to_add.extend(to_add_buf);
+                *ins_sum += out_amount;
+                to_delete.push((
+                    self.out.as_ref().unwrap().clone(),
+                    self.witness.as_ref().unwrap().clone(),
+                ));
+                Ok(())
+            }
+
+            InputFlags::IsColouredWithoutSpendKey => {
+                let out = self.out.as_ref().unwrap();
+                let mut to_add_buf = vec![];
+                let coloured_address = out.coloured_address.as_ref().unwrap();
+                let address = coloured_address.to_address();
+                let out = if let Some(idx) = idx_map.get(&(&address, &out.script_hash).into()) {
+                    &to_add[*idx as usize]
+                } else {
+                    out
+                };
+                let out_amount = out.amount;
+                let script_hash = self.script.to_script_hash(key);
+                let colour_script_hash = self.colour_script.as_ref().unwrap().to_script_hash(key);
+
+                // Verify script hash
+                if script_hash != out.script_hash {
+                    return Err(TxVerifyErr::InvalidScriptHash);
+                }
+
+                let colour_hash = coloured_address.colour_hash();
+
+                // Verify colour script hash
+                if colour_script_hash != colour_hash {
+                    return Err(TxVerifyErr::InvalidColourScriptHash);
+                }
+
+                self.script
+                    .execute(
+                        &self.script_args,
+                        input_stack,
+                        &mut to_add_buf,
+                        outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
+                        idx_map,
+                        ver_stack,
+                        [0; 32], // Empty seed, not failable
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: false,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: Some(out.clone()),
+                            can_fail: false,
+                            colour_hash: Some(colour_hash.clone()),
+                            ..Default::default()
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+
+                self.colour_script
+                    .as_ref()
+                    .unwrap()
+                    .execute(
+                        self.colour_script_args.as_ref().unwrap(),
+                        input_stack,
+                        &mut to_add_buf,
+                        outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
+                        idx_map,
+                        ver_stack,
+                        [0; 32], // Empty seed, not failable
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: false,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: Some(out.clone()),
+                            can_fail: false,
+                            is_colour_script: true,
+                            colour_hash: Some(colour_hash),
+                            ..Default::default()
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+
+                to_add.extend(to_add_buf);
+                *ins_sum += out_amount;
+                to_delete.push((
+                    self.out.as_ref().unwrap().clone(),
+                    self.witness.as_ref().unwrap().clone(),
+                ));
+                Ok(())
+            }
+
+            InputFlags::FailableIsColouredWithoutSpendKey => {
+                let out = self.out.as_ref().unwrap();
+                let mut to_add_buf = vec![];
+                let coloured_address = out.coloured_address.as_ref().unwrap();
+                let address = coloured_address.to_address();
+                let out = if let Some(idx) = idx_map.get(&(&address, &out.script_hash).into()) {
+                    &to_add[*idx as usize]
+                } else {
+                    out
+                };
+                let out_amount = out.amount;
+                let script_hash = self.script.to_script_hash(key);
+                let colour_script_hash = self.colour_script.as_ref().unwrap().to_script_hash(key);
+
+                // Verify script hash
+                if script_hash != out.script_hash {
+                    return Err(TxVerifyErr::InvalidScriptHash);
+                }
+
+                let colour_hash = coloured_address.colour_hash();
+
+                // Verify colour script hash
+                if colour_script_hash != colour_hash {
+                    return Err(TxVerifyErr::InvalidColourScriptHash);
+                }
+
+                self.script
+                    .execute(
+                        &self.script_args,
+                        input_stack,
+                        &mut to_add_buf,
+                        outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
+                        idx_map,
+                        ver_stack,
+                        [0; 32], // Empty seed, not failable
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: false,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: Some(out.clone()),
+                            can_fail: false,
+                            colour_hash: Some(colour_hash.clone()),
+                            ..Default::default()
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+
+                self.colour_script
+                    .as_ref()
+                    .unwrap()
+                    .execute(
+                        self.colour_script_args.as_ref().unwrap(),
+                        input_stack,
+                        &mut to_add_buf,
+                        outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
+                        idx_map,
+                        ver_stack,
+                        [0; 32], // Empty seed, not failable
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: false,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: Some(out.clone()),
+                            can_fail: true,
+                            is_colour_script: true,
+                            colour_hash: Some(colour_hash),
                             ..Default::default()
                         },
                     )
@@ -908,6 +1112,12 @@ impl Input {
                     .as_ref()
                     .ok_or(TxVerifyErr::InvalidOutput)?;
                 let colour_hash = coloured_address.colour_hash();
+                let colour_script_hash = self.colour_script.as_ref().unwrap().to_script_hash(key);
+
+                // Verify colour script hash
+                if colour_script_hash != colour_hash {
+                    return Err(TxVerifyErr::InvalidColourScriptHash);
+                }
 
                 let address_to_check = self
                     .spending_pkey
@@ -1031,6 +1241,12 @@ impl Input {
                     .as_ref()
                     .ok_or(TxVerifyErr::InvalidOutput)?;
                 let colour_hash = coloured_address.colour_hash();
+                let colour_script_hash = self.colour_script.as_ref().unwrap().to_script_hash(key);
+
+                // Verify colour script hash
+                if colour_script_hash != colour_hash {
+                    return Err(TxVerifyErr::InvalidColourScriptHash);
+                }
 
                 let address_to_check = self
                     .spending_pkey
