@@ -58,11 +58,11 @@ pub fn verify_membership_benchmark(c: &mut Criterion) {
     accumulator::hash::clear_cache();
 
     group.bench_function("prove membership one element check with counters", |b| {
-        let (_, counters) = accumulator::hash::hash_to_prime_with_counter(e, None);
+        let (_, counter) = accumulator::hash::hash_to_prime_with_counter(e, None);
         accumulator::hash::clear_cache();
 
         b.iter(|| {
-            let prime = accumulator::hash::hash_to_prime_check_counter(e, counters).unwrap();
+            let prime = accumulator::hash::hash_to_prime_check_counter(e, counter).unwrap();
             assert!(accumulator2.verify_membership_with_prime(&prime, &proof));
             accumulator::hash::clear_cache();
         });
@@ -155,42 +155,42 @@ pub fn transaction_batch_benchmark(c: &mut Criterion) {
             })
             .collect();
 
-        group.bench_function(
-            &format!(
-                "verify membership batch all shards in a single sector 100% cache hit rate {batch_size}"
-            ),
-            |b| {
-                b.iter(|| {
-                    accumulators_with_proofs
-                        .par_iter()
-                        .map(|(accumulator, proof_added, out_hashes)| {
-                            accumulator.verify_membership_batch(out_hashes, proof_added)
-                        })
-                        .collect::<Vec<_>>();
-                });
-            },
-        );
+        // group.bench_function(
+        //     &format!(
+        //         "verify membership batch all shards in a single sector 100% cache hit rate {batch_size}"
+        //     ),
+        //     |b| {
+        //         b.iter(|| {
+        //             accumulators_with_proofs
+        //                 .par_iter()
+        //                 .map(|(accumulator, proof_added, out_hashes)| {
+        //                     accumulator.verify_membership_batch(out_hashes, proof_added)
+        //                 })
+        //                 .collect::<Vec<_>>();
+        //         });
+        //     },
+        // );
 
-        accumulator::hash::clear_cache_percentage(0.95);
+        // accumulator::hash::clear_cache_percentage(0.95);
 
-        group.bench_function(
-            &format!(
-                "verify membership batch all shards in a single sector 95% cache hit rate {batch_size}"
-            ),
-            |b| {
-                b.iter(|| {
-                    accumulators_with_proofs
-                        .par_iter()
-                        .map(|(accumulator, proof_added, out_hashes)| {
-                            accumulator.verify_membership_batch(out_hashes, proof_added)
-                        })
-                        .collect::<Vec<_>>();
-                    accumulator::hash::clear_cache_percentage(0.95);
-                });
-            },
-        );
+        // group.bench_function(
+        //     &format!(
+        //         "verify membership batch all shards in a single sector 95% cache hit rate {batch_size}"
+        //     ),
+        //     |b| {
+        //         b.iter(|| {
+        //             accumulators_with_proofs
+        //                 .par_iter()
+        //                 .map(|(accumulator, proof_added, out_hashes)| {
+        //                     accumulator.verify_membership_batch(out_hashes, proof_added)
+        //                 })
+        //                 .collect::<Vec<_>>();
+        //             accumulator::hash::clear_cache_percentage(0.95);
+        //         });
+        //     },
+        // );
 
-        accumulator::hash::clear_cache();
+        // accumulator::hash::clear_cache();
 
         group.bench_function(
             &format!("verify membership batch all shards in a single sector uncached {batch_size}"),

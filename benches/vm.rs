@@ -326,7 +326,7 @@ fn bench_vm_load_var(c: &mut Criterion) {
         },
     );
     let mut oracle_out = Output {
-        address: Some(Hash160::zero().to_address()),
+        address: None,
         amount: 30,
         script_hash: sh,
         inputs_hash,
