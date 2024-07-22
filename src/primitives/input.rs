@@ -183,16 +183,7 @@ impl Input {
             | InputFlags::FailableIsColouredHasColourProofWithoutSpendKey
             | InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey
             | InputFlags::FailableIsColouredHasSpendProofAndColourProofWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbase
-            | InputFlags::FailableIsColouredCoinbaseHasColourProof
-            | InputFlags::FailableIsColouredCoinbaseHasSpendProof
-            | InputFlags::FailableIsColouredCoinbaseHasSpendProofAndColourProof
-            | InputFlags::FailableIsColouredCoinbaseWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbaseHasColourProofWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbaseHasSpendProofWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey => {
-                true
-            }
+            | InputFlags::FailableIsColouredCoinbase => true,
             _ => false,
         }
     }
@@ -390,6 +381,207 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: None,
                             can_fail: false,
+                            ..Default::default()
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+
+                Ok(())
+            }
+
+            InputFlags::FailableIsColouredCoinbase => {
+                let coloured_coinbase_block_height = self.coloured_coinbase_block_height.unwrap();
+
+                // Check that the block height is between current and the horizon
+                if coloured_coinbase_block_height >= height
+                    || coloured_coinbase_block_height
+                        < height.checked_sub(BLOCK_HORIZON).unwrap_or(0)
+                {
+                    return Err(TxVerifyErr::InvalidColouredCoinbaseBlockHeight);
+                }
+
+                validate_coloured_coinbase_idempotency(&self)?;
+
+                // Compute colour hash which is the hash of the script + non malleable script args + spending key
+                let mut bytes = self.script.to_bytes();
+                let mut copied_args = self.script_args.clone();
+                let mut i = 0;
+                let mut r = 0;
+                while i + r < self.script.malleable_args.len() {
+                    if self.script.malleable_args[i + r] {
+                        copied_args.remove(i);
+                        r += 1;
+                    } else {
+                        i += 1;
+                    }
+                }
+                for a in copied_args {
+                    bytes.extend_from_slice(&a.to_bytes());
+                }
+                bytes.extend_from_slice(&self.spending_pkey.as_ref().unwrap().to_bytes());
+                let colour_hash = Hash160::hash_from_slice(bytes, COLOUR_HASH_KEY);
+                let seed_hash = Hash256::hash_from_slice(seed_bytes, key);
+
+                let result = self
+                    .script
+                    .execute(
+                        &self.script_args,
+                        input_stack,
+                        to_add,
+                        outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
+                        idx_map,
+                        ver_stack,
+                        seed_hash.0,
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: true,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            colour_hash: Some(colour_hash),
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: None,
+                            can_fail: true,
+                            ..Default::default()
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+
+                Ok(())
+            }
+
+            InputFlags::IsColouredCoinbaseWithoutSpendKey => {
+                let coloured_coinbase_block_height = self.coloured_coinbase_block_height.unwrap();
+
+                // Check that the block height is between current and the horizon
+                if coloured_coinbase_block_height >= height
+                    || coloured_coinbase_block_height
+                        < height.checked_sub(BLOCK_HORIZON).unwrap_or(0)
+                {
+                    return Err(TxVerifyErr::InvalidColouredCoinbaseBlockHeight);
+                }
+
+                validate_coloured_coinbase_idempotency(&self)?;
+
+                // Compute colour hash which is the hash of the script + non malleable script args
+                let mut bytes = self.script.to_bytes();
+                let mut copied_args = self.script_args.clone();
+                let mut i = 0;
+                let mut r = 0;
+                while i + r < self.script.malleable_args.len() {
+                    if self.script.malleable_args[i + r] {
+                        copied_args.remove(i);
+                        r += 1;
+                    } else {
+                        i += 1;
+                    }
+                }
+                for a in copied_args {
+                    bytes.extend_from_slice(&a.to_bytes());
+                }
+                let colour_hash = Hash160::hash_from_slice(bytes, COLOUR_HASH_KEY);
+
+                let result = self
+                    .script
+                    .execute(
+                        &self.script_args,
+                        input_stack,
+                        to_add,
+                        outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
+                        idx_map,
+                        ver_stack,
+                        [0; 32], // Empty seed, not failable
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: true,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            colour_hash: Some(colour_hash),
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: None,
+                            can_fail: false,
+                            ..Default::default()
+                        },
+                    )
+                    .0
+                    .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
+
+                Ok(())
+            }
+
+            InputFlags::FailableIsColouredCoinbaseWithoutSpendKey => {
+                let coloured_coinbase_block_height = self.coloured_coinbase_block_height.unwrap();
+
+                // Check that the block height is between current and the horizon
+                if coloured_coinbase_block_height >= height
+                    || coloured_coinbase_block_height
+                        < height.checked_sub(BLOCK_HORIZON).unwrap_or(0)
+                {
+                    return Err(TxVerifyErr::InvalidColouredCoinbaseBlockHeight);
+                }
+
+                validate_coloured_coinbase_idempotency(&self)?;
+
+                // Compute colour hash which is the hash of the script + non malleable script args
+                let mut bytes = self.script.to_bytes();
+                let mut copied_args = self.script_args.clone();
+                let mut i = 0;
+                let mut r = 0;
+                while i + r < self.script.malleable_args.len() {
+                    if self.script.malleable_args[i + r] {
+                        copied_args.remove(i);
+                        r += 1;
+                    } else {
+                        i += 1;
+                    }
+                }
+                for a in copied_args {
+                    bytes.extend_from_slice(&a.to_bytes());
+                }
+                let colour_hash = Hash160::hash_from_slice(bytes, COLOUR_HASH_KEY);
+                let seed_hash = Hash256::hash_from_slice(seed_bytes, key);
+
+                let result = self
+                    .script
+                    .execute(
+                        &self.script_args,
+                        input_stack,
+                        to_add,
+                        outs_sum,
+                        coloured_ins_sums,
+                        coloured_outs_sums,
+                        idx_map,
+                        ver_stack,
+                        seed_hash.0,
+                        key,
+                        SETTINGS.node.network_name.as_str(),
+                        VmFlags {
+                            is_coinbase: true,
+                            chain_id,
+                            chain_height: height,
+                            chain_timestamp: timestamp,
+                            build_stacktrace: false,
+                            validate_output_amounts: true,
+                            colour_hash: Some(colour_hash),
+                            prev_block_hash: prev_block_hash.0,
+                            in_binary: self.to_bytes_for_signing(),
+                            spent_out: None,
+                            can_fail: true,
                             ..Default::default()
                         },
                     )
@@ -3051,8 +3243,6 @@ impl Input {
                 ));
                 Ok(())
             }
-
-            _ => unimplemented!(),
         }
     }
 }
@@ -3095,83 +3285,6 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.coloured_coinbase_nonce.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
-            }
-
-            InputFlags::IsColouredCoinbaseHasColourProof
-            | InputFlags::FailableIsColouredCoinbaseHasColourProof => {
-                bincode::Encode::encode(self.spending_pkey.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(
-                    &self.coloured_coinbase_block_height.as_ref().unwrap(),
-                    encoder,
-                )?;
-                bincode::Encode::encode(&self.coloured_coinbase_nonce.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.script, encoder)?;
-                bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
-            }
-
-            InputFlags::IsColouredCoinbaseHasColourProofWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbaseHasColourProofWithoutSpendKey => {
-                bincode::Encode::encode(
-                    &self.coloured_coinbase_block_height.as_ref().unwrap(),
-                    encoder,
-                )?;
-                bincode::Encode::encode(&self.coloured_coinbase_nonce.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.script, encoder)?;
-                bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
-            }
-
-            InputFlags::IsColouredCoinbaseHasSpendProof
-            | InputFlags::FailableIsColouredCoinbaseHasSpendProof => {
-                bincode::Encode::encode(self.spending_pkey.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(
-                    &self.coloured_coinbase_block_height.as_ref().unwrap(),
-                    encoder,
-                )?;
-                bincode::Encode::encode(&self.coloured_coinbase_nonce.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.script, encoder)?;
-                bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
-            }
-
-            InputFlags::IsColouredCoinbaseHasSpendProofWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbaseHasSpendProofWithoutSpendKey => {
-                bincode::Encode::encode(
-                    &self.coloured_coinbase_block_height.as_ref().unwrap(),
-                    encoder,
-                )?;
-                bincode::Encode::encode(&self.coloured_coinbase_nonce.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.script, encoder)?;
-                bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
-            }
-
-            InputFlags::IsColouredCoinbaseHasSpendProofAndColourProof
-            | InputFlags::FailableIsColouredCoinbaseHasSpendProofAndColourProof => {
-                bincode::Encode::encode(self.spending_pkey.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(
-                    &self.coloured_coinbase_block_height.as_ref().unwrap(),
-                    encoder,
-                )?;
-                bincode::Encode::encode(&self.coloured_coinbase_nonce.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.script, encoder)?;
-                bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
-            }
-
-            InputFlags::IsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey => {
-                bincode::Encode::encode(
-                    &self.coloured_coinbase_block_height.as_ref().unwrap(),
-                    encoder,
-                )?;
-                bincode::Encode::encode(&self.coloured_coinbase_nonce.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.script, encoder)?;
-                bincode::Encode::encode(&self.script_args, encoder)?;
-                bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::Plain | InputFlags::FailablePlain => {
@@ -3408,136 +3521,6 @@ impl Decode for Input {
                     input_flags,
                     coloured_coinbase_block_height,
                     coloured_coinbase_nonce,
-                    ..Default::default()
-                })
-            }
-
-            InputFlags::IsColouredCoinbaseHasColourProof
-            | InputFlags::FailableIsColouredCoinbaseHasColourProof => {
-                let spending_pkey = Some(bincode::Decode::decode(decoder)?);
-                let coloured_coinbase_block_height = Some(bincode::Decode::decode(decoder)?);
-                let coloured_coinbase_nonce = Some(bincode::Decode::decode(decoder)?);
-                let script = bincode::Decode::decode(decoder)?;
-                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
-                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
-                let colour_proof = Some(bincode::Decode::decode(decoder)?);
-
-                Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
-                    spending_pkey,
-                    coloured_coinbase_block_height,
-                    coloured_coinbase_nonce,
-                    colour_proof,
-                    ..Default::default()
-                })
-            }
-
-            InputFlags::IsColouredCoinbaseHasColourProofWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbaseHasColourProofWithoutSpendKey => {
-                let coloured_coinbase_block_height = Some(bincode::Decode::decode(decoder)?);
-                let coloured_coinbase_nonce = Some(bincode::Decode::decode(decoder)?);
-                let script = bincode::Decode::decode(decoder)?;
-                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
-                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
-                let colour_proof = Some(bincode::Decode::decode(decoder)?);
-
-                Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
-                    coloured_coinbase_block_height,
-                    coloured_coinbase_nonce,
-                    colour_proof,
-                    ..Default::default()
-                })
-            }
-
-            InputFlags::IsColouredCoinbaseHasSpendProof
-            | InputFlags::FailableIsColouredCoinbaseHasSpendProof => {
-                let spending_pkey = Some(bincode::Decode::decode(decoder)?);
-                let coloured_coinbase_block_height = Some(bincode::Decode::decode(decoder)?);
-                let coloured_coinbase_nonce = Some(bincode::Decode::decode(decoder)?);
-                let script = bincode::Decode::decode(decoder)?;
-                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
-                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
-                let spend_proof = Some(bincode::Decode::decode(decoder)?);
-
-                Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
-                    spending_pkey,
-                    coloured_coinbase_block_height,
-                    coloured_coinbase_nonce,
-                    spend_proof,
-                    ..Default::default()
-                })
-            }
-
-            InputFlags::IsColouredCoinbaseHasSpendProofWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbaseHasSpendProofWithoutSpendKey => {
-                let coloured_coinbase_block_height = Some(bincode::Decode::decode(decoder)?);
-                let coloured_coinbase_nonce = Some(bincode::Decode::decode(decoder)?);
-                let script = bincode::Decode::decode(decoder)?;
-                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
-                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
-                let spend_proof = Some(bincode::Decode::decode(decoder)?);
-
-                Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
-                    coloured_coinbase_block_height,
-                    coloured_coinbase_nonce,
-                    spend_proof,
-                    ..Default::default()
-                })
-            }
-
-            InputFlags::IsColouredCoinbaseHasSpendProofAndColourProof
-            | InputFlags::FailableIsColouredCoinbaseHasSpendProofAndColourProof => {
-                let spending_pkey = Some(bincode::Decode::decode(decoder)?);
-                let coloured_coinbase_block_height = Some(bincode::Decode::decode(decoder)?);
-                let coloured_coinbase_nonce = Some(bincode::Decode::decode(decoder)?);
-                let script = bincode::Decode::decode(decoder)?;
-                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
-                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
-                let spend_proof = Some(bincode::Decode::decode(decoder)?);
-                let colour_proof = Some(bincode::Decode::decode(decoder)?);
-
-                Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
-                    spending_pkey,
-                    coloured_coinbase_block_height,
-                    coloured_coinbase_nonce,
-                    spend_proof,
-                    colour_proof,
-                    ..Default::default()
-                })
-            }
-
-            InputFlags::IsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey => {
-                let coloured_coinbase_block_height = Some(bincode::Decode::decode(decoder)?);
-                let coloured_coinbase_nonce = Some(bincode::Decode::decode(decoder)?);
-                let script = bincode::Decode::decode(decoder)?;
-                let script_args: Vec<_> = bincode::Decode::decode(decoder)?;
-                validate_script_args_len_during_decode(&script, script_args.as_slice())?;
-                let spend_proof = Some(bincode::Decode::decode(decoder)?);
-                let colour_proof = Some(bincode::Decode::decode(decoder)?);
-
-                Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
-                    coloured_coinbase_block_height,
-                    coloured_coinbase_nonce,
-                    spend_proof,
-                    colour_proof,
                     ..Default::default()
                 })
             }
@@ -3980,23 +3963,11 @@ pub enum InputFlags {
     FailableIsColouredHasColourProofWithoutSpendKey = 0x16,
     FailableIsColouredHasSpendProofWithoutSpendKey = 0x17,
     FailableIsColouredHasSpendProofAndColourProofWithoutSpendKey = 0x18,
-    IsColouredCoinbaseHasColourProof = 0x19,
-    IsColouredCoinbaseHasSpendProof = 0x1a,
-    IsColouredCoinbaseHasSpendProofAndColourProof = 0x1b,
-    IsColouredCoinbaseWithoutSpendKey = 0x1c,
-    IsColouredCoinbaseHasColourProofWithoutSpendKey = 0x1d,
-    IsColouredCoinbaseHasSpendProofWithoutSpendKey = 0x1e,
-    IsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey = 0x1f,
-    FailableIsColouredCoinbase = 0x20,
-    FailableIsColouredCoinbaseHasColourProof = 0x21,
-    FailableIsColouredCoinbaseHasSpendProof = 0x22,
-    FailableIsColouredCoinbaseHasSpendProofAndColourProof = 0x23,
-    FailableIsColouredCoinbaseWithoutSpendKey = 0x24,
-    FailableIsColouredCoinbaseHasColourProofWithoutSpendKey = 0x25,
-    FailableIsColouredCoinbaseHasSpendProofWithoutSpendKey = 0x26,
-    FailableIsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey = 0x27,
-    PlainWithoutSpendKey = 0x28,
-    FailablePlainWithoutSpendKey = 0x29,
+    IsColouredCoinbaseWithoutSpendKey = 0x19,
+    FailableIsColouredCoinbase = 0x1a,
+    FailableIsColouredCoinbaseWithoutSpendKey = 0x1b,
+    PlainWithoutSpendKey = 0x1c,
+    FailablePlainWithoutSpendKey = 0x1d,
 }
 
 impl std::convert::TryFrom<u8> for InputFlags {
@@ -4029,23 +4000,11 @@ impl std::convert::TryFrom<u8> for InputFlags {
             0x16 => Ok(Self::FailableIsColouredHasColourProofWithoutSpendKey),
             0x17 => Ok(Self::FailableIsColouredHasSpendProofWithoutSpendKey),
             0x18 => Ok(Self::FailableIsColouredHasSpendProofAndColourProofWithoutSpendKey),
-            0x19 => Ok(Self::IsColouredCoinbaseHasColourProof),
-            0x1a => Ok(Self::IsColouredCoinbaseHasSpendProof),
-            0x1b => Ok(Self::IsColouredCoinbaseHasSpendProofAndColourProof),
-            0x1c => Ok(Self::IsColouredCoinbaseWithoutSpendKey),
-            0x1d => Ok(Self::IsColouredCoinbaseHasColourProofWithoutSpendKey),
-            0x1e => Ok(Self::IsColouredCoinbaseHasSpendProofWithoutSpendKey),
-            0x1f => Ok(Self::IsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey),
-            0x20 => Ok(Self::FailableIsColouredCoinbase),
-            0x21 => Ok(Self::FailableIsColouredCoinbaseHasColourProof),
-            0x22 => Ok(Self::FailableIsColouredCoinbaseHasSpendProof),
-            0x23 => Ok(Self::FailableIsColouredCoinbaseHasSpendProofAndColourProof),
-            0x24 => Ok(Self::FailableIsColouredCoinbaseWithoutSpendKey),
-            0x25 => Ok(Self::FailableIsColouredCoinbaseHasColourProofWithoutSpendKey),
-            0x26 => Ok(Self::FailableIsColouredCoinbaseHasSpendProofWithoutSpendKey),
-            0x27 => Ok(Self::FailableIsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey),
-            0x28 => Ok(Self::PlainWithoutSpendKey),
-            0x29 => Ok(Self::FailablePlainWithoutSpendKey),
+            0x19 => Ok(Self::IsColouredCoinbaseWithoutSpendKey),
+            0x1a => Ok(Self::FailableIsColouredCoinbase),
+            0x1b => Ok(Self::FailableIsColouredCoinbaseWithoutSpendKey),
+            0x1c => Ok(Self::PlainWithoutSpendKey),
+            0x1d => Ok(Self::FailablePlainWithoutSpendKey),
             _ => Err("invalid bitflags"),
         }
     }
@@ -4163,330 +4122,6 @@ mod tests {
             coloured_coinbase_block_height: Some(342),
             coloured_coinbase_nonce: Some(0),
             input_flags: InputFlags::FailableIsColouredCoinbaseWithoutSpendKey,
-            script_args: vec![
-                VmTerm::Signed128(137),
-                VmTerm::Hash160(Address::zero().0),
-                VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned32(543_543),
-            ],
-            ..Default::default()
-        };
-
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
-    }
-
-    #[test]
-    fn coloured_coinbase_has_colour_proof_encode_decode() {
-        let input = Input {
-            spending_pkey: Some(PublicKey::zero()),
-            script: Script::new_coinbase(),
-            coloured_coinbase_block_height: Some(342),
-            coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::IsColouredCoinbaseHasColourProof,
-            colour_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            script_args: vec![
-                VmTerm::Signed128(137),
-                VmTerm::Hash160(Address::zero().0),
-                VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned32(543_543),
-            ],
-            ..Default::default()
-        };
-
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
-    }
-
-    #[test]
-    fn failable_coloured_coinbase_has_colour_proof_encode_decode() {
-        let input = Input {
-            spending_pkey: Some(PublicKey::zero()),
-            script: Script::new_coinbase(),
-            coloured_coinbase_block_height: Some(342),
-            coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::FailableIsColouredCoinbaseHasColourProof,
-            colour_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            script_args: vec![
-                VmTerm::Signed128(137),
-                VmTerm::Hash160(Address::zero().0),
-                VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned32(543_543),
-            ],
-            ..Default::default()
-        };
-
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
-    }
-
-    #[test]
-    fn coloured_coinbase_has_colour_proof_without_spend_key_encode_decode() {
-        let input = Input {
-            script: Script::new_coinbase(),
-            coloured_coinbase_block_height: Some(342),
-            coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::IsColouredCoinbaseHasColourProofWithoutSpendKey,
-            colour_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            script_args: vec![
-                VmTerm::Signed128(137),
-                VmTerm::Hash160(Address::zero().0),
-                VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned32(543_543),
-            ],
-            ..Default::default()
-        };
-
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
-    }
-
-    #[test]
-    fn failable_coloured_coinbase_has_colour_proof_without_spend_key_encode_decode() {
-        let input = Input {
-            script: Script::new_coinbase(),
-            coloured_coinbase_block_height: Some(342),
-            coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::FailableIsColouredCoinbaseHasColourProofWithoutSpendKey,
-            colour_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            script_args: vec![
-                VmTerm::Signed128(137),
-                VmTerm::Hash160(Address::zero().0),
-                VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned32(543_543),
-            ],
-            ..Default::default()
-        };
-
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
-    }
-
-    #[test]
-    fn coloured_coinbase_has_spend_proof_encode_decode() {
-        let input = Input {
-            spending_pkey: Some(PublicKey::zero()),
-            script: Script::new_coinbase(),
-            coloured_coinbase_block_height: Some(342),
-            coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::IsColouredCoinbaseHasSpendProof,
-            spend_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            script_args: vec![
-                VmTerm::Signed128(137),
-                VmTerm::Hash160(Address::zero().0),
-                VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned32(543_543),
-            ],
-            ..Default::default()
-        };
-
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
-    }
-
-    #[test]
-    fn failable_coloured_coinbase_has_spend_proof_encode_decode() {
-        let input = Input {
-            spending_pkey: Some(PublicKey::zero()),
-            script: Script::new_coinbase(),
-            coloured_coinbase_block_height: Some(342),
-            coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::FailableIsColouredCoinbaseHasSpendProof,
-            spend_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            script_args: vec![
-                VmTerm::Signed128(137),
-                VmTerm::Hash160(Address::zero().0),
-                VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned32(543_543),
-            ],
-            ..Default::default()
-        };
-
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
-    }
-
-    #[test]
-    fn coloured_coinbase_has_spend_proof_without_spend_key_encode_decode() {
-        let input = Input {
-            script: Script::new_coinbase(),
-            coloured_coinbase_block_height: Some(342),
-            coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::IsColouredCoinbaseHasSpendProofWithoutSpendKey,
-            spend_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            script_args: vec![
-                VmTerm::Signed128(137),
-                VmTerm::Hash160(Address::zero().0),
-                VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned32(543_543),
-            ],
-            ..Default::default()
-        };
-
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
-    }
-
-    #[test]
-    fn failable_coloured_coinbase_has_spend_proof_without_spend_key_encode_decode() {
-        let input = Input {
-            script: Script::new_coinbase(),
-            coloured_coinbase_block_height: Some(342),
-            coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::FailableIsColouredCoinbaseHasSpendProofWithoutSpendKey,
-            spend_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            script_args: vec![
-                VmTerm::Signed128(137),
-                VmTerm::Hash160(Address::zero().0),
-                VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned32(543_543),
-            ],
-            ..Default::default()
-        };
-
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
-    }
-
-    #[test]
-    fn coloured_coinbase_has_spend_proof_and_colour_proof_encode_decode() {
-        let input = Input {
-            spending_pkey: Some(PublicKey::zero()),
-            script: Script::new_coinbase(),
-            coloured_coinbase_block_height: Some(342),
-            coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::IsColouredCoinbaseHasSpendProofAndColourProof,
-            spend_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            colour_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            script_args: vec![
-                VmTerm::Signed128(137),
-                VmTerm::Hash160(Address::zero().0),
-                VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned32(543_543),
-            ],
-            ..Default::default()
-        };
-
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
-    }
-
-    #[test]
-    fn failable_coloured_coinbase_has_spend_proof_and_colour_proof_encode_decode() {
-        let input = Input {
-            spending_pkey: Some(PublicKey::zero()),
-            script: Script::new_coinbase(),
-            coloured_coinbase_block_height: Some(342),
-            coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::FailableIsColouredCoinbaseHasSpendProofAndColourProof,
-            spend_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            colour_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            script_args: vec![
-                VmTerm::Signed128(137),
-                VmTerm::Hash160(Address::zero().0),
-                VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned32(543_543),
-            ],
-            ..Default::default()
-        };
-
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
-    }
-
-    #[test]
-    fn coloured_coinbase_has_spend_proof_and_colour_proof_without_spend_key_encode_decode() {
-        let input = Input {
-            script: Script::new_coinbase(),
-            coloured_coinbase_block_height: Some(342),
-            coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::IsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey,
-            spend_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            colour_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            script_args: vec![
-                VmTerm::Signed128(137),
-                VmTerm::Hash160(Address::zero().0),
-                VmTerm::Hash160(Hash160::zero().0),
-                VmTerm::Unsigned32(543_543),
-            ],
-            ..Default::default()
-        };
-
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
-    }
-
-    #[test]
-    fn failable_coloured_coinbase_has_spend_proof_and_colour_proof_without_spend_key_encode_decode()
-    {
-        let input = Input {
-            script: Script::new_coinbase(),
-            coloured_coinbase_block_height: Some(342),
-            coloured_coinbase_nonce: Some(0),
-            input_flags:
-                InputFlags::FailableIsColouredCoinbaseHasSpendProofAndColourProofWithoutSpendKey,
-            spend_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
-            colour_proof: Some((
-                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
-                vec![0, 0, 0],
-            )),
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
