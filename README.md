@@ -1,7 +1,7 @@
 # ℙurplecoin
 [![Discord](https://img.shields.io/discord/435827644915777536.svg)](https://discord.gg/UCYWSsd) [![_pdf whitepaper](https://img.shields.io/badge/_pdf-whitepaper-blue.svg)](https://github.com/purpleprotocol/purplecoin_whitepaper/raw/main/whitepaper.pdf)
 
-Official implementation of Purplecoin, the first stateless sharded cryptocurrency. Requires Rust Nightly `>=v1.78.0`, CMake, Clang.
+Official implementation of Purplecoin, the first stateless sharded cryptocurrency. Requires Rust Nightly `>=v1.79.0`, CMake, Clang.
 
 **WARNING** The source code is still under heavy development. Use at your own risk.
 
@@ -59,7 +59,7 @@ Check out the [build instructions](https://github.com/purpleprotocol/purplecoin/
 * While the Green PoW mining model used in Purplecoin is 50% energy efficient, Proof of Stake is 98% energy efficient
 
 ## Donations
-While the development of Purplecoin initially happened in the sphere of Purple Technologies, it is not backed in any way by it or any other company. Purple Technologies is a for-profit company while Purplecoin is a decentralized project. Therefore, the decisions and development happen at the community level. As such, the project also relies on the community at a funding level. 
+While the development of Purplecoin initially happened in the sphere of Purple Technologies, it is not backed in any way by it or any other company. Purple Technologies is a for-profit company while Purplecoin is a decentralized project. Therefore, the decisions and development happen at the community level. As such, the project also relies on the community at a funding level.
 
 If you wish to support the development of Purplecoin, donations can be sent to the following BTC address:
 ```

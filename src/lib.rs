@@ -65,7 +65,6 @@
     trivial_bounds,
     slice_swap_unchecked,
     stmt_expr_attributes,
-    slice_split_at_unchecked,
     impl_trait_in_assoc_type
 )]
 #![warn(clippy::cargo, clippy::pedantic)]
