@@ -273,6 +273,53 @@ impl Script {
         }
     }
 
+    #[must_use]
+    /// Returns a new script used to check if an amount of a specific asset is present in the input
+    /// stack, and if the conidition passes, it will create an output with the desired amount to
+    /// the specified address. This requires the liquidity provider to approve and sign the taker's address.
+    pub fn new_check_and_swap_to_address() -> Script {
+        Script {
+            script: vec![
+                ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: in_asset_hash, out_address, rate, min_amount
+                ScriptEntry::Opcode(OP::OutputsLen), // Push the outputs len onto the stack so we can loop through them
+                ScriptEntry::Opcode(OP::Unsigned8Var), // Sum variable, push as unsigned8 and cast to signed128 to save space
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::CastTo),
+                ScriptEntry::Byte(0x0d),
+                ScriptEntry::Opcode(OP::Unsigned16Var), // Push 0 counter
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Loop), // Loop through outputs
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::ColourHash), // Check colour hash
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::ContinueIfNeq),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::GetOutAmount),
+                ScriptEntry::Opcode(OP::Rot),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Swap),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::BreakIfEq),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Swap),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::TrapIfGt), // Check sum against min amount
+                ScriptEntry::Opcode(OP::PushOutVerify),
+            ],
+            malleable_args: bitvec_from_bools![false, false, false, false],
+            ..Script::default()
+        }
+    }
+
     /// Utility to populate `malleable_args` field in tests.
     #[cfg(test)]
     pub fn populate_malleable_args_field(&mut self) {

@@ -289,3 +289,11 @@ impl From<TransactionWithFee> for Transaction {
         other.tx.tx
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simple_atomic_swap() {}
+}
