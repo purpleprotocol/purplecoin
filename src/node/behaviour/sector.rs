@@ -109,13 +109,13 @@ impl SectorBehaviour {
             relay_client,
             relay_server,
             identify,
-            dcutr,
             ping,
+            dcutr,
             mdns,
+            upnp,
             gossipsub,
             kademlia,
             peer_request,
-            upnp,
         }
     }
 }

@@ -13,10 +13,11 @@ use crate::vm::{internal::VmTerm, Script};
 pub const COLOUR_HASH_KEY: &str = "purplecoin.hash.colour.20";
 
 /// Returns a colour kernel hash. The colour kernel is the
-/// spending pkey + non_malleable_script_args of the coloured coinbase input.
+/// spending pkey + `non_malleable_script_args` of the coloured coinbase input.
 ///
 /// A colour kernel is hashed together with the hash of the emitting colour script,
 /// to create the colour hash of an asset.
+#[must_use]
 pub fn get_colour_kernel_hash(
     non_malleable_script_args: &[VmTerm],
     spending_pkey: &PublicKey,
@@ -32,11 +33,12 @@ pub fn get_colour_kernel_hash(
 /// Compute a colour hash, based on a script, non malleable args,
 /// and a spending pkey as such:
 ///
-/// colour_hash = hash(hash(script) + hash(non_malleable_script_args + spending_key))
+/// `colour_hash` = hash(hash(script) + `hash(non_malleable_script_args` + `spending_key`))
 ///
 /// All hashing is done with the colour hashing key for global uniqueness.
 ///
 /// Returns the colour hash and the colour kernel hash.
+#[must_use]
 pub fn compute_colour_hash(
     script: &Script,
     non_malleable_script_args: &[VmTerm],
@@ -53,6 +55,7 @@ pub fn compute_colour_hash(
 
 /// Checks if a script matches the provided colour hash by hashing it against
 /// the provided colour kernel.
+#[must_use]
 pub fn validate_script_against_colour_hash(
     script: &Script,
     colour_hash: &Hash160,
@@ -67,6 +70,7 @@ pub fn validate_script_against_colour_hash(
 /// Filters the malleable script args from an arg vector based on the provided bitmap.
 ///
 /// Returns `None` if the bitvec and the args vec don't have the same length.
+#[must_use]
 pub fn get_non_malleable_script_args(args: &[VmTerm], bitvec: &BitVec) -> Option<Vec<VmTerm>> {
     if args.len() != bitvec.len() {
         return None;
@@ -106,7 +110,7 @@ mod tests {
         let kernel_hash = get_colour_kernel_hash(
             &[
                 VmTerm::Unsigned8(65),
-                VmTerm::Unsigned64(438726),
+                VmTerm::Unsigned64(438_726),
                 VmTerm::Unsigned8Array(vec![0x03, 0xe3, 0x45]),
             ],
             &pkey,
@@ -138,7 +142,7 @@ mod tests {
             &script,
             &[
                 VmTerm::Unsigned8(65),
-                VmTerm::Unsigned64(438726),
+                VmTerm::Unsigned64(438_726),
                 VmTerm::Unsigned8Array(vec![0x03, 0xe3, 0x45]),
             ],
             &PublicKey::zero(),
@@ -167,7 +171,7 @@ mod tests {
             &script,
             &[
                 VmTerm::Unsigned8(65),
-                VmTerm::Unsigned64(438726),
+                VmTerm::Unsigned64(438_726),
                 VmTerm::Unsigned8Array(vec![0x03, 0xe3, 0x45]),
             ],
             &PublicKey::zero(),
@@ -185,7 +189,7 @@ mod tests {
             &script,
             &[
                 VmTerm::Unsigned8(65),
-                VmTerm::Unsigned64(438726),
+                VmTerm::Unsigned64(438_726),
                 VmTerm::Unsigned8Array(vec![0x03, 0xe3, 0x45]),
             ],
             &PublicKey::zero(),
@@ -199,10 +203,10 @@ mod tests {
     fn it_filters_malleable_script_args() {
         let args = vec![
             VmTerm::Unsigned8(65),
-            VmTerm::Unsigned64(438726),
+            VmTerm::Unsigned64(438_726),
             VmTerm::Unsigned8Array(vec![0x03, 0xe3, 0x45]),
             VmTerm::Unsigned32(6543),
-            VmTerm::Unsigned32(548937),
+            VmTerm::Unsigned32(548_937),
         ];
         let bv = bitvec![0, 1, 1, 0, 0];
 
@@ -211,7 +215,7 @@ mod tests {
             vec![
                 VmTerm::Unsigned8(65),
                 VmTerm::Unsigned32(6543),
-                VmTerm::Unsigned32(548937),
+                VmTerm::Unsigned32(548_937),
             ]
         );
     }
@@ -220,10 +224,10 @@ mod tests {
     fn get_non_malleable_script_args_fails_when_args_differ_in_length() {
         let args = vec![
             VmTerm::Unsigned8(65),
-            VmTerm::Unsigned64(438726),
+            VmTerm::Unsigned64(438_726),
             VmTerm::Unsigned8Array(vec![0x03, 0xe3, 0x45]),
             VmTerm::Unsigned32(6543),
-            VmTerm::Unsigned32(548937),
+            VmTerm::Unsigned32(548_937),
         ];
         let bv = bitvec![0, 1, 1, 0];
 

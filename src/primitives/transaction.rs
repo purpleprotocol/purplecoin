@@ -115,7 +115,7 @@ impl Transaction {
         }
 
         // Verify coloured sums
-        for (k, ins_sum) in coloured_ins_sums.iter() {
+        for (k, ins_sum) in &coloured_ins_sums {
             let outs_sum = coloured_outs_sums.get(k).unwrap_or(&0);
             if ins_sum < outs_sum {
                 return Err(TxVerifyErr::InvalidAmount);
@@ -192,7 +192,7 @@ impl TransactionWithSignatures {
             if let Some(pub_key) = &input.spending_pkey {
                 let bytes = input.to_bytes_for_signing();
                 transcripts.push(bytes);
-                public_keys.push(pub_key.0.clone());
+                public_keys.push(pub_key.0);
             }
         }
 

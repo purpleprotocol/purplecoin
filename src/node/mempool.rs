@@ -104,7 +104,7 @@ mod tests {
         let ss = Script::new_simple_spend();
         let sh = ss.to_script_hash(key);
         let script_args = vec![
-            VmTerm::Signed128(4436729903420943280),
+            VmTerm::Signed128(4_436_729_903_420_943_280),
             VmTerm::Hash160(address.0),
             VmTerm::Hash160(sh.0),
         ];
@@ -113,7 +113,7 @@ mod tests {
             input_flags: InputFlags::PlainWithoutSpendKey,
             script_args,
             out: Some(Output {
-                amount: 4456729903420943280,
+                amount: 4_456_729_903_420_943_280,
                 script_hash: sh.clone(),
                 inputs_hash: Hash160::zero(),
                 idx: 0,

@@ -4,7 +4,10 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::consensus::*;
+use crate::consensus::{
+    Money, ADAPTOR_CERT_CTX, INLINE_VERIFICATION_CTX, MAX_FRAMES, MAX_OUT_STACK, MAX_SCRIPTS,
+    MEMORY_SIZE, SCRIPT_GAS_LIMIT, STACK_SIZE, TRACE_SIZE,
+};
 use crate::primitives::Hash256;
 use crate::primitives::{Address, Hash160, Input, Output};
 use crate::vm::internal::{Float32Wrapper, Float64Wrapper, VmTerm, EMPTY_VEC_HEAP_SIZE};
@@ -53,11 +56,11 @@ pub struct Frame {
     /// Func index. This is `None` if the current function is the main function
     pub func_idx: Option<usize>,
 
-    /// Some((start_ip, end_ip)) if the current frame is a loop start_ip is the
-    /// instruction pointer at the beginning of the loop and end_ip at the end.
+    /// `Some((start_ip, end_ip))` if the current frame is a loop `start_ip` is the
+    /// instruction pointer at the beginning of the loop and `end_ip` at the end.
     pub is_loop: Option<(usize, usize)>,
 
-    /// An array of (start_ip, end_ip) marking the start and the end of the
+    /// An array of `(start_ip, end_ip)` marking the start and the end of the
     /// control operator blocks that are currently executed
     pub is_control_op: Vec<(usize, usize)>,
 
@@ -507,11 +510,11 @@ impl Script {
                         }
 
                         ScriptExecutorState::NewCallBodyFrame(script_hash, script) => {
-                            let script_hash = script_hash.clone();
+                            let script_hash = *script_hash;
                             let script_clone = script.clone();
 
                             // Load the script and push script ref to the script stack
-                            script_storage.insert(script_hash.clone(), script_clone.clone());
+                            script_storage.insert(script_hash, script_clone.clone());
                             new_script = Some(script_clone);
 
                             // Create new frame
@@ -1563,7 +1566,7 @@ impl Script {
 
                             let term = VmTerm::UnsignedBigArray(arr);
                             memory_size += term.size();
-                            exec_count += term.size() as u64 + 2 * (len as u64 + 1);
+                            exec_count += term.size() as u64 + 2 * (u64::from(len) + 1);
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1797,7 +1800,7 @@ impl Script {
 
                             let term = VmTerm::SignedBigArray(arr);
                             memory_size += term.size();
-                            exec_count += term.size() as u64 + 2 * (len as u64 + 1);
+                            exec_count += term.size() as u64 + 2 * (u64::from(len) + 1);
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -6712,7 +6715,7 @@ impl Script {
                                                     0x0e => match v.try_into() {
                                                         Ok(v) => {
                                                             let mut v: IBig = v;
-                                                            v = v * ibig!(-1);
+                                                            v *= ibig!(-1);
                                                             let term = VmTerm::SignedBig(v);
                                                             memory_size += term.size();
                                                             frame.stack.push(term);
@@ -7691,7 +7694,7 @@ impl ScriptExecutor {
                                     // Create the context string and context
                                     let mut ctx_buf = network_name.to_owned();
                                     ctx_buf.push_str(ADAPTOR_CERT_CTX);
-                                    let ctx = signing_context(ctx_buf.as_str().as_bytes());
+                                    let ctx = signing_context(ctx_buf.as_bytes());
 
                                     let mut cert_buf = [0; 32];
                                     cert_buf.copy_from_slice(cert.as_slice());
@@ -7765,7 +7768,7 @@ impl ScriptExecutor {
                                     // Create the context string and context
                                     let mut ctx_buf = key.to_owned();
                                     ctx_buf.push_str(ADAPTOR_CERT_CTX);
-                                    let ctx = signing_context(ctx_buf.as_str().as_bytes());
+                                    let ctx = signing_context(ctx_buf.as_bytes());
 
                                     let mut cert_buf = [0; 32];
                                     cert_buf.copy_from_slice(cert.as_slice());
@@ -8442,20 +8445,18 @@ impl ScriptExecutor {
                             exec_stack.push(VmTerm::Hash160([0; 20]));
                             *memory_size += 20;
                         }
-                    } else {
-                        if flags.is_coinbase {
-                            if let Some(colour_hash) = &flags.colour_hash {
-                                exec_stack.push(VmTerm::Hash160(colour_hash.0));
-                                *memory_size += 20;
-                            } else {
-                                self.state = ScriptExecutorState::Error(
-                                    ExecutionResult::InvalidOPForCoinbaseInput,
-                                    (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                                );
-                            }
+                    } else if flags.is_coinbase {
+                        if let Some(colour_hash) = &flags.colour_hash {
+                            exec_stack.push(VmTerm::Hash160(colour_hash.0));
+                            *memory_size += 20;
                         } else {
-                            unreachable!();
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidOPForCoinbaseInput,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
                         }
+                    } else {
+                        unreachable!();
                     }
                 }
 
@@ -9484,7 +9485,7 @@ impl ScriptExecutor {
 
                     let copy = exec_stack.clone();
                     *exec_count += copy.len() as u64;
-                    for t in copy.iter() {
+                    for t in &copy {
                         *memory_size += t.size();
                     }
                     exec_stack.extend_from_slice(&copy);
@@ -10701,20 +10702,20 @@ impl ScriptExecutor {
 
                     match (second, last) {
                         (VmTerm::Float32(v), VmTerm::Unsigned8(dec)) => {
-                            let y = 10i32.pow(dec as u32) as f32;
+                            let y = 10i32.pow(u32::from(dec)) as f32;
                             let rounded = (v.0 * y).round() / y;
                             exec_stack.push(VmTerm::Float32(Float32Wrapper(rounded)));
                             *memory_size += 4;
                         }
                         (VmTerm::Float64(v), VmTerm::Unsigned8(dec)) => {
-                            let y = 10i32.pow(dec as u32) as f64;
+                            let y = f64::from(10i32.pow(u32::from(dec)));
                             let rounded = (v.0 * y).round() / y;
                             exec_stack.push(VmTerm::Float64(Float64Wrapper(rounded)));
                             *memory_size += 8;
                         }
                         (VmTerm::Decimal(v), VmTerm::Unsigned8(dec)) => {
                             let rounded = v.round_dp_with_strategy(
-                                dec as u32,
+                                u32::from(dec),
                                 RoundingStrategy::MidpointTowardZero,
                             );
                             exec_stack.push(VmTerm::Decimal(rounded));
@@ -12545,7 +12546,7 @@ enum ScriptExecutorState {
     /// None, the `If` block was executed and got to its end, block will be exited
     ControlOperator(Option<bool>),
 
-    /// We hit an OP_ReturnFunc
+    /// We hit an `OP_ReturnFunc`
     ReturnFunc,
 
     /// Return success code and push message and signature to the verification stack
@@ -13305,19 +13306,19 @@ enum ScriptParserState {
     /// Expecting function arguments length
     ExpectingFuncArgsLen,
 
-    /// Expecting script flags. The state tuple is (remaining_bitmaps, args_len, bitmaps_vec)
+    /// Expecting script flags. The state tuple is (`remaining_bitmaps`, `args_len`, `bitmaps_vec`)
     ExpectingScriptFlags(u8, u8, BitVec),
 
     /// Expecting any OP
     ExpectingOP,
 
-    /// Expecting any OP except OP_Func or OP_End
+    /// Expecting any OP except `OP_Func` or `OP_End`
     ExpectingOPButNotFuncOrEnd,
 
     /// Expecting any OP while also tracking the Control Flow
     ExpectingOPCF(Vec<ControlFlowState>, bool),
 
-    /// Expecting n bytes. The state tuple is (num_bytes, cf_stack, funcs_allowed)
+    /// Expecting n bytes. The state tuple is (`num_bytes`, `cf_stack`, `funcs_allowed`)
     ExpectingBytes(usize, Option<Vec<ControlFlowState>>, bool),
 
     /// Expecting length for for OP
@@ -30272,8 +30273,9 @@ mod tests {
             ..Script::default()
         };
 
-        let mut script_output: Vec<VmTerm> =
-            vec![VmTerm::UnsignedBig(ubig!(13535335215315315311613663))];
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::UnsignedBig(ubig!(
+            13_535_335_215_315_315_311_613_663
+        ))];
         assert_script_ok(ss, script_output, key);
     }
 
@@ -30321,7 +30323,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> = vec![
-            VmTerm::UnsignedBig(ubig!(13535335215315315311613663)),
+            VmTerm::UnsignedBig(ubig!(13_535_335_215_315_315_311_613_663)),
             VmTerm::UnsignedBig(ubig!(3535)),
             VmTerm::UnsignedBig(ubig!(0)),
         ];
@@ -30358,7 +30360,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> =
-            vec![VmTerm::SignedBig(ibig!(13535335215315315311613663))];
+            vec![VmTerm::SignedBig(ibig!(13_535_335_215_315_315_311_613_663))];
         assert_script_ok(ss, script_output, key);
     }
 
@@ -30405,7 +30407,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> = vec![
-            VmTerm::SignedBig(ibig!(13535335215315315311613663)),
+            VmTerm::SignedBig(ibig!(13_535_335_215_315_315_311_613_663)),
             VmTerm::SignedBig(ibig!(3535)),
             VmTerm::SignedBig(ibig!(0)),
         ];
@@ -30454,7 +30456,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> = vec![VmTerm::UnsignedBigArray(vec![
-            ubig!(13535335215315315311613663),
+            ubig!(13_535_335_215_315_315_311_613_663),
             ubig!(3535),
             ubig!(0),
         ])];
@@ -30502,7 +30504,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> = vec![VmTerm::SignedBigArray(vec![
-            ibig!(13535335215315315311613663),
+            ibig!(13_535_335_215_315_315_311_613_663),
             ibig!(3535),
             ibig!(0),
         ])];

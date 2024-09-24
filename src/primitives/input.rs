@@ -326,18 +326,17 @@ impl Input {
 
                 // Check that the block height is between current and the horizon
                 if coloured_coinbase_block_height >= height
-                    || coloured_coinbase_block_height
-                        < height.checked_sub(BLOCK_HORIZON).unwrap_or(0)
+                    || coloured_coinbase_block_height < height.saturating_sub(BLOCK_HORIZON)
                 {
                     return Err(TxVerifyErr::InvalidColouredCoinbaseBlockHeight);
                 }
 
-                validate_coloured_coinbase_idempotency(&self)?;
+                validate_coloured_coinbase_idempotency(self)?;
                 let nmsa =
                     get_non_malleable_script_args(&self.script_args, &self.script.malleable_args)
                         .unwrap();
                 let colour_hash =
-                    compute_colour_hash(&self.script, &nmsa, &self.spending_pkey.as_ref().unwrap())
+                    compute_colour_hash(&self.script, &nmsa, self.spending_pkey.as_ref().unwrap())
                         .0;
 
                 let result = self
@@ -380,18 +379,17 @@ impl Input {
 
                 // Check that the block height is between current and the horizon
                 if coloured_coinbase_block_height >= height
-                    || coloured_coinbase_block_height
-                        < height.checked_sub(BLOCK_HORIZON).unwrap_or(0)
+                    || coloured_coinbase_block_height < height.saturating_sub(BLOCK_HORIZON)
                 {
                     return Err(TxVerifyErr::InvalidColouredCoinbaseBlockHeight);
                 }
 
-                validate_coloured_coinbase_idempotency(&self)?;
+                validate_coloured_coinbase_idempotency(self)?;
                 let nmsa =
                     get_non_malleable_script_args(&self.script_args, &self.script.malleable_args)
                         .unwrap();
                 let colour_hash =
-                    compute_colour_hash(&self.script, &nmsa, &self.spending_pkey.as_ref().unwrap())
+                    compute_colour_hash(&self.script, &nmsa, self.spending_pkey.as_ref().unwrap())
                         .0;
                 let seed_hash = Hash256::hash_from_slice(seed_bytes, key);
 
@@ -435,18 +433,17 @@ impl Input {
 
                 // Check that the block height is between current and the horizon
                 if coloured_coinbase_block_height >= height
-                    || coloured_coinbase_block_height
-                        < height.checked_sub(BLOCK_HORIZON).unwrap_or(0)
+                    || coloured_coinbase_block_height < height.saturating_sub(BLOCK_HORIZON)
                 {
                     return Err(TxVerifyErr::InvalidColouredCoinbaseBlockHeight);
                 }
 
-                validate_coloured_coinbase_idempotency(&self)?;
+                validate_coloured_coinbase_idempotency(self)?;
                 let nmsa =
                     get_non_malleable_script_args(&self.script_args, &self.script.malleable_args)
                         .unwrap();
                 let colour_hash =
-                    compute_colour_hash(&self.script, &nmsa, &self.spending_pkey.as_ref().unwrap())
+                    compute_colour_hash(&self.script, &nmsa, self.spending_pkey.as_ref().unwrap())
                         .0;
 
                 let result = self
@@ -489,18 +486,17 @@ impl Input {
 
                 // Check that the block height is between current and the horizon
                 if coloured_coinbase_block_height >= height
-                    || coloured_coinbase_block_height
-                        < height.checked_sub(BLOCK_HORIZON).unwrap_or(0)
+                    || coloured_coinbase_block_height < height.saturating_sub(BLOCK_HORIZON)
                 {
                     return Err(TxVerifyErr::InvalidColouredCoinbaseBlockHeight);
                 }
 
-                validate_coloured_coinbase_idempotency(&self)?;
+                validate_coloured_coinbase_idempotency(self)?;
                 let nmsa =
                     get_non_malleable_script_args(&self.script_args, &self.script.malleable_args)
                         .unwrap();
                 let colour_hash =
-                    compute_colour_hash(&self.script, &nmsa, &self.spending_pkey.as_ref().unwrap())
+                    compute_colour_hash(&self.script, &nmsa, self.spending_pkey.as_ref().unwrap())
                         .0;
                 let seed_hash = Hash256::hash_from_slice(seed_bytes, key);
 
@@ -1804,7 +1800,7 @@ impl Input {
                 // Hash colour script
                 let colour_script_bytes = self.colour_script.as_ref().unwrap().to_bytes();
                 let colour_script_hash =
-                    Hash160::hash_from_slice(&colour_script_bytes, COLOUR_HASH_KEY);
+                    Hash160::hash_from_slice(colour_script_bytes, COLOUR_HASH_KEY);
                 let merkle_proof = Proof::<Hash160>::new::<U2, U2>(
                     None,
                     lemma,
@@ -1937,7 +1933,7 @@ impl Input {
                 // Hash colour script
                 let colour_script_bytes = self.colour_script.as_ref().unwrap().to_bytes();
                 let colour_script_hash =
-                    Hash160::hash_from_slice(&colour_script_bytes, COLOUR_HASH_KEY);
+                    Hash160::hash_from_slice(colour_script_bytes, COLOUR_HASH_KEY);
                 let merkle_proof = Proof::<Hash160>::new::<U2, U2>(
                     None,
                     lemma,
@@ -2343,7 +2339,7 @@ impl Input {
                 // Hash colour script
                 let colour_script_bytes = self.colour_script.as_ref().unwrap().to_bytes();
                 let colour_script_hash =
-                    Hash160::hash_from_slice(&colour_script_bytes, COLOUR_HASH_KEY);
+                    Hash160::hash_from_slice(colour_script_bytes, COLOUR_HASH_KEY);
                 let merkle_proof = Proof::<Hash160>::new::<U2, U2>(
                     None,
                     lemma,
@@ -2492,7 +2488,7 @@ impl Input {
                 // Hash colour script
                 let colour_script_bytes = self.colour_script.as_ref().unwrap().to_bytes();
                 let colour_script_hash =
-                    Hash160::hash_from_slice(&colour_script_bytes, COLOUR_HASH_KEY);
+                    Hash160::hash_from_slice(colour_script_bytes, COLOUR_HASH_KEY);
                 let merkle_proof = Proof::<Hash160>::new::<U2, U2>(
                     None,
                     lemma,
@@ -2630,7 +2626,7 @@ impl Input {
                 // Hash colour script
                 let colour_script_bytes = self.colour_script.as_ref().unwrap().to_bytes();
                 let colour_script_hash =
-                    Hash160::hash_from_slice(&colour_script_bytes, COLOUR_HASH_KEY);
+                    Hash160::hash_from_slice(colour_script_bytes, COLOUR_HASH_KEY);
                 let merkle_proof = Proof::<Hash160>::new::<U2, U2>(
                     None,
                     lemma,
@@ -2767,7 +2763,7 @@ impl Input {
                 // Hash colour script
                 let colour_script_bytes = self.colour_script.as_ref().unwrap().to_bytes();
                 let colour_script_hash =
-                    Hash160::hash_from_slice(&colour_script_bytes, COLOUR_HASH_KEY);
+                    Hash160::hash_from_slice(colour_script_bytes, COLOUR_HASH_KEY);
                 let merkle_proof = Proof::<Hash160>::new::<U2, U2>(
                     None,
                     lemma,
@@ -3445,12 +3441,12 @@ impl Decode for Input {
                 validate_script_args_len_during_decode(&script, script_args.as_slice())?;
 
                 Ok(Self {
+                    spending_pkey,
                     script,
                     script_args,
-                    input_flags,
-                    spending_pkey,
                     coloured_coinbase_block_height,
                     coloured_coinbase_nonce,
+                    input_flags,
                     ..Default::default()
                 })
             }
@@ -3466,9 +3462,9 @@ impl Decode for Input {
                 Ok(Self {
                     script,
                     script_args,
-                    input_flags,
                     coloured_coinbase_block_height,
                     coloured_coinbase_nonce,
+                    input_flags,
                     ..Default::default()
                 })
             }
@@ -3488,12 +3484,12 @@ impl Decode for Input {
                 validate_script_args_len_during_decode(&script, script_args.as_slice())?;
 
                 Ok(Self {
+                    out,
+                    spending_pkey,
+                    witness,
                     script,
                     script_args,
                     input_flags,
-                    spending_pkey,
-                    witness,
-                    out,
                     ..Default::default()
                 })
             }
@@ -3513,12 +3509,12 @@ impl Decode for Input {
                 validate_script_args_len_during_decode(&script, script_args.as_slice())?;
 
                 Ok(Self {
+                    out,
+                    spending_pkey,
+                    witness,
                     script,
                     script_args,
                     input_flags,
-                    spending_pkey,
-                    witness,
-                    out,
                     ..Default::default()
                 })
             }
@@ -3539,13 +3535,13 @@ impl Decode for Input {
                 let spend_proof = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
+                    out,
                     spending_pkey,
                     witness,
-                    out,
+                    script,
+                    script_args,
                     spend_proof,
+                    input_flags,
                     ..Default::default()
                 })
             }
@@ -3566,12 +3562,12 @@ impl Decode for Input {
                 let spend_proof = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
+                    out,
+                    witness,
                     script,
                     script_args,
-                    input_flags,
-                    witness,
-                    out,
                     spend_proof,
+                    input_flags,
                     ..Default::default()
                 })
             }
@@ -3599,14 +3595,14 @@ impl Decode for Input {
                 let colour_script_args = Some(colour_script_args);
 
                 Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
+                    out,
                     spending_pkey,
                     witness,
-                    out,
+                    script,
                     colour_script,
+                    script_args,
                     colour_script_args,
+                    input_flags,
                     ..Default::default()
                 })
             }
@@ -3635,15 +3631,15 @@ impl Decode for Input {
                 let spend_proof = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
+                    out,
                     spending_pkey,
                     witness,
-                    out,
+                    script,
                     colour_script,
+                    script_args,
                     colour_script_args,
                     spend_proof,
+                    input_flags,
                     ..Default::default()
                 })
             }
@@ -3674,16 +3670,16 @@ impl Decode for Input {
                 let colour_proof = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
+                    out,
                     spending_pkey,
                     witness,
-                    out,
+                    script,
                     colour_script,
+                    script_args,
                     colour_script_args,
                     spend_proof,
                     colour_proof,
+                    input_flags,
                     ..Default::default()
                 })
             }
@@ -3711,13 +3707,13 @@ impl Decode for Input {
                 let colour_script_args = Some(colour_script_args);
 
                 Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
-                    witness,
                     out,
+                    witness,
+                    script,
                     colour_script,
+                    script_args,
                     colour_script_args,
+                    input_flags,
                     ..Default::default()
                 })
             }
@@ -3746,15 +3742,15 @@ impl Decode for Input {
                 let colour_proof = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
+                    out,
                     spending_pkey,
                     witness,
-                    out,
+                    script,
                     colour_script,
+                    script_args,
                     colour_script_args,
                     colour_proof,
+                    input_flags,
                     ..Default::default()
                 })
             }
@@ -3783,14 +3779,14 @@ impl Decode for Input {
                 let colour_proof = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
-                    witness,
                     out,
+                    witness,
+                    script,
                     colour_script,
+                    script_args,
                     colour_script_args,
                     colour_proof,
+                    input_flags,
                     ..Default::default()
                 })
             }
@@ -3819,14 +3815,14 @@ impl Decode for Input {
                 let spend_proof = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
-                    witness,
                     out,
+                    witness,
+                    script,
                     colour_script,
+                    script_args,
                     colour_script_args,
                     spend_proof,
+                    input_flags,
                     ..Default::default()
                 })
             }
@@ -3856,15 +3852,15 @@ impl Decode for Input {
                 let colour_proof = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
-                    script,
-                    script_args,
-                    input_flags,
-                    witness,
                     out,
+                    witness,
+                    script,
                     colour_script,
+                    script_args,
                     colour_script_args,
                     spend_proof,
                     colour_proof,
+                    input_flags,
                     ..Default::default()
                 })
             }

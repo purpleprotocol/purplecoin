@@ -234,34 +234,45 @@ pub struct Keypair {
     s: SecretKey,
 }
 
+impl Default for Keypair {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Keypair {
     /// Generate a new random keypair using the OS rng.
+    #[must_use]
     pub fn new() -> Self {
         let mut kp = SchnorrKeypair::generate_with(OsRng);
 
         Keypair {
-            p: PublicKey(kp.public.clone()),
+            p: PublicKey(kp.public),
             s: SecretKey(kp.secret.clone()),
         }
     }
 
     /// Returns the public key of this keypair.
+    #[must_use]
     pub fn public(&self) -> PublicKey {
         self.p.clone()
     }
 
     /// Returns the secret key of this keypair.
+    #[must_use]
     pub fn secret(&self) -> SecretKey {
         self.s.clone()
     }
 
     /// Maps the public key associated with this keypair to an XPU address.
+    #[must_use]
     pub fn to_address(&self) -> Address {
         self.p.to_address()
     }
 
     /// Maps the public key associated with this keypair to a
     /// coloured address of the given colour hash.
+    #[must_use]
     pub fn to_coloured_address(&self, colour_hash: &Hash160) -> ColouredAddress {
         self.p.to_coloured_address(colour_hash)
     }
@@ -499,7 +510,7 @@ impl Algorithm<Hash160> for Hash160Algo {
     #[inline]
     fn hash(&mut self) -> Hash160 {
         let h1 = Hash256::hash_from_slice(&self.0, "purplecoin.merklehasher.tx.32");
-        Hash160::hash_from_slice(&h1.0, "purplecoin.merklehasher.tx.20")
+        Hash160::hash_from_slice(h1.0, "purplecoin.merklehasher.tx.20")
     }
 
     #[inline]

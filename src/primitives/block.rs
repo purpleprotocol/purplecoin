@@ -1325,7 +1325,7 @@ impl BlockData {
                 tx_seed_bytes,
                 |_| Ok(()), // TODO: Validate coloured coinbases for idempotency here
             )?;
-            for input in tx.ins.iter() {
+            for input in &tx.ins {
                 // Push public key and input binary format if we have a spending pkey
                 if let Some(public_key) = &input.spending_pkey {
                     public_keys.push(public_key.0);
@@ -1896,7 +1896,7 @@ mod tests {
         };
         input.compute_hash(key);
 
-        for batch_size in batch_sizes.iter() {
+        for batch_size in &batch_sizes {
             let in_clone = input.clone();
             input.script.execute(
                 &input.script_args,
