@@ -274,6 +274,15 @@ impl Script {
     }
 
     #[must_use]
+    pub fn new_nop_script() -> Script {
+        Script {
+            script: vec![ScriptEntry::Byte(0x00), ScriptEntry::Opcode(OP::Nop)],
+            malleable_args: bitvec_from_bools![],
+            ..Script::default()
+        }
+    }
+
+    #[must_use]
     /// Returns a new script used to check if an amount of a specific asset is present in the input
     /// stack, and if the conidition passes, it will create an output with the desired amount to
     /// the specified address. This requires the liquidity provider to approve and sign the taker's address.

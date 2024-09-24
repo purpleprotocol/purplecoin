@@ -11,10 +11,11 @@ use croaring::bitmap;
 use lazy_static::lazy_static;
 use merkletree::hash::{Algorithm, Hashable};
 use merkletree::merkle::Element;
-use rand::Rng;
-use schnorrkel::PreparedBatch;
-use schnorrkel::PublicKey as SchnorrPubKey;
-use schnorrkel::Signature as SchnorrSignature;
+use rand::{rngs::OsRng, Rng};
+use schnorrkel::{
+    Keypair as SchnorrKeypair, PreparedBatch, PublicKey as SchnorrPubKey,
+    SecretKey as SchnorrSecretKey, Signature as SchnorrSignature,
+};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::From;
 use std::fmt;
@@ -218,6 +219,54 @@ impl fmt::Debug for Address {
     }
 }
 
+impl From<Address> for Hash160 {
+    fn from(other: Address) -> Self {
+        Hash160(other.0)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SecretKey(pub SchnorrSecretKey);
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Keypair {
+    p: PublicKey,
+    s: SecretKey,
+}
+
+impl Keypair {
+    /// Generate a new random keypair using the OS rng.
+    pub fn new() -> Self {
+        let mut kp = SchnorrKeypair::generate_with(OsRng);
+
+        Keypair {
+            p: PublicKey(kp.public.clone()),
+            s: SecretKey(kp.secret.clone()),
+        }
+    }
+
+    /// Returns the public key of this keypair.
+    pub fn public(&self) -> PublicKey {
+        self.p.clone()
+    }
+
+    /// Returns the secret key of this keypair.
+    pub fn secret(&self) -> SecretKey {
+        self.s.clone()
+    }
+
+    /// Maps the public key associated with this keypair to an XPU address.
+    pub fn to_address(&self) -> Address {
+        self.p.to_address()
+    }
+
+    /// Maps the public key associated with this keypair to a
+    /// coloured address of the given colour hash.
+    pub fn to_coloured_address(&self, colour_hash: &Hash160) -> ColouredAddress {
+        self.p.to_coloured_address(colour_hash)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct PublicKey(pub SchnorrPubKey);
 
@@ -400,6 +449,13 @@ impl Hash160 {
         let mut out = hasher.finalize_xof();
         out.fill(&mut out_hash.0);
         out_hash
+    }
+
+    #[must_use]
+    #[cfg(test)]
+    pub fn random() -> Self {
+        let mut rng = rand::thread_rng();
+        Self(rng.gen())
     }
 }
 

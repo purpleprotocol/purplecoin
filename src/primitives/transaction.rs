@@ -293,7 +293,106 @@ impl From<TransactionWithFee> for Transaction {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::primitives::{ColouredAddress, InputFlags, Keypair};
+    use crate::vm::internal::VmTerm;
+    use crate::vm::Script;
 
     #[test]
-    fn test_simple_atomic_swap() {}
+    fn test_simple_atomic_swap() {
+        // let tx = Transaction {
+        //     chain_id: 0,
+        //     ins: vec![Input {}],
+        //     hash: None,
+        // };
+    }
+
+    fn xpu_ss_input_to_address_of_amount(amount: Money, to: Address, key: &str) -> Input {
+        let keypair = Keypair::new();
+        let address = keypair.to_address();
+        let script = Script::new_simple_spend();
+        let script_hash = script.to_script_hash(key);
+        let mut out = Output {
+            amount: amount + 10, // Add some psats for a tx fee
+            script_hash: script_hash.clone(),
+            address: Some(address),
+            inputs_hash: Hash160::random(),
+            idx: 0,
+            coloured_address: None,
+            coinbase_height: None,
+            script_outs: vec![],
+            hash: None,
+        };
+
+        out.compute_hash(key);
+
+        let mut input = Input {
+            out: Some(out),
+            witness: None,
+            script,
+            colour_script: None,
+            colour_script_args: None,
+            spend_proof: None,
+            colour_proof: None,
+            input_flags: InputFlags::Plain,
+            coloured_coinbase_nonce: None,
+            coloured_coinbase_block_height: None,
+            spending_pkey: Some(keypair.public()),
+            script_args: vec![
+                VmTerm::Signed128(amount),
+                VmTerm::Hash160(to.0),
+                VmTerm::Hash160(script_hash.0),
+            ],
+            hash: None,
+        };
+        input.compute_hash(key);
+        input
+    }
+
+    fn ss_input_to_address_of_asset_and_amount(
+        amount: Money,
+        to: ColouredAddress,
+        key: &str,
+    ) -> Input {
+        let keypair = Keypair::new();
+        let colour_script = Script::new_nop_script();
+        let colour_hash = colour_script.to_script_hash(key);
+        let address = keypair.to_coloured_address(&colour_hash);
+        let script = Script::new_simple_spend();
+        let script_hash = script.to_script_hash(key);
+        let mut out = Output {
+            amount,
+            script_hash: script_hash.clone(),
+            coloured_address: Some(address),
+            inputs_hash: Hash160::random(),
+            idx: 0,
+            address: None,
+            coinbase_height: None,
+            script_outs: vec![],
+            hash: None,
+        };
+
+        out.compute_hash(key);
+
+        let mut input = Input {
+            out: Some(out),
+            witness: None,
+            script,
+            colour_script: Some(colour_script),
+            colour_script_args: Some(vec![]),
+            spend_proof: None,
+            colour_proof: None,
+            input_flags: InputFlags::IsColoured,
+            coloured_coinbase_nonce: None,
+            coloured_coinbase_block_height: None,
+            spending_pkey: Some(keypair.public()),
+            script_args: vec![
+                VmTerm::Signed128(amount),
+                VmTerm::Hash160(to.address),
+                VmTerm::Hash160(script_hash.0),
+            ],
+            hash: None,
+        };
+        input.compute_hash(key);
+        input
+    }
 }

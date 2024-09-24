@@ -11,6 +11,7 @@ mod iblt;
 mod input;
 mod output;
 mod transaction;
+mod util;
 
 pub use crate::primitives::block::*;
 pub use crate::primitives::common::*;
@@ -19,3 +20,4 @@ pub use crate::primitives::iblt::*;
 pub use crate::primitives::input::*;
 pub use crate::primitives::output::*;
 pub use crate::primitives::transaction::*;
+pub use crate::primitives::util::*;

@@ -7,8 +7,8 @@
 use crate::chain::{Shard, ShardBackend};
 use crate::consensus::{Money, BLOCK_HORIZON};
 use crate::primitives::{
-    Address, AddressAndHash160, Hash160, Hash160Algo, Hash256, OutWitnessVec, Output, PublicKey,
-    TxVerifyErr,
+    compute_colour_hash, get_non_malleable_script_args, Address, AddressAndHash160, Hash160,
+    Hash160Algo, Hash256, OutWitnessVec, Output, PublicKey, TxVerifyErr, COLOUR_HASH_KEY,
 };
 use crate::settings::SETTINGS;
 use crate::vm::internal::VmTerm;
@@ -22,8 +22,6 @@ use merkletree::proof::Proof;
 use schnorrkel::{PublicKey as SchnorPK, Signature as SchnorSig};
 use std::collections::HashMap;
 use typenum::U2;
-
-const COLOUR_HASH_KEY: &str = "purplecoin.hash.colour.20";
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Input {
@@ -335,25 +333,12 @@ impl Input {
                 }
 
                 validate_coloured_coinbase_idempotency(&self)?;
-
-                // Compute colour hash which is the hash of the script + non malleable script args + spending key
-                let mut bytes = self.script.to_bytes();
-                let mut copied_args = self.script_args.clone();
-                let mut i = 0;
-                let mut r = 0;
-                while i + r < self.script.malleable_args.len() {
-                    if self.script.malleable_args[i + r] {
-                        copied_args.remove(i);
-                        r += 1;
-                    } else {
-                        i += 1;
-                    }
-                }
-                for a in copied_args {
-                    bytes.extend_from_slice(&a.to_bytes());
-                }
-                bytes.extend_from_slice(&self.spending_pkey.as_ref().unwrap().to_bytes());
-                let colour_hash = Hash160::hash_from_slice(bytes, COLOUR_HASH_KEY);
+                let nmsa =
+                    get_non_malleable_script_args(&self.script_args, &self.script.malleable_args)
+                        .unwrap();
+                let colour_hash =
+                    compute_colour_hash(&self.script, &nmsa, &self.spending_pkey.as_ref().unwrap())
+                        .0;
 
                 let result = self
                     .script
@@ -402,25 +387,12 @@ impl Input {
                 }
 
                 validate_coloured_coinbase_idempotency(&self)?;
-
-                // Compute colour hash which is the hash of the script + non malleable script args + spending key
-                let mut bytes = self.script.to_bytes();
-                let mut copied_args = self.script_args.clone();
-                let mut i = 0;
-                let mut r = 0;
-                while i + r < self.script.malleable_args.len() {
-                    if self.script.malleable_args[i + r] {
-                        copied_args.remove(i);
-                        r += 1;
-                    } else {
-                        i += 1;
-                    }
-                }
-                for a in copied_args {
-                    bytes.extend_from_slice(&a.to_bytes());
-                }
-                bytes.extend_from_slice(&self.spending_pkey.as_ref().unwrap().to_bytes());
-                let colour_hash = Hash160::hash_from_slice(bytes, COLOUR_HASH_KEY);
+                let nmsa =
+                    get_non_malleable_script_args(&self.script_args, &self.script.malleable_args)
+                        .unwrap();
+                let colour_hash =
+                    compute_colour_hash(&self.script, &nmsa, &self.spending_pkey.as_ref().unwrap())
+                        .0;
                 let seed_hash = Hash256::hash_from_slice(seed_bytes, key);
 
                 let result = self
@@ -470,24 +442,12 @@ impl Input {
                 }
 
                 validate_coloured_coinbase_idempotency(&self)?;
-
-                // Compute colour hash which is the hash of the script + non malleable script args
-                let mut bytes = self.script.to_bytes();
-                let mut copied_args = self.script_args.clone();
-                let mut i = 0;
-                let mut r = 0;
-                while i + r < self.script.malleable_args.len() {
-                    if self.script.malleable_args[i + r] {
-                        copied_args.remove(i);
-                        r += 1;
-                    } else {
-                        i += 1;
-                    }
-                }
-                for a in copied_args {
-                    bytes.extend_from_slice(&a.to_bytes());
-                }
-                let colour_hash = Hash160::hash_from_slice(bytes, COLOUR_HASH_KEY);
+                let nmsa =
+                    get_non_malleable_script_args(&self.script_args, &self.script.malleable_args)
+                        .unwrap();
+                let colour_hash =
+                    compute_colour_hash(&self.script, &nmsa, &self.spending_pkey.as_ref().unwrap())
+                        .0;
 
                 let result = self
                     .script
@@ -536,24 +496,12 @@ impl Input {
                 }
 
                 validate_coloured_coinbase_idempotency(&self)?;
-
-                // Compute colour hash which is the hash of the script + non malleable script args
-                let mut bytes = self.script.to_bytes();
-                let mut copied_args = self.script_args.clone();
-                let mut i = 0;
-                let mut r = 0;
-                while i + r < self.script.malleable_args.len() {
-                    if self.script.malleable_args[i + r] {
-                        copied_args.remove(i);
-                        r += 1;
-                    } else {
-                        i += 1;
-                    }
-                }
-                for a in copied_args {
-                    bytes.extend_from_slice(&a.to_bytes());
-                }
-                let colour_hash = Hash160::hash_from_slice(bytes, COLOUR_HASH_KEY);
+                let nmsa =
+                    get_non_malleable_script_args(&self.script_args, &self.script.malleable_args)
+                        .unwrap();
+                let colour_hash =
+                    compute_colour_hash(&self.script, &nmsa, &self.spending_pkey.as_ref().unwrap())
+                        .0;
                 let seed_hash = Hash256::hash_from_slice(seed_bytes, key);
 
                 let result = self
