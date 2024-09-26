@@ -23,6 +23,10 @@ use schnorrkel::{PublicKey as SchnorPK, Signature as SchnorSig};
 use std::collections::HashMap;
 use typenum::U2;
 
+use super::validate_script_against_colour_hash;
+
+const INVALID_OUT_ERR_TEXT: &str = "Invalid output type for these input flags";
+
 #[derive(PartialEq, Debug, Clone)]
 pub struct Input {
     /// Output. Is null if this is a coinbase input
@@ -67,6 +71,10 @@ pub struct Input {
     /// as necessary. Must be unique per `coloured_coinbase_block_height`.
     pub coloured_coinbase_nonce: Option<u32>,
 
+    /// The colour kernel of a coloured input. This must be present to validate the colour script hash
+    /// against the colour hash.
+    pub colour_kernel: Option<Hash160>,
+
     /// Input hash. Not serialised
     pub hash: Option<Hash256>,
 
@@ -88,6 +96,7 @@ impl Default for Input {
             colour_proof: None,
             coloured_coinbase_block_height: None,
             coloured_coinbase_nonce: None,
+            colour_kernel: None,
             hash: None,
             input_flags: InputFlags::IsCoinbase,
         }
@@ -847,6 +856,15 @@ impl Input {
                 if &address_to_check != coloured_address {
                     return Err(TxVerifyErr::InvalidPublicKey);
                 }
+
+                // Verify colour script
+                if validate_script_against_colour_hash(
+                    self.colour_script.as_ref().unwrap(),
+                    &colour_hash,
+                    self.colour_kernel.as_ref().unwrap(),
+                ) {
+                    return Err(TxVerifyErr::InvalidColourScriptHash);
+                }
                 let seed_hash = Hash256::hash_from_slice(seed_bytes, key);
 
                 self.script
@@ -958,6 +976,15 @@ impl Input {
                     return Err(TxVerifyErr::InvalidPublicKey);
                 }
 
+                // Verify colour script
+                if validate_script_against_colour_hash(
+                    self.colour_script.as_ref().unwrap(),
+                    &colour_hash,
+                    self.colour_kernel.as_ref().unwrap(),
+                ) {
+                    return Err(TxVerifyErr::InvalidColourScriptHash);
+                }
+
                 self.script
                     .execute(
                         &self.script_args,
@@ -1044,11 +1071,6 @@ impl Input {
                 };
                 let out_amount = out.amount;
                 let script_hash = self.script.to_script_hash(key);
-                let colour_script_hash = self
-                    .colour_script
-                    .as_ref()
-                    .unwrap()
-                    .to_script_hash(COLOUR_HASH_KEY);
 
                 // Verify script hash
                 if script_hash != out.script_hash {
@@ -1058,7 +1080,11 @@ impl Input {
                 let colour_hash = coloured_address.colour_hash();
 
                 // Verify colour script hash
-                if colour_script_hash != colour_hash {
+                if validate_script_against_colour_hash(
+                    self.colour_script.as_ref().unwrap(),
+                    &colour_hash,
+                    self.colour_kernel.as_ref().unwrap(),
+                ) {
                     return Err(TxVerifyErr::InvalidColourScriptHash);
                 }
 
@@ -1148,11 +1174,6 @@ impl Input {
                 };
                 let out_amount = out.amount;
                 let script_hash = self.script.to_script_hash(key);
-                let colour_script_hash = self
-                    .colour_script
-                    .as_ref()
-                    .unwrap()
-                    .to_script_hash(COLOUR_HASH_KEY);
 
                 // Verify script hash
                 if script_hash != out.script_hash {
@@ -1162,7 +1183,11 @@ impl Input {
                 let colour_hash = coloured_address.colour_hash();
 
                 // Verify colour script hash
-                if colour_script_hash != colour_hash {
+                if validate_script_against_colour_hash(
+                    self.colour_script.as_ref().unwrap(),
+                    &colour_hash,
+                    self.colour_kernel.as_ref().unwrap(),
+                ) {
                     return Err(TxVerifyErr::InvalidColourScriptHash);
                 }
                 let seed_hash = Hash256::hash_from_slice(seed_bytes, key);
@@ -1258,14 +1283,13 @@ impl Input {
                     .as_ref()
                     .ok_or(TxVerifyErr::InvalidOutput)?;
                 let colour_hash = coloured_address.colour_hash();
-                let colour_script_hash = self
-                    .colour_script
-                    .as_ref()
-                    .unwrap()
-                    .to_script_hash(COLOUR_HASH_KEY);
 
                 // Verify colour script hash
-                if colour_script_hash != colour_hash {
+                if validate_script_against_colour_hash(
+                    self.colour_script.as_ref().unwrap(),
+                    &colour_hash,
+                    self.colour_kernel.as_ref().unwrap(),
+                ) {
                     return Err(TxVerifyErr::InvalidColourScriptHash);
                 }
 
@@ -1393,14 +1417,13 @@ impl Input {
                     .as_ref()
                     .ok_or(TxVerifyErr::InvalidOutput)?;
                 let colour_hash = coloured_address.colour_hash();
-                let colour_script_hash = self
-                    .colour_script
-                    .as_ref()
-                    .unwrap()
-                    .to_script_hash(COLOUR_HASH_KEY);
 
                 // Verify colour script hash
-                if colour_script_hash != colour_hash {
+                if validate_script_against_colour_hash(
+                    self.colour_script.as_ref().unwrap(),
+                    &colour_hash,
+                    self.colour_kernel.as_ref().unwrap(),
+                ) {
                     return Err(TxVerifyErr::InvalidColourScriptHash);
                 }
 
@@ -1529,14 +1552,13 @@ impl Input {
                     .as_ref()
                     .ok_or(TxVerifyErr::InvalidOutput)?;
                 let colour_hash = coloured_address.colour_hash();
-                let colour_script_hash = self
-                    .colour_script
-                    .as_ref()
-                    .unwrap()
-                    .to_script_hash(COLOUR_HASH_KEY);
 
                 // Verify colour script hash
-                if colour_script_hash != colour_hash {
+                if validate_script_against_colour_hash(
+                    self.colour_script.as_ref().unwrap(),
+                    &colour_hash,
+                    self.colour_kernel.as_ref().unwrap(),
+                ) {
                     return Err(TxVerifyErr::InvalidColourScriptHash);
                 }
 
@@ -1652,14 +1674,13 @@ impl Input {
                     .as_ref()
                     .ok_or(TxVerifyErr::InvalidOutput)?;
                 let colour_hash = coloured_address.colour_hash();
-                let colour_script_hash = self
-                    .colour_script
-                    .as_ref()
-                    .unwrap()
-                    .to_script_hash(COLOUR_HASH_KEY);
 
                 // Verify colour script hash
-                if colour_script_hash != colour_hash {
+                if validate_script_against_colour_hash(
+                    self.colour_script.as_ref().unwrap(),
+                    &colour_hash,
+                    self.colour_kernel.as_ref().unwrap(),
+                ) {
                     return Err(TxVerifyErr::InvalidColourScriptHash);
                 }
 
@@ -3280,6 +3301,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_kernel.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredHasSpendProof | InputFlags::FailableIsColouredHasSpendProof => {
@@ -3293,6 +3315,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_kernel.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredHasSpendProofAndColourProof
@@ -3308,6 +3331,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_kernel.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredWithoutSpendKey
@@ -3320,6 +3344,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script_args, encoder)?;
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_kernel.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredHasColourProof | InputFlags::FailableIsColouredHasColourProof => {
@@ -3333,6 +3358,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_kernel.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredHasColourProofWithoutSpendKey
@@ -3346,6 +3372,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_kernel.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredHasSpendProofWithoutSpendKey
@@ -3359,6 +3386,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.colour_script.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_kernel.as_ref().unwrap(), encoder)?;
             }
 
             InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey
@@ -3373,6 +3401,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.colour_script_args.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.colour_proof.as_ref().unwrap(), encoder)?;
+                bincode::Encode::encode(&self.colour_kernel.as_ref().unwrap(), encoder)?;
             }
         }
 
@@ -3470,7 +3499,13 @@ impl Decode for Input {
             }
 
             InputFlags::Plain | InputFlags::FailablePlain => {
-                let out = Some(bincode::Decode::decode(decoder)?);
+                let out: Output = bincode::Decode::decode(decoder)?;
+                if out.is_coloured() {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        INVALID_OUT_ERR_TEXT.to_owned(),
+                    ));
+                }
+                let out = Some(out);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
@@ -3495,7 +3530,13 @@ impl Decode for Input {
             }
 
             InputFlags::PlainWithoutSpendKey | InputFlags::FailablePlainWithoutSpendKey => {
-                let out = Some(bincode::Decode::decode(decoder)?);
+                let out: Output = bincode::Decode::decode(decoder)?;
+                if out.is_coloured() {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        INVALID_OUT_ERR_TEXT.to_owned(),
+                    ));
+                }
+                let out = Some(out);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
@@ -3520,7 +3561,13 @@ impl Decode for Input {
             }
 
             InputFlags::HasSpendProof | InputFlags::FailableHasSpendProof => {
-                let out = Some(bincode::Decode::decode(decoder)?);
+                let out: Output = bincode::Decode::decode(decoder)?;
+                if out.is_coloured() {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        INVALID_OUT_ERR_TEXT.to_owned(),
+                    ));
+                }
+                let out = Some(out);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
@@ -3548,7 +3595,13 @@ impl Decode for Input {
 
             InputFlags::HasSpendProofWithoutSpendKey
             | InputFlags::FailableHasSpendProofWithoutSpendKey => {
-                let out = Some(bincode::Decode::decode(decoder)?);
+                let out: Output = bincode::Decode::decode(decoder)?;
+                if out.is_coloured() {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        INVALID_OUT_ERR_TEXT.to_owned(),
+                    ));
+                }
+                let out = Some(out);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
                     Some(
@@ -3573,7 +3626,13 @@ impl Decode for Input {
             }
 
             InputFlags::IsColoured | InputFlags::FailableIsColoured => {
-                let out = Some(bincode::Decode::decode(decoder)?);
+                let out: Output = bincode::Decode::decode(decoder)?;
+                if !out.is_coloured() {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        INVALID_OUT_ERR_TEXT.to_owned(),
+                    ));
+                }
+                let out = Some(out);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
@@ -3593,6 +3652,7 @@ impl Decode for Input {
                 )?;
                 let colour_script = Some(colour_script);
                 let colour_script_args = Some(colour_script_args);
+                let colour_kernel = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
                     out,
@@ -3603,12 +3663,19 @@ impl Decode for Input {
                     script_args,
                     colour_script_args,
                     input_flags,
+                    colour_kernel,
                     ..Default::default()
                 })
             }
 
             InputFlags::IsColouredHasSpendProof | InputFlags::FailableIsColouredHasSpendProof => {
-                let out = Some(bincode::Decode::decode(decoder)?);
+                let out: Output = bincode::Decode::decode(decoder)?;
+                if !out.is_coloured() {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        INVALID_OUT_ERR_TEXT.to_owned(),
+                    ));
+                }
+                let out = Some(out);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
@@ -3629,6 +3696,7 @@ impl Decode for Input {
                 let colour_script = Some(colour_script);
                 let colour_script_args = Some(colour_script_args);
                 let spend_proof = Some(bincode::Decode::decode(decoder)?);
+                let colour_kernel = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
                     out,
@@ -3640,13 +3708,20 @@ impl Decode for Input {
                     colour_script_args,
                     spend_proof,
                     input_flags,
+                    colour_kernel,
                     ..Default::default()
                 })
             }
 
             InputFlags::IsColouredHasSpendProofAndColourProof
             | InputFlags::FailableIsColouredHasSpendProofAndColourProof => {
-                let out = Some(bincode::Decode::decode(decoder)?);
+                let out: Output = bincode::Decode::decode(decoder)?;
+                if !out.is_coloured() {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        INVALID_OUT_ERR_TEXT.to_owned(),
+                    ));
+                }
+                let out = Some(out);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
@@ -3668,6 +3743,7 @@ impl Decode for Input {
                 let colour_script_args = Some(colour_script_args);
                 let spend_proof = Some(bincode::Decode::decode(decoder)?);
                 let colour_proof = Some(bincode::Decode::decode(decoder)?);
+                let colour_kernel = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
                     out,
@@ -3680,13 +3756,20 @@ impl Decode for Input {
                     spend_proof,
                     colour_proof,
                     input_flags,
+                    colour_kernel,
                     ..Default::default()
                 })
             }
 
             InputFlags::IsColouredWithoutSpendKey
             | InputFlags::FailableIsColouredWithoutSpendKey => {
-                let out = Some(bincode::Decode::decode(decoder)?);
+                let out: Output = bincode::Decode::decode(decoder)?;
+                if !out.is_coloured() {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        INVALID_OUT_ERR_TEXT.to_owned(),
+                    ));
+                }
+                let out = Some(out);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
                     Some(
@@ -3705,6 +3788,7 @@ impl Decode for Input {
                 )?;
                 let colour_script = Some(colour_script);
                 let colour_script_args = Some(colour_script_args);
+                let colour_kernel = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
                     out,
@@ -3714,12 +3798,19 @@ impl Decode for Input {
                     script_args,
                     colour_script_args,
                     input_flags,
+                    colour_kernel,
                     ..Default::default()
                 })
             }
 
             InputFlags::IsColouredHasColourProof | InputFlags::FailableIsColouredHasColourProof => {
-                let out = Some(bincode::Decode::decode(decoder)?);
+                let out: Output = bincode::Decode::decode(decoder)?;
+                if !out.is_coloured() {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        INVALID_OUT_ERR_TEXT.to_owned(),
+                    ));
+                }
+                let out = Some(out);
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
@@ -3740,6 +3831,7 @@ impl Decode for Input {
                 let colour_script = Some(colour_script);
                 let colour_script_args = Some(colour_script_args);
                 let colour_proof = Some(bincode::Decode::decode(decoder)?);
+                let colour_kernel = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
                     out,
@@ -3751,13 +3843,20 @@ impl Decode for Input {
                     colour_script_args,
                     colour_proof,
                     input_flags,
+                    colour_kernel,
                     ..Default::default()
                 })
             }
 
             InputFlags::IsColouredHasColourProofWithoutSpendKey
             | InputFlags::FailableIsColouredHasColourProofWithoutSpendKey => {
-                let out = Some(bincode::Decode::decode(decoder)?);
+                let out: Output = bincode::Decode::decode(decoder)?;
+                if !out.is_coloured() {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        INVALID_OUT_ERR_TEXT.to_owned(),
+                    ));
+                }
+                let out = Some(out);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
                     Some(
@@ -3777,6 +3876,7 @@ impl Decode for Input {
                 let colour_script = Some(colour_script);
                 let colour_script_args = Some(colour_script_args);
                 let colour_proof = Some(bincode::Decode::decode(decoder)?);
+                let colour_kernel = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
                     out,
@@ -3787,13 +3887,20 @@ impl Decode for Input {
                     colour_script_args,
                     colour_proof,
                     input_flags,
+                    colour_kernel,
                     ..Default::default()
                 })
             }
 
             InputFlags::IsColouredHasSpendProofWithoutSpendKey
             | InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey => {
-                let out = Some(bincode::Decode::decode(decoder)?);
+                let out: Output = bincode::Decode::decode(decoder)?;
+                if !out.is_coloured() {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        INVALID_OUT_ERR_TEXT.to_owned(),
+                    ));
+                }
+                let out = Some(out);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
                     Some(
@@ -3813,6 +3920,7 @@ impl Decode for Input {
                 let colour_script = Some(colour_script);
                 let colour_script_args = Some(colour_script_args);
                 let spend_proof = Some(bincode::Decode::decode(decoder)?);
+                let colour_kernel = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
                     out,
@@ -3823,13 +3931,20 @@ impl Decode for Input {
                     colour_script_args,
                     spend_proof,
                     input_flags,
+                    colour_kernel,
                     ..Default::default()
                 })
             }
 
             InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey
             | InputFlags::FailableIsColouredHasSpendProofAndColourProofWithoutSpendKey => {
-                let out = Some(bincode::Decode::decode(decoder)?);
+                let out: Output = bincode::Decode::decode(decoder)?;
+                if !out.is_coloured() {
+                    return Err(bincode::error::DecodeError::OtherString(
+                        INVALID_OUT_ERR_TEXT.to_owned(),
+                    ));
+                }
+                let out = Some(out);
                 let witness = {
                     let v: Vec<u8> = bincode::Decode::decode(decoder)?;
                     Some(
@@ -3850,6 +3965,7 @@ impl Decode for Input {
                 let colour_script_args = Some(colour_script_args);
                 let spend_proof = Some(bincode::Decode::decode(decoder)?);
                 let colour_proof = Some(bincode::Decode::decode(decoder)?);
+                let colour_kernel = Some(bincode::Decode::decode(decoder)?);
 
                 Ok(Self {
                     out,
@@ -3861,6 +3977,7 @@ impl Decode for Input {
                     spend_proof,
                     colour_proof,
                     input_flags,
+                    colour_kernel,
                     ..Default::default()
                 })
             }
@@ -3957,7 +4074,7 @@ impl std::convert::TryFrom<u8> for InputFlags {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitives::Address;
+    use crate::primitives::{Address, ColouredAddress};
 
     #[test]
     fn coinbase_encode_decode() {
@@ -4181,7 +4298,454 @@ mod tests {
     }
 
     #[test]
+    fn plain_fails_decoding_with_a_coloured_output() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: None,
+                coloured_address: Some(ColouredAddress::zero()),
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::Plain,
+            spending_pkey: Some(PublicKey::zero()),
+            script: Script::new_simple_spend(),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            ..Default::default()
+        };
+
+        let decoded: Result<Input, _> =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap());
+        assert_eq!(
+            decoded,
+            Err(bincode::error::DecodeError::OtherString(
+                INVALID_OUT_ERR_TEXT.to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn has_spend_proof_fails_decoding_with_a_coloured_output() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: None,
+                coloured_address: Some(ColouredAddress::zero()),
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::HasSpendProof,
+            spending_pkey: Some(PublicKey::zero()),
+            script: Script::new_simple_spend(),
+            spend_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            ..Default::default()
+        };
+
+        let decoded: Result<Input, _> =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap());
+        assert_eq!(
+            decoded,
+            Err(bincode::error::DecodeError::OtherString(
+                INVALID_OUT_ERR_TEXT.to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn has_spend_proof_without_spend_key_fails_decoding_with_a_coloured_output() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: None,
+                coloured_address: Some(ColouredAddress::zero()),
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::HasSpendProofWithoutSpendKey,
+            script: Script::new_simple_spend(),
+            spend_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            ..Default::default()
+        };
+
+        let decoded: Result<Input, _> =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap());
+        assert_eq!(
+            decoded,
+            Err(bincode::error::DecodeError::OtherString(
+                INVALID_OUT_ERR_TEXT.to_owned()
+            ))
+        );
+    }
+
+    #[test]
     fn coloured_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: None,
+                coloured_address: Some(ColouredAddress::zero()),
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColoured,
+            spending_pkey: Some(PublicKey::zero()),
+            script: Script::new_simple_spend(),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            colour_kernel: Some(Hash160::zero()),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_has_spend_proof_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: None,
+                coloured_address: Some(ColouredAddress::zero()),
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredHasSpendProof,
+            spending_pkey: Some(PublicKey::zero()),
+            script: Script::new_simple_spend(),
+            spend_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            colour_kernel: Some(Hash160::zero()),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_has_spend_proof_and_colour_proof_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: None,
+                coloured_address: Some(ColouredAddress::zero()),
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredHasSpendProofAndColourProof,
+            spending_pkey: Some(PublicKey::zero()),
+            script: Script::new_simple_spend(),
+            spend_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
+            colour_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            colour_kernel: Some(Hash160::zero()),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_without_spend_key_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: None,
+                coloured_address: Some(ColouredAddress::zero()),
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredWithoutSpendKey,
+            script: Script::new_simple_spend(),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            colour_kernel: Some(Hash160::zero()),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_has_colour_proof_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: None,
+                coloured_address: Some(ColouredAddress::zero()),
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredHasColourProof,
+            spending_pkey: Some(PublicKey::zero()),
+            script: Script::new_simple_spend(),
+            colour_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            colour_kernel: Some(Hash160::zero()),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_has_spend_proof_and_colour_proof_without_spend_key_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: None,
+                coloured_address: Some(ColouredAddress::zero()),
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredHasSpendProofAndColourProofWithoutSpendKey,
+            script: Script::new_simple_spend(),
+            spend_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
+            colour_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            colour_kernel: Some(Hash160::zero()),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_has_spend_proof_without_spend_key_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: None,
+                coloured_address: Some(ColouredAddress::zero()),
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredHasSpendProofWithoutSpendKey,
+            script: Script::new_simple_spend(),
+            spend_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            colour_kernel: Some(Hash160::zero()),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_has_colour_proof_without_spend_key_encode_decode() {
+        let input = Input {
+            out: Some(Output {
+                amount: 100,
+                script_hash: Hash160::zero(),
+                inputs_hash: Hash160::zero(),
+                script_outs: vec![],
+                idx: 0,
+                address: None,
+                coloured_address: Some(ColouredAddress::zero()),
+                coinbase_height: None,
+                hash: None,
+            }),
+            witness: Some(Witness::empty()),
+            input_flags: InputFlags::IsColouredHasColourProofWithoutSpendKey,
+            script: Script::new_simple_spend(),
+            colour_proof: Some((
+                vec![Hash160::zero(), Hash160::zero(), Hash160::zero()],
+                vec![0, 0, 0],
+            )),
+            script_args: vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ],
+            colour_script: Some(Script::new_simple_spend()),
+            colour_script_args: Some(vec![
+                VmTerm::Signed128(137),
+                VmTerm::Hash160(Address::zero().0),
+                VmTerm::Hash160(Hash160::zero().0),
+            ]),
+            colour_kernel: Some(Hash160::zero()),
+            ..Default::default()
+        };
+
+        let decoded: Input =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
+        assert_eq!(decoded, input);
+    }
+
+    #[test]
+    fn coloured_fails_decode_on_non_coloured_output() {
         let input = Input {
             out: Some(Output {
                 amount: 100,
@@ -4209,16 +4773,22 @@ mod tests {
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
             ]),
+            colour_kernel: Some(Hash160::zero()),
             ..Default::default()
         };
 
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
+        let decoded: Result<Input, _> =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap());
+        assert_eq!(
+            decoded,
+            Err(bincode::error::DecodeError::OtherString(
+                INVALID_OUT_ERR_TEXT.to_owned()
+            ))
+        );
     }
 
     #[test]
-    fn coloured_has_spend_proof_encode_decode() {
+    fn coloured_has_spend_proof_fails_decode_on_non_coloured_output() {
         let input = Input {
             out: Some(Output {
                 amount: 100,
@@ -4250,16 +4820,22 @@ mod tests {
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
             ]),
+            colour_kernel: Some(Hash160::zero()),
             ..Default::default()
         };
 
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
+        let decoded: Result<Input, _> =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap());
+        assert_eq!(
+            decoded,
+            Err(bincode::error::DecodeError::OtherString(
+                INVALID_OUT_ERR_TEXT.to_owned()
+            ))
+        );
     }
 
     #[test]
-    fn coloured_has_spend_proof_and_colour_proof_encode_decode() {
+    fn coloured_has_spend_proof_and_colour_proof_fails_decode_on_non_coloured_output() {
         let input = Input {
             out: Some(Output {
                 amount: 100,
@@ -4295,16 +4871,22 @@ mod tests {
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
             ]),
+            colour_kernel: Some(Hash160::zero()),
             ..Default::default()
         };
 
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
+        let decoded: Result<Input, _> =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap());
+        assert_eq!(
+            decoded,
+            Err(bincode::error::DecodeError::OtherString(
+                INVALID_OUT_ERR_TEXT.to_owned()
+            ))
+        );
     }
 
     #[test]
-    fn coloured_without_spend_key_encode_decode() {
+    fn coloured_without_spend_key_fails_decode_on_non_coloured_output() {
         let input = Input {
             out: Some(Output {
                 amount: 100,
@@ -4331,16 +4913,22 @@ mod tests {
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
             ]),
+            colour_kernel: Some(Hash160::zero()),
             ..Default::default()
         };
 
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
+        let decoded: Result<Input, _> =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap());
+        assert_eq!(
+            decoded,
+            Err(bincode::error::DecodeError::OtherString(
+                INVALID_OUT_ERR_TEXT.to_owned()
+            ))
+        );
     }
 
     #[test]
-    fn coloured_has_colour_proof_encode_decode() {
+    fn coloured_has_colour_proof_fails_decode_on_non_coloured_output() {
         let input = Input {
             out: Some(Output {
                 amount: 100,
@@ -4372,16 +4960,23 @@ mod tests {
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
             ]),
+            colour_kernel: Some(Hash160::zero()),
             ..Default::default()
         };
 
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
+        let decoded: Result<Input, _> =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap());
+        assert_eq!(
+            decoded,
+            Err(bincode::error::DecodeError::OtherString(
+                INVALID_OUT_ERR_TEXT.to_owned()
+            ))
+        );
     }
 
     #[test]
-    fn coloured_has_spend_proof_and_colour_proof_without_spend_key_encode_decode() {
+    fn coloured_has_spend_proof_and_colour_proof_without_spend_key_fails_decode_on_non_coloured_output(
+    ) {
         let input = Input {
             out: Some(Output {
                 amount: 100,
@@ -4416,16 +5011,22 @@ mod tests {
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
             ]),
+            colour_kernel: Some(Hash160::zero()),
             ..Default::default()
         };
 
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
+        let decoded: Result<Input, _> =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap());
+        assert_eq!(
+            decoded,
+            Err(bincode::error::DecodeError::OtherString(
+                INVALID_OUT_ERR_TEXT.to_owned()
+            ))
+        );
     }
 
     #[test]
-    fn coloured_has_spend_proof_without_spend_key_encode_decode() {
+    fn coloured_has_spend_proof_without_spend_key_fails_decode_on_non_coloured_output() {
         let input = Input {
             out: Some(Output {
                 amount: 100,
@@ -4456,16 +5057,22 @@ mod tests {
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
             ]),
+            colour_kernel: Some(Hash160::zero()),
             ..Default::default()
         };
 
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
+        let decoded: Result<Input, _> =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap());
+        assert_eq!(
+            decoded,
+            Err(bincode::error::DecodeError::OtherString(
+                INVALID_OUT_ERR_TEXT.to_owned()
+            ))
+        );
     }
 
     #[test]
-    fn coloured_has_colour_proof_without_spend_key_encode_decode() {
+    fn coloured_has_colour_proof_without_spend_key_fails_decode_on_non_coloured_output() {
         let input = Input {
             out: Some(Output {
                 amount: 100,
@@ -4496,11 +5103,17 @@ mod tests {
                 VmTerm::Hash160(Address::zero().0),
                 VmTerm::Hash160(Hash160::zero().0),
             ]),
+            colour_kernel: Some(Hash160::zero()),
             ..Default::default()
         };
 
-        let decoded: Input =
-            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap()).unwrap();
-        assert_eq!(decoded, input);
+        let decoded: Result<Input, _> =
+            crate::codec::decode(&crate::codec::encode_to_vec(&input).unwrap());
+        assert_eq!(
+            decoded,
+            Err(bincode::error::DecodeError::OtherString(
+                INVALID_OUT_ERR_TEXT.to_owned()
+            ))
+        );
     }
 }

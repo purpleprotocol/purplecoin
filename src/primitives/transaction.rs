@@ -293,7 +293,7 @@ impl From<TransactionWithFee> for Transaction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitives::{ColouredAddress, InputFlags, Keypair};
+    use crate::primitives::{compute_colour_hash, ColouredAddress, InputFlags, Keypair};
     use crate::vm::internal::VmTerm;
     use crate::vm::Script;
 
@@ -327,22 +327,15 @@ mod tests {
 
         let mut input = Input {
             out: Some(out),
-            witness: None,
             script,
-            colour_script: None,
-            colour_script_args: None,
-            spend_proof: None,
-            colour_proof: None,
             input_flags: InputFlags::Plain,
-            coloured_coinbase_nonce: None,
-            coloured_coinbase_block_height: None,
             spending_pkey: Some(keypair.public()),
             script_args: vec![
                 VmTerm::Signed128(amount),
                 VmTerm::Hash160(to.0),
                 VmTerm::Hash160(script_hash.0),
             ],
-            hash: None,
+            ..Default::default()
         };
         input.compute_hash(key);
         input
@@ -355,7 +348,8 @@ mod tests {
     ) -> Input {
         let keypair = Keypair::new();
         let colour_script = Script::new_nop_script();
-        let colour_hash = colour_script.to_script_hash(key);
+        let (colour_hash, colour_kernel) =
+            compute_colour_hash(&colour_script, &[], &keypair.public());
         let address = keypair.to_coloured_address(&colour_hash);
         let script = Script::new_simple_spend();
         let script_hash = script.to_script_hash(key);
@@ -375,22 +369,18 @@ mod tests {
 
         let mut input = Input {
             out: Some(out),
-            witness: None,
             script,
             colour_script: Some(colour_script),
             colour_script_args: Some(vec![]),
-            spend_proof: None,
-            colour_proof: None,
             input_flags: InputFlags::IsColoured,
-            coloured_coinbase_nonce: None,
-            coloured_coinbase_block_height: None,
             spending_pkey: Some(keypair.public()),
+            colour_kernel: Some(colour_kernel),
             script_args: vec![
                 VmTerm::Signed128(amount),
                 VmTerm::Hash160(to.address),
                 VmTerm::Hash160(script_hash.0),
             ],
-            hash: None,
+            ..Default::default()
         };
         input.compute_hash(key);
         input
