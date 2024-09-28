@@ -4,14 +4,13 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use libp2p::gossipsub;
 use libp2p::identity::{Keypair, PublicKey};
 use libp2p::request_response::ProtocolSupport;
 use libp2p::swarm::NetworkBehaviour;
 use libp2p::{
-    dcutr, identify,
+    dcutr, gossipsub, identify,
     kad::{self, store},
-    mdns, ping, relay, upnp,
+    mdns, ping, relay, upnp, StreamProtocol,
 };
 use libp2p::{request_response, PeerId};
 use std::fmt;
@@ -64,7 +63,7 @@ impl SectorBehaviour {
 
     fn build_kad_behaviour(peer_id: PeerId) -> kad::Behaviour<kad::store::MemoryStore> {
         let store = store::MemoryStore::new(peer_id);
-        let kad_config = kad::Config::new();
+        let kad_config = kad::Config::new(StreamProtocol::new("/xpu/sector/kad"));
         kad::Behaviour::with_config(peer_id, store, kad_config)
     }
 
