@@ -131,7 +131,8 @@ features = ["xxh3", "const_xxh3"]
 
 [dependencies.rocksdb]
 #version = "0.22.0"
-git = "https://github.com/rust-rocksdb/rust-rocksdb#b8bf373242c14df47721ce1e03a9c62e06eb19bc"
+git = "https://github.com/rust-rocksdb/rust-rocksdb"
+rev = "b8bf373242c14df47721ce1e03a9c62e06eb19bc"
 default-features = false
 features = ["snappy", "lz4", "zstd", "zlib", "bzip2"]
 
