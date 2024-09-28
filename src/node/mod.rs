@@ -111,7 +111,7 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
         let mut sector_swarm = match (has_tcp, has_quic) {
             (true, true) => sector_swarm
                 .with_tcp(
-                    tcp::Config::default().port_reuse(true).nodelay(true),
+                    tcp::Config::default().nodelay(true),
                     noise::Config::new,
                     yamux::Config::default,
                 )
@@ -139,7 +139,7 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
                 .build(),
             (true, false) => sector_swarm
                 .with_tcp(
-                    tcp::Config::default().port_reuse(true).nodelay(true),
+                    tcp::Config::default().nodelay(true),
                     noise::Config::new,
                     yamux::Config::default,
                 )
@@ -192,7 +192,7 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
         let exchange_swarm = SwarmBuilder::with_existing_identity(id.clone())
             .with_tokio()
             .with_tcp(
-                tcp::Config::default().port_reuse(true).nodelay(true),
+                tcp::Config::default().nodelay(true),
                 noise::Config::new,
                 yamux::Config::default,
             )
@@ -208,7 +208,7 @@ impl<B: PowChainBackend + ShardBackend + DBInterface> Node<B> {
         let cluster_swarm = SwarmBuilder::with_existing_identity(id.clone())
             .with_tokio()
             .with_tcp(
-                tcp::Config::default().port_reuse(true).nodelay(true),
+                tcp::Config::default().nodelay(true),
                 noise::Config::new,
                 yamux::Config::default,
             )

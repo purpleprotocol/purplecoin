@@ -64,7 +64,7 @@ impl SectorBehaviour {
 
     fn build_kad_behaviour(peer_id: PeerId) -> kad::Behaviour<kad::store::MemoryStore> {
         let store = store::MemoryStore::new(peer_id);
-        let kad_config = kad::Config::default();
+        let kad_config = kad::Config::new();
         kad::Behaviour::with_config(peer_id, store, kad_config)
     }
 
