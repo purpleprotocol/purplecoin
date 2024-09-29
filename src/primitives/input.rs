@@ -146,7 +146,6 @@ impl Input {
         if self.hash.is_some() {
             return;
         }
-
         let bytes = self.to_bytes();
         self.hash = Some(Hash256::hash_from_slice(bytes, key));
     }
@@ -2150,7 +2149,9 @@ impl Encode for Input {
             InputFlags::Plain | InputFlags::FailablePlain => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
-                bincode::Encode::encode(&self.witness.as_ref().unwrap().to_bytes(), encoder)?;
+                if let Some(witness) = self.witness.as_ref() {
+                    bincode::Encode::encode(&witness.to_bytes(), encoder)?;
+                }
                 bincode::Encode::encode(&self.script, encoder)?;
                 bincode::Encode::encode(&self.script_args, encoder)?;
             }

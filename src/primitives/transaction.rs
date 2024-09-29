@@ -297,15 +297,6 @@ mod tests {
     use crate::vm::internal::VmTerm;
     use crate::vm::Script;
 
-    #[test]
-    fn test_simple_atomic_swap() {
-        // let tx = Transaction {
-        //     chain_id: 0,
-        //     ins: vec![Input {}],
-        //     hash: None,
-        // };
-    }
-
     fn xpu_ss_input_to_address_of_amount(amount: Money, to: Address, key: &str) -> Input {
         let keypair = Keypair::new();
         let address = keypair.to_address();
@@ -335,6 +326,7 @@ mod tests {
                 VmTerm::Hash160(to.0),
                 VmTerm::Hash160(script_hash.0),
             ],
+            witness: Some(accumulator::Witness::empty()),
             ..Default::default()
         };
         input.compute_hash(key);
@@ -380,9 +372,124 @@ mod tests {
                 VmTerm::Hash160(to.address),
                 VmTerm::Hash160(script_hash.0),
             ],
+            witness: Some(accumulator::Witness::empty()),
             ..Default::default()
         };
         input.compute_hash(key);
         input
     }
+
+    struct ExecResult {
+        pub to_add: Vec<Output>,
+        pub to_delete: Vec<(
+            Output,
+            accumulator::Witness<accumulator::group::Rsa2048, Output>,
+        )>,
+        pub idx_map: HashMap<Hash160, u16>,
+        pub ver_stack: VerificationStack,
+    }
+
+    /// Helper to execute a simple transaction
+    fn exec_tx(tx: &Transaction, key: &str, cb: impl Fn(Result<Money, TxVerifyErr>, ExecResult)) {
+        let mut to_add = vec![];
+        let mut to_delete = vec![];
+        let mut idx_map = HashMap::new();
+        let mut ver_stack = VerificationStack::new();
+
+        let result = tx.verify_single(
+            key,
+            0,
+            0,
+            0,
+            Hash256::zero(),
+            0,
+            false,
+            &mut to_add,
+            &mut to_delete,
+            &mut ver_stack,
+            &mut idx_map,
+            &[0; 32],
+            |_| Ok(()),
+        );
+
+        cb(
+            result,
+            ExecResult {
+                to_add,
+                to_delete,
+                idx_map,
+                ver_stack,
+            },
+        );
+    }
+
+    macro_rules! tx {
+        ($($x:expr),+ $(,)?) => (
+            Transaction {
+                chain_id: 0,
+                ins: vec![$($x),+],
+                hash: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_simple_spend() {
+        let address = Address::random();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let tx = tx![xpu_ss_input_to_address_of_amount(
+            amount,
+            address.clone(),
+            key,
+        )];
+
+        exec_tx(&tx, key, move |res, data| {
+            let script = Script::new_simple_spend();
+            let script_hash = script.to_script_hash(key);
+
+            assert_eq!(res.unwrap(), 10); // Check tx fee
+            assert_eq!(data.to_add.len(), 1);
+            assert_eq!(data.to_delete.len(), 1);
+            assert_eq!(data.to_add[0].amount, amount); // Check out amount
+            assert_eq!(data.to_add[0].address.as_ref().unwrap(), &address); // Check receiver address
+            assert_eq!(data.to_add[0].script_hash, script_hash); // Check script hash
+        });
+    }
+
+    #[test]
+    fn two_simple_spends() {
+        let address = Address::random();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let tx = tx![
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key),
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key)
+        ];
+
+        exec_tx(&tx, key, move |res, data| {
+            let script = Script::new_simple_spend();
+            let script_hash = script.to_script_hash(key);
+
+            assert_eq!(res.unwrap(), 20); // Check tx fee
+            assert_eq!(data.to_add.len(), 1);
+            assert_eq!(data.to_delete.len(), 2);
+            assert_eq!(data.to_add[0].amount, amount * 2); // Check out amount
+            assert_eq!(data.to_add[0].address.as_ref().unwrap(), &address); // Check receiver address
+            assert_eq!(data.to_add[0].script_hash, script_hash); // Check script hash
+        });
+    }
+
+    // #[test]
+    // fn test_simple_atomic_swap() {
+    //     let key = "test_key";
+    //     let amount = 10_000_000;
+    //     let tx = Transaction {
+    //         chain_id: 0,
+    //         ins: vec![ss_input_to_address_of_asset_and_amount(
+    //             amount, &address, key,
+    //         )],
+    //         hash: None,
+    //     };
+    // }
 }
