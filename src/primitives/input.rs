@@ -849,7 +849,7 @@ impl Input {
                 }
 
                 // Verify colour script
-                if validate_script_against_colour_hash(
+                if !validate_script_against_colour_hash(
                     self.colour_script.as_ref().unwrap(),
                     &colour_hash,
                     self.colour_kernel.as_ref().unwrap(),
@@ -935,9 +935,13 @@ impl Input {
             InputFlags::IsColoured => {
                 let out = self.out.as_ref().unwrap();
                 let mut to_add_buf = vec![];
-                let out = if let Some(idx) =
-                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
-                {
+                let out = if let Some(idx) = idx_map.get(
+                    &(
+                        &out.coloured_address.as_ref().unwrap().to_address(),
+                        &out.script_hash,
+                    )
+                        .into(),
+                ) {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -968,7 +972,7 @@ impl Input {
                 }
 
                 // Verify colour script
-                if validate_script_against_colour_hash(
+                if !validate_script_against_colour_hash(
                     self.colour_script.as_ref().unwrap(),
                     &colour_hash,
                     self.colour_kernel.as_ref().unwrap(),
@@ -1071,7 +1075,7 @@ impl Input {
                 let colour_hash = coloured_address.colour_hash();
 
                 // Verify colour script hash
-                if validate_script_against_colour_hash(
+                if !validate_script_against_colour_hash(
                     self.colour_script.as_ref().unwrap(),
                     &colour_hash,
                     self.colour_kernel.as_ref().unwrap(),
@@ -1174,7 +1178,7 @@ impl Input {
                 let colour_hash = coloured_address.colour_hash();
 
                 // Verify colour script hash
-                if validate_script_against_colour_hash(
+                if !validate_script_against_colour_hash(
                     self.colour_script.as_ref().unwrap(),
                     &colour_hash,
                     self.colour_kernel.as_ref().unwrap(),
@@ -1276,7 +1280,7 @@ impl Input {
                 let colour_hash = coloured_address.colour_hash();
 
                 // Verify colour script hash
-                if validate_script_against_colour_hash(
+                if !validate_script_against_colour_hash(
                     self.colour_script.as_ref().unwrap(),
                     &colour_hash,
                     self.colour_kernel.as_ref().unwrap(),
@@ -1410,7 +1414,7 @@ impl Input {
                 let colour_hash = coloured_address.colour_hash();
 
                 // Verify colour script hash
-                if validate_script_against_colour_hash(
+                if !validate_script_against_colour_hash(
                     self.colour_script.as_ref().unwrap(),
                     &colour_hash,
                     self.colour_kernel.as_ref().unwrap(),
@@ -1545,7 +1549,7 @@ impl Input {
                 let colour_hash = coloured_address.colour_hash();
 
                 // Verify colour script hash
-                if validate_script_against_colour_hash(
+                if !validate_script_against_colour_hash(
                     self.colour_script.as_ref().unwrap(),
                     &colour_hash,
                     self.colour_kernel.as_ref().unwrap(),
@@ -1667,7 +1671,7 @@ impl Input {
                 let colour_hash = coloured_address.colour_hash();
 
                 // Verify colour script hash
-                if validate_script_against_colour_hash(
+                if !validate_script_against_colour_hash(
                     self.colour_script.as_ref().unwrap(),
                     &colour_hash,
                     self.colour_kernel.as_ref().unwrap(),

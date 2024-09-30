@@ -279,7 +279,11 @@ impl Script {
     #[must_use]
     pub fn new_nop_script() -> Script {
         Script {
-            script: vec![ScriptEntry::Byte(0x00), ScriptEntry::Opcode(OP::Nop)],
+            script: vec![
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Nop),
+                ScriptEntry::Opcode(OP::Ok),
+            ],
             malleable_args: bitvec_from_bools![],
             ..Script::default()
         }
@@ -7991,9 +7995,9 @@ impl ScriptExecutor {
                                         *outs_sum += amount;
                                         output_stack[*idx as usize].amount += amount;
                                         output_stack[*idx as usize].inputs_hash = inputs_hash;
-                                        output_stack[*idx as usize].compute_hash(key);
                                         output_stack[*idx as usize].script_outs =
                                             script_outputs.clone();
+                                        output_stack[*idx as usize].compute_hash(key);
 
                                         *script_outputs = vec![];
                                     } else {
@@ -8134,8 +8138,8 @@ impl ScriptExecutor {
                                 *outs_sum += amount;
                                 output_stack[*idx as usize].amount += amount;
                                 output_stack[*idx as usize].inputs_hash = inputs_hash;
-                                output_stack[*idx as usize].compute_hash(key);
                                 output_stack[*idx as usize].script_outs = script_outputs.clone();
+                                output_stack[*idx as usize].compute_hash(key);
 
                                 *script_outputs = vec![];
                             } else {

@@ -4,6 +4,8 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use super::compute_colour_hash;
+use crate::vm::Script;
 use bech32::{self, FromBase32, ToBase32, Variant};
 use bincode::{Decode, Encode};
 use bloomfilter::Bloom;
@@ -37,6 +39,12 @@ lazy_static! {
     static ref HASH_KEY256: &'static str = &HASH_KEY256_OWNED;
     static ref HASH_KEY512_OWNED: String = format!("{}", 64);
     static ref HASH_KEY512: &'static str = &HASH_KEY512_OWNED;
+}
+
+#[cfg(test)]
+lazy_static! {
+    /// Keypair for testing with the nop colour script.
+    pub static ref NOP_SCRIPT_EMITTER_KEYPAIR: Keypair = Keypair::new();
 }
 
 #[derive(Clone, PartialEq, Eq, HashTrait, Encode, Decode)]
@@ -110,6 +118,19 @@ impl ColouredAddress {
     #[must_use]
     pub fn validate(&self, public_key: &PublicKey, colour_hash: &Hash160) -> bool {
         self == &public_key.to_coloured_address(colour_hash)
+    }
+
+    #[cfg(test)]
+    #[must_use]
+    /// Create a random address of the nop script colour hash.
+    pub fn random_nop_script() -> Self {
+        let colour_script = Script::new_nop_script();
+        let (colour_hash, _) =
+            compute_colour_hash(&colour_script, &[], &NOP_SCRIPT_EMITTER_KEYPAIR.public());
+        Self {
+            address: rand::thread_rng().gen(),
+            colour_hash: colour_hash.0,
+        }
     }
 }
 

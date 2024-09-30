@@ -137,11 +137,11 @@ impl Transaction {
                             to_delete_temp = to_delete_bak;
                             break;
                         }
+                    } else {
+                        // Execution succeeded, flush changes.
+                        ins_sum += temp_ins_sum;
+                        outs_sum += temp_outs_sum;
                     }
-
-                    // Execution succeeded, flush changes.
-                    ins_sum += temp_ins_sum;
-                    outs_sum += temp_outs_sum;
                 }
                 _ => {
                     // Execution succeeded, flush changes.
@@ -339,7 +339,9 @@ impl From<TransactionWithFee> for Transaction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitives::{compute_colour_hash, ColouredAddress, InputFlags, Keypair};
+    use crate::primitives::{
+        compute_colour_hash, ColouredAddress, InputFlags, Keypair, NOP_SCRIPT_EMITTER_KEYPAIR,
+    };
     use crate::vm::internal::VmTerm;
     use crate::vm::Script;
 
@@ -423,7 +425,7 @@ mod tests {
         let keypair = Keypair::new();
         let colour_script = Script::new_nop_script();
         let (colour_hash, colour_kernel) =
-            compute_colour_hash(&colour_script, &[], &keypair.public());
+            compute_colour_hash(&colour_script, &[], &NOP_SCRIPT_EMITTER_KEYPAIR.public());
         let address = keypair.to_coloured_address(&colour_hash);
         let script = Script::new_simple_spend();
         let script_hash = script.to_script_hash(key);
@@ -623,6 +625,53 @@ mod tests {
             assert_eq!(data.to_delete.len(), 3);
         });
     }
+
+    #[test]
+    fn test_coloured_simple_spend() {
+        let address = ColouredAddress::random_nop_script();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let tx = tx![ss_input_to_address_of_asset_and_amount(
+            amount,
+            address.clone(),
+            key,
+        )];
+
+        exec_tx(&tx, key, |res, data| {
+            let script = Script::new_simple_spend();
+            let script_hash = script.to_script_hash(key);
+
+            assert_eq!(res, Ok(0));
+            assert_eq!(data.to_add.len(), 1);
+            assert_eq!(data.to_delete.len(), 1);
+            assert_eq!(data.to_add[0].amount, amount); // Check out amount
+            assert_eq!(data.to_add[0].coloured_address.as_ref().unwrap(), &address); // Check receiver address
+            assert_eq!(data.to_add[0].script_hash, script_hash); // Check script hash
+        });
+    }
+
+    // #[test]
+    // fn two_coloured_simple_spends() {
+    //     let address = ColouredAddress::random_nop_script();
+    //     let key = "test_key";
+    //     let amount = 10_000_000;
+    //     let tx = tx![
+    //         ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+    //         ss_input_to_address_of_asset_and_amount(amount, address.clone(), key)
+    //     ];
+
+    //     exec_tx(&tx, key, |res, data| {
+    //         let script = Script::new_simple_spend();
+    //         let script_hash = script.to_script_hash(key);
+
+    //         assert_eq!(res, Ok(0));
+    //         assert_eq!(data.to_add.len(), 1);
+    //         assert_eq!(data.to_delete.len(), 2);
+    //         assert_eq!(data.to_add[0].amount, amount * 2); // Check out amount
+    //         assert_eq!(data.to_add[0].coloured_address.as_ref().unwrap(), &address); // Check receiver address
+    //         assert_eq!(data.to_add[0].script_hash, script_hash); // Check script hash
+    //     });
+    // }
 
     // #[test]
     // fn test_simple_atomic_swap() {

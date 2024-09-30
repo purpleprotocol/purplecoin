@@ -131,7 +131,7 @@ mod tests {
             .to_hex();
         assert_eq!(
             colour_hash.as_str(),
-            "54e0bb86aba194058283144b98586d76b01c0fac"
+            "b502657d62900235b74b25a8c486e368f17309a8"
         );
     }
 
