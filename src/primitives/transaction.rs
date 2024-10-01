@@ -650,28 +650,67 @@ mod tests {
         });
     }
 
-    // #[test]
-    // fn two_coloured_simple_spends() {
-    //     let address = ColouredAddress::random_nop_script();
-    //     let key = "test_key";
-    //     let amount = 10_000_000;
-    //     let tx = tx![
-    //         ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
-    //         ss_input_to_address_of_asset_and_amount(amount, address.clone(), key)
-    //     ];
+    #[test]
+    fn two_coloured_simple_spends() {
+        let address = ColouredAddress::random_nop_script();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let tx = tx![
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key)
+        ];
 
-    //     exec_tx(&tx, key, |res, data| {
-    //         let script = Script::new_simple_spend();
-    //         let script_hash = script.to_script_hash(key);
+        exec_tx(&tx, key, |res, data| {
+            let script = Script::new_simple_spend();
+            let script_hash = script.to_script_hash(key);
 
-    //         assert_eq!(res, Ok(0));
-    //         assert_eq!(data.to_add.len(), 1);
-    //         assert_eq!(data.to_delete.len(), 2);
-    //         assert_eq!(data.to_add[0].amount, amount * 2); // Check out amount
-    //         assert_eq!(data.to_add[0].coloured_address.as_ref().unwrap(), &address); // Check receiver address
-    //         assert_eq!(data.to_add[0].script_hash, script_hash); // Check script hash
-    //     });
-    // }
+            assert_eq!(res, Ok(0));
+            assert_eq!(data.to_add.len(), 1);
+            assert_eq!(data.to_delete.len(), 2);
+            assert_eq!(data.to_add[0].amount, amount * 2); // Check out amount
+            assert_eq!(data.to_add[0].coloured_address.as_ref().unwrap(), &address); // Check receiver address
+            assert_eq!(data.to_add[0].script_hash, script_hash); // Check script hash
+        });
+    }
+
+    #[test]
+    fn fails_coloured_on_sum_of_inputs_lower_than_of_outputs() {
+        let address = ColouredAddress::random_nop_script();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let mut input = ss_input_to_address_of_asset_and_amount(amount, address.clone(), key);
+        input.script_args[0] = VmTerm::Signed128(10_000_000_000);
+        let tx = tx![input];
+
+        exec_tx(&tx, key, |res, data| {
+            assert_eq!(res, Err(TxVerifyErr::InvalidAmount));
+            assert_eq!(data.to_add.len(), 0);
+            assert_eq!(data.to_delete.len(), 0);
+        });
+    }
+
+    #[test]
+    fn fails_coloured_on_sum_of_inputs_lower_than_of_outputs_2() {
+        let address = ColouredAddress::random_nop_script();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let mut input = ss_input_to_address_of_asset_and_amount(amount, address.clone(), key);
+        input.script_args[0] = VmTerm::Signed128(10_000_000_000);
+        let tx = tx![
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+            input,
+        ];
+
+        exec_tx(&tx, key, |res, data| {
+            assert_eq!(res, Err(TxVerifyErr::InvalidAmount));
+            assert_eq!(data.to_add.len(), 0);
+            assert_eq!(data.to_delete.len(), 0);
+        });
+    }
 
     // #[test]
     // fn test_simple_atomic_swap() {

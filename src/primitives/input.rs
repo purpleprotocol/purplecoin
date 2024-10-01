@@ -815,13 +815,20 @@ impl Input {
 
             InputFlags::FailableIsColoured => {
                 let out = self.out.as_ref().unwrap();
-                let mut to_add_buf = vec![];
-                let out = if let Some(idx) =
-                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
-                {
-                    &to_add[*idx as usize]
+                let out = if let Some(idx) = idx_map.get(
+                    &(
+                        &out.coloured_address.as_ref().unwrap().to_address(),
+                        &out.script_hash,
+                    )
+                        .into(),
+                ) {
+                    to_add[*idx as usize].clone()
                 } else {
-                    out
+                    to_delete.push((
+                        self.out.as_ref().unwrap().clone(),
+                        self.witness.as_ref().unwrap().clone(),
+                    ));
+                    out.clone()
                 };
                 let out_amount = out.amount;
                 let script_hash = self.script.to_script_hash(key);
@@ -835,8 +842,8 @@ impl Input {
                     .coloured_address
                     .as_ref()
                     .ok_or(TxVerifyErr::InvalidOutput)?;
-                let colour_hash = coloured_address.colour_hash();
 
+                let colour_hash = coloured_address.colour_hash();
                 let address_to_check = self
                     .spending_pkey
                     .as_ref()
@@ -862,7 +869,7 @@ impl Input {
                     .execute(
                         &self.script_args,
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -895,7 +902,7 @@ impl Input {
                     .execute(
                         self.colour_script_args.as_ref().unwrap(),
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -916,25 +923,25 @@ impl Input {
                             spent_out: Some(out.clone()),
                             can_fail: true,
                             is_colour_script: true,
-                            colour_hash: Some(colour_hash),
+                            colour_hash: Some(colour_hash.clone()),
                             ..Default::default()
                         },
                     )
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
 
-                to_add.extend(to_add_buf);
-                *ins_sum += out_amount;
-                to_delete.push((
-                    self.out.as_ref().unwrap().clone(),
-                    self.witness.as_ref().unwrap().clone(),
-                ));
+                // Add amount to sums
+                if let Some(ins_sum) = coloured_ins_sums.get_mut(&colour_hash) {
+                    *ins_sum += out_amount;
+                } else {
+                    coloured_ins_sums.insert(colour_hash, out_amount);
+                }
+
                 Ok(())
             }
 
             InputFlags::IsColoured => {
                 let out = self.out.as_ref().unwrap();
-                let mut to_add_buf = vec![];
                 let out = if let Some(idx) = idx_map.get(
                     &(
                         &out.coloured_address.as_ref().unwrap().to_address(),
@@ -942,9 +949,13 @@ impl Input {
                     )
                         .into(),
                 ) {
-                    &to_add[*idx as usize]
+                    to_add[*idx as usize].clone()
                 } else {
-                    out
+                    to_delete.push((
+                        self.out.as_ref().unwrap().clone(),
+                        self.witness.as_ref().unwrap().clone(),
+                    ));
+                    out.clone()
                 };
                 let out_amount = out.amount;
                 let script_hash = self.script.to_script_hash(key);
@@ -958,8 +969,8 @@ impl Input {
                     .coloured_address
                     .as_ref()
                     .ok_or(TxVerifyErr::InvalidOutput)?;
-                let colour_hash = coloured_address.colour_hash();
 
+                let colour_hash = coloured_address.colour_hash();
                 let address_to_check = self
                     .spending_pkey
                     .as_ref()
@@ -984,7 +995,7 @@ impl Input {
                     .execute(
                         &self.script_args,
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1017,7 +1028,7 @@ impl Input {
                     .execute(
                         self.colour_script_args.as_ref().unwrap(),
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1035,35 +1046,44 @@ impl Input {
                             validate_output_amounts: true,
                             prev_block_hash: prev_block_hash.0,
                             in_binary: self.to_bytes_for_signing(),
-                            spent_out: Some(out.clone()),
+                            spent_out: Some(out),
                             can_fail: false,
                             is_colour_script: true,
-                            colour_hash: Some(colour_hash),
+                            colour_hash: Some(colour_hash.clone()),
                             ..Default::default()
                         },
                     )
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
 
-                to_add.extend(to_add_buf);
-                *ins_sum += out_amount;
-                to_delete.push((
-                    self.out.as_ref().unwrap().clone(),
-                    self.witness.as_ref().unwrap().clone(),
-                ));
+                // Add amount to sums
+                if let Some(ins_sum) = coloured_ins_sums.get_mut(&colour_hash) {
+                    *ins_sum += out_amount;
+                } else {
+                    coloured_ins_sums.insert(colour_hash, out_amount);
+                }
+
                 Ok(())
             }
 
             InputFlags::IsColouredWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
-                let mut to_add_buf = vec![];
-                let coloured_address = out.coloured_address.as_ref().unwrap();
-                let address = coloured_address.to_address();
-                let out = if let Some(idx) = idx_map.get(&(&address, &out.script_hash).into()) {
-                    &to_add[*idx as usize]
+                let out = if let Some(idx) = idx_map.get(
+                    &(
+                        &out.coloured_address.as_ref().unwrap().to_address(),
+                        &out.script_hash,
+                    )
+                        .into(),
+                ) {
+                    to_add[*idx as usize].clone()
                 } else {
-                    out
+                    to_delete.push((
+                        self.out.as_ref().unwrap().clone(),
+                        self.witness.as_ref().unwrap().clone(),
+                    ));
+                    out.clone()
                 };
+                let coloured_address = out.coloured_address.as_ref().unwrap();
                 let out_amount = out.amount;
                 let script_hash = self.script.to_script_hash(key);
 
@@ -1148,12 +1168,13 @@ impl Input {
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
 
-                to_add.extend(to_add_buf);
-                *ins_sum += out_amount;
-                to_delete.push((
-                    self.out.as_ref().unwrap().clone(),
-                    self.witness.as_ref().unwrap().clone(),
-                ));
+                // Add amount to sums
+                if let Some(ins_sum) = coloured_ins_sums.get_mut(&colour_hash) {
+                    *ins_sum += out_amount;
+                } else {
+                    coloured_ins_sums.insert(colour_hash, out_amount);
+                }
+
                 Ok(())
             }
 
@@ -1191,7 +1212,7 @@ impl Input {
                     .execute(
                         &self.script_args,
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1224,7 +1245,7 @@ impl Input {
                     .execute(
                         self.colour_script_args.as_ref().unwrap(),
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,

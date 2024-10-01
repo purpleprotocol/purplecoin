@@ -298,13 +298,10 @@ impl Script {
             script: vec![
                 ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: in_asset_hash, out_address, rate, min_amount
                 ScriptEntry::Opcode(OP::OutputsLen), // Push the outputs len onto the stack so we can loop through them
-                ScriptEntry::Opcode(OP::Unsigned8Var), // Sum variable, push as unsigned8 and cast to signed128 to save space
-                ScriptEntry::Byte(0x00),
-                ScriptEntry::Opcode(OP::CastTo),
-                ScriptEntry::Byte(0x0d),
-                ScriptEntry::Opcode(OP::Unsigned16Var), // Push 0 counter
-                ScriptEntry::Byte(0x00),
-                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::ZeroOfType), // Sum variable
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::ZeroOfType), // Push 0 counter
+                ScriptEntry::Byte(0x04),
                 ScriptEntry::Opcode(OP::Loop), // Loop through outputs
                 ScriptEntry::Opcode(OP::Dup),
                 ScriptEntry::Opcode(OP::ColourHash), // Check colour hash
@@ -7978,6 +7975,19 @@ impl ScriptExecutor {
                                         script_hash.clone()
                                     };
 
+                                    let outs_sum = if let Some(colour_hash) = &flags.colour_hash {
+                                        if let Some(outs_sum) =
+                                            coloured_outs_sums.get_mut(&colour_hash)
+                                        {
+                                            outs_sum
+                                        } else {
+                                            coloured_outs_sums.insert(colour_hash.clone(), 0);
+                                            coloured_outs_sums.get_mut(&colour_hash).unwrap()
+                                        }
+                                    } else {
+                                        outs_sum
+                                    };
+
                                     if let Some(idx) = output_stack_idx_map.get(&to_get) {
                                         // Re-hash inputs
                                         let inputs_hashes: Vec<u8> = [
@@ -8120,6 +8130,17 @@ impl ScriptExecutor {
                                 (addr, &script_hash).into()
                             } else {
                                 script_hash.clone()
+                            };
+
+                            let outs_sum = if let Some(colour_hash) = &flags.colour_hash {
+                                if let Some(outs_sum) = coloured_outs_sums.get_mut(&colour_hash) {
+                                    outs_sum
+                                } else {
+                                    coloured_outs_sums.insert(colour_hash.clone(), 0);
+                                    coloured_outs_sums.get_mut(&colour_hash).unwrap()
+                                }
+                            } else {
+                                outs_sum
                             };
 
                             if let Some(idx) = output_stack_idx_map.get(&to_get) {
