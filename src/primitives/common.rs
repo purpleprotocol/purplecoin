@@ -5,6 +5,7 @@
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
 use super::compute_colour_hash;
+use crate::vm::internal::VmTerm;
 use crate::vm::Script;
 use bech32::{self, FromBase32, ToBase32, Variant};
 use bincode::{Decode, Encode};
@@ -503,11 +504,21 @@ impl AsRef<[u8]> for Hash160 {
     }
 }
 
-impl From<(&Address, &Self)> for Hash160 {
-    fn from(other: (&Address, &Self)) -> Self {
-        let mut buf = Vec::with_capacity(40);
+impl From<(&Address, &Self, &Vec<u8>)> for Hash160 {
+    fn from(other: (&Address, &Self, &Vec<u8>)) -> Self {
+        let mut buf = Vec::with_capacity(40 + other.2.len());
         buf.extend_from_slice(&other.0 .0);
         buf.extend_from_slice(&other.1 .0);
+        buf.extend_from_slice(&other.2);
+        Self::hash_from_slice(&buf, "idx_map_hasher")
+    }
+}
+
+impl From<(&Self, &Vec<u8>)> for Hash160 {
+    fn from(other: (&Self, &Vec<u8>)) -> Self {
+        let mut buf = Vec::with_capacity(20 + other.1.len());
+        buf.extend_from_slice(&other.0 .0);
+        buf.extend_from_slice(&other.1);
         Self::hash_from_slice(&buf, "idx_map_hasher")
     }
 }

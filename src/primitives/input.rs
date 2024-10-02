@@ -537,9 +537,18 @@ impl Input {
 
             InputFlags::Plain => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) =
-                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
-                {
+                let mut script_outs_hash_buf = vec![];
+                for t in out.script_outs.iter() {
+                    script_outs_hash_buf.extend(t.to_bytes());
+                }
+                let out = if let Some(idx) = idx_map.get(
+                    &(
+                        out.address.as_ref().unwrap(),
+                        &out.script_hash,
+                        &script_outs_hash_buf,
+                    )
+                        .into(),
+                ) {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -610,9 +619,18 @@ impl Input {
 
             InputFlags::FailablePlain => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) =
-                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
-                {
+                let mut script_outs_hash_buf = vec![];
+                for t in out.script_outs.iter() {
+                    script_outs_hash_buf.extend(t.to_bytes());
+                }
+                let out = if let Some(idx) = idx_map.get(
+                    &(
+                        out.address.as_ref().unwrap(),
+                        &out.script_hash,
+                        &script_outs_hash_buf,
+                    )
+                        .into(),
+                ) {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -815,10 +833,15 @@ impl Input {
 
             InputFlags::FailableIsColoured => {
                 let out = self.out.as_ref().unwrap();
+                let mut script_outs_hash_buf = vec![];
+                for t in out.script_outs.iter() {
+                    script_outs_hash_buf.extend(t.to_bytes());
+                }
                 let out = if let Some(idx) = idx_map.get(
                     &(
-                        &out.coloured_address.as_ref().unwrap().to_address(),
+                        out.address.as_ref().unwrap(),
                         &out.script_hash,
+                        &script_outs_hash_buf,
                     )
                         .into(),
                 ) {
@@ -942,10 +965,15 @@ impl Input {
 
             InputFlags::IsColoured => {
                 let out = self.out.as_ref().unwrap();
+                let mut script_outs_hash_buf = vec![];
+                for t in out.script_outs.iter() {
+                    script_outs_hash_buf.extend(t.to_bytes());
+                }
                 let out = if let Some(idx) = idx_map.get(
                     &(
                         &out.coloured_address.as_ref().unwrap().to_address(),
                         &out.script_hash,
+                        &script_outs_hash_buf,
                     )
                         .into(),
                 ) {
@@ -1068,10 +1096,15 @@ impl Input {
 
             InputFlags::IsColouredWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
+                let mut script_outs_hash_buf = vec![];
+                for t in out.script_outs.iter() {
+                    script_outs_hash_buf.extend(t.to_bytes());
+                }
                 let out = if let Some(idx) = idx_map.get(
                     &(
                         &out.coloured_address.as_ref().unwrap().to_address(),
                         &out.script_hash,
+                        &script_outs_hash_buf,
                     )
                         .into(),
                 ) {
@@ -1107,7 +1140,7 @@ impl Input {
                     .execute(
                         &self.script_args,
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1140,7 +1173,7 @@ impl Input {
                     .execute(
                         self.colour_script_args.as_ref().unwrap(),
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1161,7 +1194,7 @@ impl Input {
                             spent_out: Some(out.clone()),
                             can_fail: false,
                             is_colour_script: true,
-                            colour_hash: Some(colour_hash),
+                            colour_hash: Some(colour_hash.clone()),
                             ..Default::default()
                         },
                     )
@@ -1180,14 +1213,27 @@ impl Input {
 
             InputFlags::FailableIsColouredWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
-                let mut to_add_buf = vec![];
-                let coloured_address = out.coloured_address.as_ref().unwrap();
-                let address = coloured_address.to_address();
-                let out = if let Some(idx) = idx_map.get(&(&address, &out.script_hash).into()) {
-                    &to_add[*idx as usize]
+                let mut script_outs_hash_buf = vec![];
+                for t in out.script_outs.iter() {
+                    script_outs_hash_buf.extend(t.to_bytes());
+                }
+                let out = if let Some(idx) = idx_map.get(
+                    &(
+                        &out.coloured_address.as_ref().unwrap().to_address(),
+                        &out.script_hash,
+                        &script_outs_hash_buf,
+                    )
+                        .into(),
+                ) {
+                    to_add[*idx as usize].clone()
                 } else {
-                    out
+                    to_delete.push((
+                        self.out.as_ref().unwrap().clone(),
+                        self.witness.as_ref().unwrap().clone(),
+                    ));
+                    out.clone()
                 };
+                let coloured_address = out.coloured_address.as_ref().unwrap();
                 let out_amount = out.amount;
                 let script_hash = self.script.to_script_hash(key);
 
@@ -1266,31 +1312,44 @@ impl Input {
                             spent_out: Some(out.clone()),
                             can_fail: true,
                             is_colour_script: true,
-                            colour_hash: Some(colour_hash),
+                            colour_hash: Some(colour_hash.clone()),
                             ..Default::default()
                         },
                     )
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
 
-                to_add.extend(to_add_buf);
-                *ins_sum += out_amount;
-                to_delete.push((
-                    self.out.as_ref().unwrap().clone(),
-                    self.witness.as_ref().unwrap().clone(),
-                ));
+                // Add amount to sums
+                if let Some(ins_sum) = coloured_ins_sums.get_mut(&colour_hash) {
+                    *ins_sum += out_amount;
+                } else {
+                    coloured_ins_sums.insert(colour_hash, out_amount);
+                }
+
                 Ok(())
             }
 
             InputFlags::IsColouredHasSpendProof => {
                 let out = self.out.as_ref().unwrap();
-                let mut to_add_buf = vec![];
-                let out = if let Some(idx) =
-                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
-                {
-                    &to_add[*idx as usize]
+                let mut script_outs_hash_buf = vec![];
+                for t in out.script_outs.iter() {
+                    script_outs_hash_buf.extend(t.to_bytes());
+                }
+                let out = if let Some(idx) = idx_map.get(
+                    &(
+                        out.address.as_ref().unwrap(),
+                        &out.script_hash,
+                        &script_outs_hash_buf,
+                    )
+                        .into(),
+                ) {
+                    to_add[*idx as usize].clone()
                 } else {
-                    out
+                    to_delete.push((
+                        self.out.as_ref().unwrap().clone(),
+                        self.witness.as_ref().unwrap().clone(),
+                    ));
+                    out.clone()
                 };
                 let out_amount = out.amount;
 
@@ -1346,7 +1405,7 @@ impl Input {
                     .execute(
                         &self.script_args,
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1379,7 +1438,7 @@ impl Input {
                     .execute(
                         self.colour_script_args.as_ref().unwrap(),
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1399,7 +1458,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: false,
-                            colour_hash: Some(colour_hash),
+                            colour_hash: Some(colour_hash.clone()),
                             is_colour_script: true,
                             ..Default::default()
                         },
@@ -1407,24 +1466,37 @@ impl Input {
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
 
-                to_add.extend(to_add_buf);
-                *ins_sum += out_amount;
-                to_delete.push((
-                    self.out.as_ref().unwrap().clone(),
-                    self.witness.as_ref().unwrap().clone(),
-                ));
+                // Add amount to sums
+                if let Some(ins_sum) = coloured_ins_sums.get_mut(&colour_hash) {
+                    *ins_sum += out_amount;
+                } else {
+                    coloured_ins_sums.insert(colour_hash, out_amount);
+                }
+
                 Ok(())
             }
 
             InputFlags::FailableIsColouredHasSpendProof => {
                 let out = self.out.as_ref().unwrap();
-                let mut to_add_buf = vec![];
-                let out = if let Some(idx) =
-                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
-                {
-                    &to_add[*idx as usize]
+                let mut script_outs_hash_buf = vec![];
+                for t in out.script_outs.iter() {
+                    script_outs_hash_buf.extend(t.to_bytes());
+                }
+                let out = if let Some(idx) = idx_map.get(
+                    &(
+                        out.address.as_ref().unwrap(),
+                        &out.script_hash,
+                        &script_outs_hash_buf,
+                    )
+                        .into(),
+                ) {
+                    to_add[*idx as usize].clone()
                 } else {
-                    out
+                    to_delete.push((
+                        self.out.as_ref().unwrap().clone(),
+                        self.witness.as_ref().unwrap().clone(),
+                    ));
+                    out.clone()
                 };
                 let out_amount = out.amount;
 
@@ -1481,7 +1553,7 @@ impl Input {
                     .execute(
                         &self.script_args,
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1514,7 +1586,7 @@ impl Input {
                     .execute(
                         self.colour_script_args.as_ref().unwrap(),
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1533,7 +1605,7 @@ impl Input {
                             prev_block_hash: prev_block_hash.0,
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
-                            colour_hash: Some(colour_hash),
+                            colour_hash: Some(colour_hash.clone()),
                             can_fail: true,
                             is_colour_script: true,
                             ..Default::default()
@@ -1542,24 +1614,37 @@ impl Input {
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
 
-                to_add.extend(to_add_buf);
-                *ins_sum += out_amount;
-                to_delete.push((
-                    self.out.as_ref().unwrap().clone(),
-                    self.witness.as_ref().unwrap().clone(),
-                ));
+                // Add amount to sums
+                if let Some(ins_sum) = coloured_ins_sums.get_mut(&colour_hash) {
+                    *ins_sum += out_amount;
+                } else {
+                    coloured_ins_sums.insert(colour_hash, out_amount);
+                }
+
                 Ok(())
             }
 
             InputFlags::IsColouredHasSpendProofWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
-                let mut to_add_buf = vec![];
-                let out = if let Some(idx) =
-                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
-                {
-                    &to_add[*idx as usize]
+                let mut script_outs_hash_buf = vec![];
+                for t in out.script_outs.iter() {
+                    script_outs_hash_buf.extend(t.to_bytes());
+                }
+                let out = if let Some(idx) = idx_map.get(
+                    &(
+                        out.address.as_ref().unwrap(),
+                        &out.script_hash,
+                        &script_outs_hash_buf,
+                    )
+                        .into(),
+                ) {
+                    to_add[*idx as usize].clone()
                 } else {
-                    out
+                    to_delete.push((
+                        self.out.as_ref().unwrap().clone(),
+                        self.witness.as_ref().unwrap().clone(),
+                    ));
+                    out.clone()
                 };
                 let out_amount = out.amount;
 
@@ -1603,7 +1688,7 @@ impl Input {
                     .execute(
                         &self.script_args,
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1636,7 +1721,7 @@ impl Input {
                     .execute(
                         self.colour_script_args.as_ref().unwrap(),
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1656,7 +1741,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: false,
-                            colour_hash: Some(colour_hash),
+                            colour_hash: Some(colour_hash.clone()),
                             is_colour_script: true,
                             ..Default::default()
                         },
@@ -1664,24 +1749,37 @@ impl Input {
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
 
-                to_add.extend(to_add_buf);
-                *ins_sum += out_amount;
-                to_delete.push((
-                    self.out.as_ref().unwrap().clone(),
-                    self.witness.as_ref().unwrap().clone(),
-                ));
+                // Add amount to sums
+                if let Some(ins_sum) = coloured_ins_sums.get_mut(&colour_hash) {
+                    *ins_sum += out_amount;
+                } else {
+                    coloured_ins_sums.insert(colour_hash, out_amount);
+                }
+
                 Ok(())
             }
 
             InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
-                let mut to_add_buf = vec![];
-                let out = if let Some(idx) =
-                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
-                {
-                    &to_add[*idx as usize]
+                let mut script_outs_hash_buf = vec![];
+                for t in out.script_outs.iter() {
+                    script_outs_hash_buf.extend(t.to_bytes());
+                }
+                let out = if let Some(idx) = idx_map.get(
+                    &(
+                        out.address.as_ref().unwrap(),
+                        &out.script_hash,
+                        &script_outs_hash_buf,
+                    )
+                        .into(),
+                ) {
+                    to_add[*idx as usize].clone()
                 } else {
-                    out
+                    to_delete.push((
+                        self.out.as_ref().unwrap().clone(),
+                        self.witness.as_ref().unwrap().clone(),
+                    ));
+                    out.clone()
                 };
                 let out_amount = out.amount;
 
@@ -1726,7 +1824,7 @@ impl Input {
                     .execute(
                         &self.script_args,
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1759,7 +1857,7 @@ impl Input {
                     .execute(
                         self.colour_script_args.as_ref().unwrap(),
                         input_stack,
-                        &mut to_add_buf,
+                        to_add,
                         outs_sum,
                         coloured_ins_sums,
                         coloured_outs_sums,
@@ -1779,7 +1877,7 @@ impl Input {
                             in_binary: self.to_bytes_for_signing(),
                             spent_out: Some(out.clone()),
                             can_fail: true,
-                            colour_hash: Some(colour_hash),
+                            colour_hash: Some(colour_hash.clone()),
                             is_colour_script: true,
                             ..Default::default()
                         },
@@ -1787,20 +1885,30 @@ impl Input {
                     .0
                     .map_err(|_| TxVerifyErr::InvalidScriptExecution)?;
 
-                to_add.extend(to_add_buf);
-                *ins_sum += out_amount;
-                to_delete.push((
-                    self.out.as_ref().unwrap().clone(),
-                    self.witness.as_ref().unwrap().clone(),
-                ));
+                // Add amount to sums
+                if let Some(ins_sum) = coloured_ins_sums.get_mut(&colour_hash) {
+                    *ins_sum += out_amount;
+                } else {
+                    coloured_ins_sums.insert(colour_hash, out_amount);
+                }
+
                 Ok(())
             }
 
             InputFlags::HasSpendProof => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) =
-                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
-                {
+                let mut script_outs_hash_buf = vec![];
+                for t in out.script_outs.iter() {
+                    script_outs_hash_buf.extend(t.to_bytes());
+                }
+                let out = if let Some(idx) = idx_map.get(
+                    &(
+                        out.address.as_ref().unwrap(),
+                        &out.script_hash,
+                        &script_outs_hash_buf,
+                    )
+                        .into(),
+                ) {
                     &to_add[*idx as usize]
                 } else {
                     out
@@ -1884,9 +1992,18 @@ impl Input {
 
             InputFlags::FailableHasSpendProof => {
                 let out = self.out.as_ref().unwrap();
-                let out = if let Some(idx) =
-                    idx_map.get(&(out.address.as_ref().unwrap(), &out.script_hash).into())
-                {
+                let mut script_outs_hash_buf = vec![];
+                for t in out.script_outs.iter() {
+                    script_outs_hash_buf.extend(t.to_bytes());
+                }
+                let out = if let Some(idx) = idx_map.get(
+                    &(
+                        out.address.as_ref().unwrap(),
+                        &out.script_hash,
+                        &script_outs_hash_buf,
+                    )
+                        .into(),
+                ) {
                     &to_add[*idx as usize]
                 } else {
                     out

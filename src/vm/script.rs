@@ -277,6 +277,21 @@ impl Script {
     }
 
     #[must_use]
+    /// A simple spend script with an additional argument,
+    /// which will be pushed to the script outputs.
+    pub fn new_simple_spend_with_data() -> Script {
+        Script {
+            script: vec![
+                ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: data, out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOutVerify),
+            ],
+            malleable_args: bitvec_from_bools![false, false, false, false],
+            ..Script::default()
+        }
+    }
+
+    #[must_use]
     pub fn new_nop_script() -> Script {
         Script {
             script: vec![
@@ -292,7 +307,7 @@ impl Script {
     #[must_use]
     /// Returns a new script used to check if an amount of a specific asset is present in the input
     /// stack, and if the conidition passes, it will create an output with the desired amount to
-    /// the specified address. This requires the liquidity provider to approve and sign the taker's address.
+    /// the specified address.
     pub fn new_check_and_swap_to_address() -> Script {
         Script {
             script: vec![
@@ -7969,10 +7984,16 @@ impl ScriptExecutor {
                                         Some(address.clone())
                                     };
 
+                                    // Do this here otherwise we move the mutable ref
+                                    let mut script_outs_hash_buf = vec![];
+                                    for t in script_outputs.iter() {
+                                        script_outs_hash_buf.extend(t.to_bytes());
+                                    }
+
                                     let to_get = if let Some(addr) = &address {
-                                        (addr, &script_hash).into()
+                                        (addr, &script_hash, &script_outs_hash_buf).into()
                                     } else {
-                                        script_hash.clone()
+                                        (&script_hash, &script_outs_hash_buf).into()
                                     };
 
                                     let outs_sum = if let Some(colour_hash) = &flags.colour_hash {
@@ -8048,12 +8069,12 @@ impl ScriptExecutor {
                                         output.compute_hash(key);
                                         if let Some(address) = address {
                                             output_stack_idx_map.insert(
-                                                (&address, &script_hash).into(),
+                                                (&address, &script_hash, &script_outs_hash_buf).into(),
                                                 output_stack.len() as u16,
                                             );
                                         } else {
                                             output_stack_idx_map
-                                                .insert(script_hash, output_stack.len() as u16);
+                                                .insert((&script_hash, &script_outs_hash_buf).into(), output_stack.len() as u16);
                                         }
                                         output_stack.push(output);
                                         *script_outputs = vec![];
@@ -8126,10 +8147,16 @@ impl ScriptExecutor {
                                 Some(address.clone())
                             };
 
+                            // Do this here otherwise we move the mutable ref
+                            let mut script_outs_hash_buf = vec![];
+                            for t in script_outputs.iter() {
+                                script_outs_hash_buf.extend(t.to_bytes());
+                            }
+
                             let to_get = if let Some(addr) = &address {
-                                (addr, &script_hash).into()
+                                (addr, &script_hash, &script_outs_hash_buf).into()
                             } else {
-                                script_hash.clone()
+                                (&script_hash, &script_outs_hash_buf).into()
                             };
 
                             let outs_sum = if let Some(colour_hash) = &flags.colour_hash {
@@ -8205,12 +8232,12 @@ impl ScriptExecutor {
                                 output.compute_hash(key);
                                 if let Some(address) = address {
                                     output_stack_idx_map.insert(
-                                        (&address, &script_hash).into(),
+                                        (&address, &script_hash, &script_outs_hash_buf).into(),
                                         output_stack.len() as u16,
                                     );
                                 } else {
                                     output_stack_idx_map
-                                        .insert(script_hash, output_stack.len() as u16);
+                                        .insert((&script_hash, &script_outs_hash_buf).into(), output_stack.len() as u16);
                                 }
                                 output_stack.push(output);
                                 *script_outputs = vec![];
