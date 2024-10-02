@@ -4,7 +4,10 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
-use crate::consensus::*;
+use crate::consensus::{
+    Money, ADAPTOR_CERT_CTX, INLINE_VERIFICATION_CTX, MAX_FRAMES, MAX_OUT_STACK, MAX_SCRIPTS,
+    MEMORY_SIZE, SCRIPT_GAS_LIMIT, STACK_SIZE, TRACE_SIZE,
+};
 use crate::primitives::Hash256;
 use crate::primitives::{Address, Hash160, Input, Output};
 use crate::vm::internal::{Float32Wrapper, Float64Wrapper, VmTerm, EMPTY_VEC_HEAP_SIZE};
@@ -53,11 +56,11 @@ pub struct Frame {
     /// Func index. This is `None` if the current function is the main function
     pub func_idx: Option<usize>,
 
-    /// Some((start_ip, end_ip)) if the current frame is a loop start_ip is the
-    /// instruction pointer at the beginning of the loop and end_ip at the end.
+    /// `Some((start_ip, end_ip))` if the current frame is a loop `start_ip` is the
+    /// instruction pointer at the beginning of the loop and `end_ip` at the end.
     pub is_loop: Option<(usize, usize)>,
 
-    /// An array of (start_ip, end_ip) marking the start and the end of the
+    /// An array of `(start_ip, end_ip)` marking the start and the end of the
     /// control operator blocks that are currently executed
     pub is_control_op: Vec<(usize, usize)>,
 
@@ -273,6 +276,78 @@ impl Script {
         }
     }
 
+    #[must_use]
+    /// A simple spend script with an additional argument,
+    /// which will be pushed to the script outputs.
+    pub fn new_simple_spend_with_data() -> Script {
+        Script {
+            script: vec![
+                ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: data, out_amount, out_address, out_script_hash
+                ScriptEntry::Opcode(OP::PopToScriptOuts),
+                ScriptEntry::Opcode(OP::PushOutVerify),
+            ],
+            malleable_args: bitvec_from_bools![false, false, false, false],
+            ..Script::default()
+        }
+    }
+
+    #[must_use]
+    pub fn new_nop_script() -> Script {
+        Script {
+            script: vec![
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::Nop),
+                ScriptEntry::Opcode(OP::Ok),
+            ],
+            malleable_args: bitvec_from_bools![],
+            ..Script::default()
+        }
+    }
+
+    #[must_use]
+    /// Returns a new script used to check if an amount of a specific asset is present in the input
+    /// stack, and if the conidition passes, it will create an output with the desired amount to
+    /// the specified address.
+    pub fn new_check_and_swap_to_address() -> Script {
+        Script {
+            script: vec![
+                ScriptEntry::Byte(0x04), // 4 arguments are pushed onto the stack: in_asset_hash, out_address, rate, min_amount
+                ScriptEntry::Opcode(OP::OutputsLen), // Push the outputs len onto the stack so we can loop through them
+                ScriptEntry::Opcode(OP::ZeroOfType), // Sum variable
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Opcode(OP::ZeroOfType), // Push 0 counter
+                ScriptEntry::Byte(0x04),
+                ScriptEntry::Opcode(OP::Loop), // Loop through outputs
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::ColourHash), // Check colour hash
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x07),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::ContinueIfNeq),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::GetOutAmount),
+                ScriptEntry::Opcode(OP::Rot),
+                ScriptEntry::Opcode(OP::Add),
+                ScriptEntry::Opcode(OP::Swap),
+                ScriptEntry::Opcode(OP::Add1),
+                ScriptEntry::Opcode(OP::Dup),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::BreakIfEq),
+                ScriptEntry::Opcode(OP::End),
+                ScriptEntry::Opcode(OP::Swap),
+                ScriptEntry::Opcode(OP::Pick),
+                ScriptEntry::Byte(0x03),
+                ScriptEntry::Byte(0x00),
+                ScriptEntry::Opcode(OP::TrapIfGt), // Check sum against min amount
+                ScriptEntry::Opcode(OP::PushOutVerify),
+            ],
+            malleable_args: bitvec_from_bools![false, false, false, false],
+            ..Script::default()
+        }
+    }
+
     /// Utility to populate `malleable_args` field in tests.
     #[cfg(test)]
     pub fn populate_malleable_args_field(&mut self) {
@@ -451,11 +526,11 @@ impl Script {
                         }
 
                         ScriptExecutorState::NewCallBodyFrame(script_hash, script) => {
-                            let script_hash = script_hash.clone();
+                            let script_hash = *script_hash;
                             let script_clone = script.clone();
 
                             // Load the script and push script ref to the script stack
-                            script_storage.insert(script_hash.clone(), script_clone.clone());
+                            script_storage.insert(script_hash, script_clone.clone());
                             new_script = Some(script_clone);
 
                             // Create new frame
@@ -1507,7 +1582,7 @@ impl Script {
 
                             let term = VmTerm::UnsignedBigArray(arr);
                             memory_size += term.size();
-                            exec_count += term.size() as u64 + 2 * (len as u64 + 1);
+                            exec_count += term.size() as u64 + 2 * (u64::from(len) + 1);
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -1741,7 +1816,7 @@ impl Script {
 
                             let term = VmTerm::SignedBigArray(arr);
                             memory_size += term.size();
-                            exec_count += term.size() as u64 + 2 * (len as u64 + 1);
+                            exec_count += term.size() as u64 + 2 * (u64::from(len) + 1);
                             frame.stack.push(term);
                             frame.executor.state = ScriptExecutorState::ExpectingInitialOP;
                             frame.i_ptr += 1;
@@ -6656,7 +6731,7 @@ impl Script {
                                                     0x0e => match v.try_into() {
                                                         Ok(v) => {
                                                             let mut v: IBig = v;
-                                                            v = v * ibig!(-1);
+                                                            v *= ibig!(-1);
                                                             let term = VmTerm::SignedBig(v);
                                                             memory_size += term.size();
                                                             frame.stack.push(term);
@@ -7635,7 +7710,7 @@ impl ScriptExecutor {
                                     // Create the context string and context
                                     let mut ctx_buf = network_name.to_owned();
                                     ctx_buf.push_str(ADAPTOR_CERT_CTX);
-                                    let ctx = signing_context(ctx_buf.as_str().as_bytes());
+                                    let ctx = signing_context(ctx_buf.as_bytes());
 
                                     let mut cert_buf = [0; 32];
                                     cert_buf.copy_from_slice(cert.as_slice());
@@ -7709,7 +7784,7 @@ impl ScriptExecutor {
                                     // Create the context string and context
                                     let mut ctx_buf = key.to_owned();
                                     ctx_buf.push_str(ADAPTOR_CERT_CTX);
-                                    let ctx = signing_context(ctx_buf.as_str().as_bytes());
+                                    let ctx = signing_context(ctx_buf.as_bytes());
 
                                     let mut cert_buf = [0; 32];
                                     cert_buf.copy_from_slice(cert.as_slice());
@@ -7909,10 +7984,29 @@ impl ScriptExecutor {
                                         Some(address.clone())
                                     };
 
+                                    // Do this here otherwise we move the mutable ref
+                                    let mut script_outs_hash_buf = vec![];
+                                    for t in script_outputs.iter() {
+                                        script_outs_hash_buf.extend(t.to_bytes());
+                                    }
+
                                     let to_get = if let Some(addr) = &address {
-                                        (addr, &script_hash).into()
+                                        (addr, &script_hash, &script_outs_hash_buf).into()
                                     } else {
-                                        script_hash.clone()
+                                        (&script_hash, &script_outs_hash_buf).into()
+                                    };
+
+                                    let outs_sum = if let Some(colour_hash) = &flags.colour_hash {
+                                        if let Some(outs_sum) =
+                                            coloured_outs_sums.get_mut(colour_hash)
+                                        {
+                                            outs_sum
+                                        } else {
+                                            coloured_outs_sums.insert(colour_hash.clone(), 0);
+                                            coloured_outs_sums.get_mut(colour_hash).unwrap()
+                                        }
+                                    } else {
+                                        outs_sum
                                     };
 
                                     if let Some(idx) = output_stack_idx_map.get(&to_get) {
@@ -7932,9 +8026,9 @@ impl ScriptExecutor {
                                         *outs_sum += amount;
                                         output_stack[*idx as usize].amount += amount;
                                         output_stack[*idx as usize].inputs_hash = inputs_hash;
-                                        output_stack[*idx as usize].compute_hash(key);
                                         output_stack[*idx as usize].script_outs =
                                             script_outputs.clone();
+                                        output_stack[*idx as usize].compute_hash(key);
 
                                         *script_outputs = vec![];
                                     } else {
@@ -7975,12 +8069,15 @@ impl ScriptExecutor {
                                         output.compute_hash(key);
                                         if let Some(address) = address {
                                             output_stack_idx_map.insert(
-                                                (&address, &script_hash).into(),
+                                                (&address, &script_hash, &script_outs_hash_buf)
+                                                    .into(),
                                                 output_stack.len() as u16,
                                             );
                                         } else {
-                                            output_stack_idx_map
-                                                .insert(script_hash, output_stack.len() as u16);
+                                            output_stack_idx_map.insert(
+                                                (&script_hash, &script_outs_hash_buf).into(),
+                                                output_stack.len() as u16,
+                                            );
                                         }
                                         output_stack.push(output);
                                         *script_outputs = vec![];
@@ -8053,10 +8150,27 @@ impl ScriptExecutor {
                                 Some(address.clone())
                             };
 
+                            // Do this here otherwise we move the mutable ref
+                            let mut script_outs_hash_buf = vec![];
+                            for t in script_outputs.iter() {
+                                script_outs_hash_buf.extend(t.to_bytes());
+                            }
+
                             let to_get = if let Some(addr) = &address {
-                                (addr, &script_hash).into()
+                                (addr, &script_hash, &script_outs_hash_buf).into()
                             } else {
-                                script_hash.clone()
+                                (&script_hash, &script_outs_hash_buf).into()
+                            };
+
+                            let outs_sum = if let Some(colour_hash) = &flags.colour_hash {
+                                if let Some(outs_sum) = coloured_outs_sums.get_mut(colour_hash) {
+                                    outs_sum
+                                } else {
+                                    coloured_outs_sums.insert(colour_hash.clone(), 0);
+                                    coloured_outs_sums.get_mut(colour_hash).unwrap()
+                                }
+                            } else {
+                                outs_sum
                             };
 
                             if let Some(idx) = output_stack_idx_map.get(&to_get) {
@@ -8075,8 +8189,8 @@ impl ScriptExecutor {
                                 *outs_sum += amount;
                                 output_stack[*idx as usize].amount += amount;
                                 output_stack[*idx as usize].inputs_hash = inputs_hash;
-                                output_stack[*idx as usize].compute_hash(key);
                                 output_stack[*idx as usize].script_outs = script_outputs.clone();
+                                output_stack[*idx as usize].compute_hash(key);
 
                                 *script_outputs = vec![];
                             } else {
@@ -8121,12 +8235,14 @@ impl ScriptExecutor {
                                 output.compute_hash(key);
                                 if let Some(address) = address {
                                     output_stack_idx_map.insert(
-                                        (&address, &script_hash).into(),
+                                        (&address, &script_hash, &script_outs_hash_buf).into(),
                                         output_stack.len() as u16,
                                     );
                                 } else {
-                                    output_stack_idx_map
-                                        .insert(script_hash, output_stack.len() as u16);
+                                    output_stack_idx_map.insert(
+                                        (&script_hash, &script_outs_hash_buf).into(),
+                                        output_stack.len() as u16,
+                                    );
                                 }
                                 output_stack.push(output);
                                 *script_outputs = vec![];
@@ -8386,20 +8502,18 @@ impl ScriptExecutor {
                             exec_stack.push(VmTerm::Hash160([0; 20]));
                             *memory_size += 20;
                         }
-                    } else {
-                        if flags.is_coinbase {
-                            if let Some(colour_hash) = &flags.colour_hash {
-                                exec_stack.push(VmTerm::Hash160(colour_hash.0));
-                                *memory_size += 20;
-                            } else {
-                                self.state = ScriptExecutorState::Error(
-                                    ExecutionResult::InvalidOPForCoinbaseInput,
-                                    (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
-                                );
-                            }
+                    } else if flags.is_coinbase {
+                        if let Some(colour_hash) = &flags.colour_hash {
+                            exec_stack.push(VmTerm::Hash160(colour_hash.0));
+                            *memory_size += 20;
                         } else {
-                            unreachable!();
+                            self.state = ScriptExecutorState::Error(
+                                ExecutionResult::InvalidOPForCoinbaseInput,
+                                (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
+                            );
                         }
+                    } else {
+                        unreachable!();
                     }
                 }
 
@@ -9428,7 +9542,7 @@ impl ScriptExecutor {
 
                     let copy = exec_stack.clone();
                     *exec_count += copy.len() as u64;
-                    for t in copy.iter() {
+                    for t in &copy {
                         *memory_size += t.size();
                     }
                     exec_stack.extend_from_slice(&copy);
@@ -9470,7 +9584,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomHash160Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9482,7 +9596,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomHash256Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9494,7 +9608,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomHash512Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9506,7 +9620,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomUnsigned8Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9518,7 +9632,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomUnsigned16Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9530,7 +9644,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomUnsigned32Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9542,7 +9656,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomUnsigned64Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9554,7 +9668,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomUnsigned128Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9566,7 +9680,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomSigned8Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9578,7 +9692,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomSigned16Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9590,7 +9704,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomSigned32Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9602,7 +9716,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomSigned64Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9614,7 +9728,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomSigned128Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9626,7 +9740,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomFloat32Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9638,7 +9752,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomFloat64Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9650,7 +9764,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomDecimalVar) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -10645,20 +10759,20 @@ impl ScriptExecutor {
 
                     match (second, last) {
                         (VmTerm::Float32(v), VmTerm::Unsigned8(dec)) => {
-                            let y = 10i32.pow(dec as u32) as f32;
+                            let y = 10i32.pow(u32::from(dec)) as f32;
                             let rounded = (v.0 * y).round() / y;
                             exec_stack.push(VmTerm::Float32(Float32Wrapper(rounded)));
                             *memory_size += 4;
                         }
                         (VmTerm::Float64(v), VmTerm::Unsigned8(dec)) => {
-                            let y = 10i32.pow(dec as u32) as f64;
+                            let y = f64::from(10i32.pow(u32::from(dec)));
                             let rounded = (v.0 * y).round() / y;
                             exec_stack.push(VmTerm::Float64(Float64Wrapper(rounded)));
                             *memory_size += 8;
                         }
                         (VmTerm::Decimal(v), VmTerm::Unsigned8(dec)) => {
                             let rounded = v.round_dp_with_strategy(
-                                dec as u32,
+                                u32::from(dec),
                                 RoundingStrategy::MidpointTowardZero,
                             );
                             exec_stack.push(VmTerm::Decimal(rounded));
@@ -12489,7 +12603,7 @@ enum ScriptExecutorState {
     /// None, the `If` block was executed and got to its end, block will be exited
     ControlOperator(Option<bool>),
 
-    /// We hit an OP_ReturnFunc
+    /// We hit an `OP_ReturnFunc`
     ReturnFunc,
 
     /// Return success code and push message and signature to the verification stack
@@ -13249,19 +13363,19 @@ enum ScriptParserState {
     /// Expecting function arguments length
     ExpectingFuncArgsLen,
 
-    /// Expecting script flags. The state tuple is (remaining_bitmaps, args_len, bitmaps_vec)
+    /// Expecting script flags. The state tuple is (`remaining_bitmaps`, `args_len`, `bitmaps_vec`)
     ExpectingScriptFlags(u8, u8, BitVec),
 
     /// Expecting any OP
     ExpectingOP,
 
-    /// Expecting any OP except OP_Func or OP_End
+    /// Expecting any OP except `OP_Func` or `OP_End`
     ExpectingOPButNotFuncOrEnd,
 
     /// Expecting any OP while also tracking the Control Flow
     ExpectingOPCF(Vec<ControlFlowState>, bool),
 
-    /// Expecting n bytes. The state tuple is (num_bytes, cf_stack, funcs_allowed)
+    /// Expecting n bytes. The state tuple is (`num_bytes`, `cf_stack`, `funcs_allowed`)
     ExpectingBytes(usize, Option<Vec<ControlFlowState>>, bool),
 
     /// Expecting length for for OP
@@ -13335,8 +13449,8 @@ pub enum ExecutionResult {
     /// VM ran out of gas
     OutOfGas,
 
-    /// This opcode is only allowed in a failable input
-    OpcodeAllowedOnlyInFailableInput,
+    /// This opcode is only allowed in a fallible input
+    OpcodeAllowedOnlyInFallibleInput,
 
     /// VM Term overflow
     TermOverflow,
@@ -30216,8 +30330,9 @@ mod tests {
             ..Script::default()
         };
 
-        let mut script_output: Vec<VmTerm> =
-            vec![VmTerm::UnsignedBig(ubig!(13535335215315315311613663))];
+        let mut script_output: Vec<VmTerm> = vec![VmTerm::UnsignedBig(ubig!(
+            13_535_335_215_315_315_311_613_663
+        ))];
         assert_script_ok(ss, script_output, key);
     }
 
@@ -30265,7 +30380,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> = vec![
-            VmTerm::UnsignedBig(ubig!(13535335215315315311613663)),
+            VmTerm::UnsignedBig(ubig!(13_535_335_215_315_315_311_613_663)),
             VmTerm::UnsignedBig(ubig!(3535)),
             VmTerm::UnsignedBig(ubig!(0)),
         ];
@@ -30302,7 +30417,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> =
-            vec![VmTerm::SignedBig(ibig!(13535335215315315311613663))];
+            vec![VmTerm::SignedBig(ibig!(13_535_335_215_315_315_311_613_663))];
         assert_script_ok(ss, script_output, key);
     }
 
@@ -30349,7 +30464,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> = vec![
-            VmTerm::SignedBig(ibig!(13535335215315315311613663)),
+            VmTerm::SignedBig(ibig!(13_535_335_215_315_315_311_613_663)),
             VmTerm::SignedBig(ibig!(3535)),
             VmTerm::SignedBig(ibig!(0)),
         ];
@@ -30398,7 +30513,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> = vec![VmTerm::UnsignedBigArray(vec![
-            ubig!(13535335215315315311613663),
+            ubig!(13_535_335_215_315_315_311_613_663),
             ubig!(3535),
             ubig!(0),
         ])];
@@ -30446,7 +30561,7 @@ mod tests {
         };
 
         let mut script_output: Vec<VmTerm> = vec![VmTerm::SignedBigArray(vec![
-            ibig!(13535335215315315311613663),
+            ibig!(13_535_335_215_315_315_311_613_663),
             ibig!(3535),
             ibig!(0),
         ])];

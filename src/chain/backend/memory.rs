@@ -27,7 +27,7 @@ type DataStore = Trie<Vec<u8>, Vec<u8>>;
 #[derive(Debug, Clone, Default)]
 pub struct MemoryBackend {
     /// Underlying data store. TODO: This isn't very performant and should
-    /// be modelled as column families to reflect RocksDB.
+    /// be modelled as column families to reflect `RocksDB`.
     data: Arc<RwLock<DataStore>>,
 
     /// Sector config

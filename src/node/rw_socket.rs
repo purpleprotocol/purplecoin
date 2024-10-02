@@ -66,7 +66,7 @@ pub async fn read_varint(socket: &mut (impl AsyncRead + Unpin)) -> Result<usize,
     let mut buffer_len = 0;
 
     loop {
-        match socket.read(&mut buffer[buffer_len..buffer_len + 1]).await? {
+        match socket.read(&mut buffer[buffer_len..=buffer_len]).await? {
             0 => {
                 // Reaching EOF before finishing to read the length is an error, unless the EOF is
                 // at the very beginning of the substream, in which case we assume that the data is
@@ -100,7 +100,7 @@ pub async fn read_varint(socket: &mut (impl AsyncRead + Unpin)) -> Result<usize,
 /// Reads a length-prefixed message from the given socket.
 ///
 /// The `max_size` parameter is the maximum size in bytes of the message that we accept. This is
-/// necessary in order to avoid DoS attacks where the remote sends us a message of several
+/// necessary in order to avoid `DoS` attacks where the remote sends us a message of several
 /// gigabytes.
 ///
 /// > **Note**: Assumes that a variable-length prefix indicates the length of the message. This is
@@ -113,10 +113,7 @@ pub async fn read_length_prefixed(
     if len > max_size {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!(
-                "Received data size ({} bytes) exceeds maximum ({} bytes)",
-                len, max_size
-            ),
+            format!("Received data size ({len} bytes) exceeds maximum ({max_size} bytes)"),
         ));
     }
 

@@ -133,10 +133,10 @@ pub fn map_height_to_block_reward(height: u64) -> Money {
 }
 
 #[must_use]
-/// Returns the eligible shard to receive the PoW reward based
+/// Returns the eligible shard to receive the `PoW` reward based
 /// on the current height and the sector id.
 pub fn map_height_to_chain_id_for_reward(height: u64, sector_id: u8) -> u8 {
-    ((height % SHARDS_PER_SECTOR as u64) + (sector_id as u64 * SHARDS_PER_SECTOR as u64)) as u8
+    ((height % SHARDS_PER_SECTOR as u64) + (u64::from(sector_id) * SHARDS_PER_SECTOR as u64)) as u8
 }
 
 /// Calculate new bits based on blocktime and old bits

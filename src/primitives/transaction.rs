@@ -75,26 +75,33 @@ impl Transaction {
         let mut outs_sum: Money = 0;
         let mut coloured_ins_sums = HashMap::new();
         let mut coloured_outs_sums = HashMap::new();
+        let mut to_add_temp = vec![];
+        let mut to_delete_temp = vec![];
 
         // Verify inputs
         for (i, input) in self.ins.iter().enumerate() {
             let nonce = (i as u64).to_le_bytes();
             let input_seed_bytes: &[u8] = &[tx_seed_bytes, nonce.as_slice()].concat();
+            let mut temp_ins_sum = 0;
+            let mut temp_outs_sum = 0;
+            // TODO: Only do this on fallible inputs
+            let to_add_bak = to_add_temp.clone();
+            let to_delete_bak = to_delete_temp.clone();
 
             let result = input.verify(
                 key,
                 height,
                 chain_id,
-                &mut ins_sum,
-                &mut outs_sum,
+                &mut temp_ins_sum,
+                &mut temp_outs_sum,
                 &mut coloured_ins_sums,
                 &mut coloured_outs_sums,
                 timestamp,
                 &block_reward,
                 prev_block_hash,
                 coinbase_allowed,
-                to_add,
-                to_delete,
+                &mut to_add_temp,
+                &mut to_delete_temp,
                 ver_stack,
                 idx_map,
                 input_seed_bytes,
@@ -102,10 +109,45 @@ impl Transaction {
                 validate_coloured_coinbase,
             );
 
-            match (result, input.is_failable()) {
-                (Err(err), false) => return Err(err), // Not failable so the whole transaction is invalid
+            match (result, input.is_fallible()) {
+                (Err(err), false) => return Err(err), // Not fallible so the whole transaction is invalid
                 (Err(_), true) => break, // Stop the rest of the transaction execution at this point
-                _ => {}
+                (Ok(()), true) => {
+                    // Check that the sum of inputs is greater than that of the outputs
+                    if temp_ins_sum < temp_outs_sum {
+                        // Revert state. TODO: Optimise this. Simply pop the extra state.
+                        to_add_temp = to_add_bak;
+                        to_delete_temp = to_delete_bak;
+                        break;
+                    }
+
+                    if input.is_coloured() {
+                        let mut b = false;
+                        // Verify coloured sums
+                        for (k, ins_sum) in &coloured_ins_sums {
+                            let outs_sum = coloured_outs_sums.get(k).unwrap_or(&0);
+                            if ins_sum < outs_sum {
+                                b = true;
+                                break;
+                            }
+                        }
+                        if b {
+                            // Revert state. TODO: Optimise this. Simply pop the extra state.
+                            to_add_temp = to_add_bak;
+                            to_delete_temp = to_delete_bak;
+                            break;
+                        }
+                    } else {
+                        // Execution succeeded, flush changes.
+                        ins_sum += temp_ins_sum;
+                        outs_sum += temp_outs_sum;
+                    }
+                }
+                _ => {
+                    // Execution succeeded, flush changes.
+                    ins_sum += temp_ins_sum;
+                    outs_sum += temp_outs_sum;
+                }
             }
         }
 
@@ -115,12 +157,16 @@ impl Transaction {
         }
 
         // Verify coloured sums
-        for (k, ins_sum) in coloured_ins_sums.iter() {
+        for (k, ins_sum) in &coloured_ins_sums {
             let outs_sum = coloured_outs_sums.get(k).unwrap_or(&0);
             if ins_sum < outs_sum {
                 return Err(TxVerifyErr::InvalidAmount);
             }
         }
+
+        // Execution succeeded, flush changes.
+        to_add.extend(to_add_temp);
+        to_delete.extend(to_delete_temp);
 
         Ok(ins_sum - outs_sum)
     }
@@ -192,7 +238,7 @@ impl TransactionWithSignatures {
             if let Some(pub_key) = &input.spending_pkey {
                 let bytes = input.to_bytes_for_signing();
                 transcripts.push(bytes);
-                public_keys.push(pub_key.0.clone());
+                public_keys.push(pub_key.0);
             }
         }
 
@@ -288,4 +334,523 @@ impl From<TransactionWithFee> for Transaction {
     fn from(other: TransactionWithFee) -> Self {
         other.tx.tx
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::primitives::{
+        compute_colour_hash, ColouredAddress, InputFlags, Keypair, NOP_SCRIPT_EMITTER_KEYPAIR,
+    };
+    use crate::vm::internal::VmTerm;
+    use crate::vm::Script;
+
+    fn xpu_ss_input_to_address_of_amount(amount: Money, to: Address, key: &str) -> Input {
+        let keypair = Keypair::new();
+        let address = keypair.to_address();
+        let script = Script::new_simple_spend();
+        let script_hash = script.to_script_hash(key);
+        let mut out = Output {
+            amount: amount + 10, // Add some psats for a tx fee
+            script_hash: script_hash.clone(),
+            address: Some(address),
+            inputs_hash: Hash160::random(),
+            idx: 0,
+            coloured_address: None,
+            coinbase_height: None,
+            script_outs: vec![],
+            hash: None,
+        };
+
+        out.compute_hash(key);
+
+        let mut input = Input {
+            out: Some(out),
+            script,
+            input_flags: InputFlags::Plain,
+            spending_pkey: Some(keypair.public()),
+            script_args: vec![
+                VmTerm::Signed128(amount),
+                VmTerm::Hash160(to.0),
+                VmTerm::Hash160(script_hash.0),
+            ],
+            witness: Some(accumulator::Witness::empty()),
+            ..Default::default()
+        };
+        input.compute_hash(key);
+        input
+    }
+
+    fn xpu_ss_fallible_input_to_address_of_amount(amount: Money, to: Address, key: &str) -> Input {
+        let keypair = Keypair::new();
+        let address = keypair.to_address();
+        let script = Script::new_simple_spend();
+        let script_hash = script.to_script_hash(key);
+        let mut out = Output {
+            amount: amount + 10, // Add some psats for a tx fee
+            script_hash: script_hash.clone(),
+            address: Some(address),
+            inputs_hash: Hash160::random(),
+            idx: 0,
+            coloured_address: None,
+            coinbase_height: None,
+            script_outs: vec![],
+            hash: None,
+        };
+
+        out.compute_hash(key);
+
+        let mut input = Input {
+            out: Some(out),
+            script,
+            input_flags: InputFlags::FalliblePlain,
+            spending_pkey: Some(keypair.public()),
+            script_args: vec![
+                VmTerm::Signed128(amount),
+                VmTerm::Hash160(to.0),
+                VmTerm::Hash160(script_hash.0),
+            ],
+            witness: Some(accumulator::Witness::empty()),
+            ..Default::default()
+        };
+        input.compute_hash(key);
+        input
+    }
+
+    fn xpu_ss_input_to_address_of_amount_with_data(
+        amount: Money,
+        to: Address,
+        key: &str,
+        data: VmTerm,
+    ) -> Input {
+        let keypair = Keypair::new();
+        let address = keypair.to_address();
+        let script = Script::new_simple_spend_with_data();
+        let script_hash = script.to_script_hash(key);
+        let mut out = Output {
+            amount: amount + 10, // Add some psats for a tx fee
+            script_hash: script_hash.clone(),
+            address: Some(address),
+            inputs_hash: Hash160::random(),
+            idx: 0,
+            coloured_address: None,
+            coinbase_height: None,
+            script_outs: vec![],
+            hash: None,
+        };
+
+        out.compute_hash(key);
+
+        let mut input = Input {
+            out: Some(out),
+            script,
+            input_flags: InputFlags::Plain,
+            spending_pkey: Some(keypair.public()),
+            script_args: vec![
+                data,
+                VmTerm::Signed128(amount),
+                VmTerm::Hash160(to.0),
+                VmTerm::Hash160(script_hash.0),
+            ],
+            witness: Some(accumulator::Witness::empty()),
+            ..Default::default()
+        };
+        input.compute_hash(key);
+        input
+    }
+
+    fn ss_input_to_address_of_asset_and_amount(
+        amount: Money,
+        to: ColouredAddress,
+        key: &str,
+    ) -> Input {
+        let keypair = Keypair::new();
+        let colour_script = Script::new_nop_script();
+        let (colour_hash, colour_kernel) =
+            compute_colour_hash(&colour_script, &[], &NOP_SCRIPT_EMITTER_KEYPAIR.public());
+        let address = keypair.to_coloured_address(&colour_hash);
+        let script = Script::new_simple_spend();
+        let script_hash = script.to_script_hash(key);
+        let mut out = Output {
+            amount,
+            script_hash: script_hash.clone(),
+            coloured_address: Some(address),
+            inputs_hash: Hash160::random(),
+            idx: 0,
+            address: None,
+            coinbase_height: None,
+            script_outs: vec![],
+            hash: None,
+        };
+
+        out.compute_hash(key);
+
+        let mut input = Input {
+            out: Some(out),
+            script,
+            colour_script: Some(colour_script),
+            colour_script_args: Some(vec![]),
+            input_flags: InputFlags::IsColoured,
+            spending_pkey: Some(keypair.public()),
+            colour_kernel: Some(colour_kernel),
+            script_args: vec![
+                VmTerm::Signed128(amount),
+                VmTerm::Hash160(to.address),
+                VmTerm::Hash160(script_hash.0),
+            ],
+            witness: Some(accumulator::Witness::empty()),
+            ..Default::default()
+        };
+        input.compute_hash(key);
+        input
+    }
+
+    struct ExecResult {
+        pub to_add: Vec<Output>,
+        pub to_delete: Vec<(
+            Output,
+            accumulator::Witness<accumulator::group::Rsa2048, Output>,
+        )>,
+        pub idx_map: HashMap<Hash160, u16>,
+        pub ver_stack: VerificationStack,
+    }
+
+    /// Helper to execute a simple transaction
+    fn exec_tx(tx: &Transaction, key: &str, cb: impl Fn(Result<Money, TxVerifyErr>, ExecResult)) {
+        let mut to_add = vec![];
+        let mut to_delete = vec![];
+        let mut idx_map = HashMap::new();
+        let mut ver_stack = VerificationStack::new();
+
+        let result = tx.verify_single(
+            key,
+            0,
+            0,
+            0,
+            Hash256::zero(),
+            0,
+            false,
+            &mut to_add,
+            &mut to_delete,
+            &mut ver_stack,
+            &mut idx_map,
+            &[0; 32],
+            |_| Ok(()),
+        );
+
+        cb(
+            result,
+            ExecResult {
+                to_add,
+                to_delete,
+                idx_map,
+                ver_stack,
+            },
+        );
+    }
+
+    macro_rules! tx {
+        ($($x:expr),+ $(,)?) => (
+            Transaction {
+                chain_id: 0,
+                ins: vec![$($x),+],
+                hash: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_simple_spend() {
+        let address = Address::random();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let tx = tx![xpu_ss_input_to_address_of_amount(
+            amount,
+            address.clone(),
+            key,
+        )];
+
+        exec_tx(&tx, key, |res, data| {
+            let script = Script::new_simple_spend();
+            let script_hash = script.to_script_hash(key);
+
+            assert_eq!(res.unwrap(), 10); // Check tx fee
+            assert_eq!(data.to_add.len(), 1);
+            assert_eq!(data.to_delete.len(), 1);
+            assert_eq!(data.to_add[0].amount, amount); // Check out amount
+            assert_eq!(data.to_add[0].address.as_ref().unwrap(), &address); // Check receiver address
+            assert_eq!(data.to_add[0].script_hash, script_hash); // Check script hash
+        });
+    }
+
+    #[test]
+    fn two_simple_spends() {
+        let address = Address::random();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let tx = tx![
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key),
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key)
+        ];
+
+        exec_tx(&tx, key, |res, data| {
+            let script = Script::new_simple_spend();
+            let script_hash = script.to_script_hash(key);
+
+            assert_eq!(res.unwrap(), 20); // Check tx fee
+            assert_eq!(data.to_add.len(), 1);
+            assert_eq!(data.to_delete.len(), 2);
+            assert_eq!(data.to_add[0].amount, amount * 2); // Check out amount
+            assert_eq!(data.to_add[0].address.as_ref().unwrap(), &address); // Check receiver address
+            assert_eq!(data.to_add[0].script_hash, script_hash); // Check script hash
+        });
+    }
+
+    #[test]
+    fn fails_on_sum_of_inputs_lower_than_of_outputs() {
+        let address = Address::random();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let mut input = xpu_ss_input_to_address_of_amount(amount, address.clone(), key);
+        input.script_args[0] = VmTerm::Signed128(10_000_000_000);
+        let tx = tx![input];
+
+        exec_tx(&tx, key, |res, data| {
+            assert_eq!(res, Err(TxVerifyErr::InvalidAmount));
+            assert_eq!(data.to_add.len(), 0);
+            assert_eq!(data.to_delete.len(), 0);
+        });
+    }
+
+    #[test]
+    fn fails_on_sum_of_inputs_lower_than_of_outputs_2() {
+        let address = Address::random();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let mut input = xpu_ss_input_to_address_of_amount(amount, address.clone(), key);
+        input.script_args[0] = VmTerm::Signed128(10_000_000_000);
+        let tx = tx![
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key),
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key),
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key),
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key),
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key),
+            input,
+        ];
+
+        exec_tx(&tx, key, |res, data| {
+            assert_eq!(res, Err(TxVerifyErr::InvalidAmount));
+            assert_eq!(data.to_add.len(), 0);
+            assert_eq!(data.to_delete.len(), 0);
+        });
+    }
+
+    #[test]
+    fn partially_fails_on_sum_of_inputs_lower_than_of_outputs() {
+        let address = Address::random();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let mut input = xpu_ss_fallible_input_to_address_of_amount(amount, address.clone(), key);
+        input.script_args[0] = VmTerm::Signed128(10_000_000_000);
+        let tx = tx![
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key),
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key),
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key),
+            input,
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key),
+            xpu_ss_input_to_address_of_amount(amount, address.clone(), key),
+        ];
+
+        exec_tx(&tx, key, |res, data| {
+            assert!(res.is_ok());
+            assert_eq!(data.to_add.len(), 1);
+            assert_eq!(data.to_delete.len(), 3);
+        });
+    }
+
+    #[test]
+    fn test_coloured_simple_spend() {
+        let address = ColouredAddress::random_nop_script();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let tx = tx![ss_input_to_address_of_asset_and_amount(
+            amount,
+            address.clone(),
+            key,
+        )];
+
+        exec_tx(&tx, key, |res, data| {
+            let script = Script::new_simple_spend();
+            let script_hash = script.to_script_hash(key);
+
+            assert_eq!(res, Ok(0));
+            assert_eq!(data.to_add.len(), 1);
+            assert_eq!(data.to_delete.len(), 1);
+            assert_eq!(data.to_add[0].amount, amount); // Check out amount
+            assert_eq!(data.to_add[0].coloured_address.as_ref().unwrap(), &address); // Check receiver address
+            assert_eq!(data.to_add[0].script_hash, script_hash); // Check script hash
+        });
+    }
+
+    #[test]
+    fn two_coloured_simple_spends() {
+        let address = ColouredAddress::random_nop_script();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let tx = tx![
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key)
+        ];
+
+        exec_tx(&tx, key, |res, data| {
+            let script = Script::new_simple_spend();
+            let script_hash = script.to_script_hash(key);
+
+            assert_eq!(res, Ok(0));
+            assert_eq!(data.to_add.len(), 1);
+            assert_eq!(data.to_delete.len(), 2);
+            assert_eq!(data.to_add[0].amount, amount * 2); // Check out amount
+            assert_eq!(data.to_add[0].coloured_address.as_ref().unwrap(), &address); // Check receiver address
+            assert_eq!(data.to_add[0].script_hash, script_hash); // Check script hash
+        });
+    }
+
+    #[test]
+    fn fails_coloured_on_sum_of_inputs_lower_than_of_outputs() {
+        let address = ColouredAddress::random_nop_script();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let mut input = ss_input_to_address_of_asset_and_amount(amount, address.clone(), key);
+        input.script_args[0] = VmTerm::Signed128(10_000_000_000);
+        let tx = tx![input];
+
+        exec_tx(&tx, key, |res, data| {
+            assert_eq!(res, Err(TxVerifyErr::InvalidAmount));
+            assert_eq!(data.to_add.len(), 0);
+            assert_eq!(data.to_delete.len(), 0);
+        });
+    }
+
+    #[test]
+    fn fails_coloured_on_sum_of_inputs_lower_than_of_outputs_2() {
+        let address = ColouredAddress::random_nop_script();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let mut input = ss_input_to_address_of_asset_and_amount(amount, address.clone(), key);
+        input.script_args[0] = VmTerm::Signed128(10_000_000_000);
+        let tx = tx![
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+            ss_input_to_address_of_asset_and_amount(amount, address.clone(), key),
+            input,
+        ];
+
+        exec_tx(&tx, key, |res, data| {
+            assert_eq!(res, Err(TxVerifyErr::InvalidAmount));
+            assert_eq!(data.to_add.len(), 0);
+            assert_eq!(data.to_delete.len(), 0);
+        });
+    }
+
+    #[test]
+    fn script_outputs_are_correct1() {
+        let address = Address::random();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let data1 = "data1";
+        let data2 = "data2";
+        let tx = tx![
+            xpu_ss_input_to_address_of_amount_with_data(
+                amount,
+                address.clone(),
+                key,
+                VmTerm::Unsigned8Array(data1.as_bytes().to_vec())
+            ),
+            xpu_ss_input_to_address_of_amount_with_data(
+                amount,
+                address.clone(),
+                key,
+                VmTerm::Unsigned8Array(data2.as_bytes().to_vec())
+            )
+        ];
+
+        exec_tx(&tx, key, |res, data| {
+            let script = Script::new_simple_spend_with_data();
+            let script_hash = script.to_script_hash(key);
+
+            assert_eq!(res.unwrap(), 20); // Check tx fee
+            assert_eq!(data.to_add.len(), 2);
+            assert_eq!(data.to_delete.len(), 2);
+            assert_eq!(data.to_add[0].amount, amount); // Check out amount
+            assert_eq!(data.to_add[0].address.as_ref().unwrap(), &address); // Check receiver address
+            assert_eq!(data.to_add[0].script_hash, script_hash); // Check script hash
+            assert_eq!(data.to_add[0].script_outs.len(), 1);
+            assert_eq!(
+                data.to_add[0].script_outs[0],
+                VmTerm::Unsigned8Array(data1.as_bytes().to_vec())
+            );
+            assert_eq!(data.to_add[1].amount, amount); // Check out amount
+            assert_eq!(data.to_add[1].address.as_ref().unwrap(), &address); // Check receiver address
+            assert_eq!(data.to_add[1].script_hash, script_hash); // Check script hash
+            assert_eq!(data.to_add[1].script_outs.len(), 1);
+            assert_eq!(
+                data.to_add[1].script_outs[0],
+                VmTerm::Unsigned8Array(data2.as_bytes().to_vec())
+            );
+        });
+    }
+
+    #[test]
+    fn script_outputs_are_correct2() {
+        let address = Address::random();
+        let key = "test_key";
+        let amount = 10_000_000;
+        let data1 = "data";
+        let tx = tx![
+            xpu_ss_input_to_address_of_amount_with_data(
+                amount,
+                address.clone(),
+                key,
+                VmTerm::Unsigned8Array(data1.as_bytes().to_vec())
+            ),
+            xpu_ss_input_to_address_of_amount_with_data(
+                amount,
+                address.clone(),
+                key,
+                VmTerm::Unsigned8Array(data1.as_bytes().to_vec())
+            )
+        ];
+
+        exec_tx(&tx, key, |res, data| {
+            let script = Script::new_simple_spend_with_data();
+            let script_hash = script.to_script_hash(key);
+
+            assert_eq!(res.unwrap(), 20); // Check tx fee
+            assert_eq!(data.to_add.len(), 1);
+            assert_eq!(data.to_delete.len(), 2);
+            assert_eq!(data.to_add[0].amount, amount * 2); // Check out amount
+            assert_eq!(data.to_add[0].address.as_ref().unwrap(), &address); // Check receiver address
+            assert_eq!(data.to_add[0].script_hash, script_hash); // Check script hash
+            assert_eq!(data.to_add[0].script_outs.len(), 1);
+            assert_eq!(
+                data.to_add[0].script_outs[0],
+                VmTerm::Unsigned8Array(data1.as_bytes().to_vec())
+            );
+        });
+    }
+
+    // #[test]
+    // fn test_interactive_atomic_swap() {
+    //     let key = "test_key";
+    //     let amount = 10_000_000;
+    //     let tx = Transaction {
+    //         chain_id: 0,
+    //         ins: vec![ss_input_to_address_of_asset_and_amount(
+    //             amount, &address, key,
+    //         )],
+    //         hash: None,
+    //     };
+    // }
 }
