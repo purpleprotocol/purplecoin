@@ -7998,12 +7998,12 @@ impl ScriptExecutor {
 
                                     let outs_sum = if let Some(colour_hash) = &flags.colour_hash {
                                         if let Some(outs_sum) =
-                                            coloured_outs_sums.get_mut(&colour_hash)
+                                            coloured_outs_sums.get_mut(colour_hash)
                                         {
                                             outs_sum
                                         } else {
                                             coloured_outs_sums.insert(colour_hash.clone(), 0);
-                                            coloured_outs_sums.get_mut(&colour_hash).unwrap()
+                                            coloured_outs_sums.get_mut(colour_hash).unwrap()
                                         }
                                     } else {
                                         outs_sum
@@ -8069,12 +8069,15 @@ impl ScriptExecutor {
                                         output.compute_hash(key);
                                         if let Some(address) = address {
                                             output_stack_idx_map.insert(
-                                                (&address, &script_hash, &script_outs_hash_buf).into(),
+                                                (&address, &script_hash, &script_outs_hash_buf)
+                                                    .into(),
                                                 output_stack.len() as u16,
                                             );
                                         } else {
-                                            output_stack_idx_map
-                                                .insert((&script_hash, &script_outs_hash_buf).into(), output_stack.len() as u16);
+                                            output_stack_idx_map.insert(
+                                                (&script_hash, &script_outs_hash_buf).into(),
+                                                output_stack.len() as u16,
+                                            );
                                         }
                                         output_stack.push(output);
                                         *script_outputs = vec![];
@@ -8160,11 +8163,11 @@ impl ScriptExecutor {
                             };
 
                             let outs_sum = if let Some(colour_hash) = &flags.colour_hash {
-                                if let Some(outs_sum) = coloured_outs_sums.get_mut(&colour_hash) {
+                                if let Some(outs_sum) = coloured_outs_sums.get_mut(colour_hash) {
                                     outs_sum
                                 } else {
                                     coloured_outs_sums.insert(colour_hash.clone(), 0);
-                                    coloured_outs_sums.get_mut(&colour_hash).unwrap()
+                                    coloured_outs_sums.get_mut(colour_hash).unwrap()
                                 }
                             } else {
                                 outs_sum
@@ -8236,8 +8239,10 @@ impl ScriptExecutor {
                                         output_stack.len() as u16,
                                     );
                                 } else {
-                                    output_stack_idx_map
-                                        .insert((&script_hash, &script_outs_hash_buf).into(), output_stack.len() as u16);
+                                    output_stack_idx_map.insert(
+                                        (&script_hash, &script_outs_hash_buf).into(),
+                                        output_stack.len() as u16,
+                                    );
                                 }
                                 output_stack.push(output);
                                 *script_outputs = vec![];

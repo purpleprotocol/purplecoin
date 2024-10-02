@@ -538,7 +538,7 @@ impl Input {
             InputFlags::Plain => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
-                for t in out.script_outs.iter() {
+                for t in &out.script_outs {
                     script_outs_hash_buf.extend(t.to_bytes());
                 }
                 let out = if let Some(idx) = idx_map.get(
@@ -620,7 +620,7 @@ impl Input {
             InputFlags::FailablePlain => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
-                for t in out.script_outs.iter() {
+                for t in &out.script_outs {
                     script_outs_hash_buf.extend(t.to_bytes());
                 }
                 let out = if let Some(idx) = idx_map.get(
@@ -834,7 +834,7 @@ impl Input {
             InputFlags::FailableIsColoured => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
-                for t in out.script_outs.iter() {
+                for t in &out.script_outs {
                     script_outs_hash_buf.extend(t.to_bytes());
                 }
                 let out = if let Some(idx) = idx_map.get(
@@ -966,7 +966,7 @@ impl Input {
             InputFlags::IsColoured => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
-                for t in out.script_outs.iter() {
+                for t in &out.script_outs {
                     script_outs_hash_buf.extend(t.to_bytes());
                 }
                 let out = if let Some(idx) = idx_map.get(
@@ -1097,7 +1097,7 @@ impl Input {
             InputFlags::IsColouredWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
-                for t in out.script_outs.iter() {
+                for t in &out.script_outs {
                     script_outs_hash_buf.extend(t.to_bytes());
                 }
                 let out = if let Some(idx) = idx_map.get(
@@ -1214,7 +1214,7 @@ impl Input {
             InputFlags::FailableIsColouredWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
-                for t in out.script_outs.iter() {
+                for t in &out.script_outs {
                     script_outs_hash_buf.extend(t.to_bytes());
                 }
                 let out = if let Some(idx) = idx_map.get(
@@ -1332,7 +1332,7 @@ impl Input {
             InputFlags::IsColouredHasSpendProof => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
-                for t in out.script_outs.iter() {
+                for t in &out.script_outs {
                     script_outs_hash_buf.extend(t.to_bytes());
                 }
                 let out = if let Some(idx) = idx_map.get(
@@ -1479,7 +1479,7 @@ impl Input {
             InputFlags::FailableIsColouredHasSpendProof => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
-                for t in out.script_outs.iter() {
+                for t in &out.script_outs {
                     script_outs_hash_buf.extend(t.to_bytes());
                 }
                 let out = if let Some(idx) = idx_map.get(
@@ -1627,7 +1627,7 @@ impl Input {
             InputFlags::IsColouredHasSpendProofWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
-                for t in out.script_outs.iter() {
+                for t in &out.script_outs {
                     script_outs_hash_buf.extend(t.to_bytes());
                 }
                 let out = if let Some(idx) = idx_map.get(
@@ -1762,7 +1762,7 @@ impl Input {
             InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
-                for t in out.script_outs.iter() {
+                for t in &out.script_outs {
                     script_outs_hash_buf.extend(t.to_bytes());
                 }
                 let out = if let Some(idx) = idx_map.get(
@@ -1898,7 +1898,7 @@ impl Input {
             InputFlags::HasSpendProof => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
-                for t in out.script_outs.iter() {
+                for t in &out.script_outs {
                     script_outs_hash_buf.extend(t.to_bytes());
                 }
                 let out = if let Some(idx) = idx_map.get(
@@ -1993,7 +1993,7 @@ impl Input {
             InputFlags::FailableHasSpendProof => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
-                for t in out.script_outs.iter() {
+                for t in &out.script_outs {
                     script_outs_hash_buf.extend(t.to_bytes());
                 }
                 let out = if let Some(idx) = idx_map.get(
