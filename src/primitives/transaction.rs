@@ -84,7 +84,7 @@ impl Transaction {
             let input_seed_bytes: &[u8] = &[tx_seed_bytes, nonce.as_slice()].concat();
             let mut temp_ins_sum = 0;
             let mut temp_outs_sum = 0;
-            // TODO: Only do this on failable inputs
+            // TODO: Only do this on fallible inputs
             let to_add_bak = to_add_temp.clone();
             let to_delete_bak = to_delete_temp.clone();
 
@@ -109,8 +109,8 @@ impl Transaction {
                 validate_coloured_coinbase,
             );
 
-            match (result, input.is_failable()) {
-                (Err(err), false) => return Err(err), // Not failable so the whole transaction is invalid
+            match (result, input.is_fallible()) {
+                (Err(err), false) => return Err(err), // Not fallible so the whole transaction is invalid
                 (Err(_), true) => break, // Stop the rest of the transaction execution at this point
                 (Ok(()), true) => {
                     // Check that the sum of inputs is greater than that of the outputs
@@ -381,7 +381,7 @@ mod tests {
         input
     }
 
-    fn xpu_ss_failable_input_to_address_of_amount(amount: Money, to: Address, key: &str) -> Input {
+    fn xpu_ss_fallible_input_to_address_of_amount(amount: Money, to: Address, key: &str) -> Input {
         let keypair = Keypair::new();
         let address = keypair.to_address();
         let script = Script::new_simple_spend();
@@ -403,7 +403,7 @@ mod tests {
         let mut input = Input {
             out: Some(out),
             script,
-            input_flags: InputFlags::FailablePlain,
+            input_flags: InputFlags::FalliblePlain,
             spending_pkey: Some(keypair.public()),
             script_args: vec![
                 VmTerm::Signed128(amount),
@@ -650,7 +650,7 @@ mod tests {
         let address = Address::random();
         let key = "test_key";
         let amount = 10_000_000;
-        let mut input = xpu_ss_failable_input_to_address_of_amount(amount, address.clone(), key);
+        let mut input = xpu_ss_fallible_input_to_address_of_amount(amount, address.clone(), key);
         input.script_args[0] = VmTerm::Signed128(10_000_000_000);
         let tx = tx![
             xpu_ss_input_to_address_of_amount(amount, address.clone(), key),

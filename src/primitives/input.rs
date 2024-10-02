@@ -171,17 +171,17 @@ impl Input {
     }
 
     #[must_use]
-    pub fn is_failable(&self) -> bool {
+    pub fn is_fallible(&self) -> bool {
         match self.input_flags {
-            InputFlags::FailablePlain
-            | InputFlags::FailablePlainWithoutSpendKey
-            | InputFlags::FailableHasSpendProof
-            | InputFlags::FailableIsColoured
-            | InputFlags::FailableIsColouredHasSpendProof
-            | InputFlags::FailableHasSpendProofWithoutSpendKey
-            | InputFlags::FailableIsColouredWithoutSpendKey
-            | InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbase => true,
+            InputFlags::FalliblePlain
+            | InputFlags::FalliblePlainWithoutSpendKey
+            | InputFlags::FallibleHasSpendProof
+            | InputFlags::FallibleIsColoured
+            | InputFlags::FallibleIsColouredHasSpendProof
+            | InputFlags::FallibleHasSpendProofWithoutSpendKey
+            | InputFlags::FallibleIsColouredWithoutSpendKey
+            | InputFlags::FallibleIsColouredHasSpendProofWithoutSpendKey
+            | InputFlags::FallibleIsColouredCoinbase => true,
             _ => false,
         }
     }
@@ -350,7 +350,7 @@ impl Input {
                         coloured_outs_sums,
                         idx_map,
                         ver_stack,
-                        [0; 32], // Empty seed, not failable
+                        [0; 32], // Empty seed, not fallible
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
@@ -374,7 +374,7 @@ impl Input {
                 Ok(())
             }
 
-            InputFlags::FailableIsColouredCoinbase => {
+            InputFlags::FallibleIsColouredCoinbase => {
                 let coloured_coinbase_block_height = self.coloured_coinbase_block_height.unwrap();
 
                 // Check that the block height is between current and the horizon
@@ -457,7 +457,7 @@ impl Input {
                         coloured_outs_sums,
                         idx_map,
                         ver_stack,
-                        [0; 32], // Empty seed, not failable
+                        [0; 32], // Empty seed, not fallible
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
@@ -481,7 +481,7 @@ impl Input {
                 Ok(())
             }
 
-            InputFlags::FailableIsColouredCoinbaseWithoutSpendKey => {
+            InputFlags::FallibleIsColouredCoinbaseWithoutSpendKey => {
                 let coloured_coinbase_block_height = self.coloured_coinbase_block_height.unwrap();
 
                 // Check that the block height is between current and the horizon
@@ -590,7 +590,7 @@ impl Input {
                         coloured_outs_sums,
                         idx_map,
                         ver_stack,
-                        [0; 32], // Empty seed, not failable
+                        [0; 32], // Empty seed, not fallible
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
@@ -617,7 +617,7 @@ impl Input {
                 Ok(())
             }
 
-            InputFlags::FailablePlain => {
+            InputFlags::FalliblePlain => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
                 for t in &out.script_outs {
@@ -738,7 +738,7 @@ impl Input {
                         coloured_outs_sums,
                         idx_map,
                         ver_stack,
-                        [0; 32], // Empty seed, not failable
+                        [0; 32], // Empty seed, not fallible
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
@@ -765,7 +765,7 @@ impl Input {
                 Ok(())
             }
 
-            InputFlags::FailablePlainWithoutSpendKey => {
+            InputFlags::FalliblePlainWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
                 let out = if let Some(idx) = idx_map.get(&out.script_hash) {
                     &to_add[*idx as usize]
@@ -831,7 +831,7 @@ impl Input {
                 Ok(())
             }
 
-            InputFlags::FailableIsColoured => {
+            InputFlags::FallibleIsColoured => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
                 for t in &out.script_outs {
@@ -1029,7 +1029,7 @@ impl Input {
                         coloured_outs_sums,
                         idx_map,
                         ver_stack,
-                        [0; 32], // Empty seed, not failable
+                        [0; 32], // Empty seed, not fallible
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
@@ -1062,7 +1062,7 @@ impl Input {
                         coloured_outs_sums,
                         idx_map,
                         ver_stack,
-                        [0; 32], // Empty seed, not failable
+                        [0; 32], // Empty seed, not fallible
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
@@ -1146,7 +1146,7 @@ impl Input {
                         coloured_outs_sums,
                         idx_map,
                         ver_stack,
-                        [0; 32], // Empty seed, not failable
+                        [0; 32], // Empty seed, not fallible
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
@@ -1179,7 +1179,7 @@ impl Input {
                         coloured_outs_sums,
                         idx_map,
                         ver_stack,
-                        [0; 32], // Empty seed, not failable
+                        [0; 32], // Empty seed, not fallible
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
@@ -1211,7 +1211,7 @@ impl Input {
                 Ok(())
             }
 
-            InputFlags::FailableIsColouredWithoutSpendKey => {
+            InputFlags::FallibleIsColouredWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
                 for t in &out.script_outs {
@@ -1411,7 +1411,7 @@ impl Input {
                         coloured_outs_sums,
                         idx_map,
                         ver_stack,
-                        [0; 32], // Empty seed, not failable
+                        [0; 32], // Empty seed, not fallible
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
@@ -1444,7 +1444,7 @@ impl Input {
                         coloured_outs_sums,
                         idx_map,
                         ver_stack,
-                        [0; 32], // Empty seed, not failable
+                        [0; 32], // Empty seed, not fallible
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
@@ -1476,7 +1476,7 @@ impl Input {
                 Ok(())
             }
 
-            InputFlags::FailableIsColouredHasSpendProof => {
+            InputFlags::FallibleIsColouredHasSpendProof => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
                 for t in &out.script_outs {
@@ -1694,7 +1694,7 @@ impl Input {
                         coloured_outs_sums,
                         idx_map,
                         ver_stack,
-                        [0; 32], // Empty seed, not failable
+                        [0; 32], // Empty seed, not fallible
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
@@ -1727,7 +1727,7 @@ impl Input {
                         coloured_outs_sums,
                         idx_map,
                         ver_stack,
-                        [0; 32], // Empty seed, not failable
+                        [0; 32], // Empty seed, not fallible
                         key,
                         SETTINGS.node.network_name.as_str(),
                         VmFlags {
@@ -1759,7 +1759,7 @@ impl Input {
                 Ok(())
             }
 
-            InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey => {
+            InputFlags::FallibleIsColouredHasSpendProofWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
                 for t in &out.script_outs {
@@ -1990,7 +1990,7 @@ impl Input {
                 Ok(())
             }
 
-            InputFlags::FailableHasSpendProof => {
+            InputFlags::FallibleHasSpendProof => {
                 let out = self.out.as_ref().unwrap();
                 let mut script_outs_hash_buf = vec![];
                 for t in &out.script_outs {
@@ -2165,7 +2165,7 @@ impl Input {
                 Ok(())
             }
 
-            InputFlags::FailableHasSpendProofWithoutSpendKey => {
+            InputFlags::FallibleHasSpendProofWithoutSpendKey => {
                 let out = self.out.as_ref().unwrap();
                 let out = if let Some(idx) = idx_map.get(&out.script_hash) {
                     &to_add[*idx as usize]
@@ -2266,7 +2266,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script_args, encoder)?;
             }
 
-            InputFlags::IsColouredCoinbase | InputFlags::FailableIsColouredCoinbase => {
+            InputFlags::IsColouredCoinbase | InputFlags::FallibleIsColouredCoinbase => {
                 bincode::Encode::encode(self.spending_pkey.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(
                     &self.coloured_coinbase_block_height.as_ref().unwrap(),
@@ -2278,7 +2278,7 @@ impl Encode for Input {
             }
 
             InputFlags::IsColouredCoinbaseWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbaseWithoutSpendKey => {
+            | InputFlags::FallibleIsColouredCoinbaseWithoutSpendKey => {
                 bincode::Encode::encode(
                     &self.coloured_coinbase_block_height.as_ref().unwrap(),
                     encoder,
@@ -2288,7 +2288,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script_args, encoder)?;
             }
 
-            InputFlags::Plain | InputFlags::FailablePlain => {
+            InputFlags::Plain | InputFlags::FalliblePlain => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
                 if let Some(witness) = self.witness.as_ref() {
@@ -2298,7 +2298,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script_args, encoder)?;
             }
 
-            InputFlags::PlainWithoutSpendKey | InputFlags::FailablePlainWithoutSpendKey => {
+            InputFlags::PlainWithoutSpendKey | InputFlags::FalliblePlainWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 if let Some(witness) = self.witness.as_ref() {
                     bincode::Encode::encode(&witness.to_bytes(), encoder)?;
@@ -2307,7 +2307,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.script_args, encoder)?;
             }
 
-            InputFlags::HasSpendProof | InputFlags::FailableHasSpendProof => {
+            InputFlags::HasSpendProof | InputFlags::FallibleHasSpendProof => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
                 if let Some(witness) = self.witness.as_ref() {
@@ -2319,7 +2319,7 @@ impl Encode for Input {
             }
 
             InputFlags::HasSpendProofWithoutSpendKey
-            | InputFlags::FailableHasSpendProofWithoutSpendKey => {
+            | InputFlags::FallibleHasSpendProofWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 if let Some(witness) = self.witness.as_ref() {
                     bincode::Encode::encode(&witness.to_bytes(), encoder)?;
@@ -2329,7 +2329,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.spend_proof.as_ref().unwrap(), encoder)?;
             }
 
-            InputFlags::IsColoured | InputFlags::FailableIsColoured => {
+            InputFlags::IsColoured | InputFlags::FallibleIsColoured => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
                 if let Some(witness) = self.witness.as_ref() {
@@ -2342,7 +2342,7 @@ impl Encode for Input {
                 bincode::Encode::encode(&self.colour_kernel.as_ref().unwrap(), encoder)?;
             }
 
-            InputFlags::IsColouredHasSpendProof | InputFlags::FailableIsColouredHasSpendProof => {
+            InputFlags::IsColouredHasSpendProof | InputFlags::FallibleIsColouredHasSpendProof => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 bincode::Encode::encode(&self.spending_pkey.as_ref().unwrap(), encoder)?;
                 if let Some(witness) = self.witness.as_ref() {
@@ -2357,7 +2357,7 @@ impl Encode for Input {
             }
 
             InputFlags::IsColouredWithoutSpendKey
-            | InputFlags::FailableIsColouredWithoutSpendKey => {
+            | InputFlags::FallibleIsColouredWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 if let Some(witness) = self.witness.as_ref() {
                     bincode::Encode::encode(&witness.to_bytes(), encoder)?;
@@ -2370,7 +2370,7 @@ impl Encode for Input {
             }
 
             InputFlags::IsColouredHasSpendProofWithoutSpendKey
-            | InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey => {
+            | InputFlags::FallibleIsColouredHasSpendProofWithoutSpendKey => {
                 bincode::Encode::encode(self.out.as_ref().unwrap(), encoder)?;
                 if let Some(witness) = self.witness.as_ref() {
                     bincode::Encode::encode(&witness.to_bytes(), encoder)?;
@@ -2440,7 +2440,7 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::IsColouredCoinbase | InputFlags::FailableIsColouredCoinbase => {
+            InputFlags::IsColouredCoinbase | InputFlags::FallibleIsColouredCoinbase => {
                 let spending_pkey = Some(bincode::Decode::decode(decoder)?);
                 let coloured_coinbase_block_height = Some(bincode::Decode::decode(decoder)?);
                 let coloured_coinbase_nonce = Some(bincode::Decode::decode(decoder)?);
@@ -2460,7 +2460,7 @@ impl Decode for Input {
             }
 
             InputFlags::IsColouredCoinbaseWithoutSpendKey
-            | InputFlags::FailableIsColouredCoinbaseWithoutSpendKey => {
+            | InputFlags::FallibleIsColouredCoinbaseWithoutSpendKey => {
                 let coloured_coinbase_block_height = Some(bincode::Decode::decode(decoder)?);
                 let coloured_coinbase_nonce = Some(bincode::Decode::decode(decoder)?);
                 let script = bincode::Decode::decode(decoder)?;
@@ -2477,7 +2477,7 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::Plain | InputFlags::FailablePlain => {
+            InputFlags::Plain | InputFlags::FalliblePlain => {
                 let out: Output = bincode::Decode::decode(decoder)?;
                 if out.is_coloured() {
                     return Err(bincode::error::DecodeError::OtherString(
@@ -2508,7 +2508,7 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::PlainWithoutSpendKey | InputFlags::FailablePlainWithoutSpendKey => {
+            InputFlags::PlainWithoutSpendKey | InputFlags::FalliblePlainWithoutSpendKey => {
                 let out: Output = bincode::Decode::decode(decoder)?;
                 if out.is_coloured() {
                     return Err(bincode::error::DecodeError::OtherString(
@@ -2539,7 +2539,7 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::HasSpendProof | InputFlags::FailableHasSpendProof => {
+            InputFlags::HasSpendProof | InputFlags::FallibleHasSpendProof => {
                 let out: Output = bincode::Decode::decode(decoder)?;
                 if out.is_coloured() {
                     return Err(bincode::error::DecodeError::OtherString(
@@ -2573,7 +2573,7 @@ impl Decode for Input {
             }
 
             InputFlags::HasSpendProofWithoutSpendKey
-            | InputFlags::FailableHasSpendProofWithoutSpendKey => {
+            | InputFlags::FallibleHasSpendProofWithoutSpendKey => {
                 let out: Output = bincode::Decode::decode(decoder)?;
                 if out.is_coloured() {
                     return Err(bincode::error::DecodeError::OtherString(
@@ -2604,7 +2604,7 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::IsColoured | InputFlags::FailableIsColoured => {
+            InputFlags::IsColoured | InputFlags::FallibleIsColoured => {
                 let out: Output = bincode::Decode::decode(decoder)?;
                 if !out.is_coloured() {
                     return Err(bincode::error::DecodeError::OtherString(
@@ -2647,7 +2647,7 @@ impl Decode for Input {
                 })
             }
 
-            InputFlags::IsColouredHasSpendProof | InputFlags::FailableIsColouredHasSpendProof => {
+            InputFlags::IsColouredHasSpendProof | InputFlags::FallibleIsColouredHasSpendProof => {
                 let out: Output = bincode::Decode::decode(decoder)?;
                 if !out.is_coloured() {
                     return Err(bincode::error::DecodeError::OtherString(
@@ -2693,7 +2693,7 @@ impl Decode for Input {
             }
 
             InputFlags::IsColouredWithoutSpendKey
-            | InputFlags::FailableIsColouredWithoutSpendKey => {
+            | InputFlags::FallibleIsColouredWithoutSpendKey => {
                 let out: Output = bincode::Decode::decode(decoder)?;
                 if !out.is_coloured() {
                     return Err(bincode::error::DecodeError::OtherString(
@@ -2735,7 +2735,7 @@ impl Decode for Input {
             }
 
             InputFlags::IsColouredHasSpendProofWithoutSpendKey
-            | InputFlags::FailableIsColouredHasSpendProofWithoutSpendKey => {
+            | InputFlags::FallibleIsColouredHasSpendProofWithoutSpendKey => {
                 let out: Output = bincode::Decode::decode(decoder)?;
                 if !out.is_coloured() {
                     return Err(bincode::error::DecodeError::OtherString(
@@ -2805,18 +2805,18 @@ pub enum InputFlags {
     IsColouredWithoutSpendKey = 0x07,
     IsColouredHasSpendProofWithoutSpendKey = 0x08,
     IsCoinbaseWithoutSpendKey = 0x09,
-    FailablePlain = 0x0a,
-    FailableHasSpendProof = 0x0b,
-    FailableIsColoured = 0x0c,
-    FailableIsColouredHasSpendProof = 0x0d,
-    FailableHasSpendProofWithoutSpendKey = 0x0e,
-    FailableIsColouredWithoutSpendKey = 0x0f,
-    FailableIsColouredHasSpendProofWithoutSpendKey = 0x10,
+    FalliblePlain = 0x0a,
+    FallibleHasSpendProof = 0x0b,
+    FallibleIsColoured = 0x0c,
+    FallibleIsColouredHasSpendProof = 0x0d,
+    FallibleHasSpendProofWithoutSpendKey = 0x0e,
+    FallibleIsColouredWithoutSpendKey = 0x0f,
+    FallibleIsColouredHasSpendProofWithoutSpendKey = 0x10,
     IsColouredCoinbaseWithoutSpendKey = 0x11,
-    FailableIsColouredCoinbase = 0x12,
-    FailableIsColouredCoinbaseWithoutSpendKey = 0x13,
+    FallibleIsColouredCoinbase = 0x12,
+    FallibleIsColouredCoinbaseWithoutSpendKey = 0x13,
     PlainWithoutSpendKey = 0x14,
-    FailablePlainWithoutSpendKey = 0x15,
+    FalliblePlainWithoutSpendKey = 0x15,
 }
 
 impl std::convert::TryFrom<u8> for InputFlags {
@@ -2834,18 +2834,18 @@ impl std::convert::TryFrom<u8> for InputFlags {
             0x07 => Ok(Self::IsColouredWithoutSpendKey),
             0x08 => Ok(Self::IsColouredHasSpendProofWithoutSpendKey),
             0x09 => Ok(Self::IsCoinbaseWithoutSpendKey),
-            0x0a => Ok(Self::FailablePlain),
-            0x0b => Ok(Self::FailableHasSpendProof),
-            0x0c => Ok(Self::FailableIsColoured),
-            0x0d => Ok(Self::FailableIsColouredHasSpendProof),
-            0x0e => Ok(Self::FailableHasSpendProofWithoutSpendKey),
-            0x0f => Ok(Self::FailableIsColouredWithoutSpendKey),
-            0x10 => Ok(Self::FailableIsColouredHasSpendProofWithoutSpendKey),
+            0x0a => Ok(Self::FalliblePlain),
+            0x0b => Ok(Self::FallibleHasSpendProof),
+            0x0c => Ok(Self::FallibleIsColoured),
+            0x0d => Ok(Self::FallibleIsColouredHasSpendProof),
+            0x0e => Ok(Self::FallibleHasSpendProofWithoutSpendKey),
+            0x0f => Ok(Self::FallibleIsColouredWithoutSpendKey),
+            0x10 => Ok(Self::FallibleIsColouredHasSpendProofWithoutSpendKey),
             0x11 => Ok(Self::IsColouredCoinbaseWithoutSpendKey),
-            0x12 => Ok(Self::FailableIsColouredCoinbase),
-            0x13 => Ok(Self::FailableIsColouredCoinbaseWithoutSpendKey),
+            0x12 => Ok(Self::FallibleIsColouredCoinbase),
+            0x13 => Ok(Self::FallibleIsColouredCoinbaseWithoutSpendKey),
             0x14 => Ok(Self::PlainWithoutSpendKey),
-            0x15 => Ok(Self::FailablePlainWithoutSpendKey),
+            0x15 => Ok(Self::FalliblePlainWithoutSpendKey),
             _ => Err("invalid bitflags"),
         }
     }
@@ -2914,13 +2914,13 @@ mod tests {
     }
 
     #[test]
-    fn failable_coloured_coinbase_encode_decode() {
+    fn fallible_coloured_coinbase_encode_decode() {
         let input = Input {
             spending_pkey: Some(PublicKey::zero()),
             script: Script::new_coinbase(),
             coloured_coinbase_block_height: Some(342),
             coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::FailableIsColouredCoinbase,
+            input_flags: InputFlags::FallibleIsColouredCoinbase,
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),
@@ -2957,12 +2957,12 @@ mod tests {
     }
 
     #[test]
-    fn failable_coloured_coinbase_without_spend_key_encode_decode() {
+    fn fallible_coloured_coinbase_without_spend_key_encode_decode() {
         let input = Input {
             script: Script::new_coinbase(),
             coloured_coinbase_block_height: Some(342),
             coloured_coinbase_nonce: Some(0),
-            input_flags: InputFlags::FailableIsColouredCoinbaseWithoutSpendKey,
+            input_flags: InputFlags::FallibleIsColouredCoinbaseWithoutSpendKey,
             script_args: vec![
                 VmTerm::Signed128(137),
                 VmTerm::Hash160(Address::zero().0),

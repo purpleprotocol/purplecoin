@@ -9584,7 +9584,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomHash160Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9596,7 +9596,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomHash256Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9608,7 +9608,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomHash512Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9620,7 +9620,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomUnsigned8Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9632,7 +9632,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomUnsigned16Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9644,7 +9644,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomUnsigned32Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9656,7 +9656,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomUnsigned64Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9668,7 +9668,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomUnsigned128Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9680,7 +9680,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomSigned8Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9692,7 +9692,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomSigned16Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9704,7 +9704,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomSigned32Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9716,7 +9716,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomSigned64Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9728,7 +9728,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomSigned128Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9740,7 +9740,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomFloat32Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9752,7 +9752,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomFloat64Var) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -9764,7 +9764,7 @@ impl ScriptExecutor {
                 ScriptEntry::Opcode(OP::RandomDecimalVar) => {
                     if !flags.can_fail {
                         self.state = ScriptExecutorState::Error(
-                            ExecutionResult::OpcodeAllowedOnlyInFailableInput,
+                            ExecutionResult::OpcodeAllowedOnlyInFallibleInput,
                             (i_ptr, func_idx, op.clone(), exec_stack.as_slice()).into(),
                         );
                         return;
@@ -13449,8 +13449,8 @@ pub enum ExecutionResult {
     /// VM ran out of gas
     OutOfGas,
 
-    /// This opcode is only allowed in a failable input
-    OpcodeAllowedOnlyInFailableInput,
+    /// This opcode is only allowed in a fallible input
+    OpcodeAllowedOnlyInFallibleInput,
 
     /// VM Term overflow
     TermOverflow,
