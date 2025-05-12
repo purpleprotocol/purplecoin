@@ -25,10 +25,12 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [x] Transaction serialization
   - [x] Script arguments serialization
   - [ ] Headers MMR implementation
-  - [ ] Find a way to dynamically determine the minimum fee for acceptance into the mempool
   - [ ] Implement optimal atomic asset exchange script and use it as a default script
   - [ ] Implement coloured assets
-
+  - [ ] Gas model for simple OPs
+  - [ ] Gas model for expensive OPs
+  - [ ] Append blocks to chain
+  - [ ] Handle forks
   * [ ] Implement VM opcodes
 
     - [x] OP `0x00` Func - Start a function definition
@@ -323,6 +325,8 @@ This document presents the technical roadmap of the Purplecoin project. Please n
     - [ ] RPC over WS/Binary
     - [ ] RPC over TCP/JSON
     - [ ] RPC over TCP/Binary
+    - [ ] RPC over IPC/JSON
+    - [ ] RPC over IPC/Binary
     - [ ] RPC Commands
       - [ ] GetBlockchainInfo
       - [ ] GetBlockHash
@@ -362,9 +366,12 @@ This document presents the technical roadmap of the Purplecoin project. Please n
       - [ ] BackupWalletS3
       - [ ] SendRawTx
       - [ ] QueryOutput
-  - [ ] Mempool
-    - [x] Base Implementation
-    - [ ] Sharded mempool
+  - [ ] Block building
+    - [ ] Miners build their own blocks
+      - [ ] Transaction relay overlay (opt-in)
+      - [ ] Block building algorithm
+    - [ ] Miner Builder Separation
+      - [ ] Block relay
 - [ ] Wallet
   - [x] Hierarchical Deterministic Wallet
   - [ ] Multi-Sig Hierarchical Deterministic Wallet
@@ -375,13 +382,13 @@ This document presents the technical roadmap of the Purplecoin project. Please n
   - [ ] Restore wallet from AWS S3
   - [ ] Restore wallet from Google Cloud Storage
 - [ ] GUI
-  - [x] Onboarding screen
-  - [x] Render XPU balances
+  - [ ] Onboarding screen
+  - [ ] Render XPU balances
   - [ ] Render XPU transaction history
   - [ ] Render alternative asset balances
   - [ ] Render alternative asset transaction histories
   - [ ] Render wallet addresses
-  - [x] Create wallet
+  - [ ] Create wallet
   - [ ] Import wallet
     - [ ] Import wallet from encrypted private key with secure window to enter the decryption key
     - [ ] Import wallet from unencrypted private key with secure window
