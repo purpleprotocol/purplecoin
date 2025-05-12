@@ -4,6 +4,9 @@
 // http://www.apache.org/licenses/LICENSE-2.0 or the MIT license, see
 // LICENSE-MIT or http://opensource.org/licenses/MIT
 
+use super::compute_colour_hash;
+use crate::vm::internal::VmTerm;
+use crate::vm::Script;
 use bech32::{self, FromBase32, ToBase32, Variant};
 use bincode::{Decode, Encode};
 use bloomfilter::Bloom;
@@ -11,10 +14,11 @@ use croaring::bitmap;
 use lazy_static::lazy_static;
 use merkletree::hash::{Algorithm, Hashable};
 use merkletree::merkle::Element;
-use rand::Rng;
-use schnorrkel::PreparedBatch;
-use schnorrkel::PublicKey as SchnorrPubKey;
-use schnorrkel::Signature as SchnorrSignature;
+use rand::{rngs::OsRng, Rng};
+use schnorrkel::{
+    Keypair as SchnorrKeypair, PreparedBatch, PublicKey as SchnorrPubKey,
+    SecretKey as SchnorrSecretKey, Signature as SchnorrSignature,
+};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::From;
 use std::fmt;
@@ -36,6 +40,12 @@ lazy_static! {
     static ref HASH_KEY256: &'static str = &HASH_KEY256_OWNED;
     static ref HASH_KEY512_OWNED: String = format!("{}", 64);
     static ref HASH_KEY512: &'static str = &HASH_KEY512_OWNED;
+}
+
+#[cfg(test)]
+lazy_static! {
+    /// Keypair for testing with the nop colour script.
+    pub static ref NOP_SCRIPT_EMITTER_KEYPAIR: Keypair = Keypair::new();
 }
 
 #[derive(Clone, PartialEq, Eq, HashTrait, Encode, Decode)]
@@ -109,6 +119,19 @@ impl ColouredAddress {
     #[must_use]
     pub fn validate(&self, public_key: &PublicKey, colour_hash: &Hash160) -> bool {
         self == &public_key.to_coloured_address(colour_hash)
+    }
+
+    #[cfg(test)]
+    #[must_use]
+    /// Create a random address of the nop script colour hash.
+    pub fn random_nop_script() -> Self {
+        let colour_script = Script::new_nop_script();
+        let (colour_hash, _) =
+            compute_colour_hash(&colour_script, &[], &NOP_SCRIPT_EMITTER_KEYPAIR.public());
+        Self {
+            address: rand::thread_rng().gen(),
+            colour_hash: colour_hash.0,
+        }
     }
 }
 
@@ -215,6 +238,65 @@ impl fmt::Debug for Address {
         f.debug_tuple("Address")
             .field(&self.to_bech32("pu"))
             .finish()
+    }
+}
+
+impl From<Address> for Hash160 {
+    fn from(other: Address) -> Self {
+        Hash160(other.0)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SecretKey(pub SchnorrSecretKey);
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Keypair {
+    p: PublicKey,
+    s: SecretKey,
+}
+
+impl Default for Keypair {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Keypair {
+    /// Generate a new random keypair using the OS rng.
+    #[must_use]
+    pub fn new() -> Self {
+        let mut kp = SchnorrKeypair::generate_with(OsRng);
+
+        Keypair {
+            p: PublicKey(kp.public),
+            s: SecretKey(kp.secret.clone()),
+        }
+    }
+
+    /// Returns the public key of this keypair.
+    #[must_use]
+    pub fn public(&self) -> PublicKey {
+        self.p.clone()
+    }
+
+    /// Returns the secret key of this keypair.
+    #[must_use]
+    pub fn secret(&self) -> SecretKey {
+        self.s.clone()
+    }
+
+    /// Maps the public key associated with this keypair to an XPU address.
+    #[must_use]
+    pub fn to_address(&self) -> Address {
+        self.p.to_address()
+    }
+
+    /// Maps the public key associated with this keypair to a
+    /// coloured address of the given colour hash.
+    #[must_use]
+    pub fn to_coloured_address(&self, colour_hash: &Hash160) -> ColouredAddress {
+        self.p.to_coloured_address(colour_hash)
     }
 }
 
@@ -401,6 +483,13 @@ impl Hash160 {
         out.fill(&mut out_hash.0);
         out_hash
     }
+
+    #[must_use]
+    #[cfg(test)]
+    pub fn random() -> Self {
+        let mut rng = rand::thread_rng();
+        Self(rng.gen())
+    }
 }
 
 impl fmt::Debug for Hash160 {
@@ -415,11 +504,21 @@ impl AsRef<[u8]> for Hash160 {
     }
 }
 
-impl From<(&Address, &Self)> for Hash160 {
-    fn from(other: (&Address, &Self)) -> Self {
-        let mut buf = Vec::with_capacity(40);
+impl From<(&Address, &Self, &Vec<u8>)> for Hash160 {
+    fn from(other: (&Address, &Self, &Vec<u8>)) -> Self {
+        let mut buf = Vec::with_capacity(40 + other.2.len());
         buf.extend_from_slice(&other.0 .0);
         buf.extend_from_slice(&other.1 .0);
+        buf.extend_from_slice(other.2);
+        Self::hash_from_slice(&buf, "idx_map_hasher")
+    }
+}
+
+impl From<(&Self, &Vec<u8>)> for Hash160 {
+    fn from(other: (&Self, &Vec<u8>)) -> Self {
+        let mut buf = Vec::with_capacity(20 + other.1.len());
+        buf.extend_from_slice(&other.0 .0);
+        buf.extend_from_slice(other.1);
         Self::hash_from_slice(&buf, "idx_map_hasher")
     }
 }
@@ -443,7 +542,7 @@ impl Algorithm<Hash160> for Hash160Algo {
     #[inline]
     fn hash(&mut self) -> Hash160 {
         let h1 = Hash256::hash_from_slice(&self.0, "purplecoin.merklehasher.tx.32");
-        Hash160::hash_from_slice(&h1.0, "purplecoin.merklehasher.tx.20")
+        Hash160::hash_from_slice(h1.0, "purplecoin.merklehasher.tx.20")
     }
 
     #[inline]
