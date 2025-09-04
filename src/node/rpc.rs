@@ -7,6 +7,7 @@
 use crate::chain::{Chain, DBInterface, PowChainBackend, ShardBackend, ShardBackendErr};
 use crate::consensus::SECTORS;
 use crate::node::{PeerInfo, PeerInfoTable, NODE_INFO, PEER_INFO_TABLE};
+use crate::settings::SETTINGS;
 use futures::{
     future::{self, Ready},
     prelude::*,
@@ -30,6 +31,48 @@ pub type RpcRequest = tarpc::ClientMessage<RpcServerDefinitionRequest>;
 pub type RpcResponse = tarpc::Response<RpcServerDefinitionResponse>;
 pub type RpcChannel = tarpc::transport::channel::UnboundedChannel<RpcResponse, RpcRequest>;
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MempoolInfo {
+    pub total_transactions: u32,
+    pub total_size_bytes: u64,
+    pub total_fee: u64,
+    pub min_fee_rate: u64,
+    pub max_fee_rate: u64,
+    pub avg_fee_rate: u64,
+    pub shard_breakdown: HashMap<u8, ShardMempoolInfo>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ShardMempoolInfo {
+    pub transaction_count: u32,
+    pub size_bytes: u64,
+    pub total_fee: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NetworkInfo {
+    pub version: String,
+    pub protocol_version: u32,
+    pub network_name: String,
+    pub connections: u32,
+    pub connections_in: u32,
+    pub connections_out: u32,
+    pub network_active: bool,
+    pub local_services: String,
+    pub local_relay: bool,
+    pub time_offset: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RawMempoolEntry {
+    pub txid: String,
+    pub size: u32,
+    pub fee: u64,
+    pub fee_rate: u64,
+    pub time: i64,
+    pub shard_id: u8,
+}
+
 #[tarpc::service]
 pub trait RpcServerDefinition {
     /// Returns information about the Blockchain
@@ -51,13 +94,13 @@ pub trait RpcServerDefinition {
     async fn get_shard_info(chain_id: u8) -> String;
 
     /// Returns info about the mempool
-    async fn get_mempool_info() -> String;
+    async fn get_mempool_info() -> Result<MempoolInfo, RpcErr>;
 
     /// Returns the raw mempool data for a shard
-    async fn get_raw_mempool_shard(chain_id: u8) -> String;
+    async fn get_raw_mempool_shard(chain_id: u8) -> Result<Vec<RawMempoolEntry>, RpcErr>;
 
     /// Returns the raw mempool data for all shards
-    async fn get_raw_mempool() -> String;
+    async fn get_raw_mempool() -> Result<Vec<RawMempoolEntry>, RpcErr>;
 
     /// Marks the block with the given hash as precious
     async fn precious_block(block_hash: String) -> String;
@@ -94,7 +137,7 @@ pub trait RpcServerDefinition {
     async fn submit_share_block(payload: String) -> String;
 
     /// Returns information about the network
-    async fn get_network_info() -> String;
+    async fn get_network_info() -> Result<NetworkInfo, RpcErr>;
 
     /// Returns information about each peer
     async fn get_peer_info() -> Option<HashMap<String, PeerInfo>>;
@@ -220,12 +263,95 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
         "Hello world!".to_string()
     }
 
-    async fn get_mempool_info(self, _: context::Context) -> String {
-        "Hello world!".to_string()
+    async fn get_mempool_info(self, _: context::Context) -> Result<MempoolInfo, RpcErr> {
+        let mempool = self.chain.mempool.read();
+
+        let mut total_transactions = 0u32;
+        let mut total_size_bytes = 0u64;
+        let mut total_fee = 0u64;
+        let mut fee_rates = Vec::new();
+        let mut shard_breakdown = HashMap::new();
+
+        // Analyze mempool transactions
+        for (tx_id, tx_data) in &mempool.transactions {
+            total_transactions += 1;
+            let tx_size = tx_data.len() as u64;
+            total_size_bytes += tx_size;
+
+            // For now, we'll simulate fee extraction since we need to parse the transaction
+            // In a real implementation, you'd parse the transaction to get actual fees
+            let estimated_fee = tx_size * 10; // Placeholder: 10 units per byte
+            total_fee += estimated_fee;
+
+            if tx_size > 0 {
+                fee_rates.push(estimated_fee * 1000 / tx_size); // Fee rate per 1000 bytes
+            }
+
+            // Assign to shard based on transaction hash (simplified)
+            let shard_id = (tx_id.as_bytes()[0] % 16) as u8; // Distribute across first 16 shards
+
+            let shard_info = shard_breakdown.entry(shard_id).or_insert(ShardMempoolInfo {
+                transaction_count: 0,
+                size_bytes: 0,
+                total_fee: 0,
+            });
+
+            shard_info.transaction_count += 1;
+            shard_info.size_bytes += tx_size;
+            shard_info.total_fee += estimated_fee;
+        }
+
+        // Calculate fee rate statistics
+        fee_rates.sort_unstable();
+        let min_fee_rate = fee_rates.first().copied().unwrap_or(0);
+        let max_fee_rate = fee_rates.last().copied().unwrap_or(0);
+        let avg_fee_rate = if !fee_rates.is_empty() {
+            fee_rates.iter().sum::<u64>() / fee_rates.len() as u64
+        } else {
+            0
+        };
+
+        Ok(MempoolInfo {
+            total_transactions,
+            total_size_bytes,
+            total_fee,
+            min_fee_rate,
+            max_fee_rate,
+            avg_fee_rate,
+            shard_breakdown,
+        })
     }
 
-    async fn get_raw_mempool(self, _: context::Context) -> String {
-        "Hello world!".to_string()
+    async fn get_raw_mempool(self, _: context::Context) -> Result<Vec<RawMempoolEntry>, RpcErr> {
+        let mempool = self.chain.mempool.read();
+        let mut entries = Vec::new();
+
+        for (tx_id, tx_data) in &mempool.transactions {
+            let tx_size = tx_data.len() as u32;
+            let estimated_fee = (tx_size as u64) * 10; // Placeholder fee calculation
+            let fee_rate = if tx_size > 0 {
+                (estimated_fee * 1000) / (tx_size as u64)
+            } else {
+                0
+            };
+
+            // Assign to shard based on transaction hash
+            let shard_id = (tx_id.as_bytes()[0] % 16) as u8;
+
+            entries.push(RawMempoolEntry {
+                txid: tx_id.clone(),
+                size: tx_size,
+                fee: estimated_fee,
+                fee_rate,
+                time: crate::global::get_unix_timestamp_secs(),
+                shard_id,
+            });
+        }
+
+        // Sort by fee rate descending (highest priority first)
+        entries.sort_by(|a, b| b.fee_rate.cmp(&a.fee_rate));
+
+        Ok(entries)
     }
 
     async fn get_sector_height(self, _: context::Context, sector_id: u8) -> Result<u64, RpcErr> {
@@ -254,8 +380,43 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
         "Hello world!".to_string()
     }
 
-    async fn get_raw_mempool_shard(self, _: context::Context, chain_id: u8) -> String {
-        "Hello world!".to_string()
+    async fn get_raw_mempool_shard(
+        self,
+        _: context::Context,
+        chain_id: u8,
+    ) -> Result<Vec<RawMempoolEntry>, RpcErr> {
+        let mempool = self.chain.mempool.read();
+        let mut entries = Vec::new();
+
+        for (tx_id, tx_data) in &mempool.transactions {
+            // Assign to shard based on transaction hash
+            let shard_id = (tx_id.as_bytes()[0] % 16) as u8;
+
+            // Only include transactions for the requested shard
+            if shard_id == chain_id {
+                let tx_size = tx_data.len() as u32;
+                let estimated_fee = (tx_size as u64) * 10; // Placeholder fee calculation
+                let fee_rate = if tx_size > 0 {
+                    (estimated_fee * 1000) / (tx_size as u64)
+                } else {
+                    0
+                };
+
+                entries.push(RawMempoolEntry {
+                    txid: tx_id.clone(),
+                    size: tx_size,
+                    fee: estimated_fee,
+                    fee_rate,
+                    time: crate::global::get_unix_timestamp_secs(),
+                    shard_id,
+                });
+            }
+        }
+
+        // Sort by fee rate descending (highest priority first)
+        entries.sort_by(|a, b| b.fee_rate.cmp(&a.fee_rate));
+
+        Ok(entries)
     }
 
     async fn get_block_hash(self, _: context::Context, chain_id: u8, height: u64) -> String {
@@ -402,8 +563,30 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
         Err(RpcErr::CouldNotBackupWallet)
     }
 
-    async fn get_network_info(self, _: context::Context) -> String {
-        "Hello world!".to_string()
+    async fn get_network_info(self, _: context::Context) -> Result<NetworkInfo, RpcErr> {
+        // Get peer information
+        let peer_count = unsafe {
+            PEER_INFO_TABLE
+                .as_ref()
+                .map(|table| table.read().len())
+                .unwrap_or(0)
+        } as u32;
+
+        // Calculate time offset (simplified - would need actual NTP sync in real implementation)
+        let time_offset = 0i64; // Placeholder
+
+        Ok(NetworkInfo {
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            protocol_version: 1, // TODO: Define actual protocol version constant
+            network_name: SETTINGS.node.network_name.clone(),
+            connections: peer_count,
+            connections_in: peer_count / 2,  // Simplified estimation
+            connections_out: peer_count / 2, // Simplified estimation
+            network_active: true,            // TODO: Get actual network status from node
+            local_services: "NODE_NETWORK".to_string(), // Standard service flag
+            local_relay: true,               // TODO: Get actual relay setting
+            time_offset,
+        })
     }
 
     async fn get_peer_info(self, _: context::Context) -> Option<HashMap<String, PeerInfo>> {
