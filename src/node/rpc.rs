@@ -289,12 +289,8 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
         // Get mempool information
         let mempool = self.chain.mempool.read();
         let mempool_summary = MempoolSummary {
-            total_transactions: mempool.transactions.len() as u32,
-            total_size_bytes: mempool
-                .transactions
-                .values()
-                .map(|tx| tx.len())
-                .sum::<usize>() as u64,
+            total_transactions: mempool.tx_map.len() as u32,
+            total_size_bytes: mempool.current_size_bytes,
         };
 
         // Get node information
@@ -384,8 +380,8 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
             .ok_or(RpcErr::ShardNotInitialised)?;
 
         // Get the canonical block header at the specified height
-        match shard.get_canonical_block_at_height(height) {
-            Ok(Some(block_header)) => Ok(block_header.hash().to_hex()),
+        match shard.backend.get_canonical_block_at_height(height) {
+            Ok(Some(block_header)) => Ok(block_header.hash().unwrap().to_hex()),
             Ok(None) => {
                 // No block at this height
                 Err(RpcErr::ShardBackendErr)
@@ -412,16 +408,17 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
         // Search through all active shards to find the block
         for (shard_id, shard) in &self.chain.chain_states {
             // Try to get the canonical block with this hash
-            match shard.get_canonical_block(&target_hash) {
+            match shard.backend.get_canonical_block(&target_hash) {
                 Ok(Some(block_header)) => {
                     // Get the block data to calculate stats
                     let block_data = shard
-                        .get_block_data(&target_hash)
+                        .backend.get_block_data(&target_hash)
                         .map_err(|_| RpcErr::ShardBackendErr)?;
 
                     let (transaction_count, total_fees) = if let Some(data) = block_data {
-                        let tx_count = data.transactions.len() as u32;
-                        let fees = data.transactions.iter().map(|tx| tx.fee).sum::<u64>();
+                        let tx_count = data.txs.len() as u32;
+                        // Note: Transaction fees no longer stored in blocks after protocol update
+                        let fees = 0u64;
                         (tx_count, fees)
                     } else {
                         (0, 0)
@@ -434,8 +431,8 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
 
                     return Ok(BlockStats {
                         hash: hash.clone(),
-                        height: block_header.pos,
-                        timestamp: block_header.timestamp,
+                        height: block_header.height,
+                        timestamp: 0, // Timestamp removed from block headers in protocol update
                         transaction_count,
                         block_size_bytes: block_size,
                         total_fees,
