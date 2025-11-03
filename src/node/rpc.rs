@@ -80,6 +80,24 @@ pub struct BlockStats {
     pub shard_id: u8,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RawMempool {
+    pub transaction_hashes: Vec<String>,
+    pub total_transactions: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OutputInfo {
+    pub amount: i128,
+    pub script_hash: String,
+    pub inputs_hash: String,
+    pub idx: u16,
+    pub address: Option<String>,
+    pub coloured_address: Option<String>,
+    pub coinbase_height: Option<u64>,
+    pub hash: String,
+}
+
 #[tarpc::service]
 pub trait RpcServerDefinition {
     /// Returns information about the Blockchain
@@ -101,13 +119,13 @@ pub trait RpcServerDefinition {
     async fn get_shard_info(chain_id: u8) -> String;
 
     /// Returns info about the mempool
-    async fn get_mempool_info() -> String;
+    async fn get_mempool_info() -> Result<MempoolSummary, RpcErr>;
 
     /// Returns the raw mempool data for a shard
-    async fn get_raw_mempool_shard(chain_id: u8) -> String;
+    async fn get_raw_mempool_shard(chain_id: u8) -> Result<RawMempool, RpcErr>;
 
     /// Returns the raw mempool data for all shards
-    async fn get_raw_mempool() -> String;
+    async fn get_raw_mempool() -> Result<RawMempool, RpcErr>;
 
     /// Marks the block with the given hash as precious
     async fn precious_block(block_hash: String) -> String;
@@ -257,6 +275,12 @@ pub enum RpcErr {
 
     /// The provided block hash is invalid or block not found
     InvalidBlockHash,
+
+    /// Invalid transaction
+    InvalidTransaction(String),
+
+    /// Internal error
+    InternalError(String),
 }
 
 /// RPC server
@@ -289,12 +313,8 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
         // Get mempool information
         let mempool = self.chain.mempool.read();
         let mempool_summary = MempoolSummary {
-            total_transactions: mempool.transactions.len() as u32,
-            total_size_bytes: mempool
-                .transactions
-                .values()
-                .map(|tx| tx.len())
-                .sum::<usize>() as u64,
+            total_transactions: mempool.tx_map.len() as u32,
+            total_size_bytes: mempool.current_size_bytes,
         };
 
         // Get node information
@@ -332,12 +352,28 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
         })
     }
 
-    async fn get_mempool_info(self, _: context::Context) -> String {
-        "Hello world!".to_string()
+    async fn get_mempool_info(self, _: context::Context) -> Result<MempoolSummary, RpcErr> {
+        // Get mempool information
+        let mempool = self.chain.mempool.read();
+        let mempool_summary = MempoolSummary {
+            total_transactions: mempool.tx_map.len() as u32,
+            total_size_bytes: mempool.current_size_bytes,
+        };
+
+        Ok(mempool_summary)
     }
 
-    async fn get_raw_mempool(self, _: context::Context) -> String {
-        "Hello world!".to_string()
+    async fn get_raw_mempool(self, _: context::Context) -> Result<RawMempool, RpcErr> {
+        // Get all transactions from mempool
+        let mempool = self.chain.mempool.read();
+        let transaction_hashes: Vec<String> =
+            mempool.tx_map.keys().map(|hash| hash.to_hex()).collect();
+        let total_transactions = transaction_hashes.len() as u32;
+
+        Ok(RawMempool {
+            transaction_hashes,
+            total_transactions,
+        })
     }
 
     async fn get_sector_height(self, _: context::Context, sector_id: u8) -> Result<u64, RpcErr> {
@@ -366,8 +402,25 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
         "Hello world!".to_string()
     }
 
-    async fn get_raw_mempool_shard(self, _: context::Context, chain_id: u8) -> String {
-        "Hello world!".to_string()
+    async fn get_raw_mempool_shard(
+        self,
+        _: context::Context,
+        chain_id: u8,
+    ) -> Result<RawMempool, RpcErr> {
+        // Filter transactions by shard/chain_id
+        let mempool = self.chain.mempool.read();
+        let transaction_hashes: Vec<String> = mempool
+            .tx_map
+            .iter()
+            .filter(|(_, tx)| tx.tx.tx.chain_id == chain_id)
+            .map(|(hash, _)| hash.to_hex())
+            .collect();
+        let total_transactions = transaction_hashes.len() as u32;
+
+        Ok(RawMempool {
+            transaction_hashes,
+            total_transactions,
+        })
     }
 
     async fn get_block_hash(
@@ -384,8 +437,8 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
             .ok_or(RpcErr::ShardNotInitialised)?;
 
         // Get the canonical block header at the specified height
-        match shard.get_canonical_block_at_height(height) {
-            Ok(Some(block_header)) => Ok(block_header.hash().to_hex()),
+        match shard.backend.get_canonical_block_at_height(height) {
+            Ok(Some(block_header)) => Ok(block_header.hash().unwrap().to_hex()),
             Ok(None) => {
                 // No block at this height
                 Err(RpcErr::ShardBackendErr)
@@ -412,17 +465,48 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
         // Search through all active shards to find the block
         for (shard_id, shard) in &self.chain.chain_states {
             // Try to get the canonical block with this hash
-            match shard.get_canonical_block(&target_hash) {
+            match shard.backend.get_canonical_block(&target_hash) {
                 Ok(Some(block_header)) => {
                     // Get the block data to calculate stats
                     let block_data = shard
+                        .backend
                         .get_block_data(&target_hash)
                         .map_err(|_| RpcErr::ShardBackendErr)?;
 
                     let (transaction_count, total_fees) = if let Some(data) = block_data {
-                        let tx_count = data.transactions.len() as u32;
-                        let fees = data.transactions.iter().map(|tx| tx.fee).sum::<u64>();
-                        (tx_count, fees)
+                        let tx_count = data.txs.len() as u32;
+
+                        // Calculate total fees from all transactions in the block
+                        // Fee = sum(inputs) - sum(outputs) for each transaction
+                        let mut fees: i128 = 0;
+                        for tx in &data.txs {
+                            // Skip coinbase transactions (no fee)
+                            if tx.is_coinbase() {
+                                continue;
+                            }
+
+                            // Sum input amounts
+                            let mut inputs_sum: i128 = 0;
+                            for input in &tx.ins {
+                                if let Some(ref out) = input.out {
+                                    inputs_sum += out.amount;
+                                }
+                            }
+
+                            // Sum output amounts (from script execution)
+                            // Note: Outputs are generated during script execution, not stored in tx
+                            // For now, we compute a simplified fee based on inputs
+                            // TODO: Cache actual fee in storage as suggested by maintainer
+                            // The proper way is to use verify_single which returns the fee
+
+                            // For a rough estimate, we can assume some fee was paid
+                            // But without executing scripts, we can't get exact output amounts
+                            // So we'll use 0 for now and add proper caching later
+                        }
+
+                        // TODO: Implement proper fee caching in storage
+                        // For now, return 0 as a placeholder
+                        (tx_count, 0u64)
                     } else {
                         (0, 0)
                     };
@@ -432,10 +516,23 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
                         .map(|encoded| encoded.len() as u64)
                         .unwrap_or(0);
 
+                    // Get timestamp from PoW block header at the same height
+                    // Calculate which sector this shard belongs to
+                    let sector_id = *shard_id / crate::consensus::SHARDS_PER_SECTOR as u8;
+
+                    let timestamp = if let Some(sector) = self.chain.sectors.get(&sector_id) {
+                        match sector.backend.get_canonical_pow_block_at_height(block_header.height) {
+                            Ok(Some(pow_header)) => pow_header.timestamp,
+                            _ => 0, // Fallback to 0 if PoW block not found
+                        }
+                    } else {
+                        0 // Fallback to 0 if sector not initialized
+                    };
+
                     return Ok(BlockStats {
                         hash: hash.clone(),
-                        height: block_header.pos,
-                        timestamp: block_header.timestamp,
+                        height: block_header.height,
+                        timestamp,
                         transaction_count,
                         block_size_bytes: block_size,
                         total_fees,
@@ -768,7 +865,80 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
     }
 
     async fn send_raw_tx(self, _: context::Context, transaction: String) -> Result<String, RpcErr> {
-        Ok("hello world".to_owned())
+        // Decode hex string to bytes
+        let tx_bytes = hex::decode(&transaction)
+            .map_err(|_| RpcErr::InvalidTransaction("Invalid hex encoding".to_string()))?;
+
+        // Deserialize to Transaction
+        let mut tx: crate::primitives::Transaction =
+            crate::codec::decode(&tx_bytes).map_err(|e| {
+                RpcErr::InvalidTransaction(format!("Failed to decode transaction: {:?}", e))
+            })?;
+
+        let chain_id = tx.chain_id;
+        let key = self.chain.config.get_chain_key(chain_id);
+
+        // Compute transaction hash
+        tx.compute_hash(key);
+
+        // Get shard to retrieve current height and other chain info
+        let shard =
+            self.chain.chain_states.get(&chain_id).ok_or_else(|| {
+                RpcErr::InvalidTransaction(format!("Shard {} not found", chain_id))
+            })?;
+
+        let height = shard
+            .height()
+            .map_err(|e| RpcErr::InternalError(format!("Failed to get shard height: {:?}", e)))?;
+
+        // Get current block header for validation context
+        let block_header = shard
+            .backend
+            .get_canonical_block_at_height(if height > 0 { height - 1 } else { 0 })
+            .map_err(|e| RpcErr::InternalError(format!("Failed to get block header: {:?}", e)))?
+            .ok_or_else(|| RpcErr::InternalError("Block header not found".to_string()))?;
+
+        // Use current timestamp for validation
+        let timestamp = crate::global::get_unix_timestamp_secs();
+        let prev_block_hash = block_header
+            .hash
+            .ok_or_else(|| RpcErr::InternalError("Block hash not computed".to_string()))?;
+
+        // Wrap in TransactionWithSignatures (signatures are embedded in inputs)
+        let tx_with_sigs = crate::primitives::TransactionWithSignatures {
+            tx,
+            signatures: vec![],
+        };
+
+        // Convert to TransactionWithFee (validates the transaction)
+        let tx_with_fee = crate::primitives::TransactionWithFee::from_transaction(
+            tx_with_sigs,
+            key,
+            height,
+            chain_id,
+            timestamp,
+            prev_block_hash,
+        )
+        .map_err(|e| {
+            RpcErr::InvalidTransaction(format!("Transaction validation failed: {:?}", e))
+        })?;
+
+        // Get transaction hash before adding to mempool
+        let tx_hash = tx_with_fee
+            .hash()
+            .ok_or_else(|| RpcErr::InternalError("Transaction hash is None".to_string()))?
+            .to_hex();
+
+        // Add to mempool
+        let mut mempool = self.chain.mempool.write();
+        unsafe {
+            let mempool_mut = std::pin::Pin::as_mut(&mut mempool);
+            std::pin::Pin::get_unchecked_mut(mempool_mut)
+                .append(tx_with_fee)
+                .map_err(|e| RpcErr::InternalError(format!("Failed to add to mempool: {}", e)))?;
+        }
+
+        Ok(tx_hash)
     }
 
     async fn query_output(
@@ -776,7 +946,53 @@ impl<B: PowChainBackend + ShardBackend + DBInterface + Send + Sync + 'static> Rp
         _: context::Context,
         output_hash: String,
     ) -> Result<String, RpcErr> {
-        Ok("hello world".to_owned())
+        // Decode hex string to Hash256
+        let hash_bytes = hex::decode(&output_hash).map_err(|_| {
+            RpcErr::InvalidTransaction("Invalid hex encoding for output hash".to_string())
+        })?;
+
+        if hash_bytes.len() != 32 {
+            return Err(RpcErr::InvalidTransaction(
+                "Output hash must be 32 bytes".to_string(),
+            ));
+        }
+
+        let mut hash_array = [0u8; 32];
+        hash_array.copy_from_slice(&hash_bytes);
+        let output_hash = crate::primitives::Hash256(hash_array);
+
+        // Since we don't know which shard the output belongs to,
+        // we need to search across all active shards
+        for (_shard_id, shard) in &self.chain.chain_states {
+            if let Some(output) = shard.backend.utxo(&output_hash) {
+                // Convert Output to OutputInfo
+                let output_info = OutputInfo {
+                    amount: output.amount,
+                    script_hash: output.script_hash.to_hex(),
+                    inputs_hash: output.inputs_hash.to_hex(),
+                    idx: output.idx,
+                    address: output.address.map(|a| a.to_bech32("pu")),
+                    coloured_address: output.coloured_address.map(|a| a.to_bech32("pu")),
+                    coinbase_height: output.coinbase_height,
+                    hash: output
+                        .hash
+                        .map(|h| h.to_hex())
+                        .unwrap_or_else(|| "unknown".to_string()),
+                };
+
+                // Serialize to JSON
+                let output_json = serde_json::to_string(&output_info).map_err(|e| {
+                    RpcErr::InternalError(format!("Failed to serialize output: {}", e))
+                })?;
+                return Ok(output_json);
+            }
+        }
+
+        // Output not found in any shard
+        Err(RpcErr::InvalidTransaction(format!(
+            "Output with hash {} not found in UTXO set",
+            output_hash.to_hex()
+        )))
     }
 }
 
